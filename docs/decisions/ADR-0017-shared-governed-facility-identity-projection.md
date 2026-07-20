@@ -26,7 +26,11 @@ runtime projection in this slice.
 Use one shared, deterministic, read-only facility identity projection for the
 eventual reviewer, packet, export, and operator consumers. The first Issue #521
 slice implements the projection plus only an authorized service-level read over
-existing program-reference and complaint-linked canonical facility data.
+existing program-reference and complaint-linked canonical facility data. The
+Issue #522 follow-on applies this accepted decision to the core facility lookup,
+suggestion, request, hub, reviewer list/detail, packet preview/draft, and repeated
+feedback-context reads through one shared presenter; it does not change the
+projection decision or persistence ownership.
 
 The projection accepts a digit-only public Facility ID and an authorized corpus
 scope. It keeps four identity categories separate:
@@ -57,8 +61,8 @@ display value.
 
 Semantic states are `populated`, `blank`, `absent`, `unavailable`,
 `unresolved_raw_code`, `conflicting`, `internal_only`, and `invalid`. Pages may
-later translate those states into approved user-facing text, but page strings
-are not stored in or accepted by the projection.
+translate those states into approved user-facing text through the shared
+presenter, but page strings are not stored in or accepted by the projection.
 
 ## Field-level precedence and reconciliation
 
@@ -111,8 +115,9 @@ Benefits:
 
 Tradeoffs:
 
-- Existing routes, templates, packets, prints, and exports do not yet consume
-  the projection and can still differ until their sequenced migration.
+- Core routes, templates, packets, and print draft now consume the projection,
+  while specialized aggregate views and exports can still differ until their
+  sequenced migration.
 - A tied conflict intentionally yields no selected display value.
 - Production data quality remains bounded by eligible existing program and
   complaint-linked observations.
@@ -120,8 +125,9 @@ Tradeoffs:
 ## Migration sequence
 
 1. Merge and validate this read-only projection contract.
-2. In a separate Issue #482 child, migrate authorized reviewer and facility
-   read models and then packet/export consumers without duplicating precedence.
+2. In Issue #522, migrate the authorized core reviewer and facility read models
+   plus packet preview/draft without duplicating precedence; leave specialized
+   aggregate views and exports for their separately bounded phases.
 3. Add controlled PostgreSQL backfill only after separate schema, dry-run,
    apply, checkpoint, recovery, provenance, and reviewer-state-preservation
    authorization.
@@ -137,8 +143,9 @@ or authorize a page-local fallback.
 
 ## Non-goals
 
-This decision and implementation do not add schemas, migrations, backfill,
-ArcGIS retrieval or activation, source scheduling, operator actions, hosted or
-QNAP deployment, Cloudflare changes, route/template migration, print/export
-changes, database writes, or legal, statewide, freshness, or completeness
-conclusions.
+This decision and its Issue #521/#522 implementation do not add schemas,
+migrations, backfill, ArcGIS retrieval or activation, source scheduling,
+operator actions, hosted or QNAP deployment, Cloudflare changes, export
+migration, database writes, or legal, statewide, freshness, or completeness
+conclusions. Issue #522 changes only the named read-only core route/template and
+print-presentation consumers.

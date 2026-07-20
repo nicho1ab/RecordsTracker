@@ -47,8 +47,11 @@ from ccld_complaints.hosted_app.ccld_facility_lookup import (
     CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH,
     CCLD_FACILITY_REVIEW_PRIORITY_PATH,
     CCLD_FACILITY_SUGGESTIONS_PATH,
+    CcldFacilityLookupResult,
     CcldFacilityReferenceSource,
     CcldFacilityReviewContext,
+    facility_lookup_record_from_projection,
+    facility_lookup_result_from_projections,
     facility_reference_from_source_derived_records,
     no_reference_facility_source,
     render_ccld_facility_lookup_page,
@@ -69,6 +72,9 @@ from ccld_complaints.hosted_app.ccld_retrieval_jobs import (
     CcldHttpRetrievalClient,
     CcldRetrievalContext,
     load_ccld_retrieval_config,
+)
+from ccld_complaints.hosted_app.facility_identity_projection import (
+    load_authorized_facility_identity_projections,
 )
 from ccld_complaints.hosted_app.facility_reference_preload import (
     facility_reference_source_from_connection,
@@ -1221,6 +1227,10 @@ def route_response(
                         source_context.connection,
                         query,
                     )
+                    lookup_result = _projected_lookup_result(
+                        active_ccld_context,
+                        lookup_result,
+                    )
                 except SQLAlchemyError:
                     lookup_result = None
         else:
@@ -1229,8 +1239,27 @@ def route_response(
             parse_qs(parsed_url.query, keep_blank_values=True),
             "facility_number",
         )
+        if parsed_path == CCLD_FACILITY_REVIEW_HUB_PATH and facility_number.isdigit():
+            try:
+                facility_reference = _projected_facility_reference_for_ids(
+                    active_ccld_context,
+                    facility_reference,
+                    (facility_number,),
+                )
+            except SQLAlchemyError:
+                return _postgres_setup_required_response(
+                    "Facility identity setup required"
+                )
+        routed_path = path
+        if (
+            parsed_path == CCLD_FACILITY_REVIEW_HUB_PATH
+            and facility_number
+            and not facility_reference.records
+        ):
+            routed_path = CCLD_FACILITY_REVIEW_HUB_PATH
+            facility_number = ""
         return route_ccld_facility_lookup_response_with_source(
-            path,
+            routed_path,
             facility_reference,
             _facility_review_context_from_context(
                 active_ccld_context,
@@ -1262,7 +1291,24 @@ def route_response(
             and active_ccld_context is not None
             and parsed_path in {CCLD_UI_PREFIX, CCLD_RECORD_REQUEST_PATH}
         ):
-            request_facility_reference = _facility_reference_from_context(active_ccld_context)
+            request_facility_reference = _facility_reference_summary_from_context(
+                active_ccld_context
+            )
+            selected_facility_number = _first_query_value(
+                parse_qs(parsed_url.query, keep_blank_values=True),
+                "facility_number",
+            )
+            if selected_facility_number.isdigit():
+                try:
+                    request_facility_reference = _projected_facility_reference_for_ids(
+                        active_ccld_context,
+                        request_facility_reference,
+                        (selected_facility_number,),
+                    )
+                except SQLAlchemyError:
+                    return _postgres_setup_required_response(
+                        "Facility identity setup required"
+                    )
         return route_ccld_record_request_ui_response(
             path,
             active_ccld_context,
@@ -1574,6 +1620,74 @@ def _facility_reference_summary_from_context(
     if facility_reference.record_count:
         return facility_reference
     return _facility_reference_from_context(context)
+
+
+def _projected_facility_reference_for_ids(
+    context: CcldRecordRequestUiContext,
+    reference_source: CcldFacilityReferenceSource,
+    facility_ids: tuple[str, ...],
+) -> CcldFacilityReferenceSource:
+    valid_ids = tuple(
+        dict.fromkeys(value for value in facility_ids if value and value.isdigit())
+    )
+    if not valid_ids:
+        return CcldFacilityReferenceSource(
+            source_kind=reference_source.source_kind,
+            label=reference_source.label,
+            path_label=reference_source.path_label,
+            records=(),
+            notices=reference_source.notices,
+            record_count=reference_source.record_count,
+        )
+    source_context = (
+        context.reviewer_ui_context.workflow_shell_context.source_derived_api_context
+    )
+    projections = load_authorized_facility_identity_projections(
+        source_context.connection,
+        source_context.actor,
+        scope=source_context.scope,
+        public_facility_ids=valid_ids,
+        allow_test_candidates=source_context.scope == LOCAL_REVIEWER_UI_SCOPE,
+    )
+    supplemental_by_id: dict[str, list[Any]] = {value: [] for value in valid_ids}
+    for record in reference_source.records:
+        if record.facility_number in supplemental_by_id:
+            supplemental_by_id[record.facility_number].append(record)
+    return CcldFacilityReferenceSource(
+        source_kind=reference_source.source_kind,
+        label=reference_source.label,
+        path_label=reference_source.path_label,
+        records=tuple(
+            facility_lookup_record_from_projection(
+                projections[facility_id],
+                supplemental_records=supplemental_by_id[facility_id],
+            )
+            for facility_id in valid_ids
+            if not projections[facility_id].ineligible_candidate_excluded
+        ),
+        notices=reference_source.notices,
+        record_count=reference_source.record_count,
+    )
+
+
+def _projected_lookup_result(
+    context: CcldRecordRequestUiContext,
+    result: CcldFacilityLookupResult,
+) -> CcldFacilityLookupResult:
+    source_context = (
+        context.reviewer_ui_context.workflow_shell_context.source_derived_api_context
+    )
+    facility_ids = tuple(
+        dict.fromkeys(record.facility_number for record in result.returned_records)
+    )
+    projections = load_authorized_facility_identity_projections(
+        source_context.connection,
+        source_context.actor,
+        scope=source_context.scope,
+        public_facility_ids=facility_ids,
+        allow_test_candidates=source_context.scope == LOCAL_REVIEWER_UI_SCOPE,
+    )
+    return facility_lookup_result_from_projections(result, projections)
 
 
 def _facility_review_context_from_context(

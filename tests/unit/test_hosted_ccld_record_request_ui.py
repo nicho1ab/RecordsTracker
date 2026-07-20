@@ -1279,7 +1279,10 @@ def test_ccld_record_request_feedback_checklist_is_deterministic_and_non_persist
     assert "- Source scope: CCLD public complaint records only" in first_checklist
     assert "- Facility ID: 157806098" in first_checklist
     assert "- Facility lookup used or skipped: Manual Facility ID entry" in first_checklist
-    assert "- Selected lookup facility name: unknown" in first_checklist
+    assert (
+        "- Selected lookup facility name: A. MIRIAM JAMISON CHILDREN'S CENTER"
+        in first_checklist
+    )
     assert "- Active facility reference source:" in first_checklist
     assert "- Date range requested: 08/01/2022 to 08/31/2022" in first_checklist
     assert "- Request criteria that felt unclear:" in first_checklist

@@ -63,6 +63,17 @@ from ccld_complaints.hosted_app.facility_case_brief import (
     priority_reason_labels,
     render_facility_case_brief,
 )
+from ccld_complaints.hosted_app.facility_identity_presenter import (
+    present_facility_field,
+    projected_display_text,
+    projected_selected_text,
+)
+from ccld_complaints.hosted_app.facility_identity_projection import (
+    FacilityIdentityProjection,
+    FacilityProjectionField,
+    load_authorized_facility_identity_projection,
+    load_authorized_facility_identity_projections,
+)
 from ccld_complaints.hosted_app.facility_review_signals import (
     load_active_facility_review_signals,
 )
@@ -996,6 +1007,10 @@ def _record_list_response(
         raise ValueError("Expected source-derived complaint bundle.")
     bundle = bundle_or_body
     records = bundle.records
+    projected_related_records = _records_with_projected_facility_identity(
+        context,
+        bundle.related_records,
+    )
     state_status, state_body = _reviewer_created_state_records_for_source_records(
         context,
         _source_record_keys_for_review_items(records),
@@ -1008,6 +1023,10 @@ def _record_list_response(
         raise ValueError("Expected reviewer-created state records.")
     state_summaries = _state_summaries_by_source_record(state_body)
     export_context = _reviewer_queue_export_context(records)
+    export_context = _queue_context_with_projected_public_identity(
+        export_context,
+        projected_related_records,
+    )
     payload = {
         "queue": {
             "pagination": {
@@ -1024,7 +1043,7 @@ def _record_list_response(
             search_query,
             state_summaries,
             export_context,
-            bundle.related_records,
+            projected_related_records,
             complaint_universe_count=bundle.eligible_count,
             actor_label=_signed_in_actor_label(context),
         ),
@@ -1043,6 +1062,14 @@ def _packet_preview_response(
         return _html_response(
             200,
             _render_packet_preview_context_needed(actor_label=_signed_in_actor_label(context)),
+        )
+    return_context = _return_context_with_projected_identity(context, return_context)
+    if return_context.facility_number is None:
+        return _html_response(
+            200,
+            _render_packet_preview_context_needed(
+                actor_label=_signed_in_actor_label(context)
+            ),
         )
     status, _content_type, body = route_reviewer_workflow_shell_response(
         f"{REVIEWER_WORKFLOW_API_PREFIX}/queue",
@@ -6355,6 +6382,14 @@ def _packet_draft_response(
                         200,
                         _render_packet_draft_context_needed(actor_label=_signed_in_actor_label(context)),
                 )
+        return_context = _return_context_with_projected_identity(context, return_context)
+        if return_context.facility_number is None:
+                return _html_response(
+                        200,
+                        _render_packet_draft_context_needed(
+                                actor_label=_signed_in_actor_label(context)
+                        ),
+                )
         status, _content_type, body = route_reviewer_workflow_shell_response(
                 f"{REVIEWER_WORKFLOW_API_PREFIX}/queue",
                 context.workflow_shell_context,
@@ -6836,17 +6871,25 @@ def _detail_html_response(
         return _workflow_error_page(bundle_status, bundle_body)
     if isinstance(bundle_body, bytes):
         raise ValueError("Expected related source-derived context records.")
+    projected_related_records = _records_with_projected_facility_identity(
+        context,
+        bundle_body,
+    )
+    projected_return_context = _return_context_with_projected_identity(
+        context,
+        _return_context_with_related_defaults(
+            return_context,
+            projected_related_records,
+        ),
+    )
     return _html_response(
         status,
         _render_detail(
             payload,
             saved_action=saved_action,
             saved_value=saved_value,
-            related_records=bundle_body,
-            return_context=_return_context_with_related_defaults(
-                return_context,
-                bundle_body,
-            ),
+            related_records=projected_related_records,
+            return_context=projected_return_context,
             actor_label=_signed_in_actor_label(context),
         ),
     )
@@ -6943,8 +6986,15 @@ def _render_record_list(
     suggested_item = _next_review_item(records, state_summaries)
     suggested_source_record_key = _source_record_key_for_item(suggested_item)
     facility_names = _facility_names_by_number(export_records)
+    facility_ids = _facility_public_display_by_number(export_records)
     rows = "\n".join(
-        _render_review_item_row(record, state_summaries, export_context) for record in records
+        _render_review_item_row(
+            record,
+            state_summaries,
+            export_context,
+            facility_ids,
+        )
+        for record in records
     )
     worklist_items = "\n".join(
         f"""          <li>
@@ -6953,6 +7003,7 @@ def _render_record_list(
     state_summaries,
     export_context,
     facility_names,
+    facility_ids,
     suggested=_source_record_key_for_item(record) == suggested_source_record_key,
 )}
           </li>"""
@@ -7147,11 +7198,48 @@ def _facility_names_by_number(
         if _string(record, "entity_type") != "facility":
             continue
         values = _mapping(record, "original_values")
-        facility_number = _optional_string(values, "external_facility_number")
-        facility_name = _optional_string(values, "facility_name")
+        projection = _facility_projection(values)
+        facility_number = (
+            projection.public_facility_id
+            if projection is not None
+            else _facility_context_value(values, "external_facility_number")
+        )
+        facility_name = _facility_context_value(values, "facility_name")
         if facility_number != "unknown" and facility_name != "unknown":
             names[facility_number] = facility_name
     return names
+
+
+def _facility_public_display_by_number(
+    records: list[Mapping[str, Any]],
+) -> dict[str, str]:
+    values: dict[str, str] = {}
+    for record in records:
+        if _string(record, "entity_type") != "facility":
+            continue
+        facility = _mapping(record, "original_values")
+        projection = _facility_projection(facility)
+        if projection is None:
+            facility_number = _facility_public_id_from_values(facility)
+            if facility_number is not None:
+                values[facility_number] = facility_number
+            continue
+        field = projection.field(FacilityProjectionField.PUBLIC_FACILITY_ID)
+        values[projection.public_facility_id] = present_facility_field(field).text
+    return values
+
+
+def _queue_context_with_projected_public_identity(
+    context: CcldQueueReturnContext,
+    related_records: list[Mapping[str, Any]],
+) -> CcldQueueReturnContext:
+    if context.facility_number is None:
+        return context
+    projected_ids = _facility_public_display_by_number(related_records)
+    display = projected_ids.get(context.facility_number)
+    if display is None or not display.isdigit():
+        return replace(context, facility_number=None, lookup_facility_name=None)
+    return context
 
 
 def _render_queue_review_cue_summary(
@@ -9560,6 +9648,7 @@ def _render_review_item_row(
     item: Mapping[str, Any],
     state_summaries: Mapping[str, Mapping[str, Any]],
     return_context: CcldQueueReturnContext,
+    facility_ids: Mapping[str, str],
 ) -> str:
     source_record = _mapping(item, "source_record")
     identity = _mapping(source_record, "identity")
@@ -9569,11 +9658,16 @@ def _render_review_item_row(
     detail_href = _reviewer_detail_href(source_record_key, return_context)
     state_summary = state_summaries.get(source_record_key, _empty_state_summary())
     action_label = _review_action_label(original_values)
+    raw_facility_number = _complaint_export_row_facility_number(
+        source_record,
+        return_context,
+    )
+    facility_number = facility_ids.get(raw_facility_number, "Source unavailable")
     return f"""        <tr>
                         <td><a class="button" href="{_escape(detail_href)}">{_escape(action_label)}</a></td>
           <td>{_escape(_optional_string(original_values, 'complaint_control_number'))}</td>
           <td>{_escape(_optional_string(original_values, 'finding'))}</td>
-                    <td>{_escape(_complaint_export_row_facility_number(source_record, return_context))}</td>
+                    <td>{_escape(facility_number)}</td>
                     <td>{_escape(_queue_display_date(_optional_string(original_values, 'complaint_received_date')))}</td>
                     <td>{_escape(_queue_display_date(_optional_string(original_values, 'visit_date')))}</td>
                     <td>{_escape(_queue_display_date(_optional_string(original_values, 'report_date')))}</td>
@@ -9588,6 +9682,7 @@ def _render_review_item_card(
     state_summaries: Mapping[str, Mapping[str, Any]],
     return_context: CcldQueueReturnContext,
     facility_names: Mapping[str, str],
+    facility_ids: Mapping[str, str],
     *,
     suggested: bool = False,
 ) -> str:
@@ -9601,13 +9696,15 @@ def _render_review_item_card(
     control_number = _display_value(
         original_values.get("complaint_control_number") or source_record_key
     )
-    facility_number = _complaint_export_row_facility_number(
+    raw_facility_number = _complaint_export_row_facility_number(
         source_record,
         return_context,
     )
-    facility_name = _reviewer_value_text(original_values.get("facility_name"))
-    if facility_name == "Not provided":
-        facility_name = facility_names.get(facility_number, facility_name)
+    facility_number = facility_ids.get(raw_facility_number, "Source unavailable")
+    facility_name = facility_names.get(
+        raw_facility_number,
+        _reviewer_value_text(original_values.get("facility_name")),
+    )
     finding = _reviewer_value_text(original_values.get("finding"))
     reviewer_status_text = _latest_status_text(state_summary)
     note_presence_text = _card_note_presence_text(state_summary)
@@ -11266,6 +11363,7 @@ def _render_record_summary_section(
     facility = _facility_context(related_records)
     facility_number = _facility_context_value(facility, "external_facility_number")
     facility_name = _facility_context_value(facility, "facility_name")
+    conflict_note = _reviewer_facility_conflict_note(facility)
     return f"""<section class="detail-card" aria-labelledby="record-summary-heading">
       <p class="launch-kicker">Source</p>
       <h2 id="record-summary-heading">Facility identity and license facts</h2>
@@ -11277,7 +11375,36 @@ def _render_record_summary_section(
         {_render_fact_item("License status", _facility_context_value(facility, "license_status"))}
         {_render_fact_item("Source ID", _facility_context_value(facility, "source_id"))}
       </dl>
+      {conflict_note}
     </section>"""
+
+
+def _reviewer_facility_conflict_note(
+    facility: Mapping[str, Any] | None,
+) -> str:
+    projection = _facility_projection(facility)
+    if projection is None:
+        return ""
+    labels = {
+        FacilityProjectionField.FACILITY_NAME: "name",
+        FacilityProjectionField.FACILITY_TYPE: "type",
+        FacilityProjectionField.STATUS: "status",
+        FacilityProjectionField.FULL_ADDRESS: "address",
+        FacilityProjectionField.COUNTY: "county",
+        FacilityProjectionField.CAPACITY: "capacity",
+    }
+    conflicts = tuple(
+        label
+        for field, label in labels.items()
+        if projection.field(field).conflict
+    )
+    if not conflicts:
+        return ""
+    return (
+        '<p class="helper-text facility-identity-conflict">Source records differ for '
+        f"{_escape(', '.join(conflicts))}. The current reference value is shown when "
+        "it can be selected safely; the complaint-time value remains preserved.</p>"
+    )
 
 
 def _render_fact_item(label: str, value: str) -> str:
@@ -12521,12 +12648,110 @@ def _facility_context(
     return None
 
 
+_FACILITY_PROJECTION_MARKER = "_facility_identity_projection"
+_FACILITY_CONTEXT_PROJECTION_FIELDS = {
+    "external_facility_number": FacilityProjectionField.PUBLIC_FACILITY_ID,
+    "facility_number": FacilityProjectionField.PUBLIC_FACILITY_ID,
+    "facility_name": FacilityProjectionField.FACILITY_NAME,
+    "facility_type": FacilityProjectionField.FACILITY_TYPE,
+    "license_status": FacilityProjectionField.STATUS,
+    "status": FacilityProjectionField.STATUS,
+    "address": FacilityProjectionField.FULL_ADDRESS,
+    "full_address": FacilityProjectionField.FULL_ADDRESS,
+    "city": FacilityProjectionField.CITY,
+    "state": FacilityProjectionField.STATE,
+    "zip": FacilityProjectionField.ZIP,
+    "zip_code": FacilityProjectionField.ZIP,
+    "county": FacilityProjectionField.COUNTY,
+    "capacity": FacilityProjectionField.CAPACITY,
+    "facility_administrator": FacilityProjectionField.ADMINISTRATOR,
+    "administrator": FacilityProjectionField.ADMINISTRATOR,
+    "licensee": FacilityProjectionField.LICENSEE,
+    "licensee_name": FacilityProjectionField.LICENSEE,
+    "telephone": FacilityProjectionField.TELEPHONE,
+    "regional_office": FacilityProjectionField.REGIONAL_OFFICE,
+}
+
+
+def _records_with_projected_facility_identity(
+    context: ReviewerUiContext,
+    records: list[Mapping[str, Any]],
+) -> list[Mapping[str, Any]]:
+    facility_ids = tuple(
+        dict.fromkeys(
+            facility_id
+            for record in records
+            if _string(record, "entity_type") == "facility"
+            if (
+                facility_id := _facility_public_id_from_values(
+                    _mapping(record, "original_values")
+                )
+            )
+            is not None
+        )
+    )
+    if not facility_ids:
+        return records
+    source_context = context.workflow_shell_context.source_derived_api_context
+    projections = load_authorized_facility_identity_projections(
+        source_context.connection,
+        source_context.actor,
+        scope=source_context.scope,
+        public_facility_ids=facility_ids,
+        allow_test_candidates=source_context.scope == LOCAL_REVIEWER_UI_SCOPE,
+    )
+    projected_records: list[Mapping[str, Any]] = []
+    for record in records:
+        if _string(record, "entity_type") != "facility":
+            projected_records.append(record)
+            continue
+        original_values = _mapping(record, "original_values")
+        facility_id = _facility_public_id_from_values(original_values)
+        projection = projections.get(facility_id or "")
+        if projection is None:
+            projected_records.append(record)
+            continue
+        values = dict(original_values)
+        values.update(
+            {
+                key: projection.field(field).display_value
+                for key, field in _FACILITY_CONTEXT_PROJECTION_FIELDS.items()
+            }
+        )
+        values[_FACILITY_PROJECTION_MARKER] = projection
+        projected_records.append({**record, "original_values": values})
+    return projected_records
+
+
+def _facility_public_id_from_values(values: Mapping[str, Any]) -> str | None:
+    for key in ("external_facility_number", "facility_number", "license_number"):
+        value = values.get(key)
+        if isinstance(value, str) and value.strip().isdigit():
+            return value.strip()
+        if isinstance(value, int) and not isinstance(value, bool):
+            return str(value)
+    return None
+
+
+def _facility_projection(
+    facility: Mapping[str, Any] | None,
+) -> FacilityIdentityProjection | None:
+    if facility is None:
+        return None
+    projection = facility.get(_FACILITY_PROJECTION_MARKER)
+    return projection if isinstance(projection, FacilityIdentityProjection) else None
+
+
 def _facility_context_value(
     facility: Mapping[str, Any] | None,
     key: str,
 ) -> str:
     if facility is None:
         return "unknown"
+    projection = _facility_projection(facility)
+    projected_field = _FACILITY_CONTEXT_PROJECTION_FIELDS.get(key)
+    if projection is not None and projected_field is not None:
+        return projected_display_text(projection, projected_field)
     if key == "facility_type":
         return _facility_type_classification(facility).display_value
     for candidate_key in _facility_context_keys(key):
@@ -12541,6 +12766,12 @@ def _facility_type_classification(
 ) -> FacilityTypeClassification:
     if facility is None:
         return FacilityTypeClassification("unknown", is_source_provided=True)
+    projection = _facility_projection(facility)
+    if projection is not None:
+        return FacilityTypeClassification(
+            projected_display_text(projection, FacilityProjectionField.FACILITY_TYPE),
+            is_source_provided=True,
+        )
     for candidate_key in _facility_context_keys("facility_type"):
         value = facility.get(candidate_key)
         if _has_display_value(value):
@@ -12628,6 +12859,33 @@ def _return_context_from_values(
     if related_records is None:
         return context
     return _return_context_with_related_defaults(context, related_records)
+
+
+def _return_context_with_projected_identity(
+    context: ReviewerUiContext,
+    return_context: CcldQueueReturnContext,
+) -> CcldQueueReturnContext:
+    if return_context.facility_number is None:
+        return return_context
+    source_context = context.workflow_shell_context.source_derived_api_context
+    projection = load_authorized_facility_identity_projection(
+        source_context.connection,
+        source_context.actor,
+        scope=source_context.scope,
+        public_facility_id=return_context.facility_number,
+        allow_test_candidates=source_context.scope == LOCAL_REVIEWER_UI_SCOPE,
+    )
+    if projection.ineligible_candidate_excluded:
+        return replace(
+            return_context,
+            facility_number=None,
+            lookup_facility_name=None,
+        )
+    name = projected_selected_text(projection, FacilityProjectionField.FACILITY_NAME)
+    return replace(
+        return_context,
+        lookup_facility_name=name or None,
+    )
 
 
 def _return_context_with_related_defaults(
@@ -13019,7 +13277,7 @@ def _render_full_source_fields_details(
           <dd>{_escape(_string(identity, 'entity_type'))}</dd>
           <dt>Stable source ID</dt>
           <dd>{_escape(_string(identity, 'stable_source_id'))}</dd>
-          <dt>Facility ID</dt>
+          <dt>Internal facility record key</dt>
           <dd>{_escape(_optional_string(identity, 'facility_id'))}</dd>
         </dl>
         <table>

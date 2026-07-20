@@ -32,6 +32,7 @@ from ccld_complaints.hosted_app.ccld_facility_lookup import (
     CCLD_FACILITY_REFERENCE_CSV_ENV,
     CCLD_FACILITY_REVIEW_HUB_PATH,
     CCLD_FACILITY_REVIEW_PRIORITY_PATH,
+    CCLD_RECORD_REQUEST_PATH,
 )
 from ccld_complaints.hosted_app.ccld_record_request_ui import (
     ccld_record_request_context_for_reviewer_context,
@@ -45,6 +46,12 @@ from ccld_complaints.hosted_app.facility_case_brief import (
     FacilityCaseBriefRecord,
     render_facility_case_brief,
     select_priority_record,
+)
+from ccld_complaints.hosted_app.facility_reference_preload import (
+    FACILITY_REFERENCE_DATASET_SLUG,
+    FACILITY_REFERENCE_DATASET_URL,
+    hosted_facility_reference_metadata,
+    hosted_facility_reference_records,
 )
 from ccld_complaints.hosted_app.facility_review_signals import (
     FACILITY_REVIEW_SIGNALS_CSVS_ENV,
@@ -86,6 +93,7 @@ FIXTURE = Path("tests/fixtures/hosted_seeded_corpus/validated_seeded_corpus.json
 TEST_SCOPE = LOCAL_REVIEWER_UI_SCOPE
 OTHER_SCOPE = HostedAccessScope("seeded_corpus", "different-seeded-corpus")
 COMPLAINT_KEY = "complaint:ccld:complaint:32-CR-20220407124448"
+APPROVED_PROGRAM_REFERENCE_RESOURCE_ID = "c9df723a-437f-4dcd-be37-ec73ae518bb9"
 
 
 def _assert_aggregate_export_fieldnames(fieldnames: list[str] | None) -> None:
@@ -1759,6 +1767,103 @@ def test_reviewer_packet_preview_renders_context_and_is_non_mutating() -> None:
     assert_no_secret_html(html)
 
 
+def test_core_facility_surfaces_share_projected_identity_without_mutation() -> None:
+    resolved_name = "Resolved Current Facility Name"
+    spoofed_name = "Spoofed Query Name"
+    date_query = "start_date=2022-08-01&end_date=2022-08-31"
+    auth_config = load_hosted_auth_runtime_config(
+        environ={
+            "CCLD_HOSTED_TESTER_AUTH_MODE": "local-dev",
+            "CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH": "enabled",
+        }
+    )
+
+    with _seeded_connection() as connection:
+        _insert_current_facility_reference(connection, facility_name=resolved_name)
+        reviewer_context = reviewer_ui_context_for_connection(
+            connection,
+            actor=_actor(roles=("tester_reviewer",)),
+        )
+        request_context = ccld_record_request_context_for_reviewer_context(
+            reviewer_context
+        )
+        before_source_rows = _source_rows(connection)
+        before_counts = _table_counts(connection)
+
+        responses = {
+            "facility hub": route_response(
+                f"{CCLD_FACILITY_REVIEW_HUB_PATH}?facility_number=157806098",
+                auth_runtime_config=auth_config,
+                page_data_mode="postgres",
+                ccld_record_request_ui_context=request_context,
+            ),
+            "request selector": route_response(
+                f"{CCLD_RECORD_REQUEST_PATH}?facility_number=157806098"
+                f"&lookup_facility_name={quote(spoofed_name)}",
+                auth_runtime_config=auth_config,
+                page_data_mode="postgres",
+                ccld_record_request_ui_context=request_context,
+            ),
+            "request results and feedback context": route_response(
+                CCLD_RECORD_REQUEST_PATH,
+                method="POST",
+                request_body=_form_bytes(
+                    {
+                        "facility_number": "157806098",
+                        "start_date": "2022-08-01",
+                        "end_date": "2022-08-31",
+                        "lookup_facility_name": spoofed_name,
+                    }
+                ),
+                auth_runtime_config=auth_config,
+                page_data_mode="postgres",
+                ccld_record_request_ui_context=request_context,
+            ),
+            "reviewer worklist": route_response(
+                "/reviewer/records",
+                reviewer_ui_context=reviewer_context,
+            ),
+            "reviewer detail": route_response(
+                f"{REVIEWER_UI_DETAIL_PATH}?source_record_key={quote(COMPLAINT_KEY)}"
+                f"&return_facility_number=157806098&{date_query}"
+                f"&return_lookup_facility_name={quote(spoofed_name)}",
+                reviewer_ui_context=reviewer_context,
+            ),
+            "packet preview": route_response(
+                f"{REVIEWER_UI_PACKET_PREVIEW_PATH}?facility_number=157806098"
+                f"&{date_query}&lookup_facility_name={quote(spoofed_name)}",
+                reviewer_ui_context=reviewer_context,
+            ),
+            "packet draft": route_response(
+                f"{REVIEWER_UI_PACKET_DRAFT_PATH}?facility_number=157806098"
+                f"&{date_query}&lookup_facility_name={quote(spoofed_name)}",
+                reviewer_ui_context=reviewer_context,
+            ),
+        }
+
+        after_source_rows = _source_rows(connection)
+        after_counts = _table_counts(connection)
+
+    assert before_source_rows == after_source_rows
+    assert before_counts == after_counts
+    for surface, (status, content_type, body) in responses.items():
+        html = body.decode("utf-8")
+        assert status == 200, surface
+        assert content_type == "text/html; charset=utf-8", surface
+        assert resolved_name in html, surface
+        assert spoofed_name not in html, surface
+        assert "157806098" in html, surface
+        assert_no_secret_html(html)
+
+    request_html = responses["request results and feedback context"][2].decode("utf-8")
+    detail_html = responses["reviewer detail"][2].decode("utf-8")
+    draft_html = responses["packet draft"][2].decode("utf-8")
+    assert f"- Selected lookup facility name: {resolved_name}" in request_html
+    assert "<dt>Facility ID</dt>\n          <dd>ccld-facility-" not in detail_html
+    assert '<main id="main-content"' in draft_html
+    assert "@media print" in draft_html
+
+
 def test_reviewer_packet_preview_renders_status_note_readiness_copy() -> None:
     with _seeded_connection() as connection:
         before_counts = _table_counts(connection)
@@ -3231,7 +3336,7 @@ def test_reviewer_landing_uses_one_bounded_governed_bundle_without_offset_paging
     assert html.count('class="review-worklist-row') == 100
     assert "<dt>Eligible records</dt><dd>126</dd>" in html
     assert '<span class="status-badge">Truncated</span>' in html
-    assert len(statements) == 3
+    assert len(statements) == 5
     assert all("OFFSET 100" not in statement.upper() for statement in statements)
     assert all("OFFSET 200" not in statement.upper() for statement in statements)
     assert any(" LIMIT " in statement.upper() for statement in statements)
@@ -5846,6 +5951,50 @@ def _seeded_connection() -> Connection:
     import_seeded_corpus_artifact(connection, artifact)
     transaction.commit()
     return connection
+
+
+def _insert_current_facility_reference(
+    connection: Connection,
+    *,
+    facility_name: str,
+) -> None:
+    hosted_facility_reference_metadata.create_all(connection)
+    connection.execute(
+        hosted_facility_reference_records.insert().values(
+            source_resource_id=APPROVED_PROGRAM_REFERENCE_RESOURCE_ID,
+            facility_number="157806098",
+            facility_name=facility_name,
+            facility_type="Children's Residential Facility",
+            program_type="Residential",
+            client_served=None,
+            licensee_name="Reference licensee",
+            facility_administrator="Reference administrator",
+            telephone="555-0100",
+            address="100 Current Way",
+            city="Sacramento",
+            state="CA",
+            zip="95814",
+            county="Sacramento",
+            regional_office="Regional Office",
+            capacity=48,
+            status="Licensed",
+            license_first_date=None,
+            closed_date=None,
+            all_visit_dates=None,
+            inspection_visit_dates=None,
+            other_visit_dates=None,
+            snapshot_date="2026-07-18",
+            source_resource_name="24-Hour Residential Care for Children",
+            source_dataset_slug=FACILITY_REFERENCE_DATASET_SLUG,
+            source_dataset_url=FACILITY_REFERENCE_DATASET_URL,
+            source_accessed_at="2026-07-18T00:00:00+00:00",
+            source_file_name="24HourResidentialCareforChildren07182026.csv",
+            original_row_json={
+                "Facility Number": "157806098",
+                "Facility Name": facility_name,
+            },
+        )
+    )
 
 def _actor(
     *,

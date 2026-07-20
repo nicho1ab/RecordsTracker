@@ -7,7 +7,7 @@ import json
 import os
 import re
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date
 from typing import Any
 from urllib.parse import parse_qs, urlencode, urlparse
@@ -30,7 +30,9 @@ from ccld_complaints.hosted_app.ccld_facility_lookup import (
     _limited_reference_note,
     _render_facility_selected_card_html,
     _user_facing_source_label,
+    facility_lookup_display_text,
     load_active_ccld_facility_reference,
+    project_ccld_facility_reference_source,
 )
 from ccld_complaints.hosted_app.ccld_import_reload import (
     CcldImportReloadContext,
@@ -57,11 +59,21 @@ from ccld_complaints.hosted_app.facility_case_brief import (
     priority_reason_labels,
     render_facility_case_brief,
 )
+from ccld_complaints.hosted_app.facility_identity_presenter import (
+    projected_display_text,
+    projected_selected_text,
+)
+from ccld_complaints.hosted_app.facility_identity_projection import (
+    FacilityIdentityProjection,
+    FacilityProjectionField,
+    load_authorized_facility_identity_projection,
+)
 from ccld_complaints.hosted_app.reviewer_created_state_routes import (
     REVIEWER_CREATED_STATE_API_PREFIX,
     route_reviewer_created_state_api_response,
 )
 from ccld_complaints.hosted_app.reviewer_ui import (
+    LOCAL_REVIEWER_UI_SCOPE,
     REVIEWER_UI_DETAIL_PATH,
     REVIEWER_UI_MATRIX_EXPORT_PATH,
     REVIEWER_UI_PACKET_DRAFT_PATH,
@@ -290,6 +302,9 @@ def route_ccld_record_request_ui_response(
             return _html_response(status, markup)
         query_values = parse_qs(parsed_url.query, keep_blank_values=True)
         selected_facility_number = _first_form_value(query_values, "facility_number")
+        active_reference = project_ccld_facility_reference_source(
+            facility_reference or load_active_ccld_facility_reference()
+        )
         return _html_response(
             200,
             _render_request_form(
@@ -302,8 +317,11 @@ def route_ccld_record_request_ui_response(
                     query_values,
                     has_prefilled_facility=bool(selected_facility_number),
                 ),
-                lookup_facility_name=_optional_lookup_facility_name(query_values),
-                reference_source=facility_reference or load_active_ccld_facility_reference(),
+                lookup_facility_name=_resolved_reference_facility_name(
+                    selected_facility_number,
+                    active_reference,
+                ),
+                reference_source=active_reference,
             ),
         )
     if method == "POST":
@@ -440,6 +458,7 @@ def _post_request_response(
     validation = validate_ccld_record_request(form_values)
     if validation.request is None:
         return _html_response(400, _render_invalid_request(validation.errors))
+    resolved_request = _request_with_projected_identity(context, validation.request)
     import_reload_result: CcldImportReloadResult | None = None
     action = _first_form_value(form_values, _IMPORT_RELOAD_ACTION_FIELD)
     if action and action != _IMPORT_RELOAD_ACTION_VALUE:
@@ -463,16 +482,16 @@ def _post_request_response(
             import_reload_result = import_reload_validated_ccld_records(
                 context.import_reload_context,
                 CcldImportReloadRequest(
-                    facility_number=validation.request.facility_number,
-                    start_date=validation.request.start_date,
-                    end_date=validation.request.end_date,
+                    facility_number=resolved_request.facility_number,
+                    start_date=resolved_request.start_date,
+                    end_date=resolved_request.end_date,
                 ),
             )
         except ValueError as error:
             return _html_response(400, _render_invalid_request((str(error),)))
     source_status, source_result = _source_derived_result_for_request(
         context,
-        validation.request,
+        resolved_request,
     )
     if source_status != 200:
         return _html_response(
@@ -489,12 +508,17 @@ def _post_request_response(
         )
     if source_result is None:
         raise ValueError("Expected source-derived result.")
+    source_result = _request_result_with_projected_identity(
+        context,
+        resolved_request,
+        source_result,
+    )
     reviewer_state_records = _reviewer_created_state_records(context)
     state_summaries = _state_summaries_by_source_record(reviewer_state_records)
     return _html_response(
         200,
         _render_request_result(
-            validation.request,
+            resolved_request,
             source_result,
             state_summaries=state_summaries,
             import_reload_result=import_reload_result,
@@ -534,6 +558,110 @@ def _source_derived_result_for_request(
             _source_derived_read_payload(record) for record in lookup.all_facility_records
         ),
     )
+
+
+def _request_with_projected_identity(
+    context: CcldRecordRequestUiContext,
+    request: CcldRecordRequest,
+) -> CcldRecordRequest:
+    projection = _request_facility_projection(context, request.facility_number)
+    resolved_name = projected_selected_text(
+        projection,
+        FacilityProjectionField.FACILITY_NAME,
+    )
+    return replace(
+        request,
+        lookup_facility_name=resolved_name or None,
+    )
+
+
+def _request_result_with_projected_identity(
+    context: CcldRecordRequestUiContext,
+    request: CcldRecordRequest,
+    result: CcldRequestSearchResult,
+) -> CcldRequestSearchResult:
+    projection = _request_facility_projection(context, request.facility_number)
+    projected_values = {
+        "external_facility_number": projection.public_facility_id,
+        "facility_name": projected_display_text(
+            projection, FacilityProjectionField.FACILITY_NAME
+        ),
+        "facility_type": projected_display_text(
+            projection, FacilityProjectionField.FACILITY_TYPE
+        ),
+        "status": projected_display_text(projection, FacilityProjectionField.STATUS),
+        "address": projected_display_text(
+            projection, FacilityProjectionField.FULL_ADDRESS
+        ),
+        "city": projected_display_text(projection, FacilityProjectionField.CITY),
+        "state": projected_display_text(projection, FacilityProjectionField.STATE),
+        "zip_code": projected_display_text(projection, FacilityProjectionField.ZIP),
+        "county": projected_display_text(projection, FacilityProjectionField.COUNTY),
+        "capacity": projected_display_text(
+            projection, FacilityProjectionField.CAPACITY
+        ),
+        "facility_administrator": projected_display_text(
+            projection, FacilityProjectionField.ADMINISTRATOR
+        ),
+        "licensee": projected_display_text(
+            projection, FacilityProjectionField.LICENSEE
+        ),
+        "telephone": projected_display_text(
+            projection, FacilityProjectionField.TELEPHONE
+        ),
+        "regional_office": projected_display_text(
+            projection, FacilityProjectionField.REGIONAL_OFFICE
+        ),
+    }
+
+    def projected_record(record: Mapping[str, Any]) -> Mapping[str, Any]:
+        if _string(record, "entity_type") != "facility":
+            return record
+        original = dict(_mapping(record, "original_values"))
+        original.update(projected_values)
+        return {**record, "original_values": original}
+
+    return CcldRequestSearchResult(
+        matched_records=tuple(projected_record(record) for record in result.matched_records),
+        matched_complaint_keys=result.matched_complaint_keys,
+        all_facility_records=tuple(
+            projected_record(record) for record in result.all_facility_records
+        ),
+    )
+
+
+def _request_facility_projection(
+    context: CcldRecordRequestUiContext,
+    facility_number: str,
+) -> FacilityIdentityProjection:
+    source_context = (
+        context.reviewer_ui_context.workflow_shell_context.source_derived_api_context
+    )
+    return load_authorized_facility_identity_projection(
+        source_context.connection,
+        source_context.actor,
+        scope=source_context.scope,
+        public_facility_id=facility_number,
+        allow_test_candidates=source_context.scope == LOCAL_REVIEWER_UI_SCOPE,
+    )
+
+
+def _resolved_reference_facility_name(
+    facility_number: str,
+    reference_source: CcldFacilityReferenceSource,
+) -> str | None:
+    if not facility_number:
+        return None
+    for record in reference_source.records:
+        if record.facility_number == facility_number:
+            if record.identity_projection is not None:
+                value = projected_selected_text(
+                    record.identity_projection,
+                    FacilityProjectionField.FACILITY_NAME,
+                )
+                return value or None
+            return record.facility_name or None
+    return None
 
 
 def _source_derived_read_payload(record: SourceDerivedRecordRead) -> dict[str, Any]:
@@ -837,12 +965,27 @@ def _render_facility_datalist_options(source: CcldFacilityReferenceSource) -> st
 
 def _facility_suggestion_label(record: Any) -> str:
         geography = ", ".join(
-                part for part in (record.city, record.county) if part
+                part
+                for part in (
+                    facility_lookup_display_text(record, FacilityProjectionField.CITY),
+                    facility_lookup_display_text(record, FacilityProjectionField.COUNTY),
+                )
+                if part
         )
         type_status = " / ".join(
-                part for part in (record.facility_type, record.status) if part
+                part
+                for part in (
+                    facility_lookup_display_text(
+                        record, FacilityProjectionField.FACILITY_TYPE
+                    ),
+                    facility_lookup_display_text(record, FacilityProjectionField.STATUS),
+                )
+                if part
         )
-        pieces = [record.facility_name, record.facility_number]
+        pieces = [
+            facility_lookup_display_text(record, FacilityProjectionField.FACILITY_NAME),
+            record.facility_number,
+        ]
         if geography:
                 pieces.append(geography)
         if type_status:

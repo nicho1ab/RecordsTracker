@@ -8,11 +8,25 @@ import json
 import os
 import re
 from collections.abc import Iterable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlencode, urlparse
 
+from ccld_complaints.hosted_app.facility_identity_presenter import (
+    present_facility_field,
+    projected_display_text,
+    projected_selected_text,
+)
+from ccld_complaints.hosted_app.facility_identity_projection import (
+    FacilityIdentityProjection,
+    FacilityProjectionCandidate,
+    FacilityProjectionField,
+    FacilitySourceKind,
+    FacilityValueContext,
+    FacilityValueState,
+    project_facility_identity,
+)
 from ccld_complaints.hosted_app.facility_review_signals import (
     FacilityReviewSignalsSummary,
     load_active_facility_review_signals,
@@ -86,10 +100,15 @@ _SECRET_HTML_MARKERS = (
     "secret",
     "token",
 )
-_FACILITY_STATUS_CODE_LABELS = {
-    "3": "Licensed",
-}
-
+_STATE_TEXT_VALUES = frozenset(
+    {
+        "Blank in source",
+        "Conflicting source values",
+        "Invalid source value",
+        "Not found in source",
+        "Source unavailable",
+    }
+)
 _FACILITY_COMBOBOX_JS = r"""(function(){
   'use strict';
   var wrap=document.getElementById('facility-selector-wrap');
@@ -131,20 +150,21 @@ _FACILITY_COMBOBOX_JS = r"""(function(){
   function esc(s){
     return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
-  function statusInfo(s){
+  function statusInfo(s,state,conflict){
     var raw=String(s==null?'':s).trim();
     var v=norm(raw);
-    if(v==='3'||v.indexOf('licensed')!==-1)return{label:'Licensed',cls:'licensed'};
-    if(v.indexOf('closed')!==-1)return{label:'Closed',cls:'closed'};
-    if(v.indexOf('pending')!==-1)return{label:'Pending',cls:'pending'};
-    if(raw)return{label:'Other',cls:'other',title:'Other status: '+raw};
-    return{label:'Unknown',cls:'other',title:'Status unknown'};
+    var cls='other';
+    if(v.indexOf('licensed')!==-1)cls='licensed';
+    else if(v.indexOf('closed')!==-1)cls='closed';
+    else if(v.indexOf('pending')!==-1)cls='pending';
+    var title=conflict?'Conflicting source observations':raw;
+    return{label:raw,cls:cls,title:title,state:state};
   }
   function buildHtml(matches){
     var h='';
     for(var i=0;i<matches.length;i++){
       var f=matches[i];
-    var info=statusInfo(f.s);
+    var info=statusInfo(f.s,f.ss,f.sc);
     var geo=[f.city,f.state,f.zip].filter(Boolean).join(' \u00b7 ');
     var meta=[f.num,f.co,f.t,f.p].filter(Boolean).join(' \u2022 ');
       var det=[geo,meta].filter(Boolean).join(' | ');
@@ -306,6 +326,15 @@ class CcldFacilityLookupRecord:
     res_street_addr: str | None = None
     capacity_source_present: bool | None = None
     closed_date_source_present: bool | None = None
+    administrator: str = ""
+    licensee: str = ""
+    telephone: str = ""
+    identity_projection: FacilityIdentityProjection | None = field(
+        default=None,
+        compare=False,
+        hash=False,
+        repr=False,
+    )
 
 
 @dataclass(frozen=True)
@@ -406,6 +435,223 @@ def load_ccld_facility_reference(
         row_mapper = _facility_row_mapper(fieldnames)
         records = tuple(row_mapper(row) for row in reader)
     return _deduplicate_facility_records(records)
+
+
+def project_ccld_facility_reference_source(
+    source: CcldFacilityReferenceSource,
+) -> CcldFacilityReferenceSource:
+    if source.records and all(
+        record.identity_projection is not None for record in source.records
+    ):
+        return source
+    records_by_id: dict[str, list[CcldFacilityLookupRecord]] = {}
+    for record in source.records:
+        if record.facility_number.isdigit():
+            records_by_id.setdefault(record.facility_number, []).append(record)
+    projected_records = tuple(
+        facility_lookup_record_from_projection(
+            _project_lookup_records(
+                facility_id,
+                records,
+                source=source,
+            ),
+            supplemental_records=records,
+        )
+        for facility_id, records in sorted(records_by_id.items())
+    )
+    return CcldFacilityReferenceSource(
+        source_kind=source.source_kind,
+        label=source.label,
+        path_label=source.path_label,
+        records=projected_records,
+        notices=source.notices,
+        record_count=(
+            len(projected_records)
+            if source.records
+            else source.record_count
+        ),
+    )
+
+
+def facility_lookup_record_from_projection(
+    projection: FacilityIdentityProjection,
+    *,
+    supplemental_records: Iterable[CcldFacilityLookupRecord] = (),
+) -> CcldFacilityLookupRecord:
+    records = tuple(supplemental_records)
+    return CcldFacilityLookupRecord(
+        facility_number=projection.public_facility_id,
+        facility_name=projected_selected_text(
+            projection, FacilityProjectionField.FACILITY_NAME
+        ),
+        city=projected_selected_text(projection, FacilityProjectionField.CITY),
+        state=projected_selected_text(projection, FacilityProjectionField.STATE),
+        county=projected_selected_text(projection, FacilityProjectionField.COUNTY),
+        zip_code=projected_selected_text(projection, FacilityProjectionField.ZIP),
+        facility_type=projected_selected_text(
+            projection, FacilityProjectionField.FACILITY_TYPE
+        ),
+        program_type=_consistent_record_value(records, "program_type"),
+        capacity=projected_selected_text(projection, FacilityProjectionField.CAPACITY),
+        status=projected_selected_text(projection, FacilityProjectionField.STATUS),
+        closed_date=_consistent_record_value(records, "closed_date"),
+        address=projected_selected_text(
+            projection, FacilityProjectionField.FULL_ADDRESS
+        ),
+        regional_office=projected_selected_text(
+            projection, FacilityProjectionField.REGIONAL_OFFICE
+        ),
+        administrator=projected_selected_text(
+            projection, FacilityProjectionField.ADMINISTRATOR
+        ),
+        licensee=projected_selected_text(
+            projection, FacilityProjectionField.LICENSEE
+        ),
+        telephone=projected_selected_text(
+            projection, FacilityProjectionField.TELEPHONE
+        ),
+        identity_projection=projection,
+    )
+
+
+def facility_lookup_result_from_projections(
+    result: CcldFacilityLookupResult,
+    projections: Mapping[str, FacilityIdentityProjection],
+) -> CcldFacilityLookupResult:
+    records_by_id: dict[str, list[CcldFacilityLookupRecord]] = {}
+    for record in result.returned_records:
+        records_by_id.setdefault(record.facility_number, []).append(record)
+    projected_records = tuple(
+        facility_lookup_record_from_projection(
+            projections[facility_id],
+            supplemental_records=records_by_id.get(facility_id, ()),
+        )
+        for facility_id in dict.fromkeys(
+            record.facility_number for record in result.returned_records
+        )
+        if facility_id in projections
+        and not projections[facility_id].ineligible_candidate_excluded
+    )
+    hidden_count = len(
+        {
+            record.facility_number
+            for record in result.returned_records
+            if record.facility_number in projections
+            and projections[record.facility_number].ineligible_candidate_excluded
+        }
+    )
+    return CcldFacilityLookupResult(
+        query=result.query,
+        total_match_count=max(0, result.total_match_count - hidden_count),
+        returned_records=projected_records,
+        result_limit=result.result_limit,
+        reference_source=result.reference_source,
+    )
+
+
+def project_ccld_facility_lookup_result(
+    result: CcldFacilityLookupResult,
+    source: CcldFacilityReferenceSource,
+) -> CcldFacilityLookupResult:
+    if result.returned_records and all(
+        record.identity_projection is not None for record in result.returned_records
+    ):
+        return result
+    records_by_id: dict[str, list[CcldFacilityLookupRecord]] = {}
+    for record in result.returned_records:
+        records_by_id.setdefault(record.facility_number, []).append(record)
+    projections = {
+        facility_id: _project_lookup_records(facility_id, records, source=source)
+        for facility_id, records in records_by_id.items()
+    }
+    return facility_lookup_result_from_projections(result, projections)
+
+
+def _project_lookup_records(
+    facility_id: str,
+    records: Iterable[CcldFacilityLookupRecord],
+    *,
+    source: CcldFacilityReferenceSource,
+) -> FacilityIdentityProjection:
+    source_kind = (
+        FacilitySourceKind.COMPLAINT_LINKED_FACILITY
+        if source.source_kind == "postgres_source_derived"
+        else FacilitySourceKind.PROGRAM_REFERENCE
+    )
+    context = (
+        FacilityValueContext.HISTORICAL_COMPLAINT
+        if source_kind is FacilitySourceKind.COMPLAINT_LINKED_FACILITY
+        else FacilityValueContext.CURRENT_REFERENCE
+    )
+    candidates = tuple(
+        _projection_candidate_from_lookup_record(
+            record,
+            source=source,
+            source_kind=source_kind,
+            context=context,
+        )
+        for record in records
+    )
+    return project_facility_identity(facility_id, candidates)
+
+
+def _projection_candidate_from_lookup_record(
+    record: CcldFacilityLookupRecord,
+    *,
+    source: CcldFacilityReferenceSource,
+    source_kind: FacilitySourceKind,
+    context: FacilityValueContext,
+) -> FacilityProjectionCandidate:
+    values: dict[FacilityProjectionField, Any] = {
+        FacilityProjectionField.PUBLIC_FACILITY_ID: record.facility_number,
+        FacilityProjectionField.FACILITY_NAME: record.facility_name,
+        FacilityProjectionField.FACILITY_TYPE: record.facility_type,
+        FacilityProjectionField.STATUS: record.status,
+        FacilityProjectionField.CITY: record.city,
+        FacilityProjectionField.STATE: record.state,
+        FacilityProjectionField.ZIP: record.zip_code,
+        FacilityProjectionField.COUNTY: record.county,
+        FacilityProjectionField.CAPACITY: record.capacity,
+        FacilityProjectionField.REGIONAL_OFFICE: record.regional_office,
+        FacilityProjectionField.ADMINISTRATOR: record.administrator,
+        FacilityProjectionField.LICENSEE: record.licensee,
+        FacilityProjectionField.TELEPHONE: record.telephone,
+    }
+    present_fields = set(values)
+    if record.facility_address is not None:
+        values[FacilityProjectionField.FULL_ADDRESS] = record.facility_address
+        present_fields.add(FacilityProjectionField.FULL_ADDRESS)
+    elif record.res_street_addr is not None:
+        values[FacilityProjectionField.FULL_ADDRESS] = record.res_street_addr
+        present_fields.add(FacilityProjectionField.FULL_ADDRESS)
+    elif record.address:
+        values[FacilityProjectionField.FULL_ADDRESS] = record.address
+        present_fields.add(FacilityProjectionField.FULL_ADDRESS)
+    record_identity = "|".join(
+        str(values[field]) for field in sorted(values, key=lambda item: item.value)
+    )
+    return FacilityProjectionCandidate(
+        source_kind=source_kind,
+        source_row_identity=f"{source.path_label}:{record_identity}",
+        snapshot_identity=source.path_label,
+        observed_at=None,
+        context=context,
+        values=values,
+        present_fields=frozenset(present_fields),
+        source_fields={field: field.value for field in present_fields},
+    )
+
+
+def _consistent_record_value(
+    records: Iterable[CcldFacilityLookupRecord],
+    attribute: str,
+) -> str:
+    values = {
+        value
+        for record in records
+        if (value := str(getattr(record, attribute, "")).strip())
+    }
+    return next(iter(values)) if len(values) == 1 else ""
 
 
 def load_active_ccld_facility_reference(
@@ -578,11 +824,17 @@ def render_ccld_facility_lookup_page(
     lookup_result: CcldFacilityLookupResult | None = None,
     active_path: str = CCLD_FACILITY_LOOKUP_PATH,
 ) -> str:
-    reference_source = reference_source or load_active_ccld_facility_reference()
-    result = lookup_result or search_ccld_facilities(
-        query,
-        reference_source.records,
-        reference_source=reference_source,
+    reference_source = project_ccld_facility_reference_source(
+        reference_source or load_active_ccld_facility_reference()
+    )
+    result = (
+        project_ccld_facility_lookup_result(lookup_result, reference_source)
+        if lookup_result is not None
+        else search_ccld_facilities(
+            query,
+            reference_source.records,
+            reference_source=reference_source,
+        )
     )
     limited_note = _limited_reference_note(reference_source)
     lookup_unavailable = _is_lookup_unavailable(reference_source)
@@ -660,7 +912,9 @@ def render_ccld_facility_review_hub_page(
     *,
     review_context: CcldFacilityReviewContext | None = None,
 ) -> str:
-    reference_source = reference_source or load_active_ccld_facility_reference()
+    reference_source = project_ccld_facility_reference_source(
+        reference_source or load_active_ccld_facility_reference()
+    )
     facility_number = facility_number.strip()
     review_context = review_context or CcldFacilityReviewContext()
     matching_records = tuple(
@@ -1382,29 +1636,33 @@ def _render_result_card(record: CcldFacilityLookupRecord, *, index: int) -> str:
         request_href = _facility_request_href(record)
         hub_href = _facility_hub_href(record.facility_number)
         heading_id = f"facility-{_escape(record.facility_number)}-{index}-heading"
+        facility_name = _facility_record_field(
+            record,
+            FacilityProjectionField.FACILITY_NAME,
+        )
         return f"""        <article class="result-card" aria-labelledby="{heading_id}">
                     <div>
-                        <h3 id="{heading_id}">{_escape(record.facility_name)}</h3>
+                        <h3 id="{heading_id}">{_escape(facility_name)}</h3>
                         <dl class="summary-list">
                             <dt>Facility ID</dt>
                             <dd>{_escape(record.facility_number)}</dd>
                             <dt>Facility type</dt>
-                            <dd>{_escape(_display_value(record.facility_type))}</dd>
+                            <dd>{_escape(_facility_record_field(record, FacilityProjectionField.FACILITY_TYPE))}</dd>
                             <dt>Location</dt>
                             <dd>{_escape(_display_value(_display_location(record)))}</dd>
                             <dt>Status</dt>
-                            <dd>{_escape(_display_value(_display_facility_status_code(record.status)))}</dd>
-                        </dl>
+                            <dd>{_escape(_facility_record_field(record, FacilityProjectionField.STATUS))}</dd>
+                        </dl>{_render_facility_conflict_note(record, (FacilityProjectionField.FACILITY_NAME, FacilityProjectionField.FACILITY_TYPE, FacilityProjectionField.STATUS))}
                         <details class="secondary-actions reference-details-section">
                             <summary>Directory details</summary>
                             {_render_facility_directory_details(record)}
                         </details>
                     </div>
                     <div class="form-actions action-group" aria-label="Actions for facility {_escape(record.facility_number)}">
-                        <a class="button" href="{_escape(request_href)}" aria-label="Use facility {_escape(record.facility_number)} ({_escape(record.facility_name)}) in Request Records">Continue to Request Records</a>
+                        <a class="button" href="{_escape(request_href)}" aria-label="Use facility {_escape(record.facility_number)} ({_escape(facility_name)}) in Request Records">Continue to Request Records</a>
                         <details class="secondary-actions">
                             <summary>More actions</summary>
-                            <p><a href="{_escape(hub_href)}" aria-label="Open facility review hub for {_escape(record.facility_number)} ({_escape(record.facility_name)})">Open facility hub when loaded context is available</a></p>
+                            <p><a href="{_escape(hub_href)}" aria-label="Open facility review hub for {_escape(record.facility_number)} ({_escape(facility_name)})">Open facility hub when loaded context is available</a></p>
                         </details>
                     </div>
                 </article>"""
@@ -1430,19 +1688,19 @@ def _render_facility_directory_details(
                 <dt>{labels[0]}</dt>
                 <dd>{_escape(record.facility_number)}</dd>
                 <dt>{labels[1]}</dt>
-                <dd>{_escape(_display_value(record.facility_name))}</dd>
+                <dd>{_escape(_facility_record_field(record, FacilityProjectionField.FACILITY_NAME))}</dd>
                 <dt>{labels[2]}</dt>
                 <dd>{_escape(_display_value(record.program_type))}</dd>
                 <dt>{labels[3]}</dt>
-                <dd>{_escape(_display_value(record.facility_type))}</dd>
+                <dd>{_escape(_facility_record_field(record, FacilityProjectionField.FACILITY_TYPE))}</dd>
                 <dt>{labels[4]}</dt>
                 <dd>{_escape(_display_value(_display_location(record)))}</dd>
                 <dt>{labels[5]}</dt>
-                <dd>{_escape(_display_value(record.county))}</dd>
+                <dd>{_escape(_facility_record_field(record, FacilityProjectionField.COUNTY))}</dd>
                 <dt>{labels[6]}</dt>
-                <dd>{_escape(_record_display_value(record, "capacity", kind="number"))}</dd>
+                <dd>{_escape(_facility_record_field(record, FacilityProjectionField.CAPACITY))}</dd>
                 <dt>{labels[7]}</dt>
-                <dd>{_escape(_display_value(_display_facility_status_code(record.status)))}</dd>
+                <dd>{_escape(_facility_record_field(record, FacilityProjectionField.STATUS))}</dd>
                 <dt>{labels[8]}</dt>
                 <dd>{_escape(_record_display_value(record, "closed_date", kind="date"))}</dd>
             </dl>"""
@@ -1460,22 +1718,23 @@ def _render_facility_identity_and_core_facts(
     return f"""<section class="hero-card attorney-hero" aria-labelledby="facility-hub-heading">
       <div>
         <p class="launch-kicker">Facility</p>
-        <h2 id="facility-hub-heading">{_render_copyable_value("Copy facility name", record.facility_name)}</h2>
+        <h2 id="facility-hub-heading">{_render_copyable_value("Copy facility name", _facility_record_field(record, FacilityProjectionField.FACILITY_NAME))}</h2>
         <p class="launch-value">{_escape(launch_value)}</p>
         <dl class="summary-list" aria-label="Primary facility facts">
           <dt>Facility ID</dt>
           <dd>{_render_copyable_value("Copy Facility ID", record.facility_number)}</dd>
           <dt>Facility type</dt>
-          <dd>{_escape(_display_value(record.facility_type))}</dd>
+          <dd>{_escape(_facility_record_field(record, FacilityProjectionField.FACILITY_TYPE))}</dd>
           <dt>Status</dt>
-          <dd>{_escape(_display_value(_display_facility_status_code(record.status)))}</dd>
+          <dd>{_escape(_facility_record_field(record, FacilityProjectionField.STATUS))}</dd>
           <dt>Address</dt>
           <dd>{_escape(_display_facility_address(record))}</dd>
           <dt>County</dt>
-          <dd>{_escape(_display_value(record.county))}</dd>
+          <dd>{_escape(_facility_record_field(record, FacilityProjectionField.COUNTY))}</dd>
           <dt>Capacity</dt>
-          <dd>{_escape(_record_display_value(record, "capacity", kind="number"))}</dd>
+          <dd>{_escape(_facility_record_field(record, FacilityProjectionField.CAPACITY))}</dd>
         </dl>
+        {_render_facility_conflict_note(record, (FacilityProjectionField.FACILITY_NAME, FacilityProjectionField.FACILITY_TYPE, FacilityProjectionField.STATUS, FacilityProjectionField.FULL_ADDRESS, FacilityProjectionField.COUNTY, FacilityProjectionField.CAPACITY))}
       </div>
     </section>
     {_render_copy_control_script()}"""
@@ -1488,7 +1747,7 @@ def _render_secondary_facility_facts(record: CcldFacilityLookupRecord) -> str:
         <dt>Program type</dt>
         <dd>{_escape(_display_value(record.program_type))}</dd>
         <dt>Regional office</dt>
-        <dd>{_escape(_display_value(record.regional_office))}</dd>
+        <dd>{_escape(_facility_record_field(record, FacilityProjectionField.REGIONAL_OFFICE))}</dd>
         <dt>Closed date</dt>
         <dd>{_escape(_record_display_value(record, "closed_date", kind="date"))}</dd>
       </dl>
@@ -1496,6 +1755,25 @@ def _render_secondary_facility_facts(record: CcldFacilityLookupRecord) -> str:
 
 
 def _display_facility_address(record: CcldFacilityLookupRecord) -> str:
+    if record.identity_projection is not None:
+        result = record.identity_projection.field(FacilityProjectionField.FULL_ADDRESS)
+        street = projected_selected_text(
+            record.identity_projection,
+            FacilityProjectionField.FULL_ADDRESS,
+        )
+        location = _display_location(record)
+        if street:
+            return ", ".join(
+                part
+                for part in (
+                    street,
+                    location if location not in _STATE_TEXT_VALUES else "",
+                )
+                if part
+            )
+        if location not in _STATE_TEXT_VALUES:
+            return location
+        return present_facility_field(result).text
     street_value = record.address
     street_source_present = bool(street_value)
     if not street_value and record.facility_address is not None:
@@ -1598,14 +1876,7 @@ def _render_copy_control_script() -> str:
 
 
 def _display_facility_status_code(status: str) -> str:
-        if not status:
-                return ""
-        if not status.isdigit():
-                return status
-        label = _FACILITY_STATUS_CODE_LABELS.get(status)
-        if not label:
-                return "Status label not available"
-        return label
+        return status
 
 
 def _render_facility_hub_not_found(facility_number: str) -> str:
@@ -2551,8 +2822,97 @@ def _facility_hub_href(facility_number: str) -> str:
 
 
 def _display_location(record: CcldFacilityLookupRecord) -> str:
+    if record.identity_projection is not None:
+        city = projected_selected_text(
+            record.identity_projection, FacilityProjectionField.CITY
+        )
+        state = projected_selected_text(
+            record.identity_projection, FacilityProjectionField.STATE
+        )
+        zip_code = projected_selected_text(
+            record.identity_projection, FacilityProjectionField.ZIP
+        )
+        city_state = ", ".join(part for part in (city, state) if part)
+        location = " ".join(part for part in (city_state, zip_code) if part)
+        if location:
+            return location
+        states = tuple(
+            record.identity_projection.field(field).state
+            for field in (
+                FacilityProjectionField.CITY,
+                FacilityProjectionField.STATE,
+                FacilityProjectionField.ZIP,
+            )
+        )
+        if FacilityValueState.UNAVAILABLE in states:
+            return "Source unavailable"
+        if FacilityValueState.BLANK in states:
+            return "Blank in source"
+        return "Not found in source"
     city_state = ", ".join(part for part in (record.city, record.state) if part)
     return " ".join(part for part in (city_state, record.zip_code) if part)
+
+
+def _facility_record_field(
+    record: CcldFacilityLookupRecord,
+    field: FacilityProjectionField,
+) -> str:
+    if record.identity_projection is not None:
+        return projected_display_text(record.identity_projection, field)
+    if field is FacilityProjectionField.CAPACITY:
+        return _record_display_value(record, "capacity", kind="number")
+    fallback_by_field = {
+        FacilityProjectionField.FACILITY_NAME: record.facility_name,
+        FacilityProjectionField.PUBLIC_FACILITY_ID: record.facility_number,
+        FacilityProjectionField.FACILITY_TYPE: record.facility_type,
+        FacilityProjectionField.STATUS: record.status,
+        FacilityProjectionField.FULL_ADDRESS: record.address,
+        FacilityProjectionField.CITY: record.city,
+        FacilityProjectionField.STATE: record.state,
+        FacilityProjectionField.ZIP: record.zip_code,
+        FacilityProjectionField.COUNTY: record.county,
+        FacilityProjectionField.CAPACITY: record.capacity,
+        FacilityProjectionField.ADMINISTRATOR: record.administrator,
+        FacilityProjectionField.LICENSEE: record.licensee,
+        FacilityProjectionField.TELEPHONE: record.telephone,
+        FacilityProjectionField.REGIONAL_OFFICE: record.regional_office,
+    }
+    return _display_value(fallback_by_field[field])
+
+
+def facility_lookup_display_text(
+    record: CcldFacilityLookupRecord,
+    field: FacilityProjectionField,
+) -> str:
+    return _facility_record_field(record, field)
+
+
+def _render_facility_conflict_note(
+    record: CcldFacilityLookupRecord,
+    fields: Iterable[FacilityProjectionField],
+) -> str:
+    if record.identity_projection is None:
+        return ""
+    labels = {
+        FacilityProjectionField.FACILITY_NAME: "name",
+        FacilityProjectionField.FACILITY_TYPE: "type",
+        FacilityProjectionField.STATUS: "status",
+        FacilityProjectionField.FULL_ADDRESS: "address",
+        FacilityProjectionField.COUNTY: "county",
+        FacilityProjectionField.CAPACITY: "capacity",
+    }
+    conflicts = tuple(
+        labels.get(field, field.value.replace("_", " "))
+        for field in fields
+        if record.identity_projection.field(field).conflict
+    )
+    if not conflicts:
+        return ""
+    return (
+        '<p class="helper-text facility-identity-conflict">Source records differ for '
+        f"{_escape(', '.join(conflicts))}. Current reference values are shown when "
+        "the projection can select one safely; complaint-time values remain preserved.</p>"
+    )
 
 
 def _render_message_page(*, title: str, heading: str, message: str) -> str:
@@ -2686,15 +3046,17 @@ def _build_facility_json_data(
     records = [
         {
             "num": record.facility_number,
-            "n": record.facility_name,
-            "city": record.city,
-            "state": record.state,
-            "co": record.county,
-            "zip": record.zip_code,
-            "t": record.facility_type,
+            "n": _facility_record_field(record, FacilityProjectionField.FACILITY_NAME),
+            "city": _facility_record_field(record, FacilityProjectionField.CITY),
+            "state": _facility_record_field(record, FacilityProjectionField.STATE),
+            "co": _facility_record_field(record, FacilityProjectionField.COUNTY),
+            "zip": _facility_record_field(record, FacilityProjectionField.ZIP),
+            "t": _facility_record_field(record, FacilityProjectionField.FACILITY_TYPE),
             "p": record.program_type,
-            "cap": record.capacity,
-            "s": record.status,
+            "cap": _facility_record_field(record, FacilityProjectionField.CAPACITY),
+            "s": _facility_record_field(record, FacilityProjectionField.STATUS),
+            "ss": _facility_field_state(record, FacilityProjectionField.STATUS),
+            "sc": _facility_field_conflict(record, FacilityProjectionField.STATUS),
         }
         for record in source.records[:limit]
     ]
@@ -2721,11 +3083,17 @@ def _facility_suggestions_payload(
     *,
     lookup_result: CcldFacilityLookupResult | None = None,
 ) -> dict[str, Any]:
-    reference_source = reference_source or load_active_ccld_facility_reference()
-    result = lookup_result or search_ccld_facilities(
-        query,
-        reference_source.records,
-        reference_source=reference_source,
+    reference_source = project_ccld_facility_reference_source(
+        reference_source or load_active_ccld_facility_reference()
+    )
+    result = (
+        project_ccld_facility_lookup_result(lookup_result, reference_source)
+        if lookup_result is not None
+        else search_ccld_facilities(
+            query,
+            reference_source.records,
+            reference_source=reference_source,
+        )
     )
     return {
         "query": result.query,
@@ -2737,24 +3105,47 @@ def _facility_suggestions_payload(
 
 def _facility_json_records(
     records: Iterable[CcldFacilityLookupRecord],
-) -> list[dict[str, str | None]]:
+) -> list[dict[str, str | bool | None]]:
     return [
         {
             "num": record.facility_number,
-            "n": record.facility_name,
-            "city": record.city,
-            "state": record.state,
-            "co": record.county,
-            "zip": record.zip_code,
-            "t": record.facility_type,
+            "n": _facility_record_field(record, FacilityProjectionField.FACILITY_NAME),
+            "city": _facility_record_field(record, FacilityProjectionField.CITY),
+            "state": _facility_record_field(record, FacilityProjectionField.STATE),
+            "co": _facility_record_field(record, FacilityProjectionField.COUNTY),
+            "zip": _facility_record_field(record, FacilityProjectionField.ZIP),
+            "t": _facility_record_field(record, FacilityProjectionField.FACILITY_TYPE),
             "p": record.program_type,
-            "cap": record.capacity,
-            "s": record.status,
-            "address": record.address,
-            "regional_office": record.regional_office,
+            "cap": _facility_record_field(record, FacilityProjectionField.CAPACITY),
+            "s": _facility_record_field(record, FacilityProjectionField.STATUS),
+            "ss": _facility_field_state(record, FacilityProjectionField.STATUS),
+            "sc": _facility_field_conflict(record, FacilityProjectionField.STATUS),
+            "ts": _facility_field_state(record, FacilityProjectionField.FACILITY_TYPE),
+            "tc": _facility_field_conflict(record, FacilityProjectionField.FACILITY_TYPE),
+            "address": _facility_record_field(record, FacilityProjectionField.FULL_ADDRESS),
+            "regional_office": _facility_record_field(record, FacilityProjectionField.REGIONAL_OFFICE),
         }
         for record in records
     ]
+
+
+def _facility_field_state(
+    record: CcldFacilityLookupRecord,
+    field: FacilityProjectionField,
+) -> str:
+    if record.identity_projection is None:
+        return FacilityValueState.POPULATED.value if _facility_record_field(record, field) else FacilityValueState.ABSENT.value
+    return record.identity_projection.field(field).state.value
+
+
+def _facility_field_conflict(
+    record: CcldFacilityLookupRecord,
+    field: FacilityProjectionField,
+) -> bool:
+    return bool(
+        record.identity_projection is not None
+        and record.identity_projection.field(field).conflict
+    )
 
 
 def _json_response(status: int, payload: Mapping[str, Any]) -> tuple[int, str, bytes]:

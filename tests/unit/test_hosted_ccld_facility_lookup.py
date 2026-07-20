@@ -70,6 +70,7 @@ from ccld_complaints.hosted_app.seeded_import import (
 
 FIXTURE = Path("tests/fixtures/hosted_seeded_corpus/validated_seeded_corpus.json")
 TEST_SCOPE = LOCAL_REVIEWER_UI_SCOPE
+APPROVED_PROGRAM_REFERENCE_RESOURCE_ID = "c9df723a-437f-4dcd-be37-ec73ae518bb9"
 
 
 class _ButtonClassParser(HTMLParser):
@@ -380,6 +381,80 @@ def test_ccld_facility_reference_loads_safe_lookup_columns() -> None:
         closed_date_source_present=True,
     )
     assert {record.facility_number for record in records} == {"900000001", "900000002"}
+
+
+def test_same_id_reference_conflict_is_insertion_order_independent_in_lookup_ui() -> None:
+    shared = {
+        "facility_number": "425802141",
+        "facility_name": "Representative Facility",
+        "city": "Santa Barbara",
+        "state": "CA",
+        "zip_code": "93101",
+        "facility_type": "733",
+        "program_type": "Residential",
+        "capacity": "24",
+        "status": "Licensed",
+        "closed_date": "",
+    }
+    records = (
+        CcldFacilityLookupRecord(county="Santa Barbara", **shared),
+        CcldFacilityLookupRecord(county="Ventura", **shared),
+    )
+
+    def render(rows: tuple[CcldFacilityLookupRecord, ...]) -> str:
+        return render_ccld_facility_lookup_page(
+            query="425802141",
+            reference_source=CcldFacilityReferenceSource(
+                source_kind="full_local_test_csv",
+                label="Governed program reference fixture",
+                path_label="governed-program-reference.csv",
+                records=rows,
+            ),
+        )
+
+    forward = render(records)
+    reverse = render(tuple(reversed(records)))
+
+    assert forward == reverse
+    assert forward.count('class="result-card"') == 1
+    assert "Source code 733 — label not verified" in forward
+    assert "Conflicting source values" in forward
+    assert "Unknown" not in forward
+    assert "Other" not in forward
+    assert_no_secret_html(forward)
+
+
+def test_server_and_javascript_use_the_same_projected_status_text() -> None:
+    record = CcldFacilityLookupRecord(
+        facility_number="425802141",
+        facility_name="Representative Facility",
+        city="Santa Barbara",
+        state="CA",
+        county="Santa Barbara",
+        zip_code="93101",
+        facility_type="733",
+        program_type="Residential",
+        capacity="24",
+        status="3",
+        closed_date="",
+    )
+    html = render_ccld_facility_lookup_page(
+        query="425802141",
+        reference_source=CcldFacilityReferenceSource(
+            source_kind="full_local_test_csv",
+            label="Governed program reference fixture",
+            path_label="governed-program-reference.csv",
+            records=(record,),
+        ),
+    )
+
+    expected_status = "Source code 3 — label not verified"
+    assert f"<dd>{expected_status}</dd>" in html
+    assert json.dumps(expected_status, ensure_ascii=True)[1:-1] in html
+    assert "function statusInfo(s,state,conflict)" in html
+    assert "return{label:raw" in html
+    assert "Source code 733 — label not verified" in html
+    assert_no_secret_html(html)
 
 
 def test_postgres_mode_without_database_shows_setup_required_state() -> None:
@@ -1145,7 +1220,7 @@ def test_ccld_facility_review_hub_known_loaded_preloaded_example_renders(
     assert "77 REVIEW WAY, SAN JOSE, CA 95112" in html
     assert "San Jose Regional Office" in html
     assert "Status</dt>" in html
-    assert "<dd>Licensed</dd>" in html
+    assert "<dd>Source code 3 — label not verified</dd>" in html
     assert "<dd>3</dd>" not in html
     assert "RES_STREET_ADDR" not in html
     assert "FAC_DO_DESC" not in html
@@ -2560,7 +2635,7 @@ def _facility_reference_row(
     status: str,
 ) -> dict[str, Any]:
     return {
-        "source_resource_id": source_resource_id,
+        "source_resource_id": APPROVED_PROGRAM_REFERENCE_RESOURCE_ID,
         "facility_number": facility_number,
         "facility_name": facility_name,
         "facility_type": facility_type,
