@@ -422,6 +422,19 @@ and import scope, unchanged reviewer-created state/audit history, reviewer UI
 visibility, and ordinary retrieval parity. Tests must use source-shaped fixtures
 and doubles only; they must not make live CCLD requests.
 
+Shared governed facility identity projection tests must prove public Facility
+ID, internal canonical identity, source-row identity, and snapshot identity stay
+separate; matching observations reconcile without provenance loss; blanks never
+erase populated values; current-reference and historical complaint observations
+remain distinguishable; conflicts retain every original; raw `733` remains an
+unresolved code; and multiple same-ID rows are insertion-order independent with
+no first-row winner. Service-level tests must also prove query-carried names are
+not authority, fixture/demo/synthetic candidates are unavailable by default in
+production-style reads, authorization is required, reads execute no data
+mutation, and reviewer-created state is unchanged. Route, template, packet,
+export, ArcGIS, backfill, operator, refresh, deployment, and hosted-acceptance
+tests remain later issue phases.
+
 Issue #447 canonical-allocation evidence tests must cover the exact 12-field
 registry, canonical importer population, null versus verified zero, date-list
 ordering/deduplication, raw composite provenance, additive migration behavior,

@@ -183,6 +183,12 @@ operator backfill that combines validated complaint records with approved
 preloaded facility type/county/status values, retains precedence conflicts, and
 enters the existing artifact/import path without changing reviewer-created
 state or creating a second canonical persistence path,
+a shared read-only governed facility identity projection that accepts a public
+Facility ID plus authorized scope, loads eligible program-reference and
+complaint-linked canonical facility observations, and returns typed per-field
+values, semantic states, source/snapshot identities, conflicts, alternatives,
+and current-reference versus historical complaint context without a schema,
+migration, route, template, export, backfill, or reviewer-state mutation,
 a local/test authenticated reset/reload dry-run route seam, and a local/test
 authenticated reset/reload execution-plan route seam: a
 no-secret database URL configuration seam, an Alembic script location, one
@@ -349,6 +355,15 @@ retention implementation PRs validate the concrete layer.
 - Reviewer-created state for hosted review workflows is separate from
   source-derived canonical records and must be defined by production-discovery
   requirements and future ADRs before implementation.
+- ADR-0017 keeps public Facility ID, internal canonical record identity,
+  source-resource row identity, and source snapshot/import-batch identity
+  separate. Its shared projection is read-only and field-specific: blanks never
+  erase nonblank values, identical observations reconcile without losing
+  provenance, conflicts retain every original, and current-reference selection
+  does not rewrite complaint-time facts. Raw numeric facility type `733` remains
+  unresolved. ArcGIS observations, database backfill, route and export
+  migrations, and operator or scheduled refresh behavior remain outside this
+  slice.
 - Production stack selection belongs in future ADRs after production-discovery
   requirements are documented.
 - The preferred hosted tester MVP direction is hybrid, not Datasette-primary:
