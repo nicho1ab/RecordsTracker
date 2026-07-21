@@ -44,15 +44,17 @@ lifecycle state, or source-completeness proof.
 
 ## Screenshots
 
-These screenshots are reviewed live-mode captures from the hosted CCLD
-RecordsTracker workflow. They show public-data review surfaces, but they must
-not be treated as source-completeness, production, legal, or export evidence.
+These screenshots illustrate reviewer workflows. They do not prove statewide
+source completeness, legal conclusions, certified exports, or production
+acceptance.
 
-![Hosted review start page in live public CCLD mode](docs/assets/readme/hosted-review-start-live.png)
+![Compare Facilities showing governed complaint factors, contributing complaint records, source availability, reviewer state, and next actions.](docs/assets/readme/compare-facilities-live.png)
 
-![Hosted live review queue decision flow with facility/date context, source traceability cues, recommended next record action, and prioritized worklist record](docs/assets/readme/hosted-review-queue-live.png)
+![Facility Overview showing facility identity, complaint history, findings, source coverage, exact contributing complaints, and the recommended next complaint.](docs/assets/readme/facility-overview-live.png)
 
-![Hosted reviewer detail in live mode showing source traceability summary, reviewer-created state separation, safe review guidance, and note/status action context](docs/assets/readme/hosted-review-detail-live.png)
+![Complaint detail showing the first investigation activity date connected to bounded public-source evidence while reviewer notes and status remain separate.](docs/assets/readme/source-evidence-open-live.png)
+
+![Complaint Worklist showing complaint dates, findings, source availability, reviewer state, and record-specific review actions.](docs/assets/readme/complaint-worklist-live.png)
 
 ## Who This Is For
 
