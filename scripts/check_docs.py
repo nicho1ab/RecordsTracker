@@ -40,6 +40,85 @@ REVIEWER_UI_EVIDENCE_TABLE_HEADER = (
     "Blocking result",
 )
 
+ATTORNEY_IA_GOVERNANCE_SECTIONS = (
+    (
+        "docs/product/records-tracker-attorney-information-architecture.md",
+        "Attorney task model",
+    ),
+    (
+        "docs/product/records-tracker-attorney-information-architecture.md",
+        "Reviewer-facing route and page inventory",
+    ),
+    (
+        "docs/product/records-tracker-attorney-information-architecture.md",
+        "Route dispositions",
+    ),
+    (
+        "docs/product/records-tracker-attorney-information-architecture.md",
+        "Approved navigation",
+    ),
+    (
+        "docs/product/records-tracker-attorney-information-architecture.md",
+        "Approved terminology",
+    ),
+    (
+        "docs/product/records-tracker-attorney-information-architecture.md",
+        "Information tiers",
+    ),
+    (
+        "docs/product/records-tracker-attorney-information-architecture.md",
+        "Responsive, keyboard, zoom, and print behavior",
+    ),
+    (
+        "docs/product/records-tracker-attorney-information-architecture.md",
+        "Figma and design package",
+    ),
+    (
+        "docs/product/records-tracker-attorney-information-architecture.md",
+        "Stale contract inventory",
+    ),
+    (
+        "docs/product/records-tracker-attorney-information-architecture.md",
+        "Ordered implementation sequence",
+    ),
+    ("DESIGN_AND_USABILITY.md", "Issue #501 attorney information architecture"),
+    (
+        "docs/planning/records-tracker-ui-ux-data-completeness-remediation-plan.md",
+        "Issue #501 dependent design sequence",
+    ),
+)
+
+ATTORNEY_IA_REQUIREMENT_IDS = ("RT-IA-004", "RT-NAV-001", "RT-LANG-001")
+ATTORNEY_IA_NAVIGATION_ORDER = (
+    "Home",
+    "Find a Facility",
+    "Compare Facilities",
+    "Complaint Worklist",
+    "Feedback",
+    "Help",
+)
+ATTORNEY_IA_ROUTE_DISPOSITIONS = (
+    ("/", "retain"),
+    ("/ccld/facilities", "retain"),
+    ("/ccld/facilities/intelligence", "retain"),
+    ("/ccld/facilities/review-priority", "merge"),
+    ("/ccld/records/request", "retain"),
+    ("/reviewer", "retain"),
+    ("/reviewer/records", "redirect"),
+    ("/reviewer/records/substantiated", "convert to view/filter"),
+    ("/reviewer/records/serious-topics", "convert to view/filter"),
+    ("/reviewer/facilities/priorities", "merge"),
+    ("/reviewer/facilities/trends", "convert to view/filter"),
+    ("/ccld/help", "retain"),
+    ("/feedback", "retain"),
+)
+ATTORNEY_IA_ROUTE_TABLE_HEADER = (
+    "Current route or endpoint",
+    "Disposition",
+    "Approved destination or role",
+    "Transition and preservation rule",
+)
+
 REQUIRED = [
     ".github/PULL_REQUEST_TEMPLATE.md",
     ".github/copilot-instructions.md",
@@ -75,6 +154,7 @@ REQUIRED = [
     "docs/decisions/ADR-0014-hosted-tester-mvp-auth-provider-and-role-implementation.md",
     "docs/decisions/ADR-0015-hosted-tester-mvp-database-and-migration-tooling.md",
     "docs/decisions/ADR-0016-controlled-browser-triggered-ccld-retrieval-jobs.md",
+    "docs/product/records-tracker-attorney-information-architecture.md",
     "docs/developer/setup.md",
     "docs/developer/architecture.md",
     "docs/developer/hosted-scaffold.md",
@@ -972,6 +1052,94 @@ def find_reviewer_ui_governance_contract_violations(
     return violations
 
 
+def find_attorney_information_architecture_contract_violations(
+    root: Path = Path("."),
+) -> list[str]:
+    violations = []
+    for relative_path, heading in ATTORNEY_IA_GOVERNANCE_SECTIONS:
+        path = root / relative_path
+        if not path.exists():
+            violations.append(f"missing attorney IA governance file: {relative_path}")
+            continue
+        marker = f"## {heading}"
+        if path.read_text(encoding="utf-8").count(marker) != 1:
+            violations.append(
+                f"{relative_path}: expected exactly one section heading: {marker}"
+            )
+
+    decision_path = (
+        root / "docs/product/records-tracker-attorney-information-architecture.md"
+    )
+    design_path = root / "docs/product/records-tracker-approved-design-decisions.md"
+    if not decision_path.exists() or not design_path.exists():
+        return violations
+
+    decision_content = decision_path.read_text(encoding="utf-8")
+    design_content = design_path.read_text(encoding="utf-8")
+    for requirement_id in ATTORNEY_IA_REQUIREMENT_IDS:
+        marker = f"### {requirement_id} —"
+        if design_content.count(marker) != 1:
+            violations.append(
+                "approved design register must define exactly one " + requirement_id
+            )
+
+    navigation_text = ", ".join(ATTORNEY_IA_NAVIGATION_ORDER)
+    navigation_section = _markdown_section(decision_content, "Approved navigation")
+    normalized_navigation_section = " ".join(navigation_section.split())
+    if navigation_text not in normalized_navigation_section:
+        violations.append(
+            "attorney navigation order must be exactly: " + navigation_text
+        )
+
+    route_section = _markdown_section(decision_content, "Route dispositions")
+    lines = route_section.splitlines()
+    header_index = next(
+        (
+            index
+            for index, line in enumerate(lines)
+            if line.startswith("|")
+            and _markdown_table_cells(line) == ATTORNEY_IA_ROUTE_TABLE_HEADER
+        ),
+        None,
+    )
+    if header_index is None:
+        violations.append("attorney IA route-disposition table header is missing")
+        return violations
+
+    route_rows: dict[str, str] = {}
+    for line in lines[header_index + 1 :]:
+        if not line.startswith("|"):
+            if route_rows:
+                break
+            continue
+        cells = _markdown_table_cells(line)
+        if cells and all(re.fullmatch(r"-+", cell) for cell in cells):
+            continue
+        if len(cells) == len(ATTORNEY_IA_ROUTE_TABLE_HEADER):
+            route_rows[cells[0]] = cells[1]
+
+    for route, expected_disposition in ATTORNEY_IA_ROUTE_DISPOSITIONS:
+        actual_disposition = route_rows.get(route)
+        if actual_disposition != expected_disposition:
+            violations.append(
+                f"{route}: expected disposition {expected_disposition}, "
+                f"found {actual_disposition or 'missing'}"
+            )
+
+    figma_section = _markdown_section(decision_content, "Figma and design package")
+    for required_text in (
+        "No editable Figma artifact was accessed or changed",
+        "visual design package is **pending**",
+        "explicitly records a controlled variance",
+    ):
+        if required_text not in figma_section:
+            violations.append(
+                "attorney IA Figma status must preserve: " + required_text
+            )
+
+    return violations
+
+
 def main() -> None:
     missing_files = find_missing_files()
     if missing_files:
@@ -1018,6 +1186,13 @@ def main() -> None:
         raise SystemExit(
             "Invalid reviewer UI governance contract: "
             + "; ".join(reviewer_ui_governance_violations)
+        )
+
+    attorney_ia_violations = find_attorney_information_architecture_contract_violations()
+    if attorney_ia_violations:
+        raise SystemExit(
+            "Invalid attorney information-architecture contract: "
+            + "; ".join(attorney_ia_violations)
         )
 
     print("Documentation check passed.")
