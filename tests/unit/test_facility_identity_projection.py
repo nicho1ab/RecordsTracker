@@ -8,6 +8,22 @@ from typing import Any
 import pytest
 from sqlalchemy import create_engine, select
 
+from ccld_complaints.connectors.arcgis_ccl_facilities.contract import (
+    ARCGIS_SUPPLEMENT_SOURCE_FAMILY_ID,
+    LIVE_QUERY_SCOPE,
+)
+from ccld_complaints.connectors.ccld_transparency_api.contract import (
+    OBSERVATION_KIND as TRANSPARENCY_OBSERVATION_KIND,
+)
+from ccld_complaints.connectors.ccld_transparency_api.contract import (
+    SNAPSHOT_SCOPE as TRANSPARENCY_SNAPSHOT_SCOPE,
+)
+from ccld_complaints.connectors.ccld_transparency_api.contract import (
+    SOURCE_FAMILY_ID as TRANSPARENCY_SOURCE_FAMILY_ID,
+)
+from ccld_complaints.connectors.ccld_transparency_api.lifecycle import (
+    transparency_rows,
+)
 from ccld_complaints.hosted_app.auth import (
     AuthenticatedActor,
     HostedAccessScope,
@@ -46,6 +62,12 @@ from ccld_complaints.hosted_app.seeded_import import (
     import_seeded_corpus_artifact,
     load_seeded_corpus_artifact,
 )
+from ccld_complaints.hosted_app.source_snapshot_lifecycle import (
+    source_snapshot_metadata,
+    source_snapshot_pointers,
+    source_snapshot_rows,
+    source_snapshots,
+)
 
 FACILITY_ID = "157806098"
 FIXTURE = Path("tests/fixtures/hosted_seeded_corpus/validated_seeded_corpus.json")
@@ -61,7 +83,7 @@ def test_matching_observations_reconcile_and_keep_every_provenance() -> None:
         FACILITY_ID,
         (
             _candidate(
-                source_kind=FacilitySourceKind.PROGRAM_REFERENCE,
+                source_kind=FacilitySourceKind.TRANSPARENCY_API_CURRENT,
                 row_identity="reference-row",
                 observed_at="2026-07-18T00:00:00+00:00",
                 context=FacilityValueContext.CURRENT_REFERENCE,
@@ -117,7 +139,7 @@ def test_blank_never_erases_populated_value(
         FACILITY_ID,
         (
             _candidate(
-                source_kind=FacilitySourceKind.PROGRAM_REFERENCE,
+                source_kind=FacilitySourceKind.TRANSPARENCY_API_CURRENT,
                 row_identity="reference-row",
                 observed_at="2026-07-18T00:00:00+00:00",
                 context=FacilityValueContext.CURRENT_REFERENCE,
@@ -147,7 +169,7 @@ def test_conflicting_current_and_historical_values_keep_selected_context_and_ori
         FACILITY_ID,
         (
             _candidate(
-                source_kind=FacilitySourceKind.PROGRAM_REFERENCE,
+                source_kind=FacilitySourceKind.TRANSPARENCY_API_CURRENT,
                 row_identity="current-reference-row",
                 observed_at="2026-07-18T00:00:00+00:00",
                 context=FacilityValueContext.CURRENT_REFERENCE,
@@ -193,6 +215,40 @@ def test_raw_733_remains_an_unresolved_type_code() -> None:
     assert present_facility_field(result).text == "Source code 733 — label not verified"
 
 
+def test_status_closed_date_contact_and_administrator_remain_distinct_fields() -> None:
+    projection = project_facility_identity(
+        FACILITY_ID,
+        (
+            _candidate(
+                source_kind=FacilitySourceKind.TRANSPARENCY_API_CURRENT,
+                row_identity="current-reference-row",
+                observed_at="2026-07-21T00:00:00+00:00",
+                context=FacilityValueContext.CURRENT_REFERENCE,
+                values={
+                    FacilityProjectionField.STATUS: "Licensed",
+                    FacilityProjectionField.CLOSED_DATE: "2024-05-01",
+                    FacilityProjectionField.CONTACT: "Source contact",
+                    FacilityProjectionField.ADMINISTRATOR: "Facility administrator",
+                },
+            ),
+        ),
+    )
+
+    assert projection.field(FacilityProjectionField.STATUS).display_value == "Licensed"
+    assert (
+        projection.field(FacilityProjectionField.CLOSED_DATE).display_value
+        == "2024-05-01"
+    )
+    assert (
+        projection.field(FacilityProjectionField.CONTACT).display_value
+        == "Source contact"
+    )
+    assert (
+        projection.field(FacilityProjectionField.ADMINISTRATOR).display_value
+        == "Facility administrator"
+    )
+
+
 @pytest.mark.parametrize(
     ("state", "expected"),
     (
@@ -228,14 +284,14 @@ def test_presenter_uses_one_approved_phrase_for_each_empty_state(
 def test_multiple_same_id_rows_are_insertion_order_independent_and_never_first_row_wins() -> None:
     candidates = (
         _candidate(
-            source_kind=FacilitySourceKind.PROGRAM_REFERENCE,
+            source_kind=FacilitySourceKind.TRANSPARENCY_API_CURRENT,
             row_identity="reference-a",
             observed_at="2026-07-18T00:00:00+00:00",
             context=FacilityValueContext.CURRENT_REFERENCE,
             values={FacilityProjectionField.COUNTY: "Alameda"},
         ),
         _candidate(
-            source_kind=FacilitySourceKind.PROGRAM_REFERENCE,
+            source_kind=FacilitySourceKind.TRANSPARENCY_API_CURRENT,
             row_identity="reference-b",
             observed_at="2026-07-18T00:00:00+00:00",
             context=FacilityValueContext.CURRENT_REFERENCE,
@@ -291,7 +347,7 @@ def test_projection_has_no_query_carried_name_authority() -> None:
         FACILITY_ID,
         (
             _candidate(
-                source_kind=FacilitySourceKind.PROGRAM_REFERENCE,
+                source_kind=FacilitySourceKind.TRANSPARENCY_API_CURRENT,
                 row_identity="reference-row",
                 observed_at="2026-07-18T00:00:00+00:00",
                 context=FacilityValueContext.CURRENT_REFERENCE,
@@ -312,7 +368,7 @@ def test_blank_absent_unavailable_and_internal_states_are_semantic() -> None:
         FACILITY_ID,
         (
             _candidate(
-                source_kind=FacilitySourceKind.PROGRAM_REFERENCE,
+                source_kind=FacilitySourceKind.TRANSPARENCY_API_CURRENT,
                 row_identity="reference-row",
                 observed_at="2026-07-18T00:00:00+00:00",
                 context=FacilityValueContext.CURRENT_REFERENCE,
@@ -341,6 +397,192 @@ def test_blank_absent_unavailable_and_internal_states_are_semantic() -> None:
         is FacilityValueState.INTERNAL_ONLY
     )
     assert set(projection.fields) == set(PUBLIC_FACILITY_FIELDS)
+
+
+def test_extraction_failed_remains_distinct_from_invalid_and_unavailable() -> None:
+    projection = project_facility_identity(
+        FACILITY_ID,
+        (
+            _candidate(
+                source_kind=FacilitySourceKind.COMPLAINT_LINKED_FACILITY,
+                row_identity="complaint-row",
+                observed_at="2026-06-01T00:00:00+00:00",
+                context=FacilityValueContext.HISTORICAL_COMPLAINT,
+                values={FacilityProjectionField.ADMINISTRATOR: None},
+                semantic_states={
+                    FacilityProjectionField.ADMINISTRATOR: (
+                        FacilityValueState.EXTRACTION_FAILED
+                    )
+                },
+            ),
+        ),
+    )
+
+    result = projection.field(FacilityProjectionField.ADMINISTRATOR)
+    assert result.state is FacilityValueState.EXTRACTION_FAILED
+    assert present_facility_field(result).text == "Source extraction failed"
+
+
+def test_active_transparency_snapshot_is_primary_and_preserves_leading_zero_id() -> None:
+    facility_id = "001234567"
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    _create_projection_tables(engine)
+    with engine.begin() as connection:
+        _insert_reference(
+            connection,
+            facility_id=facility_id,
+            facility_name="Historical CKAN name",
+        )
+        _insert_transparency_snapshot(
+            connection,
+            snapshot_id="transparency-active-leading-zero",
+            facility_id=facility_id,
+            recorded_at="2026-07-21T10:00:00+00:00",
+            observations={
+                "facility_name": _observation("Current Transparency name"),
+                "facility_type": _observation("Child Care Center"),
+                "bulk_status": _observation("Licensed"),
+            },
+        )
+
+        projection = load_authorized_facility_identity_projection(
+            connection,
+            _actor(),
+            scope=FIXTURE_SCOPE,
+            public_facility_id=facility_id,
+        )
+
+    name = projection.field(FacilityProjectionField.FACILITY_NAME)
+    assert projection.public_facility_id == facility_id
+    assert projection.field(FacilityProjectionField.PUBLIC_FACILITY_ID).display_value == facility_id
+    assert name.display_value == "Current Transparency name"
+    assert name.context is FacilityValueContext.CURRENT_REFERENCE
+    assert name.source_identity is not None
+    assert (
+        name.source_identity.source_kind
+        is FacilitySourceKind.TRANSPARENCY_API_CURRENT
+    )
+    assert {item.raw_value for item in name.alternatives} == {
+        "Current Transparency name",
+        "Historical CKAN name",
+    }
+
+
+def test_prior_accepted_address_survives_active_placeholder_with_exact_provenance() -> None:
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    _create_projection_tables(engine)
+    with engine.begin() as connection:
+        _insert_transparency_snapshot(
+            connection,
+            snapshot_id="transparency-prior",
+            facility_id=FACILITY_ID,
+            recorded_at="2026-07-20T10:00:00+00:00",
+            observations={
+                "facility_name": _observation("Current name"),
+                "facility_address": _observation("100 Preserved Way"),
+                "facility_telephone_number": _observation("555-0100"),
+            },
+            promote=False,
+        )
+        _insert_transparency_snapshot(
+            connection,
+            snapshot_id="transparency-active-placeholder",
+            facility_id=FACILITY_ID,
+            recorded_at="2026-07-21T10:00:00+00:00",
+            observations={
+                "facility_name": _observation("Current name"),
+                "facility_address": _observation("Unavailable", state="placeholder"),
+                "facility_telephone_number": _observation("See FAQs", state="placeholder"),
+            },
+            prior_snapshot_id="transparency-prior",
+        )
+
+        projection = load_authorized_facility_identity_projection(
+            connection,
+            _actor(),
+            scope=FIXTURE_SCOPE,
+            public_facility_id=FACILITY_ID,
+        )
+
+    address = projection.field(FacilityProjectionField.FULL_ADDRESS)
+    telephone = projection.field(FacilityProjectionField.TELEPHONE)
+    assert address.display_value == "100 Preserved Way"
+    assert telephone.display_value == "555-0100"
+    assert address.context is FacilityValueContext.HISTORICAL_REFERENCE
+    assert address.source_identity is not None
+    assert address.source_identity.snapshot_identity == "transparency-prior"
+    assert (
+        address.source_identity.source_kind
+        is FacilitySourceKind.TRANSPARENCY_API_PRIOR_ACCEPTED
+    )
+    assert FacilityValueState.UNAVAILABLE in {
+        item.state for item in address.alternatives
+    }
+
+
+def test_arcgis_is_supplementary_and_ckan_and_complaint_remain_historical() -> None:
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    _create_projection_tables(engine)
+    with engine.begin() as connection:
+        _insert_reference(connection, facility_name="Historical CKAN name")
+        _insert_transparency_snapshot(
+            connection,
+            snapshot_id="transparency-active-missing-name",
+            facility_id=FACILITY_ID,
+            recorded_at="2026-07-21T10:00:00+00:00",
+            observations={"facility_name": _observation(None, state="absent")},
+        )
+        _insert_arcgis_snapshot(
+            connection,
+            facility_id=FACILITY_ID,
+            facility_name="ArcGIS supplementary name",
+        )
+
+        projection = load_authorized_facility_identity_projection(
+            connection,
+            _actor(),
+            scope=FIXTURE_SCOPE,
+            public_facility_id=FACILITY_ID,
+        )
+
+    name = projection.field(FacilityProjectionField.FACILITY_NAME)
+    assert name.display_value == "ArcGIS supplementary name"
+    assert name.context is FacilityValueContext.SUPPLEMENTARY_REFERENCE
+    assert name.source_identity is not None
+    assert name.source_identity.source_kind is FacilitySourceKind.ARCGIS_SUPPLEMENT
+    assert any(
+        item.context is FacilityValueContext.HISTORICAL_REFERENCE
+        and item.raw_value == "Historical CKAN name"
+        for item in name.alternatives
+    )
+
+
+def test_quarantined_transparency_row_is_not_eligible_facility_truth() -> None:
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    _create_projection_tables(engine)
+    with engine.begin() as connection:
+        _insert_reference(connection, facility_name="Historical CKAN name")
+        _insert_transparency_snapshot(
+            connection,
+            snapshot_id="transparency-active-quarantined",
+            facility_id=FACILITY_ID,
+            recorded_at="2026-07-21T10:00:00+00:00",
+            observations={"facility_name": _observation("Quarantined name")},
+            is_quarantined=True,
+        )
+
+        projection = load_authorized_facility_identity_projection(
+            connection,
+            _actor(),
+            scope=FIXTURE_SCOPE,
+            public_facility_id=FACILITY_ID,
+        )
+
+    name = projection.field(FacilityProjectionField.FACILITY_NAME)
+    assert name.display_value == "Historical CKAN name"
+    assert name.context is FacilityValueContext.HISTORICAL_REFERENCE
+    assert all(item.raw_value != "Quarantined name" for item in name.alternatives)
+    assert FacilitySourceKind.TRANSPARENCY_API_CURRENT in name.unavailable_sources
 
 
 def test_production_service_excludes_synthetic_candidates_as_unavailable() -> None:
@@ -380,7 +622,7 @@ def test_eligible_reference_remains_visible_when_complaint_candidate_is_unsafe()
         )
 
     name = projection.field(FacilityProjectionField.FACILITY_NAME)
-    assert name.display_value == "Current program reference name"
+    assert name.display_value == "Historical program reference name"
     assert name.state is FacilityValueState.POPULATED
     assert FacilitySourceKind.COMPLAINT_LINKED_FACILITY in name.unavailable_sources
     assert projection.ineligible_candidate_excluded is False
@@ -443,7 +685,7 @@ def test_authorized_service_is_select_only_and_preserves_reviewer_created_state(
     assert before == after
     assert (
         projection.field(FacilityProjectionField.FACILITY_NAME).display_value
-        == "Current program reference name"
+        == "Historical program reference name"
     )
     capacity = projection.field(FacilityProjectionField.CAPACITY)
     assert capacity.display_value == 48
@@ -460,6 +702,7 @@ def _candidate(
     values: Mapping[FacilityProjectionField, Any],
     snapshot_identity: str = "snapshot:one",
     canonical_internal_identity: str | None = None,
+    semantic_states: Mapping[FacilityProjectionField, FacilityValueState] | None = None,
 ) -> FacilityProjectionCandidate:
     candidate_values = {
         FacilityProjectionField.PUBLIC_FACILITY_ID: FACILITY_ID,
@@ -475,6 +718,7 @@ def _candidate(
         present_fields=frozenset(candidate_values),
         source_fields={field: f"source.{field.value}" for field in candidate_values},
         canonical_internal_identity=canonical_internal_identity,
+        semantic_states=semantic_states or {},
     )
 
 
@@ -495,14 +739,20 @@ def _create_projection_tables(engine: Any) -> None:
     hosted_ccld_retrieval_jobs.metadata.create_all(engine)
     hosted_seeded_import_metadata.create_all(engine)
     hosted_facility_reference_metadata.create_all(engine)
+    source_snapshot_metadata.create_all(engine)
 
 
-def _insert_reference(connection: Any) -> None:
+def _insert_reference(
+    connection: Any,
+    *,
+    facility_id: str = FACILITY_ID,
+    facility_name: str = "Historical program reference name",
+) -> None:
     connection.execute(
         hosted_facility_reference_records.insert().values(
             source_resource_id=APPROVED_RESOURCE_IDS[0],
-            facility_number=FACILITY_ID,
-            facility_name="Current program reference name",
+            facility_number=facility_id,
+            facility_name=facility_name,
             facility_type="Children's Residential Facility",
             program_type="Residential",
             client_served=None,
@@ -529,9 +779,161 @@ def _insert_reference(connection: Any) -> None:
             source_accessed_at="2026-07-18T00:00:00+00:00",
             source_file_name="24HourResidentialCareforChildren07182026.csv",
             original_row_json={
-                "Facility Number": FACILITY_ID,
-                "Facility Name": "Current program reference name",
+                "Facility Number": facility_id,
+                "Facility Name": facility_name,
             },
+        )
+    )
+
+
+def _observation(value: object, *, state: str = "populated") -> dict[str, object]:
+    return {"state": state, "raw": value, "value": value if state == "populated" else None}
+
+
+def _snapshot_values(
+    *,
+    snapshot_id: str,
+    source_family_id: str,
+    fixture_scope: str,
+    observation_kind: str,
+    recorded_at: str,
+) -> dict[str, object]:
+    manifest_sha = f"{snapshot_id}-manifest".ljust(64, "0")[:64]
+    raw_sha = f"{snapshot_id}-raw".ljust(64, "0")[:64]
+    return {
+        "snapshot_id": snapshot_id,
+        "source_family_id": source_family_id,
+        "fixture_scope": fixture_scope,
+        "observation_kind": observation_kind,
+        "lifecycle_state": "accepted",
+        "manifest_ref": "ignored-evidence/manifest.json",
+        "manifest_sha256": manifest_sha,
+        "raw_payload_ref": "ignored-evidence/raw",
+        "raw_payload_sha256": raw_sha,
+        "normalized_content_sha256": "3" * 64,
+        "schema_fingerprint": "4" * 64,
+        "domain_fingerprint": "5" * 64,
+        "row_count": 1,
+        "stored_row_count": 1,
+        "duplicate_object_id_count": 0,
+        "duplicate_facility_number_count": 0,
+        "omitted_field_count": 0,
+        "invalid_field_count": 0,
+        "warning_count": 0,
+        "rejection_reason_count": 0,
+        "validation_report": {},
+        "recorded_at": recorded_at,
+        "validated_at": recorded_at,
+        "rejected_at": None,
+        "accepted_at": recorded_at,
+    }
+
+
+def _insert_transparency_snapshot(
+    connection: Any,
+    *,
+    snapshot_id: str,
+    facility_id: str,
+    recorded_at: str,
+    observations: Mapping[str, object],
+    prior_snapshot_id: str | None = None,
+    promote: bool = True,
+    is_quarantined: bool = False,
+) -> None:
+    connection.execute(
+        source_snapshots.insert().values(
+            **_snapshot_values(
+                snapshot_id=snapshot_id,
+                source_family_id=TRANSPARENCY_SOURCE_FAMILY_ID,
+                fixture_scope=TRANSPARENCY_SNAPSHOT_SCOPE,
+                observation_kind=TRANSPARENCY_OBSERVATION_KIND,
+                recorded_at=recorded_at,
+            )
+        )
+    )
+    connection.execute(
+        transparency_rows.insert().values(
+            snapshot_id=snapshot_id,
+            export_id="ChildCareCenters",
+            row_ordinal=1,
+            facility_number=facility_id,
+            raw_row_sha256="6" * 64,
+            raw_values=[],
+            raw_record={"Facility Number": facility_id},
+            normalized_record=dict(observations),
+            resolved_current_reference=dict(observations),
+            complaint_blocks=[],
+            row_fingerprint="7" * 64,
+            is_quarantined=is_quarantined,
+        )
+    )
+    if promote:
+        connection.execute(
+            source_snapshot_pointers.insert().values(
+                source_family_id=TRANSPARENCY_SOURCE_FAMILY_ID,
+                active_snapshot_id=snapshot_id,
+                prior_accepted_snapshot_id=prior_snapshot_id,
+                updated_at=recorded_at,
+            )
+        )
+
+
+def _insert_arcgis_snapshot(
+    connection: Any,
+    *,
+    facility_id: str,
+    facility_name: str,
+) -> None:
+    snapshot_id = "arcgis-active-supplement"
+    recorded_at = "2026-07-21T09:00:00+00:00"
+    connection.execute(
+        source_snapshots.insert().values(
+            **_snapshot_values(
+                snapshot_id=snapshot_id,
+                source_family_id=ARCGIS_SUPPLEMENT_SOURCE_FAMILY_ID,
+                fixture_scope=LIVE_QUERY_SCOPE,
+                observation_kind="live_query",
+                recorded_at=recorded_at,
+            )
+        )
+    )
+    connection.execute(
+        source_snapshot_rows.insert().values(
+            snapshot_id=snapshot_id,
+            source_object_id=1001,
+            facility_number=facility_id,
+            raw_record={"FAC_NBR": facility_id, "NAME": facility_name},
+            normalized_record={
+                "facility_number": {
+                    "source_field": "FAC_NBR",
+                    "state": "populated",
+                    "value": facility_id,
+                },
+                "facility_name_source": {
+                    "source_field": "NAME",
+                    "state": "populated",
+                    "value": facility_name,
+                },
+                "facility_type_description_source": {
+                    "source_field": "FAC_TYPE_DESC",
+                    "state": "absent",
+                    "value": None,
+                },
+                "raw_type_code": {
+                    "source_field": "TYPE",
+                    "state": "absent",
+                    "value": None,
+                },
+            },
+            row_fingerprint="8" * 64,
+        )
+    )
+    connection.execute(
+        source_snapshot_pointers.insert().values(
+            source_family_id=ARCGIS_SUPPLEMENT_SOURCE_FAMILY_ID,
+            active_snapshot_id=snapshot_id,
+            prior_accepted_snapshot_id=None,
+            updated_at=recorded_at,
         )
     )
 

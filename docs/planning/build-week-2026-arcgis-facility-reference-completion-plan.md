@@ -255,20 +255,23 @@ snapshot for that source family while preserving the other source unchanged.
 
 Current status: #521-#523 completed the shared projection, named consumers and
 exports, and bounded existing backfill for eligible program-reference data.
-They did not consume ArcGIS. Phase C therefore means the still-pending
-ArcGIS-specific extension of those governed boundaries, not their recreation.
+Issue #482 extends that same read-only projection to active accepted
+TransparencyAPI primary and ArcGIS supplementary snapshots while retaining
+CKAN/program and complaint-linked observations as historical evidence. It does
+not recreate those consumers or authorize a production backfill.
 
 Under Issue #482, implement one governed facility identity and reconciliation
-projection over the separate program and ArcGIS source snapshots. Define stable
-identity, source-specific row identity, governed matching, field-level
-ownership, source/effective-date handling, blank-preserving fallback, conflict
-retention, duplicate handling, and disappearance review.
+projection over the separate TransparencyAPI, ArcGIS, CKAN/program, and
+complaint-linked observations. Define stable identity, source-specific row
+identity, governed matching, field-level ownership, source/effective-date
+handling, blank-preserving fallback, conflict retention, duplicate handling,
+and disappearance review.
 
-Implement a bounded dry-run/apply PostgreSQL backfill with explicit selection,
-checkpoints, repeat-run safety, failure isolation, and protection of
-reviewer-created state. Apply only approved supplementary values with field-
-level source/snapshot provenance. There is no global ArcGIS-wins or program-wins
-rule, and a current-reference value cannot rewrite historical complaint context.
+The existing #523 bounded backfill remains separate and is not executed or
+expanded by #482. Any future production backfill requires explicit selection,
+checkpoints, repeat-run safety, failure isolation, protection of reviewer-created
+state, and separate mutation authority. There is no global ArcGIS-wins rule,
+and a current-reference value cannot rewrite historical complaint context.
 
 Facility-type identifiers must display verified descriptive labels. Raw `733`
 must remain raw and explicitly unresolved unless governed source or mapping
@@ -314,10 +317,11 @@ evidence proves its label.
 
 ### Completion gate
 
-Complete when the identity/reconciliation contract is merged, approved source
-values reconcile to PostgreSQL, dry-run/apply is bounded, idempotent, and
-recoverable, every source observation remains traceable, and reviewer-created
-state is unchanged. Only then may safe parallel implementation begin.
+Complete when the identity/reconciliation contract is merged, every eligible
+source observation remains traceable, named read consumers reconcile
+deterministically, and reviewer-created state is unchanged. Production
+promotion, backfill execution, scheduling, deployment, and Hosted acceptance
+remain separate completion gates.
 
 ### Rollback or preservation rule
 
@@ -597,14 +601,14 @@ field provenance, conflicts, checkpoints, or the prior accepted release.
 
 - **#490:** completed historical evaluation evidence; remains complete and is
   not reopened or recharacterized as production adoption.
-- **#518:** owns Phase B separate program/ArcGIS snapshots, source-specific
-  identity and lifecycle, validation, accepted/prior-accepted pointers, and
-  atomic rollback. It is the exact next repository issue and does not own
-  reviewer integration or canonical backfill.
+- **#518:** completed the Phase B ArcGIS snapshot lifecycle, source-specific
+  identity, validation, accepted/prior-accepted pointers, and atomic rollback.
+  It did not own reviewer integration or canonical backfill.
 - **#482:** #521-#523 completed the shared projection, named reviewer/export
-  consumers, and bounded existing backfill for eligible program-reference data.
-  #482 remains required for the later ArcGIS-specific identity/reconciliation,
-  provenance, and controlled dual-source backfill extension after #518.
+  consumers, and bounded existing backfill. #482 now extends the shared
+  read-only projection to accepted TransparencyAPI primary and ArcGIS
+  supplementary snapshots with CKAN/program and complaint history retained.
+  It does not execute a production backfill.
 - **#453:** remains open for blocked Hosted evidence and additional ArcGIS
   source-to-screen verification.
 - **#477:** closed and repository-complete for the supported read-only operator

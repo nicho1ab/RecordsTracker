@@ -183,8 +183,9 @@
   are primary current reference, CKAN/program snapshots remain historical and
   controlled fallback evidence, and ArcGIS remains separately versioned
   supplementary evidence. Issue #554 implements only the connector/snapshot
-  boundary; #482/#521-#523 integration, #478 scheduling, deployment, and Hosted
-  acceptance remain separately governed.
+  boundary. Issue #482 now supplies read-time integration through the #521-#523
+  shared consumer boundary; #478 scheduling, production activation/backfill,
+  deployment, and Hosted acceptance remain separately governed.
 - Multi-source preservation rule: TransparencyAPI, CKAN/program, ArcGIS, and
   complaint/report-time observations remain source-specific. No source erases
   another source's raw values or provenance. Identical values may reconcile
@@ -218,11 +219,15 @@
   automation remain separately governed or human-controlled and are not
   approved by the completed dashboard scope.
 - Shared facility projection status: #521 established the governed read-only
-  projection for eligible existing program-reference and complaint-linked data;
-  #522 migrated the named reviewer surfaces; and #523 aligned the governed
-  exports and bounded existing backfill. Those issues are complete, but none
-  consumed or activated ArcGIS. ArcGIS-specific reconciliation, provenance,
-  backfill, and cross-surface evidence remain future #482 work after #518.
+  projection; #522 migrated the named reviewer surfaces; and #523 aligned the
+  governed exports and bounded existing backfill. Issue #482 now makes eligible
+  active accepted TransparencyAPI rows primary current-reference observations,
+  adds eligible active accepted ArcGIS rows as supplementary observations, and
+  retains CKAN/program plus complaint-linked rows as historical evidence through
+  that same boundary. The projection preserves source-row/snapshot provenance,
+  leading-zero public IDs, conflicts, missing states, and reviewer-created-state
+  separation. It does not promote snapshots, perform a production backfill,
+  schedule refresh, deploy, or establish Hosted acceptance.
 
 ## Completed ADR decisions
 

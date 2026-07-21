@@ -27,10 +27,13 @@ _STATE_TEXT = {
     FacilityValueState.CONFLICTING: "Conflicting source values",
     FacilityValueState.INTERNAL_ONLY: "Internal only",
     FacilityValueState.INVALID: "Invalid source value",
+    FacilityValueState.EXTRACTION_FAILED: "Source extraction failed",
 }
 
 _CONTEXT_TEXT = {
     FacilityValueContext.CURRENT_REFERENCE: "Current facility reference",
+    FacilityValueContext.SUPPLEMENTARY_REFERENCE: "Supplementary facility reference",
+    FacilityValueContext.HISTORICAL_REFERENCE: "Historical facility reference",
     FacilityValueContext.HISTORICAL_COMPLAINT: "Complaint-time record",
     FacilityValueContext.INTERNAL: "Internal only",
 }
@@ -47,11 +50,16 @@ def present_facility_field(result: FacilityFieldResult) -> FacilityFieldPresenta
 
     conflict_note = None
     if result.conflict:
-        conflict_note = (
-            "Current facility reference and complaint-time records differ."
-            if value is not None
-            else "Eligible source records disagree; no value was selected."
-        )
+        contexts = {alternative.context for alternative in result.alternatives}
+        if value is None:
+            conflict_note = "Eligible source records disagree; no value was selected."
+        elif {
+            FacilityValueContext.CURRENT_REFERENCE,
+            FacilityValueContext.HISTORICAL_COMPLAINT,
+        }.issubset(contexts):
+            conflict_note = "Current facility reference and complaint-time records differ."
+        else:
+            conflict_note = "Governed facility source observations differ."
     return FacilityFieldPresentation(
         text=text,
         state=result.state,

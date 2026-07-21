@@ -46,27 +46,35 @@ reviewer page.
 
 ## Shared governed facility identity projection
 
-The Issue #521 read-only facility identity projection accepts a digit-only
-public Facility ID and an authorized corpus scope. It reads eligible existing
-program-reference rows and authorized complaint-linked canonical facility rows;
-it does not create a canonical entity, write a database row, accept a
-query-carried name as evidence, or consume ArcGIS runtime data. Public Facility
-ID, internal canonical record key, source-resource row identity, and snapshot or
-import-batch identity remain separate typed values. An internal record key is
-intentionally non-displayable and can never become a public Facility ID.
+The shared read-only facility identity projection accepts a digit-only public
+Facility ID and an authorized corpus scope. Issue #482 extends the Issue
+#521-#523 boundary to read eligible rows from active accepted TransparencyAPI
+and ArcGIS snapshot pointers alongside retained CKAN/program-reference and
+authorized complaint-linked canonical facility rows. It does not create a
+canonical entity, write a database row, accept a query-carried name as evidence,
+or activate a source snapshot. Public Facility ID, internal canonical record
+key, source-resource row identity, and snapshot or import-batch identity remain
+separate typed values. Leading zeros remain part of the public Facility ID. An
+internal record key is intentionally non-displayable and can never become a
+public Facility ID.
 
 Each supported field returns a typed display value when one can be selected,
 normalized comparison value, semantic state, source row and snapshot identity,
-observation time, conflict indicator, preserved alternatives, and either
-`current_reference` or `historical_complaint` context. Supported public fields
-are facility name, public Facility ID, facility type, status, full address,
-city, state, ZIP, county, capacity, administrator, licensee, telephone, and
-regional office. Coordinates remain outside this projection.
+observation time, conflict indicator, preserved alternatives, and
+`current_reference`, `supplementary_reference`, `historical_reference`, or
+`historical_complaint` context. Supported fields are facility name, public
+Facility ID, facility type, current status, Closed Date, full address, city,
+state, ZIP, county, capacity, administrator, licensee, telephone, regional
+office, and CONTACT. CONTACT and Facility Administrator remain distinct
+observations and are not cross-mapped. Coordinates remain outside this
+projection, and a supported field is shown only on surfaces where it serves the
+review task.
 
 The finite semantic states include `populated`, `blank`, `absent`,
-`unavailable`, `unresolved_raw_code`, `conflicting`, `internal_only`, and
-`invalid`. They are application data states, not page copy. A present blank
-remains distinct from an absent field and from an unavailable eligible source.
+`unavailable`, `unresolved_raw_code`, `conflicting`, `internal_only`, `invalid`,
+and `extraction_failed`. They are application data states, not page copy. A
+present blank remains distinct from an absent field, an unavailable eligible
+source, and a failed extraction.
 Blank never erases eligible nonblank data. Identical normalized observations
 reconcile while every observation retains provenance. Differing nonblank
 observations retain their original values and conflict metadata even when a
@@ -78,8 +86,9 @@ The shared presenter maps those states consistently for migrated HTML and
 suggestion consumers: a populated value is shown as selected, `blank` is
 `Blank in source`, `absent` is `Not found in source`, `unavailable` is
 `Source unavailable`, a raw code is `Source code <value> — label not verified`,
-an unselected conflict is `Conflicting source values`, and `invalid` is
-`Invalid source value`. Internal-only identity remains non-displayable. When a
+an unselected conflict is `Conflicting source values`, `invalid` is
+`Invalid source value`, and `extraction_failed` is `Source extraction failed`.
+Internal-only identity remains non-displayable. When a
 safe current value is selected despite a historical difference, the concise
 conflict explanation states that current facility reference and complaint-time
 records differ. A separate exclusion indicator distinguishes a matching but
@@ -89,26 +98,22 @@ remains usable.
 
 Precedence is defined per field for this current-reference projection:
 
-| Field | First eligible current presentation | Historical fallback and preservation rule |
+| Field | First eligible current presentation | Supplementary and historical preservation rule |
 | --- | --- | --- |
-| Facility name | Newest nonblank program-reference observation | Complaint-linked name is fallback and retained historical context; conflict remains explicit. |
-| Public Facility ID | Matching program-reference observation | Matching complaint-linked Facility ID is fallback; no source row or internal key can replace it. |
-| Facility type | Newest nonblank program-reference descriptive observation | Complaint-reported type is fallback and retained; a numeric raw type such as `733` remains unresolved without governed label evidence. |
-| Status | Newest nonblank program-reference status text | Complaint-reported status is fallback and retained; a numeric raw status remains unresolved, and no page-local status-code label becomes shared truth. |
-| Full address | Newest nonblank program-reference address | Complaint-reported address is fallback and retained historical context. |
-| City | Newest nonblank program-reference city | Complaint-reported city is fallback and retained historical context. |
-| State | Newest nonblank program-reference state | Complaint-reported state is fallback and retained historical context. |
-| ZIP | Newest nonblank program-reference ZIP | Complaint-reported ZIP is fallback and retained historical context. |
-| County | Newest nonblank program-reference county | Complaint-reported county is fallback and retained historical context. |
-| Capacity | Newest valid nonblank program-reference integer | Complaint-reported capacity is fallback and retained historical context; explicit zero remains zero. |
-| Administrator | Newest nonblank program-reference administrator | Complaint-reported administrator is fallback and retained historical context. |
-| Licensee | Newest nonblank program-reference licensee | Complaint-reported licensee is fallback and retained historical context. |
-| Telephone | Newest nonblank program-reference telephone | Complaint-reported telephone is fallback and retained historical context. |
-| Regional office | Newest nonblank program-reference regional-office text | Complaint-reported office is fallback and retained historical context. |
+| Facility name | Populated active accepted TransparencyAPI observation | ArcGIS may supplement an absent primary value; CKAN/program and then complaint-linked observations remain historical fallback. |
+| Public Facility ID | Matching active accepted TransparencyAPI Facility Number, preserved as text | Matching ArcGIS, CKAN/program, or complaint-linked ID may support grouping; no source row or internal key can replace the public ID. |
+| Facility type | Populated active accepted TransparencyAPI descriptive observation | ArcGIS descriptive evidence may supplement; CKAN/program and complaint-reported values are historical fallback. A numeric raw type such as `733` remains unresolved without governed label evidence. |
+| Current status | Populated active accepted TransparencyAPI bulk-status observation | ArcGIS may supplement; CKAN/program and complaint-reported status are historical fallback. Numeric raw status remains unresolved, and no page-local mapping becomes shared truth. |
+| Closed Date | Populated active accepted TransparencyAPI Closed Date | CKAN/program and complaint-linked observations remain historical fallback. Closed Date never derives current status and current status never derives Closed Date. |
+| Full address, telephone | Populated active accepted TransparencyAPI observation | A populated prior accepted TransparencyAPI value is preserved when the active observation is blank, omitted, placeholder, or unavailable; then ArcGIS, CKAN/program, and complaint history may supplement or fall back. |
+| City, state, ZIP, county, capacity, regional office | Populated active accepted TransparencyAPI observation | ArcGIS may supplement an absent primary value; CKAN/program and complaint-linked observations remain historical fallback. Explicit capacity zero remains zero. |
+| Administrator, licensee | Populated active accepted TransparencyAPI observation | CKAN/program and complaint-linked observations remain historical fallback; ArcGIS supplies neither field. |
+| CONTACT | Separately governed CONTACT observation when present | It remains distinct from Facility Administrator and is never inferred from that field. |
 
 These are read-model rules, not persistence ownership or a cross-source
 canonical backfill. Current-reference selection never rewrites historical
-complaint values. Multiple eligible rows for one Facility ID remain separate;
+complaint values. Source disappearance does not infer closure or deletion.
+Multiple eligible rows for one Facility ID remain separate;
 same-source observations at the same timestamp with different normalized values
 remain conflicting with no selected value. Synthetic, fixture, demo, sample,
 mock, or test-only candidates are unavailable by default in production-style
@@ -140,6 +145,16 @@ facility before recording checkpoint completion, retains failed Facility IDs for
 retry, validates resume selection and operation, and remains idempotent on
 repeat. It does not change reviewer-created state, activate ArcGIS, schedule a
 refresh, or rewrite historical complaint observations.
+
+Issue #482 makes the active accepted TransparencyAPI snapshot the primary
+current-reference input to this same projection, adds the accepted ArcGIS
+snapshot as supplementary observations, and reclassifies CKAN/program rows as
+historical fallback. Existing named reviewer, packet, and export consumers keep
+using the shared boundary; bounded facility search enumerates the active
+TransparencyAPI family without loading it into page memory. Projection reads
+remain authorization-before-read and `SELECT`-only. This change adds no
+materialized projection, schema, migration, production snapshot promotion,
+canonical backfill execution, refresh schedule, or reviewer-created-state write.
 
 ## Offline ArcGIS source-specific snapshot lifecycle
 

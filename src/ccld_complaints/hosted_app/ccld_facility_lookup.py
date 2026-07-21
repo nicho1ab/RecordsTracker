@@ -495,7 +495,9 @@ def facility_lookup_record_from_projection(
         program_type=_consistent_record_value(records, "program_type"),
         capacity=projected_selected_text(projection, FacilityProjectionField.CAPACITY),
         status=projected_selected_text(projection, FacilityProjectionField.STATUS),
-        closed_date=_consistent_record_value(records, "closed_date"),
+        closed_date=projected_selected_text(
+            projection, FacilityProjectionField.CLOSED_DATE
+        ),
         address=projected_selected_text(
             projection, FacilityProjectionField.FULL_ADDRESS
         ),
@@ -574,16 +576,15 @@ def _project_lookup_records(
     *,
     source: CcldFacilityReferenceSource,
 ) -> FacilityIdentityProjection:
-    source_kind = (
-        FacilitySourceKind.COMPLAINT_LINKED_FACILITY
-        if source.source_kind == "postgres_source_derived"
-        else FacilitySourceKind.PROGRAM_REFERENCE
-    )
-    context = (
-        FacilityValueContext.HISTORICAL_COMPLAINT
-        if source_kind is FacilitySourceKind.COMPLAINT_LINKED_FACILITY
-        else FacilityValueContext.CURRENT_REFERENCE
-    )
+    if source.source_kind == "postgres_source_derived":
+        source_kind = FacilitySourceKind.COMPLAINT_LINKED_FACILITY
+        context = FacilityValueContext.HISTORICAL_COMPLAINT
+    elif source.source_kind == "postgres_transparencyapi_reference":
+        source_kind = FacilitySourceKind.TRANSPARENCY_API_CURRENT
+        context = FacilityValueContext.CURRENT_REFERENCE
+    else:
+        source_kind = FacilitySourceKind.PROGRAM_REFERENCE
+        context = FacilityValueContext.HISTORICAL_REFERENCE
     candidates = tuple(
         _projection_candidate_from_lookup_record(
             record,
@@ -608,6 +609,7 @@ def _projection_candidate_from_lookup_record(
         FacilityProjectionField.FACILITY_NAME: record.facility_name,
         FacilityProjectionField.FACILITY_TYPE: record.facility_type,
         FacilityProjectionField.STATUS: record.status,
+        FacilityProjectionField.CLOSED_DATE: record.closed_date,
         FacilityProjectionField.CITY: record.city,
         FacilityProjectionField.STATE: record.state,
         FacilityProjectionField.ZIP: record.zip_code,
@@ -3067,7 +3069,10 @@ def _source_record_count(source: CcldFacilityReferenceSource) -> int:
 
 
 def _facility_suggest_url(source: CcldFacilityReferenceSource) -> str:
-    if source.source_kind == "postgres_facility_reference":
+    if source.source_kind in {
+        "postgres_facility_reference",
+        "postgres_transparencyapi_reference",
+    }:
         return CCLD_FACILITY_SUGGESTIONS_PATH
     return ""
 

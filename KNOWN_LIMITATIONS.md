@@ -7,9 +7,11 @@
   direction: the official TransparencyAPI is the approved primary current
   facility-reference source, ArcGIS remains separate supplementary evidence,
   and CKAN remains historical/controlled fallback. Issue #554 adds governed
-  connector and immutable snapshot infrastructure, but it does not activate
-  reviewer reads, define cross-source precedence, run a production backfill,
-  schedule refresh, deploy, or complete automated Hosted acceptance. The
+  connector and immutable snapshot infrastructure. Issue #482 adds repository
+  read-time integration and deterministic cross-source precedence for active
+  accepted snapshots, but it does not promote a production snapshot, run a
+  production backfill, schedule refresh, deploy, or complete automated Hosted
+  acceptance. The
   historical ArcGIS query/export atomicity check failed for 47 shared Facility IDs;
   the exact Creative Commons version, dataset-specific attribution sentence,
   system-of-record status, maintainer, steward, update owner, cadence, and raw
@@ -37,8 +39,11 @@
   facility presentation, stakeholder CSV/XLSX outputs, and review-bundle CSVs;
   it also bounds the existing three-field hosted backfill with durable recovery.
   Facility intelligence, priorities, and trends remain on their specialized
-  aggregate read models. This work does not consume or activate ArcGIS, change
-  schemas, schedule refresh, add operator actions, deploy, or prove hosted
+  aggregate read models. Issue #482 composes the active accepted TransparencyAPI
+  primary source, active accepted ArcGIS supplementary source, CKAN/program
+  history, and complaint-time observations through that shared read-only
+  boundary. It does not change schemas, promote or retrieve a snapshot, run a
+  backfill, schedule refresh, add operator actions, deploy, or prove hosted
   acceptance.
   Raw `733` remains unresolved, and production-style reads exclude fixture,
   demo, synthetic, sample, mock, and test-only candidates rather than displaying

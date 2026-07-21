@@ -188,11 +188,12 @@ preloaded facility type/county/status values, retains precedence conflicts, and
 enters the existing artifact/import path without changing reviewer-created
 state or creating a second canonical persistence path,
 a shared read-only governed facility identity projection that accepts a public
-Facility ID plus authorized scope, loads eligible program-reference and
-complaint-linked canonical facility observations, and returns typed per-field
-values, semantic states, source/snapshot identities, conflicts, alternatives,
-and current-reference versus historical complaint context without a schema,
-migration, export, backfill, or reviewer-state mutation. Core facility lookup,
+Facility ID plus authorized scope, loads eligible active accepted TransparencyAPI
+primary-current and ArcGIS supplementary observations plus CKAN/program and
+complaint-linked historical observations, and returns typed per-field values,
+semantic states, source/snapshot identities, conflicts, alternatives, and
+current, supplementary, historical-reference, or complaint-time context without
+a schema, migration, export, backfill, or reviewer-state mutation. Core facility lookup,
 suggestion, request, hub, reviewer list/detail, packet preview/draft, and repeated
 feedback-context reads consume that projection through one shared presenter;
 query-carried names remain navigation context and authorized list reads resolve
@@ -412,8 +413,14 @@ infer closure or deletion.
 
 ArcGIS tables/pointers remain a separate supplementary source family and CKAN
 program snapshots remain historical/controlled fallback evidence. Issue #554
-does not connect accepted rows to canonical/reviewer projection, backfill,
-scheduling, deployment, operator mutation, or Hosted acceptance.
+itself added no consumer integration. Issue #482 now composes eligible rows from
+the active accepted source-family pointers at read time: TransparencyAPI is
+primary current reference, ArcGIS is supplementary, and CKAN/program plus
+complaint-linked observations remain historical. Bounded facility search queries
+the active TransparencyAPI snapshot directly; named reviewer, packet, and export
+consumers reuse ADR-0017's shared projection and presenter. No source snapshot is
+promoted by a read, and no canonical backfill, scheduling, deployment, operator
+mutation, or Hosted acceptance is added.
 
 ## Boundaries
 
@@ -432,9 +439,9 @@ scheduling, deployment, operator mutation, or Hosted acceptance.
   provenance, conflicts retain every original, and current-reference selection
   does not rewrite complaint-time facts. Raw numeric facility type `733` remains
   unresolved. Specialized facility intelligence, priority, trend,
-  substantiated, and serious-topic aggregate migration; exports; ArcGIS
-  observations; database backfill; and operator or scheduled refresh behavior
-  remain outside the core consumer migration.
+  substantiated, and serious-topic aggregate read models remain specialized;
+  database backfill and operator or scheduled refresh behavior remain outside
+  the read-only projection.
 - Production stack selection belongs in future ADRs after production-discovery
   requirements are documented.
 - The preferred hosted tester MVP direction is hybrid, not Datasette-primary:

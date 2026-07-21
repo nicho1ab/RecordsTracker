@@ -1226,7 +1226,10 @@ def route_response(
             facility_reference = _facility_reference_summary_from_context(
                 active_ccld_context
             )
-            if facility_reference.source_kind == "postgres_facility_reference":
+            if facility_reference.source_kind in {
+                "postgres_facility_reference",
+                "postgres_transparencyapi_reference",
+            }:
                 try:
                     source_context = active_ccld_context.reviewer_ui_context.workflow_shell_context.source_derived_api_context
                     lookup_result = search_facility_reference_records(
@@ -1591,7 +1594,9 @@ def _facility_reference_from_context(
         )
     except SQLAlchemyError:
         facility_reference = None
-    if facility_reference is not None and facility_reference.records:
+    if facility_reference is not None and (
+        facility_reference.records or facility_reference.record_count
+    ):
         return facility_reference
 
     status, _content_type, body = route_source_derived_api_response(
