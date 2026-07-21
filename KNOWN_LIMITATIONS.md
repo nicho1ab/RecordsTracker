@@ -49,7 +49,7 @@
   demo, synthetic, sample, mock, and test-only candidates rather than displaying
   them as facility truth.
 - The authenticated operator source-coverage dashboard consumes validated
-  Issue #453 v1 packages and exposes only GET summary, facility, job, aggregate
+  Issue #453 `1.1.0` packages and exposes only GET summary, facility, job, aggregate
   CSV, and grouped Facility ID reads. Production requests require a fully
   verified Cloudflare Access JWT and an exact operator email allowlist match;
   an allowed tester domain alone never grants operator authority. The read-only
@@ -62,12 +62,19 @@
   `pending_policy`. Runtime coverage describes measured deployed rows; it does
   not prove statewide completeness, freshness, absence of complaints, legal
   conclusions, correct rendering without UI evidence, deployment success, or
-  QNAP behavior. Fully automated Hosted capture also requires a user-approved
-  process-local header-provider command; no token or browser-cookie fallback is
-  implemented. The supported read-only Issue #477 repository scope is complete
-  and the issue is closed. The Hosted provider
-  prerequisite, deployment, mutation, scheduling, and retention work remain
-  human-controlled or separately governed rather than missing dashboard code.
+  QNAP behavior. The `1.1.0` facility-reference extension reports persisted
+  bulk-snapshot facts; CONTACT, detail status, and complaint-linked conflict
+  totals remain explicitly unavailable unless an approved persisted/authorized
+  read supplies them. Repository-verified surface availability is not a
+  substitute for deployed non-provider acceptance. Fully automated Hosted
+  authenticated-UI capture also requires a user-approved process-local header-
+  provider command; no token or browser-cookie fallback is implemented. The
+  product owner accepts the residual automation risk when that approved provider
+  is unavailable, so its absence alone does not block Issue #453 completion and
+  must not be reported as a passed authenticated-UI run. The supported read-only
+  Issue #477 repository scope is complete and the issue is closed. Deployment,
+  mutation, scheduling, and retention work remain human-controlled or separately
+  governed rather than missing dashboard code.
 - Reviewer aggregates report their loaded-record universe, denominator,
   selected date dimension/range, source coverage, and explicit zero,
   unavailable, partial, or truncated cause. These counts describe authorized

@@ -1,6 +1,13 @@
 # Changelog
 
 ## Unreleased
+- Extended the Issue #453 source-to-screen contract to `1.1.0` for the active
+  accepted TransparencyAPI snapshot and ADR-0017 shared facility projection.
+  The deterministic package now carries aggregate field-stage, quarantine,
+  conflict, missing-state, reviewer-surface, PostgreSQL-reconciliation, and
+  release-threshold results without emitting facility or reviewer record
+  values. Runtime reads remain authorization-before-read and `SELECT`-only;
+  hosted acceptance remains a post-merge deployment activity.
 - Unified the governed read-only facility identity projection for Issue #482.
   Active accepted TransparencyAPI snapshots now provide primary current-reference
   values, ArcGIS remains supplementary, CKAN/program observations remain

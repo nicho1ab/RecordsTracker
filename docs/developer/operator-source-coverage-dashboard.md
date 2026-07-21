@@ -65,7 +65,7 @@ silently substitutes fixture data.
 
 The dashboard imports only the stable
 `ccld_complaints.source_to_screen_coverage` read boundary. That boundary invokes
-Issue #453's public package validator and consumes contract version `1.0.0`
+Issue #453's public package validator and consumes contract version `1.1.0`
 from an explicit package directory. The dashboard does not import the producer
 implementation directly and does not recount or reclassify producer results.
 The boundary validates:
@@ -121,6 +121,14 @@ or update jobs, change checkpoints, mutate reviewer state, or write to the
 database. Operational or job dimensions without a complete approved read
 boundary are explicitly unavailable; zero, success, freshness, and completeness
 are never fabricated.
+
+Contract `1.1.0` adds the producer-owned `coverage.facility_reference` object.
+It identifies the active accepted TransparencyAPI snapshot in safe governed
+form and supplies aggregate row, quarantine, field-stage, conflict,
+missing-state, reviewer-surface, PostgreSQL-reconciliation, and release-check
+results. The dashboard continues to consume producer results without loading
+facility values or recalculating them. Repository verification does not replace
+the later deployed Hosted acceptance run required by Issue #453.
 
 Publication takes an exclusive sibling lock, writes to a temporary sibling,
 validates the complete contract package through the stable consumer, and only
@@ -213,7 +221,13 @@ The provider output is consumed in memory and suppressed on error. The script
 does not read browser cookies or profiles and refuses Hosted mode without this
 mechanism. Cookies, browser profiles, stored assertions, service-token secrets,
 and authentication headers must not enter evidence. An absent approved provider
-is a precise automation blocker, not permission to bypass Access. Hosted mode
+is a precise automation limitation, not permission to bypass Access. When it is
+the only remaining gap, the product owner accepts that residual automation risk
+and it does not block Issue #453 completion after all other repository,
+deployment, database, route, reconciliation, privacy, and available Hosted gates
+pass. The completion record must state that no automated authenticated Hosted UI
+run passed and that Cloudflare Access operation was independently accepted by
+the product owner. Hosted mode
 also refuses a feature branch, dirty worktree, unresolved `origin/main`, or any
 HEAD/origin/expected-SHA mismatch; the evidence manifest records the validated
 deployed merge SHA. A hosted run validates the current deployed package; the

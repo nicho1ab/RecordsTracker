@@ -203,8 +203,10 @@
   cannot be a unique ArcGIS database key.
   Raw `733` remains unresolved unless verified source or governed mapping
   evidence proves a descriptive label.
-- Source-to-screen operator coverage completion status: Issue #453's deterministic v1
-  producer is connected to Issue #477's read-only dashboard through the stable
+- Source-to-screen operator coverage completion status: Issue #453's
+  deterministic `1.1.0` producer extends the existing package with active
+  accepted TransparencyAPI and shared-projection aggregate coverage and is
+  connected to Issue #477's read-only dashboard through the stable
   `source_to_screen_coverage` boundary. The consumer uses producer-owned schema,
   hashes, identities, media types, CSV header, reconciliation, release, and
   controlled source-layout values without recounting. Shared operator
@@ -212,9 +214,13 @@
   not expose the surface. The production-style read-only bridge reuses verified
   Cloudflare Access JWTs plus an exact operator-email allowlist and atomically
   publishes stable-consumer-validated contract packages from SELECT-only
-  PostgreSQL aggregates. Missing operational/job read boundaries remain
-  explicitly unavailable. The supported read-only Issue #477 repository scope
-  is complete. Mutation, persistence, scheduling, retrieval/import,
+  PostgreSQL aggregates. The release assessment compares governed aggregate
+  baselines, rejects reconciliation and rendering regressions, and keeps
+  source absence distinct from defects. Missing detail, complaint-linked, and
+  operational/job read boundaries remain explicitly unavailable rather than
+  verified zero. The supported read-only Issue #477 repository scope is
+  complete. Issue #453 still requires a later deployed Hosted acceptance run.
+  Mutation, persistence, scheduling, retrieval/import,
   job/checkpoint mutation, deployment, Hosted execution, and retention
   automation remain separately governed or human-controlled and are not
   approved by the completed dashboard scope.

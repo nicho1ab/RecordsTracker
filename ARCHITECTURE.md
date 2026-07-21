@@ -422,6 +422,16 @@ consumers reuse ADR-0017's shared projection and presenter. No source snapshot i
 promoted by a read, and no canonical backfill, scheduling, deployment, operator
 mutation, or Hosted acceptance is added.
 
+Issue #453 contract `1.1.0` extends the existing source-to-screen package rather
+than adding another reporting framework. Its read-only runtime adapter selects
+the active accepted TransparencyAPI snapshot, measures only aggregate row,
+quarantine, field-state, conflict, projection, and surface-availability facts,
+and reuses ADR-0017's authorized shared projector. ArcGIS remains supplementary;
+CKAN/program and complaint/report-time observations remain historical. The
+package compares release aggregates with the prior accepted package, fails on
+reconciliation or threshold regressions, and never serializes facility values,
+source rows, reviewer-created state, or authentication material.
+
 ## Boundaries
 
 - The repository owns ingestion, extraction, validation, storage, documentation, and tests.
