@@ -250,4 +250,5 @@ def test_alembic_scaffold_has_expected_domain_migrations() -> None:
         "20260714_0007_canonical_allocation.py",
         "20260720_0008_source_snapshot_lifecycle.py",
         "20260720_0009_live_arcgis_query_scope.py",
+        "20260721_0010_transparencyapi_source_snapshot.py",
     ]

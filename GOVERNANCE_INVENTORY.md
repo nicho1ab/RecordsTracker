@@ -173,34 +173,33 @@
   sources and keep the statewide candidate inactive**. That remains completed
   historical evaluation evidence and did not activate a source.
 - Build Week facility-reference completion status: Phase A under Issue #516
-  merged at `41d512127febdfd086432e7f082d0651da232e9f` with the authoritative
-  **SUPPLEMENT** decision. Program snapshots remain the primary source family;
-  ArcGIS is a separate supplementary current-reference source. ArcGIS has
+  merged at `41d512127febdfd086432e7f082d0651da232e9f` with the historical
+  **SUPPLEMENT** decision. ArcGIS has
   29,871 rows, 29,714 unique facility numbers, and 129 duplicated facility
   numbers across 286 rows. Query/export values differ on 47 shared Facility
   IDs. Program sources have 68,526 unique nonblank Facility IDs: 27,831 shared,
-  1,883 ArcGIS-only, and 40,695 program-only. The remaining sequence is Issue
-  #518 source-specific snapshots; ArcGIS-specific extension of Issue #482's
-  identity/reconciliation and controlled backfill plus the downstream projection
-  work completed under #521-#523; Issue #453 coverage through the completed #477
-  read-only operator boundary; Issue #478 separate refresh workflows; then
-  deployment, automated Hosted acceptance, final documentation, final SHA, and
-  release tag. The original #516 replacement premise is superseded by the merged
-  **SUPPLEMENT** decision, and #518 is the exact next repository issue. See the
-  [Build Week ArcGIS facility-reference completion plan](docs/planning/build-week-2026-arcgis-facility-reference-completion-plan.md).
-- Dual-source preservation rule: program-specific snapshots remain primary;
-  ArcGIS snapshots remain separate and supplementary. Neither source overwrites
-  or erases the other. Identical values may reconcile while retaining both
-  observations; conflicting nonblank values retain both originals and conflict
-  state. No global ArcGIS-wins or program-wins rule is approved. Content change
-  is determined from preserved bytes, normalized content, schema/domain
-  fingerprints, and Facility ID sets, never catalog timestamps alone.
+  1,883 ArcGIS-only, and 40,695 program-only. Issue #553 supersedes that plan's
+  forward-looking source direction: official TransparencyAPI accepted snapshots
+  are primary current reference, CKAN/program snapshots remain historical and
+  controlled fallback evidence, and ArcGIS remains separately versioned
+  supplementary evidence. Issue #554 implements only the connector/snapshot
+  boundary; #482/#521-#523 integration, #478 scheduling, deployment, and Hosted
+  acceptance remain separately governed.
+- Multi-source preservation rule: TransparencyAPI, CKAN/program, ArcGIS, and
+  complaint/report-time observations remain source-specific. No source erases
+  another source's raw values or provenance. Identical values may reconcile
+  while retaining originals; conflicting populated values retain explicit
+  conflict state. Content change is determined from preserved bytes, normalized
+  content, schema/taxonomy fingerprints, and Facility ID sets, never catalog or
+  request timestamps alone.
 - Identity and label rule: one governed facility identity projection must serve
   search, facility hub, queue, complaint detail, packet views, exports, and
   operator reporting. Current reference values retain field-level provenance
-  and conflicts without rewriting historical complaint context. ArcGIS
-  source-row identity is snapshot identity plus `ObjectId`; facility number is
-  a non-unique match/grouping value and cannot be a unique ArcGIS database key.
+  and conflicts without rewriting historical complaint context. TransparencyAPI
+  quarantine identity is snapshot, export ID, row ordinal, and raw-row SHA-256;
+  Facility Number is unique only within one accepted current snapshot. ArcGIS
+  source-row identity remains snapshot plus `ObjectId`, and facility number
+  cannot be a unique ArcGIS database key.
   Raw `733` remains unresolved unless verified source or governed mapping
   evidence proves a descriptive label.
 - Source-to-screen operator coverage completion status: Issue #453's deterministic v1

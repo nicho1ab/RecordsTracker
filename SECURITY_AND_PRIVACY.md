@@ -34,6 +34,19 @@ bodies. The connector has no retry, production activation, canonical/reviewer
 write, scheduler, operator mutation, deployment, QNAP, Cloudflare, or Hosted
 acceptance path.
 
+The Issue #554 TransparencyAPI connector is limited to official public CCLD
+HTTPS GET endpoints and the seven approved bulk export IDs. It sends no
+credentials, cookies, authorization headers, user information, caller URLs, or
+fragments and rejects redirects, duplicate/unapproved parameters,
+`FacilitySearch` enumeration, negative/unvalidated report indexes, and every
+raw `REPORTPAGE` value containing `fakeout.gov`. Exact public response bodies
+are preserved under the ignored `data/raw/ccld/transparencyapi-facility-reference/`
+boundary before parsing. Manifests retain only approved safe response headers;
+cookie, authentication, and unapproved header values are excluded. Private
+source-owner correspondence remains outside Git. The connector has no
+reviewer/canonical write, production activation, schedule, deployment, QNAP,
+Cloudflare, or Hosted acceptance path.
+
 ## Secrets
 
 Local secrets must use environment variables or untracked `.env` files. `.env` is ignored by Git.

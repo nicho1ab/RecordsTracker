@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import csv
+import io
 import json
 import os
 import uuid
@@ -17,11 +19,32 @@ from ccld_complaints.connectors.arcgis_ccl_facilities.contract import (
     ARCGIS_LAYER_URL,
     ARCGIS_QUERY_URL,
     ARCGIS_SERVICE_URL,
+    ARCGIS_SUPPLEMENT_SOURCE_FAMILY_ID,
     CATALOG_URL,
     LICENSES_URL,
 )
 from ccld_complaints.connectors.arcgis_ccl_facilities.live_query import (
     capture_live_arcgis_query_snapshot,
+)
+from ccld_complaints.connectors.ccld_transparency_api.connector import (
+    HttpArtifactResponse,
+    TransparencyApiConnector,
+)
+from ccld_complaints.connectors.ccld_transparency_api.contract import (
+    BASE_URL as TRANSPARENCY_API_BASE_URL,
+)
+from ccld_complaints.connectors.ccld_transparency_api.contract import (
+    EXPORT_IDS as TRANSPARENCY_EXPORT_IDS,
+)
+from ccld_complaints.connectors.ccld_transparency_api.contract import (
+    expected_headers as transparency_expected_headers,
+)
+from ccld_complaints.connectors.ccld_transparency_api.lifecycle import (
+    accept_transparencyapi_snapshot,
+    promote_transparencyapi_snapshot,
+    stage_transparencyapi_snapshot,
+    transparency_rows,
+    validate_transparencyapi_snapshot,
 )
 from ccld_complaints.hosted_app.reviewer_created_state import hosted_reviewer_created_state
 from ccld_complaints.hosted_app.seeded_import import (
@@ -74,8 +97,7 @@ class _FixtureTransport:
         self.service = _fixture_json("service.json")
         self.layer = _fixture_json("layer.json")
         self.rows = [
-            dict(feature["attributes"])
-            for feature in _fixture_json("page-00000.json")["features"]
+            dict(feature["attributes"]) for feature in _fixture_json("page-00000.json")["features"]
         ]
 
     def get(self, url: str, *, timeout_seconds: float) -> HttpResponse:
@@ -105,10 +127,7 @@ class _FixtureTransport:
                 offset = int(params["resultOffset"][0])
                 count = int(params["resultRecordCount"][0])
                 payload = {
-                    "features": [
-                        {"attributes": row}
-                        for row in self.rows[offset : offset + count]
-                    ]
+                    "features": [{"attributes": row} for row in self.rows[offset : offset + count]]
                 }
             body = canonical_json_bytes(payload)
         else:
@@ -118,6 +137,29 @@ class _FixtureTransport:
             final_url=url,
             status=200,
             content_type=content_type,
+            body=body,
+        )
+
+
+class _TransparencyFixtureTransport:
+    def get(self, url: str, *, timeout_seconds: float) -> HttpArtifactResponse:
+        assert timeout_seconds > 0
+        if url == f"{TRANSPARENCY_API_BASE_URL}/Group/":
+            body = b'[{"TYPE":"733"},{"TYPE":"777"}]'
+            media_type = "application/json"
+        elif url == f"{TRANSPARENCY_API_BASE_URL}/CACounty":
+            body = b'[{"CODE":"00","NAME":"Fixture County"}]'
+            media_type = "application/json"
+        else:
+            export_id = parse_qs(urlsplit(url).query)["id"][0]
+            index = TRANSPARENCY_EXPORT_IDS.index(export_id) + 1
+            body = _transparency_csv(export_id, f"8{index:08d}")
+            media_type = "text/csv"
+        return HttpArtifactResponse(
+            request_url=url,
+            final_url=url,
+            status=200,
+            headers=(("Content-Type", media_type),),
             body=body,
         )
 
@@ -164,14 +206,23 @@ def test_postgres_snapshot_promotion_and_rollback_preserve_complete_history(
     second = _stage_accept_promote(connection, "snapshot-b-manifest.json")
     connection.commit()
 
-    pointer = connection.execute(sa.select(source_snapshot_pointers)).mappings().one()
+    pointer = (
+        connection.execute(
+            sa.select(source_snapshot_pointers).where(
+                source_snapshot_pointers.c.source_family_id == ARCGIS_SUPPLEMENT_SOURCE_FAMILY_ID
+            )
+        )
+        .mappings()
+        .one()
+    )
     assert pointer["active_snapshot_id"] == second
     assert pointer["prior_accepted_snapshot_id"] == first
     assert connection.scalar(sa.select(sa.func.count()).select_from(source_snapshots)) == 2
     assert connection.scalar(sa.select(sa.func.count()).select_from(source_snapshot_rows)) == 5
-    assert connection.scalar(
-        sa.select(sa.func.count()).select_from(source_snapshot_disappearances)
-    ) == 2
+    assert (
+        connection.scalar(sa.select(sa.func.count()).select_from(source_snapshot_disappearances))
+        == 2
+    )
 
     rolled_back = rollback_arcgis_fixture_snapshot(
         connection,
@@ -181,9 +232,9 @@ def test_postgres_snapshot_promotion_and_rollback_preserve_complete_history(
     connection.commit()
     assert rolled_back.active_snapshot_id == first
     assert rolled_back.prior_accepted_snapshot_id == second
-    assert set(
-        connection.execute(sa.select(source_snapshots.c.lifecycle_state)).scalars()
-    ) == {"accepted"}
+    assert set(connection.execute(sa.select(source_snapshots.c.lifecycle_state)).scalars()) == {
+        "accepted"
+    }
 
 
 def test_postgres_live_candidate_preserves_prior_and_unrelated_reviewer_state(
@@ -191,7 +242,15 @@ def test_postgres_live_candidate_preserves_prior_and_unrelated_reviewer_state(
     tmp_path: Path,
 ) -> None:
     connection = postgres_lifecycle_connection
-    pointer = connection.execute(sa.select(source_snapshot_pointers)).mappings().one()
+    pointer = (
+        connection.execute(
+            sa.select(source_snapshot_pointers).where(
+                source_snapshot_pointers.c.source_family_id == ARCGIS_SUPPLEMENT_SOURCE_FAMILY_ID
+            )
+        )
+        .mappings()
+        .one()
+    )
     prior_snapshot_id = str(pointer["active_snapshot_id"])
     _ensure_reviewer_state(connection)
     reviewer_state_before = _reviewer_state_record(connection)
@@ -206,12 +265,15 @@ def test_postgres_live_candidate_preserves_prior_and_unrelated_reviewer_state(
         capture.manifest_path,
         execution_scope=ISOLATED_NONPRODUCTION_SCOPE,
     )
-    assert validate_arcgis_live_query_snapshot(
-        connection,
-        live.snapshot_id,
-        validated_at="2026-07-20T20:01:00Z",
-        execution_scope=ISOLATED_NONPRODUCTION_SCOPE,
-    ) == "validated"
+    assert (
+        validate_arcgis_live_query_snapshot(
+            connection,
+            live.snapshot_id,
+            validated_at="2026-07-20T20:01:00Z",
+            execution_scope=ISOLATED_NONPRODUCTION_SCOPE,
+        )
+        == "validated"
+    )
     accept_arcgis_live_query_snapshot(
         connection,
         live.snapshot_id,
@@ -236,6 +298,50 @@ def test_postgres_live_candidate_preserves_prior_and_unrelated_reviewer_state(
     connection.commit()
 
 
+def test_postgres_transparencyapi_candidate_preserves_text_identity(
+    postgres_lifecycle_connection: Connection,
+    tmp_path: Path,
+) -> None:
+    connection = postgres_lifecycle_connection
+    capture = TransparencyApiConnector(transport=_TransparencyFixtureTransport()).capture_snapshot(
+        tmp_path,
+        retrieved_at="2026-07-21T00:00:00+00:00",
+    )
+    inspection = stage_transparencyapi_snapshot(connection, capture.manifest_path)
+    assert (
+        validate_transparencyapi_snapshot(
+            connection,
+            inspection.snapshot_id,
+            validated_at="2026-07-21T00:01:00+00:00",
+        )
+        == "validated"
+    )
+    accept_transparencyapi_snapshot(
+        connection,
+        inspection.snapshot_id,
+        accepted_at="2026-07-21T00:02:00+00:00",
+    )
+    pointer = promote_transparencyapi_snapshot(
+        connection,
+        inspection.snapshot_id,
+        promoted_at="2026-07-21T00:03:00+00:00",
+    )
+    connection.commit()
+
+    assert pointer.active_snapshot_id == inspection.snapshot_id
+    assert connection.scalar(sa.select(sa.func.count()).select_from(transparency_rows)) == 7
+    facility_numbers = (
+        connection.execute(
+            sa.select(transparency_rows.c.facility_number).order_by(
+                transparency_rows.c.facility_number
+            )
+        )
+        .scalars()
+        .all()
+    )
+    assert facility_numbers[0] == "800000001"
+
+
 def test_postgres_controlled_real_candidate_completes_and_rolls_back(
     postgres_lifecycle_connection: Connection,
 ) -> None:
@@ -246,15 +352,21 @@ def test_postgres_controlled_real_candidate_completes_and_rolls_back(
             "real-candidate lifecycle regression."
         )
     repository_root = Path(__file__).resolve().parents[2]
-    governed_root = (
-        repository_root / "data/raw/source-profiling/issue-518-live-query"
-    ).resolve()
+    governed_root = (repository_root / "data/raw/source-profiling/issue-518-live-query").resolve()
     manifest_path = Path(manifest_value).resolve()
     if not manifest_path.is_relative_to(governed_root):
         pytest.fail(f"{LIVE_MANIFEST_ENV} must be inside the governed ignored evidence root.")
 
     connection = postgres_lifecycle_connection
-    pointer = connection.execute(sa.select(source_snapshot_pointers)).mappings().one()
+    pointer = (
+        connection.execute(
+            sa.select(source_snapshot_pointers).where(
+                source_snapshot_pointers.c.source_family_id == ARCGIS_SUPPLEMENT_SOURCE_FAMILY_ID
+            )
+        )
+        .mappings()
+        .one()
+    )
     prior_snapshot_id = str(pointer["active_snapshot_id"])
     prior_snapshot_count = connection.scalar(
         sa.select(sa.func.count()).select_from(source_snapshots)
@@ -271,12 +383,15 @@ def test_postgres_controlled_real_candidate_completes_and_rolls_back(
     assert live.validation_report["duplicate_object_id_count"] == 0
     assert live.validation_report["duplicate_facility_number_count"] == 157
     assert live.rejection_reasons == ()
-    assert validate_arcgis_live_query_snapshot(
-        connection,
-        live.snapshot_id,
-        validated_at="2026-07-20T21:10:00Z",
-        execution_scope=ISOLATED_NONPRODUCTION_SCOPE,
-    ) == "validated"
+    assert (
+        validate_arcgis_live_query_snapshot(
+            connection,
+            live.snapshot_id,
+            validated_at="2026-07-20T21:10:00Z",
+            execution_scope=ISOLATED_NONPRODUCTION_SCOPE,
+        )
+        == "validated"
+    )
     accept_arcgis_live_query_snapshot(
         connection,
         live.snapshot_id,
@@ -307,11 +422,14 @@ def test_postgres_controlled_real_candidate_completes_and_rolls_back(
 
 def _stage_accept_promote(connection: Connection, manifest_name: str) -> str:
     inspection = stage_arcgis_fixture_snapshot(connection, FIXTURE_ROOT / manifest_name)
-    assert validate_arcgis_fixture_snapshot(
-        connection,
-        inspection.snapshot_id,
-        validated_at="2026-07-20T16:00:00+00:00",
-    ) == "validated"
+    assert (
+        validate_arcgis_fixture_snapshot(
+            connection,
+            inspection.snapshot_id,
+            validated_at="2026-07-20T16:00:00+00:00",
+        )
+        == "validated"
+    )
     accept_arcgis_fixture_snapshot(
         connection,
         inspection.snapshot_id,
@@ -329,6 +447,26 @@ def _fixture_json(name: str) -> dict[str, Any]:
     value = json.loads((LIVE_FIXTURE_ROOT / name).read_text(encoding="utf-8"))
     assert isinstance(value, dict)
     return value
+
+
+def _transparency_csv(export_id: str, facility_number: str) -> bytes:
+    headers = transparency_expected_headers(export_id)
+    values = {header: "" for header in headers[:-1]}
+    values.update(
+        {
+            "Facility Type": "SYNTHETIC TYPE",
+            "Facility Number": facility_number,
+            "Facility Name": "Synthetic PostgreSQL Facility",
+            "Facility Status": "Licensed",
+            "Facility Address": "100 Synthetic Way",
+            "Facility Telephone Number": "555-0100",
+        }
+    )
+    output = io.StringIO(newline="")
+    writer = csv.writer(output, lineterminator="\r\n")
+    writer.writerow(headers)
+    writer.writerow([values[header] for header in headers[:-1]] + ["No Complaints"])
+    return output.getvalue().encode()
 
 
 def _ensure_reviewer_state(connection: Connection) -> None:
@@ -357,11 +495,15 @@ def _reviewer_state_record(
     *,
     required: bool = True,
 ) -> dict[str, Any] | None:
-    row = connection.execute(
-        sa.select(hosted_reviewer_created_state).where(
-            hosted_reviewer_created_state.c.reviewer_state_id == REVIEWER_STATE_ID
+    row = (
+        connection.execute(
+            sa.select(hosted_reviewer_created_state).where(
+                hosted_reviewer_created_state.c.reviewer_state_id == REVIEWER_STATE_ID
+            )
         )
-    ).mappings().one_or_none()
+        .mappings()
+        .one_or_none()
+    )
     if row is None and required:
         raise AssertionError("Expected the actual reviewer-created state row to remain present.")
     return dict(row) if row is not None else None

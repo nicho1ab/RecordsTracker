@@ -479,6 +479,26 @@ isolated nonproduction infrastructure; these flags never authorize production.
 Static coverage keeps HTTP policy in the connector and out of the shared
 lifecycle module.
 
+Issue #554 TransparencyAPI tests use fictional source-shaped responses and no
+live source calls in CI. They prove the exact headers for all seven exports,
+quoted commas, six/seven-field ordered complaint blocks, zero/partial blocks,
+leading-zero Facility Numbers, blank and cross-export duplicate quarantine,
+separate raw/normalized and bulk/detail observations, Closed Date disagreement,
+type `777`, unknown type codes, suspicious dates, and populated address/phone
+preservation. Detail/report tests prove sentinel detection, ordered list/index
+validation, raw `REPORTPAGE` rejection, HTML/status/redirect enforcement, and
+list/helper reconciliation. Capture tests prove all nine required artifacts are
+written byte-for-byte before parsing with governed provenance and no retained
+cookie/authentication headers.
+
+Lifecycle and migration tests prove incomplete source-family rejection,
+idempotent staging, deterministic warnings/quarantines, accepted/active/prior
+state, atomic pointer promotion/rollback, disappearance without closure, and
+separate ArcGIS/CKAN/reviewer state. The existing isolated PostgreSQL regression
+also stages and promotes a complete fictional TransparencyAPI family when its
+two explicit nonproduction environment flags are present. Migration tests cover
+upgrade, downgrade, retained-history refusal, and the single Alembic head.
+
 Issue #447 canonical-allocation evidence tests must cover the exact 12-field
 registry, canonical importer population, null versus verified zero, date-list
 ordering/deduplication, raw composite provenance, additive migration behavior,

@@ -383,6 +383,38 @@ inside the caller's database transaction while retaining both accepted
 snapshots. No source-reference, canonical, reviewer-created, audit, retrieval,
 job, operator, or hosted table is read or written by the connector lifecycle.
 
+## Governed TransparencyAPI facility-reference snapshot lifecycle
+
+Issues #553/#554 designate the official CCLD TransparencyAPI as the primary
+current facility-reference source and add a versioned connector under
+`src/ccld_complaints/connectors/ccld_transparency_api/`. The connector has a
+closed unauthenticated GET allowlist for seven `DownloadStateData` exports,
+bounded `FacilityDetail`, `Group/`, `CACounty`, and validated `FacilityReports`
+list/helper requests. Redirects, caller URLs, `FacilitySearch` enumeration, and
+raw `REPORTPAGE` values containing `fakeout.gov` fail closed.
+
+The shared `hosted_source_snapshots` state rows and source-family pointers own
+candidate, validated/rejected, accepted, active, and prior-accepted transitions.
+TransparencyAPI-specific tables preserve each raw artifact, export row,
+quarantine, and disappearance. Row identity is snapshot plus export ID plus row
+ordinal, with raw-row SHA-256 retained; Facility Number remains text and is
+unique only within one accepted current snapshot. Promotion and rollback update
+one complete pointer atomically within the caller's transaction.
+
+Exact response bytes are written before parsing. The manifest records safe
+request/response provenance and aggregate hashes; authentication and cookie
+headers are neither sent nor stored. The parser preserves fixed headers, raw
+and normalized observations, ordered complaint blocks, source-specific bulk
+and detail status, Closed Date, CONTACT, and Facility Administrator. Blank or
+placeholder address/telephone observations cannot supersede a prior populated
+current-source value. Disappearances remain reconciliation facts and never
+infer closure or deletion.
+
+ArcGIS tables/pointers remain a separate supplementary source family and CKAN
+program snapshots remain historical/controlled fallback evidence. Issue #554
+does not connect accepted rows to canonical/reviewer projection, backfill,
+scheduling, deployment, operator mutation, or Hosted acceptance.
+
 ## Boundaries
 
 - The repository owns ingestion, extraction, validation, storage, documentation, and tests.

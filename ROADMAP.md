@@ -7,6 +7,18 @@ traceability, local review, and exports. Datasette remains useful for validation
 inspection, debugging, local exploration, and export support, but it is no longer
 the governed primary future review experience.
 
+## Current facility-reference source direction
+
+Issue #553 supersedes the earlier forward-looking ArcGIS completion sequence.
+The official CCLD TransparencyAPI is the approved primary current
+facility-reference source; ArcGIS remains a separate optional supplementary
+observation and CKAN/program snapshots remain historical/controlled fallback
+evidence. Issue #554 establishes only the connector and immutable snapshot
+lifecycle. Projection/backfill, scheduling, deployment, operator integration,
+and automated Hosted acceptance remain separately governed. Older Issue
+#490/#516/#518 sections below are retained as historical evaluation and
+implementation evidence, not current source-selection direction.
+
 ## Completed foundation
 
 - Defined a governed development-loop issue contract, pull-request evidence
