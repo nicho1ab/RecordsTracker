@@ -3,16 +3,14 @@
 - The deployed Build Week checkpoint
   `d7e9b1fff9e1826c3387a7313777d14c1480d3b4` is not the final Build Week
   release. Phase A merged at `41d512127febdfd086432e7f082d0651da232e9f`
-  with **SUPPLEMENT**. Issue #518 now has a bounded live query-only connector,
-  but ArcGIS is not a production-active source. Program-specific snapshots
-  remain the primary governed source family;
-  ArcGIS is a separate supplementary current-reference source. Separate source
-  snapshots/lifecycle; ArcGIS-specific identity, reconciliation, controlled
-  backfill, and downstream projection evidence; ArcGIS source-to-screen/operator
-  reconciliation; separate scheduled refresh/recovery; deployment; and automated
-  Hosted acceptance in the
-  [Build Week ArcGIS completion plan](docs/planning/build-week-2026-arcgis-facility-reference-completion-plan.md)
-  remain incomplete. Query/export atomicity failed for 47 shared Facility IDs;
+  with **SUPPLEMENT**. Issue #553 supersedes the old forward-looking source
+  direction: the official TransparencyAPI is the approved primary current
+  facility-reference source, ArcGIS remains separate supplementary evidence,
+  and CKAN remains historical/controlled fallback. Issue #554 adds governed
+  connector and immutable snapshot infrastructure, but it does not activate
+  reviewer reads, define cross-source precedence, run a production backfill,
+  schedule refresh, deploy, or complete automated Hosted acceptance. The
+  historical ArcGIS query/export atomicity check failed for 47 shared Facility IDs;
   the exact Creative Commons version, dataset-specific attribution sentence,
   system-of-record status, maintainer, steward, update owner, cadence, and raw
   type value `733` label remain unresolved.

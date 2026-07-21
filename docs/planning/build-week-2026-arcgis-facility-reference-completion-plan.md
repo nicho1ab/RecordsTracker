@@ -1,5 +1,12 @@
 # Build Week 2026 ArcGIS facility-reference completion plan
 
+> Historical plan notice: Issue #553 supersedes this document's forward-looking
+> source direction. The official CCLD TransparencyAPI is now the approved
+> primary current facility-reference source; ArcGIS remains separately versioned
+> supplementary evidence and CKAN/program snapshots remain historical/controlled
+> fallback evidence. The phases below are retained as Issue #516/#518 history
+> and do not authorize new ArcGIS-first implementation.
+
 ## Status and completion boundary
 
 This document defines the Build Week 2026 production sequence for implementing

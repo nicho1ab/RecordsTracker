@@ -351,15 +351,16 @@ The repository establishes this boundary:
 The current deployed checkpoint is an intermediate accepted checkpoint. It must
 not be described or tagged as the final Build Week release. Phase A merged at
 `41d512127febdfd086432e7f082d0651da232e9f` with the evidence-supported
-**SUPPLEMENT** decision. Build Week completion therefore includes the complete
-governed dual-source ArcGIS facility-reference supplement sequence in the
-[ArcGIS facility-reference completion plan](docs/planning/build-week-2026-arcgis-facility-reference-completion-plan.md):
-separate immutable program and ArcGIS snapshots; ArcGIS-specific extension of
-the shared facility identity, reconciliation, controlled backfill, and downstream
-consumer work already completed for eligible program-reference data under
-#521-#523; source-to-screen and operator reconciliation; separate governed refresh
-workflows with checkpoint recovery; production deployment; and automated Hosted
-acceptance.
+**SUPPLEMENT** decision. Issue #553 later superseded that plan's forward-looking
+source direction: official CCLD TransparencyAPI accepted snapshots are the
+approved primary current facility-reference source, ArcGIS remains separately
+versioned supplementary evidence, and CKAN/program snapshots remain
+historical/controlled fallback evidence. Build Week completion therefore still
+requires governed source integration with the shared identity projection,
+controlled reconciliation/backfill, source-to-screen and operator evidence,
+scheduled refresh/recovery, production deployment, and automated Hosted
+acceptance. Historical ArcGIS planning remains retained as evidence rather than
+current source-selection authority.
 
 Until every required phase is merged, deployed, and accepted, the final Build
 Week SHA remains pending and tag `openai-build-week-2026` must not be moved to
@@ -385,16 +386,14 @@ During Build Week, I added or materially expanded:
 - Freshness metadata and source-precedence rules.
 - Production-oriented deployment, backup, validation, and release procedures.
 
-Those completed extensions do not establish that ArcGIS is currently active,
-statewide-complete, current, authoritative, or a replacement for the program
-sources. Issue #490 remains completed historical evaluation evidence, and the
-governed Phase A evaluation under #516 now establishes **SUPPLEMENT**: the
-program-specific snapshots remain the primary source family while ArcGIS is a
-separately versioned current-reference supplement. The final Build Week release
-must add the remaining ArcGIS-specific dual-source implementation without
-inventing a descriptive label for raw type value `733`. The original #516
-replacement premise is superseded by this merged decision; it is not an
-authorization to cut over, activate, or backfill ArcGIS.
+Those completed extensions do not establish that TransparencyAPI or ArcGIS is
+deployed, statewide-complete, current, authoritative for legal conclusions, or
+integrated into reviewer reads. Issue #490/#516/#518 remains historical
+evaluation and supplementary-lifecycle evidence. Issue #553 is the current
+source-selection authority, but it does not itself authorize production
+cutover, backfill, scheduling, or deployment. The final Build Week release must
+complete those separately governed phases without inventing a descriptive label
+for raw type value `733`.
 
 These changes transformed RecordsTracker from a promising early application into a substantially more complete public-record intelligence platform.
 

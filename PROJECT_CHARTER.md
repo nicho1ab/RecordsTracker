@@ -34,16 +34,16 @@ For OpenAI Build Week 2026, the current deployed checkpoint
 `d7e9b1fff9e1826c3387a7313777d14c1480d3b4` is intermediate, not final. The
 governed Phase A evaluation merged at
 `41d512127febdfd086432e7f082d0651da232e9f` and concluded **SUPPLEMENT**, not
-replacement. The remaining completion scope is a governed dual-source model:
-program-specific snapshots remain the primary facility-reference source family,
-and ArcGIS is a separately versioned supplementary current-reference source.
-This merged decision supersedes the original #516 replacement premise. Issues
+replacement. Issue #553 later approved the official CCLD TransparencyAPI as
+the primary governed current facility-reference source: `DownloadStateData`
+provides the complete seven-export family, bounded detail/report endpoints
+provide source-specific observations, ArcGIS remains an optional supplementary
+source, and CKAN remains historical/controlled fallback evidence. Issues
 #521-#523 completed the shared projection, named consumers/exports, and bounded
-backfill for eligible existing program-reference data; they did not consume or
-activate ArcGIS. The remaining work extends those governed boundaries to the
-ArcGIS supplement after #518 establishes its separate snapshot lifecycle.
-The required sequence is defined in the
-[Build Week ArcGIS facility-reference completion plan](docs/planning/build-week-2026-arcgis-facility-reference-completion-plan.md).
+backfill for eligible existing program-reference data; they do not activate the
+new source or authorize production migration. Historical ArcGIS evaluation and
+planning remain retained as evidence, but #553 supersedes their forward-looking
+source direction.
 
 ## Primary goal
 
@@ -60,12 +60,14 @@ experience.
 
 The Build Week facility-reference goal is one provenance-preserving identity
 projection across search, facility hub, queue, complaint detail, packet views,
-exports, and operator reporting; controlled dual-source reconciliation and
-backfill; separate governed refresh workflows with recovery; and automated
-Hosted acceptance. Program snapshots remain the primary source family, while
-ArcGIS may supply only approved supplementary current-reference fields. Neither
-source erases the other. Raw type value `733` must not receive a descriptive
-label without verified source or governed mapping evidence.
+exports, and operator reporting; controlled source reconciliation and backfill;
+separate governed refresh workflows with recovery; and automated Hosted
+acceptance. Accepted TransparencyAPI snapshots are the approved primary current
+source family, ArcGIS may supply only approved supplementary observations, and
+CKAN evidence remains historical/controlled fallback. No source erases another
+source's provenance or complaint-time context. Raw type value `733` must not
+receive a descriptive label without verified source or governed mapping
+evidence.
 
 ## Initial source
 
@@ -96,9 +98,9 @@ Initial facility:
 - Documentation is generated and maintained for developer and end-user audiences.
 - The presentation layer meets ADA digital accessibility requirements.
 - The project can add future source connectors without rewriting the architecture.
-- The final Build Week release is set only after the complete ArcGIS supplement
-  and dual-source reconciliation sequence is merged, deployed, reconciled, and
-  accepted through automated Hosted evidence.
+- The final Build Week release is set only after the approved current-source,
+  supplementary-source, reconciliation, deployment, and automated Hosted
+  acceptance sequence is complete.
 
 ## Non-goals
 

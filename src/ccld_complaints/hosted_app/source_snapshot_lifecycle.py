@@ -132,11 +132,13 @@ source_snapshots = Table(
     Column("rejected_at", String(40), nullable=True),
     Column("accepted_at", String(40), nullable=True),
     CheckConstraint(
-        "fixture_scope IN ('repository_synthetic_fixture', 'governed_live_query')",
+        "fixture_scope IN ('repository_synthetic_fixture', 'governed_live_query', "
+        "'governed_transparencyapi')",
         name="ck_hosted_source_snapshots_fixture_scope",
     ),
     CheckConstraint(
-        "observation_kind IN ('synthetic_query', 'synthetic_export', 'live_query')",
+        "observation_kind IN ('synthetic_query', 'synthetic_export', 'live_query', "
+        "'bulk_export_family')",
         name="ck_hosted_source_snapshots_observation_kind",
     ),
     CheckConstraint(
@@ -240,8 +242,7 @@ source_snapshot_pointers = Table(
     ),
     Column("updated_at", String(40), nullable=False),
     CheckConstraint(
-        "prior_accepted_snapshot_id IS NULL "
-        "OR prior_accepted_snapshot_id <> active_snapshot_id",
+        "prior_accepted_snapshot_id IS NULL OR prior_accepted_snapshot_id <> active_snapshot_id",
         name="ck_hosted_source_snapshot_pointers_distinct_snapshots",
     ),
 )
@@ -473,9 +474,7 @@ def _inspect_arcgis_package(
     report = {
         "row_count": len(raw_records),
         "stored_row_count": len(normalized_rows),
-        "duplicate_object_id_count": sum(
-            count - 1 for count in object_ids.values() if count > 1
-        ),
+        "duplicate_object_id_count": sum(count - 1 for count in object_ids.values() if count > 1),
         "duplicate_facility_number_count": sum(
             count - 1 for count in facility_numbers.values() if count > 1
         ),
@@ -488,13 +487,16 @@ def _inspect_arcgis_package(
         "canonical_or_reviewer_fields_written": False,
     }
     if storage_scope == OFFLINE_FIXTURE_SCOPE:
-        snapshot_id = "arcgis-fixture-" + canonical_fingerprint(
-            {
-                "source_family_id": ARCGIS_SUPPLEMENT_SOURCE_FAMILY_ID,
-                "manifest_sha256": manifest_sha256,
-                "raw_payload_sha256": raw_sha256,
-            }
-        )[:48]
+        snapshot_id = (
+            "arcgis-fixture-"
+            + canonical_fingerprint(
+                {
+                    "source_family_id": ARCGIS_SUPPLEMENT_SOURCE_FAMILY_ID,
+                    "manifest_sha256": manifest_sha256,
+                    "raw_payload_sha256": raw_sha256,
+                }
+            )[:48]
+        )
     else:
         snapshot_id = _required_text(manifest, "snapshot_id")
     return SnapshotInspection(
@@ -585,9 +587,13 @@ def _stage_arcgis_snapshot(
             baseline_schema_fingerprint=baseline_schema,
             baseline_domain_fingerprint=baseline_domain,
         )
-    existing = connection.execute(
-        select(source_snapshots).where(source_snapshots.c.snapshot_id == inspection.snapshot_id)
-    ).mappings().one_or_none()
+    existing = (
+        connection.execute(
+            select(source_snapshots).where(source_snapshots.c.snapshot_id == inspection.snapshot_id)
+        )
+        .mappings()
+        .one_or_none()
+    )
     if existing is not None:
         existing_snapshot = dict(existing)
         _assert_same_immutable_snapshot(existing_snapshot, inspection)
@@ -670,8 +676,30 @@ def _validate_arcgis_snapshot(
     expected_scope: str,
     validated_at: str,
 ) -> LifecycleState:
+    return validate_source_snapshot(
+        connection,
+        snapshot_id,
+        expected_source_family_id=ARCGIS_SUPPLEMENT_SOURCE_FAMILY_ID,
+        expected_scope=expected_scope,
+        validated_at=validated_at,
+    )
+
+
+def validate_source_snapshot(
+    connection: Connection,
+    snapshot_id: str,
+    *,
+    expected_source_family_id: str,
+    expected_scope: str,
+    validated_at: str,
+) -> LifecycleState:
+    """Validate one staged source snapshot without assuming a source row model."""
     snapshot = _snapshot_record(connection, snapshot_id)
-    _assert_snapshot_scope(snapshot, expected_scope)
+    _assert_snapshot_identity(
+        snapshot,
+        expected_source_family_id=expected_source_family_id,
+        expected_scope=expected_scope,
+    )
     state = str(snapshot["lifecycle_state"])
     if state != "candidate":
         raise OfflineSnapshotLifecycleError(
@@ -729,8 +757,30 @@ def _accept_arcgis_snapshot(
     expected_scope: str,
     accepted_at: str,
 ) -> None:
+    accept_source_snapshot(
+        connection,
+        snapshot_id,
+        expected_source_family_id=ARCGIS_SUPPLEMENT_SOURCE_FAMILY_ID,
+        expected_scope=expected_scope,
+        accepted_at=accepted_at,
+    )
+
+
+def accept_source_snapshot(
+    connection: Connection,
+    snapshot_id: str,
+    *,
+    expected_source_family_id: str,
+    expected_scope: str,
+    accepted_at: str,
+) -> None:
+    """Accept one validated snapshot for its governed source family."""
     snapshot = _snapshot_record(connection, snapshot_id)
-    _assert_snapshot_scope(snapshot, expected_scope)
+    _assert_snapshot_identity(
+        snapshot,
+        expected_source_family_id=expected_source_family_id,
+        expected_scope=expected_scope,
+    )
     state = str(snapshot["lifecycle_state"])
     if state == "accepted":
         return
@@ -782,33 +832,52 @@ def _promote_arcgis_snapshot(
     expected_scope: str,
     promoted_at: str,
 ) -> SnapshotPointer:
+    return promote_source_snapshot(
+        connection,
+        snapshot_id,
+        expected_source_family_id=ARCGIS_SUPPLEMENT_SOURCE_FAMILY_ID,
+        expected_scope=expected_scope,
+        promoted_at=promoted_at,
+    )
+
+
+def promote_source_snapshot(
+    connection: Connection,
+    snapshot_id: str,
+    *,
+    expected_source_family_id: str,
+    expected_scope: str,
+    promoted_at: str,
+) -> SnapshotPointer:
+    """Atomically move a source-family pointer to an accepted snapshot."""
     snapshot = _snapshot_record(connection, snapshot_id)
-    _assert_accepted_arcgis_snapshot(snapshot, expected_scope=expected_scope)
-    pointer = _pointer_record(connection, ARCGIS_SUPPLEMENT_SOURCE_FAMILY_ID)
+    _assert_accepted_source_snapshot(
+        snapshot,
+        expected_source_family_id=expected_source_family_id,
+        expected_scope=expected_scope,
+    )
+    pointer = _pointer_record(connection, expected_source_family_id)
     if pointer is None:
         connection.execute(
             source_snapshot_pointers.insert().values(
-                source_family_id=ARCGIS_SUPPLEMENT_SOURCE_FAMILY_ID,
+                source_family_id=expected_source_family_id,
                 active_snapshot_id=snapshot_id,
                 prior_accepted_snapshot_id=None,
                 updated_at=promoted_at,
             )
         )
-        return SnapshotPointer(ARCGIS_SUPPLEMENT_SOURCE_FAMILY_ID, snapshot_id, None)
+        return SnapshotPointer(expected_source_family_id, snapshot_id, None)
     active_snapshot_id = str(pointer["active_snapshot_id"])
     prior_snapshot_id = _optional_text(pointer.get("prior_accepted_snapshot_id"))
     if active_snapshot_id == snapshot_id:
         return SnapshotPointer(
-            ARCGIS_SUPPLEMENT_SOURCE_FAMILY_ID,
+            expected_source_family_id,
             active_snapshot_id,
             prior_snapshot_id,
         )
     connection.execute(
         update(source_snapshot_pointers)
-        .where(
-            source_snapshot_pointers.c.source_family_id
-            == ARCGIS_SUPPLEMENT_SOURCE_FAMILY_ID
-        )
+        .where(source_snapshot_pointers.c.source_family_id == expected_source_family_id)
         .values(
             active_snapshot_id=snapshot_id,
             prior_accepted_snapshot_id=active_snapshot_id,
@@ -816,7 +885,7 @@ def _promote_arcgis_snapshot(
         )
     )
     return SnapshotPointer(
-        ARCGIS_SUPPLEMENT_SOURCE_FAMILY_ID,
+        expected_source_family_id,
         snapshot_id,
         active_snapshot_id,
     )
@@ -862,45 +931,63 @@ def _rollback_arcgis_snapshot(
     expected_prior_scope: str | None,
     rolled_back_at: str,
 ) -> SnapshotPointer:
-    pointer = _pointer_record(connection, ARCGIS_SUPPLEMENT_SOURCE_FAMILY_ID)
+    return rollback_source_snapshot(
+        connection,
+        expected_source_family_id=ARCGIS_SUPPLEMENT_SOURCE_FAMILY_ID,
+        expected_active_snapshot_id=expected_active_snapshot_id,
+        expected_active_scope=expected_active_scope,
+        expected_prior_scope=expected_prior_scope,
+        rolled_back_at=rolled_back_at,
+    )
+
+
+def rollback_source_snapshot(
+    connection: Connection,
+    *,
+    expected_source_family_id: str,
+    expected_active_snapshot_id: str,
+    expected_active_scope: str,
+    expected_prior_scope: str | None,
+    rolled_back_at: str,
+) -> SnapshotPointer:
+    """Atomically swap an active source snapshot with its prior accepted snapshot."""
+    pointer = _pointer_record(connection, expected_source_family_id)
     if pointer is None:
-        raise OfflineSnapshotLifecycleError("No active ArcGIS fixture snapshot can be rolled back.")
+        raise OfflineSnapshotLifecycleError("No active source snapshot can be rolled back.")
     active = str(pointer["active_snapshot_id"])
     prior = _optional_text(pointer.get("prior_accepted_snapshot_id"))
     if active != expected_active_snapshot_id:
         if prior == expected_active_snapshot_id:
-            _assert_accepted_arcgis_snapshot(
+            _assert_accepted_source_snapshot(
                 _snapshot_record(connection, expected_active_snapshot_id),
+                expected_source_family_id=expected_source_family_id,
                 expected_scope=expected_active_scope,
             )
-            return SnapshotPointer(ARCGIS_SUPPLEMENT_SOURCE_FAMILY_ID, active, prior)
-        raise OfflineSnapshotLifecycleError(
-            "The active ArcGIS fixture snapshot changed before rollback."
-        )
+            return SnapshotPointer(expected_source_family_id, active, prior)
+        raise OfflineSnapshotLifecycleError("The active source snapshot changed before rollback.")
     if prior is None:
-        raise OfflineSnapshotLifecycleError("No prior accepted ArcGIS snapshot exists.")
+        raise OfflineSnapshotLifecycleError("No prior accepted source snapshot exists.")
     active_snapshot = _snapshot_record(connection, active)
-    _assert_accepted_arcgis_snapshot(
+    _assert_accepted_source_snapshot(
         active_snapshot,
+        expected_source_family_id=expected_source_family_id,
         expected_scope=expected_active_scope,
     )
-    _assert_accepted_arcgis_snapshot(
+    _assert_accepted_source_snapshot(
         _snapshot_record(connection, prior),
+        expected_source_family_id=expected_source_family_id,
         expected_scope=expected_prior_scope,
     )
     connection.execute(
         update(source_snapshot_pointers)
-        .where(
-            source_snapshot_pointers.c.source_family_id
-            == ARCGIS_SUPPLEMENT_SOURCE_FAMILY_ID
-        )
+        .where(source_snapshot_pointers.c.source_family_id == expected_source_family_id)
         .values(
             active_snapshot_id=prior,
             prior_accepted_snapshot_id=active,
             updated_at=rolled_back_at,
         )
     )
-    return SnapshotPointer(ARCGIS_SUPPLEMENT_SOURCE_FAMILY_ID, prior, active)
+    return SnapshotPointer(expected_source_family_id, prior, active)
 
 
 def _validate_manifest(
@@ -1022,9 +1109,7 @@ def _validate_live_manifest(manifest: Mapping[str, Any]) -> list[str]:
         expected_snapshot_id = live_snapshot_id(
             recorded_at=recorded_at,
             raw_payload_sha256=str(fingerprint_values["raw_payload_sha256"]),
-            normalized_content_sha256=str(
-                fingerprint_values["normalized_content_sha256"]
-            ),
+            normalized_content_sha256=str(fingerprint_values["normalized_content_sha256"]),
             schema_fingerprint=str(fingerprint_values["schema_fingerprint"]),
             domain_fingerprint=str(fingerprint_values["domain_fingerprint"]),
             object_id_set_sha256=object_id_set_sha256,
@@ -1066,21 +1151,29 @@ def _active_snapshot_record(
     connection: Connection,
     source_family_id: str,
 ) -> Mapping[str, Any] | None:
-    row = connection.execute(
-        select(source_snapshots)
-        .join(
-            source_snapshot_pointers,
-            source_snapshot_pointers.c.active_snapshot_id == source_snapshots.c.snapshot_id,
+    row = (
+        connection.execute(
+            select(source_snapshots)
+            .join(
+                source_snapshot_pointers,
+                source_snapshot_pointers.c.active_snapshot_id == source_snapshots.c.snapshot_id,
+            )
+            .where(source_snapshot_pointers.c.source_family_id == source_family_id)
         )
-        .where(source_snapshot_pointers.c.source_family_id == source_family_id)
-    ).mappings().one_or_none()
+        .mappings()
+        .one_or_none()
+    )
     return dict(row) if row is not None else None
 
 
 def _snapshot_record(connection: Connection, snapshot_id: str) -> Mapping[str, Any]:
-    snapshot = connection.execute(
-        select(source_snapshots).where(source_snapshots.c.snapshot_id == snapshot_id)
-    ).mappings().one_or_none()
+    snapshot = (
+        connection.execute(
+            select(source_snapshots).where(source_snapshots.c.snapshot_id == snapshot_id)
+        )
+        .mappings()
+        .one_or_none()
+    )
     if snapshot is None:
         raise OfflineSnapshotLifecycleError(f"Unknown snapshot: {snapshot_id}")
     return dict(snapshot)
@@ -1090,11 +1183,15 @@ def _pointer_record(
     connection: Connection,
     source_family_id: str,
 ) -> Mapping[str, Any] | None:
-    row = connection.execute(
-        select(source_snapshot_pointers).where(
-            source_snapshot_pointers.c.source_family_id == source_family_id
+    row = (
+        connection.execute(
+            select(source_snapshot_pointers).where(
+                source_snapshot_pointers.c.source_family_id == source_family_id
+            )
         )
-    ).mappings().one_or_none()
+        .mappings()
+        .one_or_none()
+    )
     return dict(row) if row is not None else None
 
 
@@ -1143,7 +1240,20 @@ def _assert_accepted_arcgis_snapshot(
     *,
     expected_scope: str | None,
 ) -> None:
-    if snapshot["source_family_id"] != ARCGIS_SUPPLEMENT_SOURCE_FAMILY_ID:
+    _assert_accepted_source_snapshot(
+        snapshot,
+        expected_source_family_id=ARCGIS_SUPPLEMENT_SOURCE_FAMILY_ID,
+        expected_scope=expected_scope,
+    )
+
+
+def _assert_accepted_source_snapshot(
+    snapshot: Mapping[str, Any],
+    *,
+    expected_source_family_id: str,
+    expected_scope: str | None,
+) -> None:
+    if snapshot["source_family_id"] != expected_source_family_id:
         raise OfflineSnapshotLifecycleError("Snapshot belongs to a different source family.")
     if expected_scope is not None:
         _assert_snapshot_scope(snapshot, expected_scope)
@@ -1151,6 +1261,17 @@ def _assert_accepted_arcgis_snapshot(
         raise OfflineSnapshotLifecycleError("Snapshot has an unsupported source storage scope.")
     if snapshot["lifecycle_state"] != "accepted":
         raise OfflineSnapshotLifecycleError("Only an accepted snapshot may be promoted.")
+
+
+def _assert_snapshot_identity(
+    snapshot: Mapping[str, Any],
+    *,
+    expected_source_family_id: str,
+    expected_scope: str,
+) -> None:
+    if snapshot["source_family_id"] != expected_source_family_id:
+        raise OfflineSnapshotLifecycleError("Snapshot belongs to a different source family.")
+    _assert_snapshot_scope(snapshot, expected_scope)
 
 
 def _assert_snapshot_scope(snapshot: Mapping[str, Any], expected_scope: str) -> None:

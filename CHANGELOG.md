@@ -1,6 +1,15 @@
 # Changelog
 
 ## Unreleased
+- Added the versioned, no-redirect CCLD TransparencyAPI facility-reference
+  connector and immutable seven-export snapshot lifecycle for Issue #554. It
+  preserves exact raw bytes and safe provenance, parses the 31/38-column CSV
+  families and ordered six/seven-field complaint blocks, retains leading-zero
+  Facility Numbers, records deterministic warnings/quarantines, and reuses
+  atomic accepted/active/prior promotion and rollback. Source-specific artifact,
+  row, quarantine, and disappearance tables remain separate from ArcGIS,
+  historical CKAN evidence, canonical facility data, and reviewer-created state;
+  no activation, backfill, schedule, deployment, or hosted execution was added.
 - Consolidated cross-facility review under the canonical `Compare Facilities`
   destination at `/ccld/facilities/intelligence`. Complaint Patterns now keeps
   primary contributing records visible, Licensing and Visit Activity preserves
