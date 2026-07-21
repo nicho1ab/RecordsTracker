@@ -127,6 +127,14 @@ The route marker checks also look for visible page-level orientation on the
 main hosted workflow pages, including route headings, shared skip links, active
 navigation, and the existing control or link that moves the review forward.
 
+The route set and markers above describe the current implementation. Under
+`../product/records-tracker-reviewer-redesign-artifact-governance.md`, a later
+approved redesign must classify and update them with the route implementation;
+they do not require obsolete headings, duplicate destinations, or markup to
+survive. The replacement acceptance contract must preserve each useful
+workflow outcome, supported context, safe boundary, redirect or migration, and
+exact-route evidence rather than merely rename the old marker.
+
 ## Reviewer-facing visual acceptance boundary
 
 This general verifier does not establish the Issue #479 visual-acceptance gate.

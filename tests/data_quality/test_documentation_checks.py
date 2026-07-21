@@ -35,6 +35,10 @@ class CheckDocsModule(Protocol):
         self, root: Path = Path(".")
     ) -> list[str]: ...
 
+    def find_anti_fossilization_contract_violations(
+        self, root: Path = Path(".")
+    ) -> list[str]: ...
+
 
 def _load_check_docs_module() -> CheckDocsModule:
     path = Path("scripts/check_docs.py")
@@ -279,6 +283,125 @@ def test_attorney_information_architecture_requires_design_requirement_ids(
     assert "approved design register must define exactly one RT-NAV-001" in violations
 
 
+ANTI_FOSSILIZATION_FILES = (
+    "AGENTS.md",
+    ".github/copilot-instructions.md",
+    "ACCESSIBILITY_REQUIREMENTS.md",
+    "DESIGN_AND_USABILITY.md",
+    "DOCUMENTATION_STRATEGY.md",
+    "TESTING_STRATEGY.md",
+    "docs/developer/codex-workflow.md",
+    "docs/developer/hosted-reviewer-acceptance.md",
+    "docs/developer/ui-evidence-review.md",
+    "docs/planning/records-tracker-ui-ux-data-completeness-remediation-plan.md",
+    "docs/product/records-tracker-approved-design-decisions.md",
+    "docs/product/records-tracker-product-ux-lead-charter.md",
+    "docs/product/records-tracker-reviewer-redesign-artifact-governance.md",
+)
+
+
+def _copy_anti_fossilization_files(tmp_path: Path) -> None:
+    for relative_path in ANTI_FOSSILIZATION_FILES:
+        target = tmp_path / relative_path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(relative_path, target)
+
+
+def test_anti_fossilization_contract_is_complete() -> None:
+    check_docs = _load_check_docs_module()
+
+    assert check_docs.find_anti_fossilization_contract_violations() == []
+
+
+def test_anti_fossilization_contract_requires_all_seven_classes(
+    tmp_path: Path,
+) -> None:
+    check_docs = _load_check_docs_module()
+    _copy_anti_fossilization_files(tmp_path)
+    path = (
+        tmp_path
+        / "docs/product/records-tracker-reviewer-redesign-artifact-governance.md"
+    )
+    content = path.read_text(encoding="utf-8")
+    path.write_text(
+        content.replace(
+            "| 6 | Presentation snapshot or exact-string assertion |",
+            "| 6 | Any presentation test |",
+            1,
+        ),
+        encoding="utf-8",
+    )
+
+    violations = check_docs.find_anti_fossilization_contract_violations(tmp_path)
+    assert any(
+        "anti-fossilization class model must be exactly" in item
+        for item in violations
+    )
+
+
+def test_anti_fossilization_contract_requires_class_treatment(
+    tmp_path: Path,
+) -> None:
+    check_docs = _load_check_docs_module()
+    _copy_anti_fossilization_files(tmp_path)
+    path = (
+        tmp_path
+        / "docs/product/records-tracker-reviewer-redesign-artifact-governance.md"
+    )
+    content = path.read_text(encoding="utf-8")
+    path.write_text(
+        content.replace(
+            "| 7 | Historical documentation | Accurate evidence of prior behavior, "
+            "decisions, releases, or captures. | Preserve as history",
+            "| 7 | Historical documentation | | Preserve as history",
+            1,
+        ),
+        encoding="utf-8",
+    )
+
+    violations = check_docs.find_anti_fossilization_contract_violations(tmp_path)
+    assert "anti-fossilization class rows must not contain empty cells" in violations
+
+
+def test_anti_fossilization_contract_requires_governing_file_links(
+    tmp_path: Path,
+) -> None:
+    check_docs = _load_check_docs_module()
+    _copy_anti_fossilization_files(tmp_path)
+    path = tmp_path / "TESTING_STRATEGY.md"
+    content = path.read_text(encoding="utf-8")
+    path.write_text(
+        content.replace(
+            "docs/product/records-tracker-reviewer-redesign-artifact-governance.md",
+            "removed-anti-fossilization-contract.md",
+            1,
+        ),
+        encoding="utf-8",
+    )
+
+    violations = check_docs.find_anti_fossilization_contract_violations(tmp_path)
+    assert any(
+        item.startswith("TESTING_STRATEGY.md: missing anti-fossilization marker")
+        for item in violations
+    )
+
+
+def test_anti_fossilization_contract_requires_dependent_issue_findings(
+    tmp_path: Path,
+) -> None:
+    check_docs = _load_check_docs_module()
+    _copy_anti_fossilization_files(tmp_path)
+    path = (
+        tmp_path
+        / "docs/product/records-tracker-reviewer-redesign-artifact-governance.md"
+    )
+    content = path.read_text(encoding="utf-8")
+    path.write_text(content.replace("#503 Help", "Help follow-up", 1), encoding="utf-8")
+
+    violations = check_docs.find_anti_fossilization_contract_violations(tmp_path)
+    assert "anti-fossilization findings must include: #503 Help" in violations
+
+
 def test_pull_request_template_contract_is_complete() -> None:
     check_docs = _load_check_docs_module()
 
@@ -317,6 +440,30 @@ def test_pull_request_template_keeps_ui_evidence_conditional(tmp_path: Path) -> 
     assert (
         "missing marker: Complete this section only for UI or accessibility changes."
         in check_docs.find_pull_request_template_contract_violations(tmp_path)
+    )
+
+
+@pytest.mark.parametrize(
+    "marker",
+    [
+        (
+            "| Artifact or assertion | Class | Disposition | Durable reason or "
+            "requirement ID | Replacement evidence |"
+        ),
+        "Preserved assertions:",
+        "Intentionally superseded behavior or routes:",
+        "Durable protections weakened:",
+    ],
+)
+def test_pull_request_template_requires_redesign_classification(
+    tmp_path: Path, marker: str
+) -> None:
+    check_docs = _load_check_docs_module()
+    content = Path(".github/PULL_REQUEST_TEMPLATE.md").read_text(encoding="utf-8")
+    _write_pull_request_template(tmp_path, content.replace(marker, "", 1))
+
+    assert f"missing marker: {marker}" in (
+        check_docs.find_pull_request_template_contract_violations(tmp_path)
     )
 
 

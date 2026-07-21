@@ -119,6 +119,59 @@ ATTORNEY_IA_ROUTE_TABLE_HEADER = (
     "Transition and preservation rule",
 )
 
+ANTI_FOSSILIZATION_DOCUMENT = (
+    "docs/product/records-tracker-reviewer-redesign-artifact-governance.md"
+)
+ANTI_FOSSILIZATION_SECTIONS = (
+    "Authority and scope",
+    "Artifact classification model",
+    "Required redesign inventory and change process",
+    "Outcome-based test design",
+    "Evidence and acceptance",
+    "Pull request and handoff contract",
+    "Issue 501, 502, and 503 findings",
+    "Prohibited shortcuts and stop conditions",
+)
+ANTI_FOSSILIZATION_CLASS_MODEL = (
+    ("1", "Durable product outcome"),
+    ("2", "Accessibility or safety invariant"),
+    ("3", "Source/data/domain contract"),
+    ("4", "Approved design requirement"),
+    ("5", "Implementation regression test"),
+    ("6", "Presentation snapshot or exact-string assertion"),
+    ("7", "Historical documentation"),
+)
+ANTI_FOSSILIZATION_TABLE_HEADER = (
+    "Class",
+    "Name",
+    "What it protects",
+    "Redesign treatment",
+)
+ANTI_FOSSILIZATION_REQUIRED_MARKERS = {
+    "AGENTS.md": ANTI_FOSSILIZATION_DOCUMENT,
+    ".github/copilot-instructions.md": ANTI_FOSSILIZATION_DOCUMENT,
+    "docs/developer/codex-workflow.md": ANTI_FOSSILIZATION_DOCUMENT,
+    "DESIGN_AND_USABILITY.md": ANTI_FOSSILIZATION_DOCUMENT,
+    "TESTING_STRATEGY.md": ANTI_FOSSILIZATION_DOCUMENT,
+    "ACCESSIBILITY_REQUIREMENTS.md": ANTI_FOSSILIZATION_DOCUMENT,
+    "DOCUMENTATION_STRATEGY.md": ANTI_FOSSILIZATION_DOCUMENT,
+    "docs/product/records-tracker-product-ux-lead-charter.md": (
+        "records-tracker-reviewer-redesign-artifact-governance.md"
+    ),
+    "docs/product/records-tracker-approved-design-decisions.md": (
+        "records-tracker-reviewer-redesign-artifact-governance.md"
+    ),
+    "docs/planning/records-tracker-ui-ux-data-completeness-remediation-plan.md": (
+        "docs/product/records-tracker-reviewer-redesign-artifact-governance.md"
+    ),
+    "docs/developer/ui-evidence-review.md": (
+        "records-tracker-reviewer-redesign-artifact-governance.md"
+    ),
+    "docs/developer/hosted-reviewer-acceptance.md": (
+        "records-tracker-reviewer-redesign-artifact-governance.md"
+    ),
+}
+
 REQUIRED = [
     ".github/PULL_REQUEST_TEMPLATE.md",
     ".github/copilot-instructions.md",
@@ -155,6 +208,7 @@ REQUIRED = [
     "docs/decisions/ADR-0015-hosted-tester-mvp-database-and-migration-tooling.md",
     "docs/decisions/ADR-0016-controlled-browser-triggered-ccld-retrieval-jobs.md",
     "docs/product/records-tracker-attorney-information-architecture.md",
+    "docs/product/records-tracker-reviewer-redesign-artifact-governance.md",
     "docs/developer/setup.md",
     "docs/developer/architecture.md",
     "docs/developer/hosted-scaffold.md",
@@ -820,6 +874,7 @@ PULL_REQUEST_TEMPLATE_SECTIONS = (
     "Acceptance-criteria evidence",
     "Validation and failure classification",
     "UI and accessibility evidence (when applicable)",
+    "Reviewer-facing redesign artifact classification (when applicable)",
     "Documentation, assumptions, and remaining risks",
     "Governed-boundary review",
     "Required GitHub checks",
@@ -835,6 +890,19 @@ PULL_REQUEST_TEMPLATE_MARKERS = (
     "Pre-existing failures:",
     "Environmental failures:",
     "Complete this section only for UI or accessibility changes.",
+    "Complete this section for a material reviewer-facing removal, merge, rename,",
+    (
+        "| Artifact or assertion | Class | Disposition | Durable reason or "
+        "requirement ID | Replacement evidence |"
+    ),
+    "Preserved assertions:",
+    "Rewritten assertions:",
+    "Removed assertions:",
+    "Historical-only artifacts:",
+    "Intentionally superseded behavior or routes:",
+    "Redirect or migration behavior:",
+    "Controlled-variance approval, if used:",
+    "Durable protections weakened:",
     "| Schemas and migrations |",
     "| Ingestion and source-connector contracts |",
     "| Security and privacy |",
@@ -1127,14 +1195,112 @@ def find_attorney_information_architecture_contract_violations(
             )
 
     figma_section = _markdown_section(decision_content, "Figma and design package")
+    normalized_figma_section = " ".join(figma_section.split())
     for required_text in (
         "No editable Figma artifact was accessed or changed",
         "visual design package is **pending**",
-        "explicitly records a controlled variance",
+        "repository-readable package as the controlled variance",
     ):
-        if required_text not in figma_section:
+        if required_text not in normalized_figma_section:
             violations.append(
                 "attorney IA Figma status must preserve: " + required_text
+            )
+
+    return violations
+
+
+def find_anti_fossilization_contract_violations(
+    root: Path = Path("."),
+) -> list[str]:
+    violations = []
+    contract_path = root / ANTI_FOSSILIZATION_DOCUMENT
+    if not contract_path.exists():
+        return [f"missing anti-fossilization contract: {ANTI_FOSSILIZATION_DOCUMENT}"]
+
+    content = contract_path.read_text(encoding="utf-8")
+    for heading in ANTI_FOSSILIZATION_SECTIONS:
+        marker = f"## {heading}"
+        if content.count(marker) != 1:
+            violations.append(
+                f"{ANTI_FOSSILIZATION_DOCUMENT}: expected exactly one section "
+                f"heading: {marker}"
+            )
+
+    classification_section = _markdown_section(content, "Artifact classification model")
+    lines = classification_section.splitlines()
+    header_index = next(
+        (
+            index
+            for index, line in enumerate(lines)
+            if line.startswith("|")
+            and _markdown_table_cells(line) == ANTI_FOSSILIZATION_TABLE_HEADER
+        ),
+        None,
+    )
+    if header_index is None:
+        violations.append("anti-fossilization classification table header is missing")
+    else:
+        rows: list[tuple[str, ...]] = []
+        for line in lines[header_index + 1 :]:
+            if not line.startswith("|"):
+                if rows:
+                    break
+                continue
+            cells = _markdown_table_cells(line)
+            if cells and all(re.fullmatch(r"-+", cell) for cell in cells):
+                continue
+            rows.append(cells)
+
+        actual_model = tuple(
+            (row[0], row[1])
+            for row in rows
+            if len(row) == len(ANTI_FOSSILIZATION_TABLE_HEADER)
+        )
+        if actual_model != ANTI_FOSSILIZATION_CLASS_MODEL:
+            expected = ", ".join(
+                f"{number} {name}" for number, name in ANTI_FOSSILIZATION_CLASS_MODEL
+            )
+            violations.append(
+                "anti-fossilization class model must be exactly: " + expected
+            )
+        for row in rows:
+            if len(row) != len(ANTI_FOSSILIZATION_TABLE_HEADER):
+                violations.append(
+                    "anti-fossilization class rows must contain four structured cells"
+                )
+                break
+            if any(not cell for cell in row):
+                violations.append(
+                    "anti-fossilization class rows must not contain empty cells"
+                )
+                break
+
+    findings = _markdown_section(content, "Issue 501, 502, and 503 findings")
+    for marker in ("#501 controlling design", "#502 Home and Facilities", "#503 Help"):
+        if marker not in findings:
+            violations.append("anti-fossilization findings must include: " + marker)
+
+    for marker in (
+        "preserve",
+        "rewrite",
+        "remove",
+        "historical only",
+        "Durable outcome test:",
+        "Brittle presentation assertion:",
+        "RT-UI-GATE-001",
+        "RT-UI-GATE-009",
+    ):
+        if marker not in content:
+            violations.append("anti-fossilization contract must include: " + marker)
+
+    for relative_path, marker in ANTI_FOSSILIZATION_REQUIRED_MARKERS.items():
+        path = root / relative_path
+        if not path.exists():
+            violations.append(f"missing anti-fossilization governance file: {relative_path}")
+            continue
+        if marker not in path.read_text(encoding="utf-8"):
+            violations.append(
+                f"{relative_path}: missing anti-fossilization marker: {marker}"
             )
 
     return violations
@@ -1193,6 +1359,13 @@ def main() -> None:
         raise SystemExit(
             "Invalid attorney information-architecture contract: "
             + "; ".join(attorney_ia_violations)
+        )
+
+    anti_fossilization_violations = find_anti_fossilization_contract_violations()
+    if anti_fossilization_violations:
+        raise SystemExit(
+            "Invalid anti-fossilization contract: "
+            + "; ".join(anti_fossilization_violations)
         )
 
     print("Documentation check passed.")

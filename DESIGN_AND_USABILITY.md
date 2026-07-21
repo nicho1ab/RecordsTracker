@@ -558,10 +558,12 @@ Older numbered inventory entries remain useful historical scope records, but
 they do not override the Issue #501 decision or require obsolete wording or
 page structure to survive.
 
-The repository decision does not substitute for the visual design package.
-Issue #502, #503, and cross-facility implementation remain blocked until the
-exact Figma frames listed in the decision record are approved or the product
-owner explicitly accepts a controlled variance.
+The product owner explicitly approved the repository-readable Issue #501
+decision package as a controlled design variance for the dependent Build Week
+implementation sequence. No editable Figma artifact was changed. #419, #502,
+and #503 may consume that package only with requirement-ID mapping, a pre-code
+variance inventory, automated exact-route evidence, every applicable
+`RT-UI-GATE-001` through `RT-UI-GATE-009`, and explicit visual acceptance.
 
 ## Feedback and help direction
 
@@ -1300,6 +1302,15 @@ preserving source traceability, accessibility, cautious public-source language,
 raw source preservation, and deterministic extraction safeguards.
 
 ## Approved design implementation and primary-content rules
+
+Material reviewer-facing redesigns must also follow
+`docs/product/records-tracker-reviewer-redesign-artifact-governance.md`. The
+approved design may supersede a current heading, helper paragraph, disclosure,
+route presentation, or markup structure. Update stale presentation assertions
+with the implementation while preserving the durable attorney outcome,
+accessibility and safety invariants, source/data/domain contracts, and useful
+route behavior. Neither an old test nor an old evidence marker overrides an
+approved design requirement.
 
 ### Approved design package is authoritative
 

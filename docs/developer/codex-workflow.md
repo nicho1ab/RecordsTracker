@@ -190,6 +190,15 @@ Project Source replacement, planning chats must inspect repository `main`.
 
 ## Validation
 
+For a material reviewer-facing redesign, complete the pre-code artifact
+inventory and seven-class assessment in
+`docs/product/records-tracker-reviewer-redesign-artifact-governance.md` before
+editing application behavior. Update the directly affected implementation,
+tests, active evidence contracts, current documentation, and approved design
+register together. Accurate historical evidence stays historical. The task
+handoff must list preserved, rewritten, removed, and historical-only assertions
+and the replacement evidence for each.
+
 For a focused bug fix or similarly narrow implementation change, Codex should:
 
 - Run the new regression independently.

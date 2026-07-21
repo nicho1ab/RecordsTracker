@@ -100,13 +100,21 @@ For important pages, the workflow must be:
 6. Define raw/source data handling.
 7. Define visual acceptance criteria.
 8. Only then give the coding agent an implementation prompt.
-9. Capture or manually review the exact route screenshot before opening or merging a PR.
+9. Capture the exact route through the governed automated evidence workflow and
+   record explicit visual acceptance before opening or merging a PR.
 
 ### 9. Tests are necessary but not sufficient
 
 Passing tests only confirms that behavior and expected markup did not break. Tests do not prove that the page is usable or visually successful.
 
 A page redesign is not complete until the screenshot of the target route passes visual review against the blueprint or approved sitewide pattern.
+
+Tests and documentation also must not fossilize a superseded presentation. For
+a material redesign, use
+`records-tracker-reviewer-redesign-artifact-governance.md` to classify every
+affected assertion before coding. Preserve durable product, accessibility,
+safety, source, data, privacy, and reviewer-state boundaries; rewrite or remove
+temporary exact-string and markup assertions with the approved implementation.
 
 ### 10. Reject superficial redesigns
 
@@ -403,6 +411,12 @@ Figma is not required for a nonvisual correction that preserves an already
 approved pattern, but the implementation handoff must cite that pattern and
 state why no visual variance is expected. Agents must not invent missing visual
 direction while coding.
+
+For #419, #502, and #503, the product owner has approved the repository-readable
+Issue #501 information architecture as a controlled design variance. That
+approval does not mean Figma was updated and does not waive automated exact-
+route evidence, applicable design-gate classification, or explicit visual
+acceptance.
 
 A Figma-to-Codex handoff should specify:
 

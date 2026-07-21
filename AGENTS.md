@@ -195,6 +195,15 @@ Keep handoffs copy/paste-safe for PowerShell users. Do not include secrets, pers
 
 ## Reviewer-facing design enforcement
 
+- For any material reviewer-facing removal, merge, rename, relocation, or
+  redesign, follow
+  `docs/product/records-tracker-reviewer-redesign-artifact-governance.md`.
+  Inventory and classify every affected assertion before implementation; list
+  preserved, rewritten, removed, and historical-only artifacts in the PR and
+  handoff. Do not preserve superseded presentation solely for a stale test, and
+  do not weaken accessibility, security, privacy, source, data-integrity,
+  export, reviewer-state, authorization, or deterministic-reconciliation
+  protections under the label of redesign.
 - Do not use accordions, `<details>`, collapsed cards, tabs, or repeated disclosure sections for primary complaint inventories, allegations, findings, deficiencies, plans of correction, or source-backed records supporting reviewer-facing summaries.
 - Do not render the same complaint repeatedly under multiple aggregates. Use one canonical record inventory with filters, chips, badges, highlighting, or anchor links.
 - Do not accept `Not provided` for a reviewer-relevant field visibly present in governed source evidence without tracing the field through extraction, normalization, canonical allocation, persistence, import/backfill, read model, source precedence, and rendering.

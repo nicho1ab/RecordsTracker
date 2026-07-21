@@ -21,9 +21,12 @@ The Civic Ledger direction uses a warm neutral canvas, deep navy shell and
 primary actions, restrained gold navigation and focus cues, compact editorial
 density, modest radii, and minimal elevation.
 
-This document does not replace Figma as the authoritative visual reference.
-Where prose and the approved Figma artifact appear to differ, implementation
-must stop and the variance must be resolved before work continues.
+Figma remains the authoritative visual reference except where the product owner
+explicitly approves a bounded repository-readable controlled variance. Such a
+variance does not claim that Figma changed and does not waive requirement
+mapping, automated exact-route evidence, applicable design gates, or explicit
+visual acceptance. Where approved authorities cannot be reconciled,
+implementation must stop before coding.
 
 ## Relationship to project governance
 
@@ -103,10 +106,14 @@ must follow this procedure:
    the current user task.
 3. Identify every page, component, viewport, state, and acceptance criterion
    affected.
-4. Update the Figma design and regression register first.
-5. Obtain explicit user approval.
-6. Update this repository file in the same governed change.
-7. Only then prepare or revise the implementation prompt.
+4. Update the Figma design and regression register first, unless the product
+   owner explicitly authorizes a bounded repository-readable design package.
+5. Obtain explicit user approval and record its exact scope.
+6. Update this repository file in the same governed change; do not claim Figma
+   changed when it did not.
+7. Classify affected assertions under
+   `records-tracker-reviewer-redesign-artifact-governance.md`.
+8. Only then prepare or revise the implementation prompt.
 
 An implementation must not silently redefine an approved decision.
 
@@ -248,10 +255,9 @@ An implementation must not silently redefine an approved decision.
   equally promoted duplicate inventories.
 - **Scope:** Sitewide attorney information architecture under Issue #501.
 - **Figma proof:** Repository product direction is approved in
-  `records-tracker-attorney-information-architecture.md`; the exact Issue #501
-  Figma frames listed there remain pending. No implementation is authorized
-  until those frames are approved or the product owner records a controlled
-  variance.
+  `records-tracker-attorney-information-architecture.md`. The product owner
+  approved that repository-readable package as the controlled variance for the
+  dependent sequence; the listed Figma frames were not changed.
 - **Responsive requirement:** Reflow preserves the same canonical destinations
   and inventory; it does not introduce alternate mobile-only route concepts.
 - **Accessibility requirement:** Destination and view/filter controls have
@@ -272,9 +278,9 @@ An implementation must not silently redefine an approved decision.
   contextual or tier-specific.
 - **Scope:** Shared attorney shell under Issue #501.
 - **Figma proof:** Repository product direction is approved in
-  `records-tracker-attorney-information-architecture.md`; `Issue 501 — Product
-  shell navigation` desktop, narrow, mobile, 200% zoom, focus, active, stress,
-  and print frames remain pending.
+  `records-tracker-attorney-information-architecture.md`; it is the approved
+  controlled-variance artifact for the desktop, narrow, mobile, 200% zoom,
+  focus, active, stress, and print requirements. No Figma update is claimed.
 - **Responsive requirement:** The same ordered destinations reflow without
   clipping, horizontal page scrolling, or a second unapproved navigation model.
 - **Accessibility requirement:** Active state uses `aria-current`, every item
@@ -294,8 +300,9 @@ An implementation must not silently redefine an approved decision.
   inaccurate synonym.
 - **Scope:** Sitewide attorney and Help language under Issue #501.
 - **Figma proof:** The governed terminology table is in
-  `records-tracker-attorney-information-architecture.md`; visual placement in
-  the exact Issue #501 frames remains pending.
+  `records-tracker-attorney-information-architecture.md`; that table is the
+  approved controlled-variance artifact. Visual placement remains subject to
+  automated exact-route evidence and explicit acceptance.
 - **Responsive requirement:** Labels and explanations wrap without clipping or
   losing their relationship to the affected control or value.
 - **Accessibility requirement:** Official-term definitions work with keyboard
@@ -720,20 +727,23 @@ justification.
 Every future reviewer-facing implementation prompt must:
 
 1. Cite the applicable IDs from this document.
-2. Identify the exact approved Figma frames.
+2. Identify the exact approved Figma frames or explicitly approved controlled-
+   variance artifact.
 3. State the applicable prohibited regressions.
 4. Require exact-route screenshots at the relevant viewports.
 5. Require the evidence handoff to classify every cited ID.
-6. Stop implementation when the approved Figma artifact and this file cannot be
+6. Stop implementation when the approved artifact and this file cannot be
    reconciled.
 
 ## Visual authority
 
-Figma remains the authoritative visual design environment.
-
-This file provides shared, searchable, repository-readable governance and stable
-requirement IDs. It does not authorize an implementation to substitute prose for
-the actual approved visual reference.
+Figma remains the authoritative visual design environment except for an
+explicitly approved bounded controlled variance. This file provides shared,
+searchable governance and stable requirement IDs. It does not by itself
+authorize prose to replace an approved visual reference. The Issue #501
+repository-readable package is the approved controlled variance for #419,
+#502, and #503; it does not claim an editable Figma change and it preserves all
+applicable visual-acceptance gates.
 
 The approved Checkpoint 3 reference frames carry this label:
 
