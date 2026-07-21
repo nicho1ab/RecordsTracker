@@ -1550,7 +1550,7 @@ def test_facility_hub_renders_complaint_context_without_directory_row() -> None:
     assert "Corpus Only Center" in html
     assert "Children&#x27;s Center" in html
     assert "Kern" in html
-    assert "Not found in source" in html
+    assert "Source unavailable" in html
     assert "ccld:facility:157806098" not in html
     assert "Untrusted Query Facility" not in html
     assert "Review summary" in html
@@ -1565,7 +1565,7 @@ def test_facility_hub_renders_complaint_context_without_directory_row() -> None:
     assert unknown_status == 200
     assert unknown_content_type == "text/html; charset=utf-8"
     assert "Facility-directory result not found" not in unknown_html
-    assert "Not found in source" in unknown_html
+    assert "Source unavailable" in unknown_html
     assert "999999999" in unknown_html
     assert "No loaded complaint records are currently available" in unknown_html
     assert "Corpus Only Center" not in unknown_html

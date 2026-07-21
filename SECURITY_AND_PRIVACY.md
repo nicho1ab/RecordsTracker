@@ -47,6 +47,16 @@ source-owner correspondence remains outside Git. The connector has no
 reviewer/canonical write, production activation, schedule, deployment, QNAP,
 Cloudflare, or Hosted acceptance path.
 
+The Issue #482 projection performs authorization before inspecting or reading
+facility source tables. It reads only eligible rows associated with active
+accepted source-family pointers, excludes quarantined TransparencyAPI rows and
+production-ineligible fixture scopes, and retains source/snapshot provenance
+without rendering raw rows or internal canonical identities. Facility search is
+bounded and parameterized. Projection reads do not send network requests,
+promote snapshots, write canonical or reviewer-created state, or expose
+credentials, cookies, authentication claims, private paths, or uncontrolled
+exception content.
+
 ## Secrets
 
 Local secrets must use environment variables or untracked `.env` files. `.env` is ignored by Git.

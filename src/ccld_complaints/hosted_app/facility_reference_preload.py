@@ -19,6 +19,7 @@ from sqlalchemy import (
     Text,
     and_,
     func,
+    inspect,
     or_,
     select,
     update,
@@ -368,6 +369,8 @@ def load_facility_reference_preload(
 def facility_reference_source_from_connection(
     connection: Connection,
 ) -> CcldFacilityReferenceSource:
+    if _active_transparency_snapshot_id(connection) is not None:
+        return facility_reference_source_summary_from_connection(connection)
     rows = connection.execute(
         select(hosted_facility_reference_records).order_by(
             hosted_facility_reference_records.c.facility_name,
@@ -394,6 +397,27 @@ def facility_reference_source_from_connection(
 def facility_reference_source_summary_from_connection(
     connection: Connection,
 ) -> CcldFacilityReferenceSource:
+    active_snapshot_id = _active_transparency_snapshot_id(connection)
+    if active_snapshot_id is not None:
+        from ccld_complaints.connectors.ccld_transparency_api.lifecycle import (
+            transparency_rows,
+        )
+
+        record_count = connection.execute(
+            select(func.count(func.distinct(transparency_rows.c.facility_number))).where(
+                transparency_rows.c.snapshot_id == active_snapshot_id,
+                transparency_rows.c.is_quarantined.is_(False),
+                transparency_rows.c.facility_number.is_not(None),
+            )
+        ).scalar_one()
+        return CcldFacilityReferenceSource(
+            source_kind="postgres_transparencyapi_reference",
+            label="Accepted CCLD facility reference snapshot",
+            path_label="active accepted TransparencyAPI snapshot",
+            records=(),
+            notices=(),
+            record_count=record_count,
+        )
     record_count = connection.execute(
         select(func.count()).select_from(hosted_facility_reference_records)
     ).scalar_one()
@@ -422,6 +446,13 @@ def search_facility_reference_records(
     if result_limit < 1:
         raise ValueError("result_limit must be at least 1.")
     source = facility_reference_source_summary_from_connection(connection)
+    if source.source_kind == "postgres_transparencyapi_reference":
+        return _search_active_transparency_reference_records(
+            connection,
+            query,
+            source=source,
+            result_limit=result_limit,
+        )
     query_tokens = _normalized_query_tokens(query)
     if not query_tokens:
         return CcldFacilityLookupResult(
@@ -473,6 +504,171 @@ def search_facility_reference_records(
         returned_records=records,
         result_limit=result_limit,
         reference_source=source,
+    )
+
+
+def _search_active_transparency_reference_records(
+    connection: Connection,
+    query: str,
+    *,
+    source: CcldFacilityReferenceSource,
+    result_limit: int,
+) -> CcldFacilityLookupResult:
+    from ccld_complaints.connectors.ccld_transparency_api.lifecycle import (
+        transparency_rows,
+    )
+
+    active_snapshot_id = _active_transparency_snapshot_id(connection)
+    query_tokens = _normalized_query_tokens(query)
+    if active_snapshot_id is None or not query_tokens:
+        return CcldFacilityLookupResult(
+            query=query.strip(),
+            total_match_count=0,
+            returned_records=(),
+            result_limit=result_limit,
+            reference_source=source,
+        )
+    filters = tuple(_transparency_search_token_filter(token) for token in query_tokens)
+    base_conditions = (
+        transparency_rows.c.snapshot_id == active_snapshot_id,
+        transparency_rows.c.is_quarantined.is_(False),
+        transparency_rows.c.facility_number.is_not(None),
+        *filters,
+    )
+    total_match_count = connection.execute(
+        select(func.count(func.distinct(transparency_rows.c.facility_number))).where(
+            *base_conditions
+        )
+    ).scalar_one()
+    name_expression = _transparency_value_expression("facility_name")
+    rows = connection.execute(
+        select(transparency_rows)
+        .where(*base_conditions)
+        .order_by(
+            func.lower(func.coalesce(name_expression, "")),
+            transparency_rows.c.facility_number,
+            transparency_rows.c.export_id,
+            transparency_rows.c.row_ordinal,
+        )
+        .limit(result_limit)
+    ).mappings()
+    records = tuple(_lookup_record_from_transparency_row(dict(row)) for row in rows)
+    return CcldFacilityLookupResult(
+        query=query.strip(),
+        total_match_count=total_match_count,
+        returned_records=records,
+        result_limit=result_limit,
+        reference_source=source,
+    )
+
+
+def _active_transparency_snapshot_id(connection: Connection) -> str | None:
+    from ccld_complaints.connectors.ccld_transparency_api.contract import (
+        SNAPSHOT_SCOPE,
+        SOURCE_FAMILY_ID,
+    )
+    from ccld_complaints.connectors.ccld_transparency_api.lifecycle import (
+        transparency_rows,
+    )
+    from ccld_complaints.hosted_app.source_snapshot_lifecycle import (
+        source_snapshot_pointers,
+        source_snapshots,
+    )
+
+    inspector = inspect(connection)
+    if not all(
+        inspector.has_table(table_name)
+        for table_name in (
+            source_snapshots.name,
+            source_snapshot_pointers.name,
+            transparency_rows.name,
+        )
+    ):
+        return None
+    value = connection.scalar(
+        select(source_snapshot_pointers.c.active_snapshot_id)
+        .join(
+            source_snapshots,
+            source_snapshots.c.snapshot_id
+            == source_snapshot_pointers.c.active_snapshot_id,
+        )
+        .where(
+            source_snapshot_pointers.c.source_family_id == SOURCE_FAMILY_ID,
+            source_snapshots.c.source_family_id == SOURCE_FAMILY_ID,
+            source_snapshots.c.fixture_scope == SNAPSHOT_SCOPE,
+            source_snapshots.c.lifecycle_state == "accepted",
+        )
+    )
+    return str(value) if value is not None else None
+
+
+def _transparency_value_expression(field_name: str) -> Any:
+    from ccld_complaints.connectors.ccld_transparency_api.lifecycle import (
+        transparency_rows,
+    )
+
+    return transparency_rows.c.resolved_current_reference[field_name]["value"].as_string()
+
+
+def _transparency_search_token_filter(token: str) -> Any:
+    from ccld_complaints.connectors.ccld_transparency_api.lifecycle import (
+        transparency_rows,
+    )
+
+    pattern = f"%{token}%"
+    searchable_values = (
+        transparency_rows.c.facility_number,
+        *(
+            _transparency_value_expression(field_name)
+            for field_name in (
+                "facility_name",
+                "facility_city",
+                "facility_state",
+                "facility_zip",
+                "county_name",
+                "facility_type",
+                "bulk_status",
+            )
+        ),
+    )
+    return or_(
+        *(
+            func.lower(func.coalesce(sql_cast(value, String), "")).like(pattern)
+            for value in searchable_values
+        )
+    )
+
+
+def _lookup_record_from_transparency_row(
+    row: Mapping[str, Any],
+) -> CcldFacilityLookupRecord:
+    resolved_values = row.get("resolved_current_reference")
+    resolved = resolved_values if isinstance(resolved_values, Mapping) else {}
+
+    def value(field_name: str) -> str:
+        observation = resolved.get(field_name)
+        if not isinstance(observation, Mapping):
+            return ""
+        selected = observation.get("value")
+        return "" if selected is None else str(selected).strip()
+
+    return CcldFacilityLookupRecord(
+        facility_number=_row_str(row, "facility_number"),
+        facility_name=value("facility_name"),
+        city=value("facility_city"),
+        state=value("facility_state"),
+        county=value("county_name"),
+        zip_code=value("facility_zip"),
+        facility_type=value("facility_type"),
+        program_type="",
+        capacity=value("facility_capacity"),
+        status=value("bulk_status"),
+        closed_date=value("closed_date"),
+        address=value("facility_address"),
+        regional_office=value("regional_office"),
+        administrator=value("facility_administrator"),
+        licensee=value("licensee"),
+        telephone=value("facility_telephone_number"),
     )
 
 

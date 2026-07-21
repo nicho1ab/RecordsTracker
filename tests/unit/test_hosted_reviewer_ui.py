@@ -1899,10 +1899,8 @@ def test_core_facility_surfaces_share_projected_identity_without_mutation() -> N
             else "Facility Identity Conflicts"
         )
         assert row[name_key] == resolved_name
-        assert row[context_key] == "Current facility reference"
-        assert row[conflict_key] == (
-            "Current facility reference and complaint-time records differ."
-        )
+        assert row[context_key] == "Historical facility reference"
+        assert row[conflict_key] == "Governed facility source observations differ."
 
     request_html = responses["request results and feedback context"][2].decode("utf-8")
     detail_html = responses["reviewer detail"][2].decode("utf-8")

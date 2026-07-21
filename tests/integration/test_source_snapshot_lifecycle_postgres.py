@@ -46,6 +46,15 @@ from ccld_complaints.connectors.ccld_transparency_api.lifecycle import (
     transparency_rows,
     validate_transparencyapi_snapshot,
 )
+from ccld_complaints.hosted_app.auth import AuthenticatedActor, HostedAccessScope
+from ccld_complaints.hosted_app.facility_identity_projection import (
+    FacilityProjectionField,
+    FacilitySourceKind,
+    load_authorized_facility_identity_projections,
+)
+from ccld_complaints.hosted_app.facility_reference_preload import (
+    search_facility_reference_records,
+)
 from ccld_complaints.hosted_app.reviewer_created_state import hosted_reviewer_created_state
 from ccld_complaints.hosted_app.seeded_import import (
     hosted_seeded_import_metadata,
@@ -340,6 +349,44 @@ def test_postgres_transparencyapi_candidate_preserves_text_identity(
         .all()
     )
     assert facility_numbers[0] == "800000001"
+    _ensure_reviewer_state(connection)
+    reviewer_state_before = _reviewer_state_record(connection)
+    scope = HostedAccessScope("seeded_corpus", "seeded-ccld-fixture-2026-06-13")
+    actor = AuthenticatedActor(
+        provider_subject="issue482-postgres-reviewer",
+        provider_issuer="managed-test-provider",
+        display_name="Issue 482 PostgreSQL Reviewer",
+        email="reviewer@example.invalid",
+        actor_category="tester",
+        account_status="active",
+        roles=("read_only_tester",),
+        scopes=(scope,),
+    )
+    projection = load_authorized_facility_identity_projections(
+        connection,
+        actor,
+        scope=scope,
+        public_facility_ids=("800000001",),
+        authorized_source_records=(),
+    )["800000001"]
+    projected_name = projection.field(FacilityProjectionField.FACILITY_NAME)
+    assert projected_name.display_value == "Synthetic PostgreSQL Facility"
+    assert projected_name.source_identity is not None
+    assert (
+        projected_name.source_identity.source_kind
+        is FacilitySourceKind.TRANSPARENCY_API_CURRENT
+    )
+    search_result = search_facility_reference_records(
+        connection,
+        "Synthetic PostgreSQL 800000001",
+        result_limit=10,
+    )
+    assert search_result.total_match_count == 1
+    assert tuple(
+        record.facility_number for record in search_result.returned_records
+    ) == ("800000001",)
+    assert _reviewer_state_record(connection) == reviewer_state_before
+    connection.commit()
 
 
 def test_postgres_controlled_real_candidate_completes_and_rolls_back(

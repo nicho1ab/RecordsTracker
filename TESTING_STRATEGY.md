@@ -444,9 +444,20 @@ UI; server and JavaScript status/type text agree; raw codes remain unresolved;
 conflict and missing-state wording stays consistent; internal IDs do not replace
 public Facility IDs; print/accessibility semantics remain present; and all reads
 preserve reviewer-created state. Specialized facility intelligence, priorities,
-trends, substantiated, and serious-topic aggregate tests, plus export, ArcGIS,
-backfill, operator, refresh, deployment, and hosted-acceptance tests, remain
-later issue phases.
+trends, substantiated, and serious-topic aggregate tests remain with their
+specialized read models; backfill, operator, refresh, deployment, and
+hosted-acceptance tests remain separately governed.
+
+Issue #482 projection tests additionally stage accepted TransparencyAPI and
+ArcGIS snapshots and prove active-pointer eligibility, TransparencyAPI primary
+current-reference precedence, ArcGIS supplementary fallback, CKAN/program
+historical fallback, leading-zero text identity, prior populated address and
+telephone preservation, quarantine exclusion, extraction-failure distinction,
+bounded active-snapshot search, and unchanged reviewer-created state. Cross-
+surface tests continue to exercise the existing reviewer, packet, and export
+consumers rather than introducing source-specific rendering branches. The
+isolated PostgreSQL regression exercises both active-snapshot projection and
+JSON-backed bounded search when the two documented nonproduction flags are set.
 
 Issue #518 snapshot-lifecycle fixtures remain clearly fictional. They prove the
 exact official 19-field schema, narrower approved source-specific normalized

@@ -6,9 +6,9 @@ Accepted
 
 ## Context
 
-RecordsTracker currently has two eligible facility-information paths with
-different semantics. Program-reference rows describe a current facility
-reference and preserve resource and snapshot metadata. Canonical facility rows
+RecordsTracker originally had two eligible facility-information paths with
+different semantics. Program-reference rows preserved resource and snapshot
+metadata. Canonical facility rows
 linked to complaint reports preserve historically reported complaint context
 and source-document traceability. Existing pages and exports combine subsets of
 those values independently, which can produce different facility names, types,
@@ -16,10 +16,11 @@ addresses, counties, capacities, statuses, or missing-value behavior for the
 same public Facility ID.
 
 Phase A evaluated the governed ArcGIS source and concluded **SUPPLEMENT**, not
-replacement or production activation. ArcGIS has distinct snapshot-plus-object
-row identity, duplicate Facility IDs, query/export differences, fields without
-governed domains, and unresolved authority and terms gates. It cannot enter the
-runtime projection in this slice.
+replacement. Issue #518 subsequently implemented its accepted snapshot
+lifecycle. Issues #553/#554 then approved and implemented the official CCLD
+TransparencyAPI as the primary current facility-reference source family. ArcGIS
+keeps distinct snapshot-plus-object row identity and supplementary semantics;
+CKAN/program observations are historical/controlled fallback evidence.
 
 ## Decision
 
@@ -31,6 +32,13 @@ Issue #522 follow-on applies this accepted decision to the core facility lookup,
 suggestion, request, hub, reviewer list/detail, packet preview/draft, and repeated
 feedback-context reads through one shared presenter; it does not change the
 projection decision or persistence ownership.
+
+Issue #482 completes the source-family composition at the same read-only
+boundary. An eligible active accepted TransparencyAPI snapshot is primary
+current reference; an eligible active accepted ArcGIS snapshot is
+supplementary; CKAN/program observations are historical fallback; and
+complaint-linked observations remain complaint/report-time evidence. Reads do
+not promote, accept, retrieve, or mutate snapshots.
 
 The projection accepts a digit-only public Facility ID and an authorized corpus
 scope. It keeps four identity categories separate:
@@ -49,29 +57,34 @@ to the projector.
 ## Field result contract
 
 The projection supports facility name, public Facility ID, facility type,
-status, full address, city, state, ZIP, county, capacity, administrator,
-licensee, telephone, and regional office. Coordinates are excluded.
+status, Closed Date, full address, city, state, ZIP, county, capacity,
+administrator, licensee, telephone, regional office, and CONTACT. CONTACT and
+Facility Administrator remain separate. Coordinates are excluded.
 
 Each field result carries a safely selected display value when applicable, a
 normalized comparison value, semantic state, source row and snapshot identity,
 observation time, conflict flag, every eligible alternative observation, and
-current-reference or historical complaint context. The canonical internal
+current-reference, supplementary-reference, historical-reference, or historical
+complaint context. The canonical internal
 identity uses the same result shape but is always `internal_only` and has no
 display value.
 
 Semantic states are `populated`, `blank`, `absent`, `unavailable`,
-`unresolved_raw_code`, `conflicting`, `internal_only`, and `invalid`. Pages may
+`unresolved_raw_code`, `conflicting`, `internal_only`, `invalid`, and
+`extraction_failed`. Pages may
 translate those states into approved user-facing text through the shared
 presenter, but page strings are not stored in or accepted by the projection.
 
 ## Field-level precedence and reconciliation
 
 Precedence is defined separately for every supported field in
-`DATA_CONTRACT.md`. For the current-reference read model, the newest eligible
-nonblank program-reference observation is the first presentation candidate and
-the complaint-linked observation is the historical fallback. This does not
-make the program source a global canonical owner and does not update stored
-canonical values.
+`DATA_CONTRACT.md`. For the current-reference read model, the first eligible
+populated candidate is active accepted TransparencyAPI, then eligible ArcGIS
+supplement, then CKAN/program historical reference, then complaint-linked
+historical evidence. Prior accepted TransparencyAPI observations participate
+only to preserve populated address or telephone when the active observation is
+blank, absent, placeholder, or unavailable. This does not make any source a
+global canonical owner and does not update stored canonical values.
 
 The following invariants apply to every field:
 
@@ -80,6 +93,9 @@ The following invariants apply to every field:
 - Conflicting nonblank originals and their contexts are retained even when a
   field rule selects a current display candidate.
 - Current-reference values never rewrite complaint-time observations.
+- Source disappearance never implies closure or deletion.
+- Current status and Closed Date remain distinct; CONTACT and Facility
+  Administrator remain distinct.
 - Multiple same-ID rows remain separate observations.
 - Same-source, same-time conflicting values have no selected winner; database
   or input order never decides.
@@ -115,12 +131,12 @@ Benefits:
 
 Tradeoffs:
 
-- Core routes, templates, packets, and print draft now consume the projection,
-  while specialized aggregate views and exports can still differ until their
-  sequenced migration.
+- Core routes, templates, packets, print draft, and governed exports consume the
+  projection, while specialized aggregate views retain their separately governed
+  read models.
 - A tied conflict intentionally yields no selected display value.
-- Production data quality remains bounded by eligible existing program and
-  complaint-linked observations.
+- Production data quality remains bounded by eligible accepted source snapshots
+  and retained historical observations.
 
 ## Migration sequence
 
@@ -131,8 +147,8 @@ Tradeoffs:
 3. Add controlled PostgreSQL backfill only after separate schema, dry-run,
    apply, checkpoint, recovery, provenance, and reviewer-state-preservation
    authorization.
-4. Add ArcGIS accepted snapshots only after Issue #518 lifecycle, authority,
-   terms, identity, and acceptance gates pass; ArcGIS remains a supplement.
+4. In Issue #482, consume eligible accepted TransparencyAPI and ArcGIS snapshots
+   through the shared read-only projection; ArcGIS remains a supplement.
 5. Extend Issue #453/#477 reconciliation and Issue #478 governed refresh only
    after the shared consumer and persistence phases are accepted.
 
@@ -143,9 +159,10 @@ or authorize a page-local fallback.
 
 ## Non-goals
 
-This decision and its Issue #521/#522 implementation do not add schemas,
-migrations, backfill, ArcGIS retrieval or activation, source scheduling,
+This decision and its Issue #521/#522/#482 implementation do not add schemas,
+migrations, backfill, source retrieval, snapshot promotion, source scheduling,
 operator actions, hosted or QNAP deployment, Cloudflare changes, export
 migration, database writes, or legal, statewide, freshness, or completeness
-conclusions. Issue #522 changes only the named read-only core route/template and
-print-presentation consumers.
+conclusions. Issue #522 changed the named read-only core route/template and
+print-presentation consumers; Issue #482 changes source composition and bounded
+facility search without redesigning those surfaces.

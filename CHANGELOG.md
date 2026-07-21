@@ -1,6 +1,16 @@
 # Changelog
 
 ## Unreleased
+- Unified the governed read-only facility identity projection for Issue #482.
+  Active accepted TransparencyAPI snapshots now provide primary current-reference
+  values, ArcGIS remains supplementary, CKAN/program observations remain
+  historical fallback, and complaint-linked values remain complaint-time
+  evidence. Facility search, existing reviewer/packet/export consumers, and
+  projection diagnostics share the same deterministic field resolution,
+  provenance, conflict, missing-state, leading-zero ID, placeholder-preservation,
+  and unresolved-code rules. No schema, materialized projection, production
+  activation, backfill execution, scheduling, deployment, or reviewer-state
+  mutation was added.
 - Added the versioned, no-redirect CCLD TransparencyAPI facility-reference
   connector and immutable seven-export snapshot lifecycle for Issue #554. It
   preserves exact raw bytes and safe provenance, parses the 31/38-column CSV

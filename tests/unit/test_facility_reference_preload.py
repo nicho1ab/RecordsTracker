@@ -13,6 +13,18 @@ import pytest
 from sqlalchemy import create_engine, func, inspect, select
 from sqlalchemy.engine import Connection
 
+from ccld_complaints.connectors.ccld_transparency_api.contract import (
+    OBSERVATION_KIND as TRANSPARENCY_OBSERVATION_KIND,
+)
+from ccld_complaints.connectors.ccld_transparency_api.contract import (
+    SNAPSHOT_SCOPE as TRANSPARENCY_SNAPSHOT_SCOPE,
+)
+from ccld_complaints.connectors.ccld_transparency_api.contract import (
+    SOURCE_FAMILY_ID as TRANSPARENCY_SOURCE_FAMILY_ID,
+)
+from ccld_complaints.connectors.ccld_transparency_api.lifecycle import (
+    transparency_rows,
+)
 from ccld_complaints.hosted_app import facility_reference_preload as preload_module
 from ccld_complaints.hosted_app.app import route_response
 from ccld_complaints.hosted_app.auth import load_hosted_auth_runtime_config
@@ -28,9 +40,15 @@ from ccld_complaints.hosted_app.facility_reference_preload import (
     hosted_facility_reference_records,
     load_facility_reference_preload,
     parse_facility_reference_csv,
+    search_facility_reference_records,
 )
 from ccld_complaints.hosted_app.reviewer_ui import reviewer_ui_context_for_connection
 from ccld_complaints.hosted_app.seeded_import import hosted_seeded_import_metadata
+from ccld_complaints.hosted_app.source_snapshot_lifecycle import (
+    source_snapshot_metadata,
+    source_snapshot_pointers,
+    source_snapshots,
+)
 
 
 def test_facility_reference_table_shape_includes_lookup_columns_and_indexes() -> None:
@@ -392,6 +410,113 @@ def test_facility_reference_source_reads_database_rows_for_lookup(tmp_path: Path
     assert source.records[0].city == "Irvine"
 
 
+def test_active_transparency_snapshot_is_the_searchable_primary_reference() -> None:
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    hosted_facility_reference_metadata.create_all(engine)
+    source_snapshot_metadata.create_all(engine)
+    snapshot_id = "transparency-search-active"
+    facility_id = "001234567"
+    recorded_at = "2026-07-21T10:00:00+00:00"
+    observations = {
+        "facility_name": _transparency_observation("Transparency Only Center"),
+        "facility_type": _transparency_observation("Child Care Center"),
+        "bulk_status": _transparency_observation("Licensed"),
+        "facility_city": _transparency_observation("Sacramento"),
+        "facility_state": _transparency_observation("CA"),
+        "facility_zip": _transparency_observation("95814"),
+        "county_name": _transparency_observation("Sacramento"),
+    }
+    with engine.begin() as connection:
+        connection.execute(
+            source_snapshots.insert().values(
+                snapshot_id=snapshot_id,
+                source_family_id=TRANSPARENCY_SOURCE_FAMILY_ID,
+                fixture_scope=TRANSPARENCY_SNAPSHOT_SCOPE,
+                observation_kind=TRANSPARENCY_OBSERVATION_KIND,
+                lifecycle_state="accepted",
+                manifest_ref="ignored-evidence/manifest.json",
+                manifest_sha256="1" * 64,
+                raw_payload_ref="ignored-evidence/raw",
+                raw_payload_sha256="2" * 64,
+                normalized_content_sha256="3" * 64,
+                schema_fingerprint="4" * 64,
+                domain_fingerprint="5" * 64,
+                row_count=1,
+                stored_row_count=1,
+                duplicate_object_id_count=0,
+                duplicate_facility_number_count=0,
+                omitted_field_count=0,
+                invalid_field_count=0,
+                warning_count=0,
+                rejection_reason_count=0,
+                validation_report={},
+                recorded_at=recorded_at,
+                validated_at=recorded_at,
+                rejected_at=None,
+                accepted_at=recorded_at,
+            )
+        )
+        connection.execute(
+            transparency_rows.insert().values(
+                snapshot_id=snapshot_id,
+                export_id="ChildCareCenters",
+                row_ordinal=1,
+                facility_number=facility_id,
+                raw_row_sha256="6" * 64,
+                raw_values=[],
+                raw_record={"Facility Number": facility_id},
+                normalized_record=observations,
+                resolved_current_reference=observations,
+                complaint_blocks=[],
+                row_fingerprint="7" * 64,
+                is_quarantined=False,
+            )
+        )
+        connection.execute(
+            transparency_rows.insert().values(
+                snapshot_id=snapshot_id,
+                export_id="ChildCareCenters",
+                row_ordinal=2,
+                facility_number="009999999",
+                raw_row_sha256="8" * 64,
+                raw_values=[],
+                raw_record={"Facility Number": "009999999"},
+                normalized_record={
+                    "facility_name": _transparency_observation("Quarantined Center")
+                },
+                resolved_current_reference={
+                    "facility_name": _transparency_observation("Quarantined Center")
+                },
+                complaint_blocks=[],
+                row_fingerprint="9" * 64,
+                is_quarantined=True,
+            )
+        )
+        connection.execute(
+            source_snapshot_pointers.insert().values(
+                source_family_id=TRANSPARENCY_SOURCE_FAMILY_ID,
+                active_snapshot_id=snapshot_id,
+                prior_accepted_snapshot_id=None,
+                updated_at=recorded_at,
+            )
+        )
+
+        source = facility_reference_source_from_connection(connection)
+        by_name = search_facility_reference_records(connection, "transparency center")
+        by_id = search_facility_reference_records(connection, facility_id)
+        quarantined = search_facility_reference_records(connection, "Quarantined Center")
+
+    assert source.source_kind == "postgres_transparencyapi_reference"
+    assert source.records == ()
+    assert source.record_count == 1
+    assert by_name.total_match_count == 1
+    assert by_name.returned_records[0].facility_number == facility_id
+    assert by_name.returned_records[0].facility_name == "Transparency Only Center"
+    assert by_id.returned_records[0].facility_number == facility_id
+    assert quarantined.total_match_count == 0
+    assert quarantined.returned_records == ()
+
+
 def test_address_diagnostic_distinguishes_raw_absence_from_mapping_gap() -> None:
     with _connection() as connection:
         connection.execute(
@@ -714,6 +839,10 @@ def _diagnostic_reference_row(
         "source_file_name": "ChildrenResidential.csv",
         "original_row_json": original_row_json,
     }
+
+
+def _transparency_observation(value: object) -> dict[str, object]:
+    return {"state": "populated", "raw": value, "value": value}
 
 
 def _load_preload_cli_module() -> Any:

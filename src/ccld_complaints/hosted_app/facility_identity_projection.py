@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
+from dataclasses import field as dataclass_field
 from enum import StrEnum
 from types import MappingProxyType
 from typing import Any, TypeAlias
@@ -10,6 +11,19 @@ from typing import Any, TypeAlias
 from sqlalchemy import inspect, select
 from sqlalchemy.engine import Connection
 
+from ccld_complaints.connectors.arcgis_ccl_facilities.contract import (
+    ARCGIS_SUPPLEMENT_SOURCE_FAMILY_ID,
+    LIVE_QUERY_SCOPE,
+)
+from ccld_complaints.connectors.ccld_transparency_api.contract import (
+    SNAPSHOT_SCOPE as TRANSPARENCY_SNAPSHOT_SCOPE,
+)
+from ccld_complaints.connectors.ccld_transparency_api.contract import (
+    SOURCE_FAMILY_ID as TRANSPARENCY_SOURCE_FAMILY_ID,
+)
+from ccld_complaints.connectors.ccld_transparency_api.lifecycle import (
+    transparency_rows,
+)
 from ccld_complaints.hosted_app.auth import (
     SOURCE_DERIVED_READ_PERMISSION,
     AuthenticatedActor,
@@ -22,6 +36,11 @@ from ccld_complaints.hosted_app.seeded_import import (
     hosted_source_derived_records,
 )
 from ccld_complaints.hosted_app.source_derived_reads import SourceDerivedRecordRead
+from ccld_complaints.hosted_app.source_snapshot_lifecycle import (
+    source_snapshot_pointers,
+    source_snapshot_rows,
+    source_snapshots,
+)
 from ccld_complaints.source_profiling import FACILITY_SOURCE_REGISTRY
 
 FacilityValue: TypeAlias = str | int
@@ -42,6 +61,8 @@ class FacilityProjectionField(StrEnum):
     LICENSEE = "licensee"
     TELEPHONE = "telephone"
     REGIONAL_OFFICE = "regional_office"
+    CLOSED_DATE = "closed_date"
+    CONTACT = "contact"
     CANONICAL_INTERNAL_IDENTITY = "canonical_internal_identity"
 
 
@@ -61,15 +82,21 @@ class FacilityValueState(StrEnum):
     CONFLICTING = "conflicting"
     INTERNAL_ONLY = "internal_only"
     INVALID = "invalid"
+    EXTRACTION_FAILED = "extraction_failed"
 
 
 class FacilityValueContext(StrEnum):
     CURRENT_REFERENCE = "current_reference"
+    SUPPLEMENTARY_REFERENCE = "supplementary_reference"
+    HISTORICAL_REFERENCE = "historical_reference"
     HISTORICAL_COMPLAINT = "historical_complaint"
     INTERNAL = "internal"
 
 
 class FacilitySourceKind(StrEnum):
+    TRANSPARENCY_API_CURRENT = "transparencyapi_current"
+    TRANSPARENCY_API_PRIOR_ACCEPTED = "transparencyapi_prior_accepted"
+    ARCGIS_SUPPLEMENT = "arcgis_supplement"
     PROGRAM_REFERENCE = "program_reference"
     COMPLAINT_LINKED_FACILITY = "complaint_linked_facility"
 
@@ -121,6 +148,8 @@ class FacilityIdentityProjection:
 
 @dataclass(frozen=True)
 class FacilityProjectionSourceAvailability:
+    transparencyapi_current: bool = True
+    arcgis_supplement: bool = True
     program_reference: bool = True
     complaint_linked_facility: bool = True
 
@@ -136,68 +165,22 @@ class FacilityProjectionCandidate:
     present_fields: frozenset[FacilityProjectionField]
     source_fields: Mapping[FacilityProjectionField, str]
     canonical_internal_identity: str | None = None
+    semantic_states: Mapping[FacilityProjectionField, FacilityValueState] = dataclass_field(
+        default_factory=dict
+    )
+    raw_values: Mapping[FacilityProjectionField, Any] = dataclass_field(default_factory=dict)
 
 
+_DEFAULT_FIELD_PRECEDENCE = (
+    FacilitySourceKind.TRANSPARENCY_API_CURRENT,
+    FacilitySourceKind.TRANSPARENCY_API_PRIOR_ACCEPTED,
+    FacilitySourceKind.ARCGIS_SUPPLEMENT,
+    FacilitySourceKind.PROGRAM_REFERENCE,
+    FacilitySourceKind.COMPLAINT_LINKED_FACILITY,
+)
 _FIELD_PRECEDENCE: Mapping[
     FacilityProjectionField, tuple[FacilitySourceKind, ...]
-] = {
-    FacilityProjectionField.FACILITY_NAME: (
-        FacilitySourceKind.PROGRAM_REFERENCE,
-        FacilitySourceKind.COMPLAINT_LINKED_FACILITY,
-    ),
-    FacilityProjectionField.PUBLIC_FACILITY_ID: (
-        FacilitySourceKind.PROGRAM_REFERENCE,
-        FacilitySourceKind.COMPLAINT_LINKED_FACILITY,
-    ),
-    FacilityProjectionField.FACILITY_TYPE: (
-        FacilitySourceKind.PROGRAM_REFERENCE,
-        FacilitySourceKind.COMPLAINT_LINKED_FACILITY,
-    ),
-    FacilityProjectionField.STATUS: (
-        FacilitySourceKind.PROGRAM_REFERENCE,
-        FacilitySourceKind.COMPLAINT_LINKED_FACILITY,
-    ),
-    FacilityProjectionField.FULL_ADDRESS: (
-        FacilitySourceKind.PROGRAM_REFERENCE,
-        FacilitySourceKind.COMPLAINT_LINKED_FACILITY,
-    ),
-    FacilityProjectionField.CITY: (
-        FacilitySourceKind.PROGRAM_REFERENCE,
-        FacilitySourceKind.COMPLAINT_LINKED_FACILITY,
-    ),
-    FacilityProjectionField.STATE: (
-        FacilitySourceKind.PROGRAM_REFERENCE,
-        FacilitySourceKind.COMPLAINT_LINKED_FACILITY,
-    ),
-    FacilityProjectionField.ZIP: (
-        FacilitySourceKind.PROGRAM_REFERENCE,
-        FacilitySourceKind.COMPLAINT_LINKED_FACILITY,
-    ),
-    FacilityProjectionField.COUNTY: (
-        FacilitySourceKind.PROGRAM_REFERENCE,
-        FacilitySourceKind.COMPLAINT_LINKED_FACILITY,
-    ),
-    FacilityProjectionField.CAPACITY: (
-        FacilitySourceKind.PROGRAM_REFERENCE,
-        FacilitySourceKind.COMPLAINT_LINKED_FACILITY,
-    ),
-    FacilityProjectionField.ADMINISTRATOR: (
-        FacilitySourceKind.PROGRAM_REFERENCE,
-        FacilitySourceKind.COMPLAINT_LINKED_FACILITY,
-    ),
-    FacilityProjectionField.LICENSEE: (
-        FacilitySourceKind.PROGRAM_REFERENCE,
-        FacilitySourceKind.COMPLAINT_LINKED_FACILITY,
-    ),
-    FacilityProjectionField.TELEPHONE: (
-        FacilitySourceKind.PROGRAM_REFERENCE,
-        FacilitySourceKind.COMPLAINT_LINKED_FACILITY,
-    ),
-    FacilityProjectionField.REGIONAL_OFFICE: (
-        FacilitySourceKind.PROGRAM_REFERENCE,
-        FacilitySourceKind.COMPLAINT_LINKED_FACILITY,
-    ),
-}
+] = {field: _DEFAULT_FIELD_PRECEDENCE for field in PUBLIC_FACILITY_FIELDS}
 
 _REFERENCE_FIELD_ALIASES: Mapping[FacilityProjectionField, tuple[str, ...]] = {
     FacilityProjectionField.FACILITY_NAME: ("Facility Name", "NAME"),
@@ -228,6 +211,8 @@ _REFERENCE_FIELD_ALIASES: Mapping[FacilityProjectionField, tuple[str, ...]] = {
         "Regional Office",
         "FAC_DO_DESC",
     ),
+    FacilityProjectionField.CLOSED_DATE: ("Closed Date", "CLOSED_DATE"),
+    FacilityProjectionField.CONTACT: ("CONTACT", "Contact"),
 }
 
 _REFERENCE_TYPED_COLUMNS: Mapping[FacilityProjectionField, str] = {
@@ -245,6 +230,8 @@ _REFERENCE_TYPED_COLUMNS: Mapping[FacilityProjectionField, str] = {
     FacilityProjectionField.LICENSEE: "licensee_name",
     FacilityProjectionField.TELEPHONE: "telephone",
     FacilityProjectionField.REGIONAL_OFFICE: "regional_office",
+    FacilityProjectionField.CLOSED_DATE: "closed_date",
+    FacilityProjectionField.CONTACT: "contact",
 }
 
 _CANONICAL_FIELD_ALIASES: Mapping[FacilityProjectionField, tuple[str, ...]] = {
@@ -285,6 +272,40 @@ _CANONICAL_FIELD_ALIASES: Mapping[FacilityProjectionField, tuple[str, ...]] = {
         "regional_office",
         "fac_do_desc",
     ),
+    FacilityProjectionField.CLOSED_DATE: ("closed_date",),
+    FacilityProjectionField.CONTACT: ("contact",),
+}
+
+_TRANSPARENCY_FIELD_KEYS: Mapping[FacilityProjectionField, str] = {
+    FacilityProjectionField.FACILITY_NAME: "facility_name",
+    FacilityProjectionField.PUBLIC_FACILITY_ID: "facility_number",
+    FacilityProjectionField.FACILITY_TYPE: "facility_type",
+    FacilityProjectionField.STATUS: "bulk_status",
+    FacilityProjectionField.FULL_ADDRESS: "facility_address",
+    FacilityProjectionField.CITY: "facility_city",
+    FacilityProjectionField.STATE: "facility_state",
+    FacilityProjectionField.ZIP: "facility_zip",
+    FacilityProjectionField.COUNTY: "county_name",
+    FacilityProjectionField.CAPACITY: "facility_capacity",
+    FacilityProjectionField.ADMINISTRATOR: "facility_administrator",
+    FacilityProjectionField.LICENSEE: "licensee",
+    FacilityProjectionField.TELEPHONE: "facility_telephone_number",
+    FacilityProjectionField.REGIONAL_OFFICE: "regional_office",
+    FacilityProjectionField.CLOSED_DATE: "closed_date",
+}
+
+_ARCGIS_FIELD_KEYS: Mapping[FacilityProjectionField, str] = {
+    FacilityProjectionField.FACILITY_NAME: "facility_name_source",
+    FacilityProjectionField.PUBLIC_FACILITY_ID: "facility_number",
+    FacilityProjectionField.STATUS: "raw_status_code",
+    FacilityProjectionField.FULL_ADDRESS: "street_address_source",
+    FacilityProjectionField.CITY: "city_source",
+    FacilityProjectionField.STATE: "state_source",
+    FacilityProjectionField.ZIP: "postal_code_source",
+    FacilityProjectionField.COUNTY: "county_source",
+    FacilityProjectionField.CAPACITY: "capacity_source",
+    FacilityProjectionField.TELEPHONE: "telephone_source",
+    FacilityProjectionField.REGIONAL_OFFICE: "regional_office_source",
 }
 
 _APPROVED_REFERENCE_RESOURCE_IDS = frozenset(
@@ -364,11 +385,7 @@ def facility_projection_candidate_from_values(
         source_row_identity=_clean_text(source_row_identity),
         snapshot_identity=_clean_text(snapshot_identity),
         observed_at=_optional_text(observed_at),
-        context=(
-            FacilityValueContext.CURRENT_REFERENCE
-            if source_kind is FacilitySourceKind.PROGRAM_REFERENCE
-            else FacilityValueContext.HISTORICAL_COMPLAINT
-        ),
+        context=_context_for_source_kind(source_kind),
         values=candidate_values,
         present_fields=frozenset(present_fields),
         source_fields=source_fields,
@@ -424,6 +441,128 @@ def load_authorized_facility_identity_projections(
     )
     inspector = inspect(connection)
 
+    transparency_candidates: dict[str, list[FacilityProjectionCandidate]] = {
+        facility_id: [] for facility_id in facility_ids
+    }
+    transparency_matching_counts = dict.fromkeys(facility_ids, 0)
+    transparency_available = False
+    if _has_tables(
+        inspector,
+        source_snapshots.name,
+        source_snapshot_pointers.name,
+        transparency_rows.name,
+    ):
+        transparency_snapshot = _active_snapshot(
+            connection,
+            TRANSPARENCY_SOURCE_FAMILY_ID,
+        )
+        transparency_available = bool(
+            transparency_snapshot
+            and (
+                transparency_snapshot["fixture_scope"] == TRANSPARENCY_SNAPSHOT_SCOPE
+                or allow_test_candidates
+            )
+        )
+        if transparency_snapshot is not None:
+            active_rows = tuple(
+                dict(row)
+                for row in connection.execute(
+                    select(transparency_rows).where(
+                        transparency_rows.c.snapshot_id
+                        == transparency_snapshot["snapshot_id"],
+                        transparency_rows.c.facility_number.in_(facility_ids),
+                    )
+                ).mappings()
+            )
+            for row in active_rows:
+                matching_id = _clean_text(row.get("facility_number"))
+                if matching_id not in transparency_candidates:
+                    continue
+                transparency_matching_counts[matching_id] += 1
+                if transparency_available and not row.get("is_quarantined"):
+                    transparency_candidates[matching_id].append(
+                        _candidate_from_transparency_row(
+                            row,
+                            observed_at=_optional_text(
+                                transparency_snapshot.get("recorded_at")
+                            ),
+                        )
+                    )
+            prior_snapshot_id = _optional_text(
+                transparency_snapshot.get("prior_accepted_snapshot_id")
+            )
+            if transparency_available and prior_snapshot_id:
+                prior_rows = tuple(
+                    dict(row)
+                    for row in connection.execute(
+                        select(transparency_rows).where(
+                            transparency_rows.c.snapshot_id == prior_snapshot_id,
+                            transparency_rows.c.facility_number.in_(facility_ids),
+                            transparency_rows.c.is_quarantined.is_(False),
+                        )
+                    ).mappings()
+                )
+                prior_recorded_at = connection.scalar(
+                    select(source_snapshots.c.recorded_at).where(
+                        source_snapshots.c.snapshot_id == prior_snapshot_id
+                    )
+                )
+                for row in prior_rows:
+                    matching_id = _clean_text(row.get("facility_number"))
+                    if matching_id in transparency_candidates:
+                        transparency_candidates[matching_id].append(
+                            _candidate_from_transparency_row(
+                                row,
+                                observed_at=_optional_text(prior_recorded_at),
+                                prior_preserved_fields_only=True,
+                            )
+                        )
+
+    arcgis_candidates: dict[str, list[FacilityProjectionCandidate]] = {
+        facility_id: [] for facility_id in facility_ids
+    }
+    arcgis_matching_counts = dict.fromkeys(facility_ids, 0)
+    arcgis_available = False
+    if _has_tables(
+        inspector,
+        source_snapshots.name,
+        source_snapshot_pointers.name,
+        source_snapshot_rows.name,
+    ):
+        arcgis_snapshot = _active_snapshot(
+            connection,
+            ARCGIS_SUPPLEMENT_SOURCE_FAMILY_ID,
+        )
+        arcgis_available = bool(
+            arcgis_snapshot
+            and (
+                arcgis_snapshot["fixture_scope"] == LIVE_QUERY_SCOPE
+                or allow_test_candidates
+            )
+        )
+        if arcgis_snapshot is not None:
+            arcgis_rows = tuple(
+                dict(row)
+                for row in connection.execute(
+                    select(source_snapshot_rows).where(
+                        source_snapshot_rows.c.snapshot_id == arcgis_snapshot["snapshot_id"],
+                        source_snapshot_rows.c.facility_number.in_(facility_ids),
+                    )
+                ).mappings()
+            )
+            for row in arcgis_rows:
+                matching_id = _clean_text(row.get("facility_number"))
+                if matching_id not in arcgis_candidates:
+                    continue
+                arcgis_matching_counts[matching_id] += 1
+                if arcgis_available:
+                    arcgis_candidates[matching_id].append(
+                        _candidate_from_arcgis_row(
+                            row,
+                            observed_at=_optional_text(arcgis_snapshot.get("recorded_at")),
+                        )
+                    )
+
     complaint_candidates: dict[str, list[FacilityProjectionCandidate]] = {
         facility_id: [] for facility_id in facility_ids
     }
@@ -447,12 +586,15 @@ def load_authorized_facility_identity_projections(
         )
         facility_id_set = set(facility_ids)
         for record in source_records:
-            matching_id = _source_record_public_facility_id(record)
-            if matching_id not in facility_id_set:
+            complaint_matching_id = _source_record_public_facility_id(record)
+            if (
+                complaint_matching_id is None
+                or complaint_matching_id not in facility_id_set
+            ):
                 continue
-            complaint_matching_counts[matching_id] += 1
+            complaint_matching_counts[complaint_matching_id] += 1
             if allow_test_candidates or not _unsafe_source_record(record):
-                complaint_candidates[matching_id].append(
+                complaint_candidates[complaint_matching_id].append(
                     _candidate_from_source_record(record)
                 )
 
@@ -487,10 +629,33 @@ def load_authorized_facility_identity_projections(
             facility_id: project_facility_identity(
                 facility_id,
                 (
+                    *transparency_candidates[facility_id],
+                    *arcgis_candidates[facility_id],
                     *reference_candidates[facility_id],
                     *complaint_candidates[facility_id],
                 ),
                 availability=FacilityProjectionSourceAvailability(
+                    transparencyapi_current=(
+                        transparency_available
+                        and not (
+                            transparency_matching_counts[facility_id]
+                            and not any(
+                                candidate.source_kind
+                                in {
+                                    FacilitySourceKind.TRANSPARENCY_API_CURRENT,
+                                    FacilitySourceKind.TRANSPARENCY_API_PRIOR_ACCEPTED,
+                                }
+                                for candidate in transparency_candidates[facility_id]
+                            )
+                        )
+                    ),
+                    arcgis_supplement=(
+                        arcgis_available
+                        and not (
+                            arcgis_matching_counts[facility_id]
+                            and not arcgis_candidates[facility_id]
+                        )
+                    ),
                     program_reference=(
                         reference_available
                         and not (
@@ -507,10 +672,14 @@ def load_authorized_facility_identity_projections(
                     ),
                 ),
                 ineligible_candidate_excluded=(
-                    not reference_candidates[facility_id]
+                    not transparency_candidates[facility_id]
+                    and not arcgis_candidates[facility_id]
+                    and not reference_candidates[facility_id]
                     and not complaint_candidates[facility_id]
                     and (
-                        reference_matching_counts[facility_id] > 0
+                        transparency_matching_counts[facility_id] > 0
+                        or arcgis_matching_counts[facility_id] > 0
+                        or reference_matching_counts[facility_id] > 0
                         or complaint_matching_counts[facility_id] > 0
                     )
                 ),
@@ -518,6 +687,187 @@ def load_authorized_facility_identity_projections(
             for facility_id in facility_ids
         }
     )
+
+
+def _active_snapshot(
+    connection: Connection,
+    source_family_id: str,
+) -> Mapping[str, Any] | None:
+    row = (
+        connection.execute(
+            select(
+                source_snapshots,
+                source_snapshot_pointers.c.prior_accepted_snapshot_id,
+            )
+            .join(
+                source_snapshot_pointers,
+                source_snapshot_pointers.c.active_snapshot_id
+                == source_snapshots.c.snapshot_id,
+            )
+            .where(
+                source_snapshot_pointers.c.source_family_id == source_family_id,
+                source_snapshots.c.source_family_id == source_family_id,
+                source_snapshots.c.lifecycle_state == "accepted",
+            )
+        )
+        .mappings()
+        .one_or_none()
+    )
+    return dict(row) if row is not None else None
+
+
+def _candidate_from_transparency_row(
+    row: Mapping[str, Any],
+    *,
+    observed_at: str | None,
+    prior_preserved_fields_only: bool = False,
+) -> FacilityProjectionCandidate:
+    facility_id = _clean_text(row.get("facility_number"))
+    normalized_values = row.get("normalized_record")
+    normalized = normalized_values if isinstance(normalized_values, Mapping) else {}
+    source_kind = (
+        FacilitySourceKind.TRANSPARENCY_API_PRIOR_ACCEPTED
+        if prior_preserved_fields_only
+        else FacilitySourceKind.TRANSPARENCY_API_CURRENT
+    )
+    allowed_fields = (
+        {
+            FacilityProjectionField.PUBLIC_FACILITY_ID,
+            FacilityProjectionField.FULL_ADDRESS,
+            FacilityProjectionField.TELEPHONE,
+        }
+        if prior_preserved_fields_only
+        else set(_TRANSPARENCY_FIELD_KEYS)
+    )
+    values: dict[FacilityProjectionField, Any] = {
+        FacilityProjectionField.PUBLIC_FACILITY_ID: facility_id
+    }
+    raw_values: dict[FacilityProjectionField, Any] = {
+        FacilityProjectionField.PUBLIC_FACILITY_ID: facility_id
+    }
+    semantic_states: dict[FacilityProjectionField, FacilityValueState] = {
+        FacilityProjectionField.PUBLIC_FACILITY_ID: FacilityValueState.POPULATED
+    }
+    source_fields: dict[FacilityProjectionField, str] = {
+        FacilityProjectionField.PUBLIC_FACILITY_ID: "Facility Number"
+    }
+    present_fields = {FacilityProjectionField.PUBLIC_FACILITY_ID}
+    for field, normalized_key in _TRANSPARENCY_FIELD_KEYS.items():
+        if field is FacilityProjectionField.PUBLIC_FACILITY_ID or field not in allowed_fields:
+            continue
+        observation = normalized.get(normalized_key)
+        if not isinstance(observation, Mapping):
+            continue
+        values[field] = observation.get("value")
+        raw_values[field] = observation.get("raw")
+        semantic_states[field] = _semantic_state(observation.get("state"))
+        source_fields[field] = f"normalized_record.{normalized_key}"
+        present_fields.add(field)
+    return FacilityProjectionCandidate(
+        source_kind=source_kind,
+        source_row_identity=(
+            f"transparencyapi:{row.get('export_id')}:{row.get('row_ordinal')}:"
+            f"{row.get('raw_row_sha256')}"
+        ),
+        snapshot_identity=_clean_text(row.get("snapshot_id")),
+        observed_at=observed_at,
+        context=_context_for_source_kind(source_kind),
+        values=MappingProxyType(values),
+        present_fields=frozenset(present_fields),
+        source_fields=MappingProxyType(source_fields),
+        semantic_states=MappingProxyType(semantic_states),
+        raw_values=MappingProxyType(raw_values),
+    )
+
+
+def _candidate_from_arcgis_row(
+    row: Mapping[str, Any],
+    *,
+    observed_at: str | None,
+) -> FacilityProjectionCandidate:
+    facility_id = _clean_text(row.get("facility_number"))
+    normalized_values = row.get("normalized_record")
+    normalized = normalized_values if isinstance(normalized_values, Mapping) else {}
+    values: dict[FacilityProjectionField, Any] = {
+        FacilityProjectionField.PUBLIC_FACILITY_ID: facility_id
+    }
+    raw_values: dict[FacilityProjectionField, Any] = {
+        FacilityProjectionField.PUBLIC_FACILITY_ID: facility_id
+    }
+    semantic_states: dict[FacilityProjectionField, FacilityValueState] = {
+        FacilityProjectionField.PUBLIC_FACILITY_ID: FacilityValueState.POPULATED
+    }
+    source_fields: dict[FacilityProjectionField, str] = {
+        FacilityProjectionField.PUBLIC_FACILITY_ID: "FAC_NBR"
+    }
+    present_fields = {FacilityProjectionField.PUBLIC_FACILITY_ID}
+    field_keys = dict(_ARCGIS_FIELD_KEYS)
+    type_description = normalized.get("facility_type_description_source")
+    if isinstance(type_description, Mapping) and type_description.get("state") == "populated":
+        field_keys[FacilityProjectionField.FACILITY_TYPE] = (
+            "facility_type_description_source"
+        )
+    else:
+        field_keys[FacilityProjectionField.FACILITY_TYPE] = "raw_type_code"
+    for field, normalized_key in field_keys.items():
+        if field is FacilityProjectionField.PUBLIC_FACILITY_ID:
+            continue
+        observation = normalized.get(normalized_key)
+        if not isinstance(observation, Mapping):
+            continue
+        values[field] = observation.get("value")
+        raw_values[field] = observation.get("value")
+        semantic_states[field] = _semantic_state(observation.get("state"))
+        source_fields[field] = _clean_text(observation.get("source_field")) or normalized_key
+        present_fields.add(field)
+    return FacilityProjectionCandidate(
+        source_kind=FacilitySourceKind.ARCGIS_SUPPLEMENT,
+        source_row_identity=(
+            f"arcgis:{row.get('snapshot_id')}:{row.get('source_object_id')}"
+        ),
+        snapshot_identity=_clean_text(row.get("snapshot_id")),
+        observed_at=observed_at,
+        context=FacilityValueContext.SUPPLEMENTARY_REFERENCE,
+        values=MappingProxyType(values),
+        present_fields=frozenset(present_fields),
+        source_fields=MappingProxyType(source_fields),
+        semantic_states=MappingProxyType(semantic_states),
+        raw_values=MappingProxyType(raw_values),
+    )
+
+
+def _semantic_state(value: object) -> FacilityValueState:
+    normalized = _clean_text(value).casefold().replace("-", "_")
+    if normalized == "populated":
+        return FacilityValueState.POPULATED
+    if normalized in {"blank", "null"}:
+        return FacilityValueState.BLANK
+    if normalized == "absent":
+        return FacilityValueState.ABSENT
+    if normalized in {"placeholder", "unavailable"}:
+        return FacilityValueState.UNAVAILABLE
+    if normalized == "invalid":
+        return FacilityValueState.INVALID
+    if normalized == "extraction_failed":
+        return FacilityValueState.EXTRACTION_FAILED
+    return FacilityValueState.INVALID
+
+
+def _context_for_source_kind(source_kind: FacilitySourceKind) -> FacilityValueContext:
+    if source_kind is FacilitySourceKind.TRANSPARENCY_API_CURRENT:
+        return FacilityValueContext.CURRENT_REFERENCE
+    if source_kind is FacilitySourceKind.ARCGIS_SUPPLEMENT:
+        return FacilityValueContext.SUPPLEMENTARY_REFERENCE
+    if source_kind in {
+        FacilitySourceKind.TRANSPARENCY_API_PRIOR_ACCEPTED,
+        FacilitySourceKind.PROGRAM_REFERENCE,
+    }:
+        return FacilityValueContext.HISTORICAL_REFERENCE
+    return FacilityValueContext.HISTORICAL_COMPLAINT
+
+
+def _has_tables(inspector: Any, *table_names: str) -> bool:
+    return all(inspector.has_table(table_name) for table_name in table_names)
 
 
 def _project_field(
@@ -553,8 +903,12 @@ def _project_field(
         state = FacilityValueState.UNRESOLVED_RAW_CODE
     elif selected is not None:
         state = FacilityValueState.POPULATED
+    elif any(item.state is FacilityValueState.EXTRACTION_FAILED for item in alternatives):
+        state = FacilityValueState.EXTRACTION_FAILED
     elif any(item.state is FacilityValueState.INVALID for item in alternatives):
         state = FacilityValueState.INVALID
+    elif any(item.state is FacilityValueState.UNAVAILABLE for item in alternatives):
+        state = FacilityValueState.UNAVAILABLE
     elif any(item.state is FacilityValueState.BLANK for item in alternatives):
         state = FacilityValueState.BLANK
     elif unavailable_sources:
@@ -624,8 +978,16 @@ def _alternative(
 ) -> FacilityValueAlternative | None:
     if field not in candidate.present_fields:
         return None
-    raw_value = candidate.values.get(field)
-    normalized_value, state = _normalize_value(field, raw_value)
+    value = candidate.values.get(field)
+    raw_value = candidate.raw_values.get(field, value)
+    semantic_state = candidate.semantic_states.get(field)
+    if semantic_state is None or semantic_state is FacilityValueState.POPULATED:
+        normalized_value, state = _normalize_value(field, value)
+    elif semantic_state is FacilityValueState.UNRESOLVED_RAW_CODE:
+        normalized_value, _ = _normalize_value(field, value)
+        state = FacilityValueState.UNRESOLVED_RAW_CODE
+    else:
+        normalized_value, state = None, semantic_state
     return FacilityValueAlternative(
         raw_value=_observation_value(field, raw_value),
         normalized_value=normalized_value,
@@ -861,6 +1223,10 @@ def _unavailable_sources(
     availability: FacilityProjectionSourceAvailability,
 ) -> tuple[FacilitySourceKind, ...]:
     unavailable: list[FacilitySourceKind] = []
+    if not availability.transparencyapi_current:
+        unavailable.append(FacilitySourceKind.TRANSPARENCY_API_CURRENT)
+    if not availability.arcgis_supplement:
+        unavailable.append(FacilitySourceKind.ARCGIS_SUPPLEMENT)
     if not availability.program_reference:
         unavailable.append(FacilitySourceKind.PROGRAM_REFERENCE)
     if not availability.complaint_linked_facility:
