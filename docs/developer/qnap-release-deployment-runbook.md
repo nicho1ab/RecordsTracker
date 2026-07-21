@@ -180,6 +180,79 @@ boundaries. It is not proof of statewide completeness, freshness, absence of
 complaints, legal conclusions, or correct rendering without the automated UI
 evidence.
 
+### TransparencyAPI snapshot lifecycle operator commands
+
+These commands operate only on a complete TransparencyAPI package that the human
+operator has already preserved under the app's mounted raw-data volume. The recommended
+container path is
+`/app/data/raw/ccld/transparencyapi-operator/<snapshot-id>/manifest.json`. The CLI does
+not retrieve or copy source data. Confirm the package directory contains the governed
+manifest and all referenced raw artifacts before using it.
+
+Run read-only checks first from `/share/Public/RecordsTracker` in the standalone QNAP
+SSH client. Substitute only the governed container manifest path:
+
+```sh
+sudo docker compose -f docker-compose.qnap.yml exec -T app python -m ccld_complaints.cli.transparencyapi_snapshot_lifecycle --help
+```
+
+```sh
+sudo docker compose -f docker-compose.qnap.yml exec -T app python -m ccld_complaints.cli.transparencyapi_snapshot_lifecycle status
+```
+
+```sh
+sudo docker compose -f docker-compose.qnap.yml exec -T app python -m ccld_complaints.cli.transparencyapi_snapshot_lifecycle inspect-package /app/data/raw/ccld/transparencyapi-operator/<snapshot-id>/manifest.json
+```
+
+```sh
+sudo docker compose -f docker-compose.qnap.yml exec -T app python -m ccld_complaints.cli.transparencyapi_snapshot_lifecycle dry-run /app/data/raw/ccld/transparencyapi-operator/<snapshot-id>/manifest.json
+```
+
+Stop if any command exits nonzero, reports a rejection, shows an unexpected pointer,
+or fails an approved Facility ID/name check. Save only the aggregate JSON. Do not retain
+database connection values, source bodies, headers, contact details, or reviewer data in
+operator evidence.
+
+Before the first mutation, verify the current PostgreSQL backup still exists and remains
+usable. Create a new backup only when the database changed since the verified backup or
+that backup is no longer available. Run each lifecycle transition separately:
+
+```sh
+sudo docker compose -f docker-compose.qnap.yml exec -T app python -m ccld_complaints.cli.transparencyapi_snapshot_lifecycle stage /app/data/raw/ccld/transparencyapi-operator/<snapshot-id>/manifest.json
+```
+
+```sh
+sudo docker compose -f docker-compose.qnap.yml exec -T app python -m ccld_complaints.cli.transparencyapi_snapshot_lifecycle validate <snapshot-id>
+```
+
+```sh
+sudo docker compose -f docker-compose.qnap.yml exec -T app python -m ccld_complaints.cli.transparencyapi_snapshot_lifecycle accept <snapshot-id>
+```
+
+For the first promotion, explicitly prove both pointers are absent:
+
+```sh
+sudo docker compose -f docker-compose.qnap.yml exec -T app python -m ccld_complaints.cli.transparencyapi_snapshot_lifecycle promote <snapshot-id> --expected-active none --expected-prior none
+```
+
+For a later promotion, copy the exact active and prior identities from the immediately
+preceding `status` result:
+
+```sh
+sudo docker compose -f docker-compose.qnap.yml exec -T app python -m ccld_complaints.cli.transparencyapi_snapshot_lifecycle promote <snapshot-id> --expected-active <active-snapshot-id> --expected-prior <prior-snapshot-id-or-none>
+```
+
+Rollback swaps the active and prior accepted pointers without deleting history. Use the
+exact immediately preceding values; then run `status` again:
+
+```sh
+sudo docker compose -f docker-compose.qnap.yml exec -T app python -m ccld_complaints.cli.transparencyapi_snapshot_lifecycle rollback --expected-active <active-snapshot-id> --expected-prior <prior-snapshot-id>
+```
+
+Re-promotion is the ordinary guarded `promote` command with the post-rollback active and
+prior values. The CLI performs no source retrieval, scheduling, canonical backfill,
+reviewer-state mutation, snapshot deletion, deployment, or Cloudflare operation.
+
 ## Operator command standards
 
 - QNAP commands must be BusyBox-compatible unless a required utility was explicitly verified.

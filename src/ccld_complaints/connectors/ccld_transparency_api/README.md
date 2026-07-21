@@ -36,6 +36,30 @@ connector does not write canonical facility values or reviewer-created state.
 
 ## Commands and scheduling
 
-There is intentionally no production CLI, scheduler, deployment hook, or reviewer
-integration in Issue #554. Later activation, projection, refresh, operator, deployment,
-and hosted-acceptance work remains under its separately governed issues.
+The operator lifecycle CLI invokes the existing package and shared snapshot-lifecycle
+functions; it does not implement another state machine. Invoke it as:
+
+```text
+python -m ccld_complaints.cli.transparencyapi_snapshot_lifecycle <command>
+```
+
+Its explicit commands are `inspect-package`, `stage`, `validate`, `accept`, `promote`,
+`rollback`, `status`, and `dry-run`. `inspect-package` needs only a manifest path.
+`status` and `dry-run` use read-only database connections. Every other database command
+runs as one transaction and never combines lifecycle stages.
+
+Promotion and rollback require both `--expected-active` and `--expected-prior`. Use the
+literal `none` for an expected absent pointer; the first promotion therefore requires
+`--expected-active none --expected-prior none`. The guards are checked in the same
+transaction as the existing promotion or rollback function. A mismatch fails closed.
+
+All successful output is deterministic aggregate-safe JSON on stdout. Failures emit a
+concise category-only JSON object on stderr and return nonzero. Output excludes raw rows,
+source bodies, arbitrary source values, URLs, headers, contact details, reviewer content,
+database connection values, and local paths. The only named record checks are the three
+explicitly approved public Facility ID/name pairs in `dry-run`.
+
+The CLI cannot retrieve a package. A human operator must place one already-preserved,
+complete source family in an approved mounted raw-data path and pass its `manifest.json`.
+The CLI also provides no scheduler, automatic refresh, canonical allocation/backfill,
+reviewer-state mutation, snapshot deletion, browser route, or deployment hook.
