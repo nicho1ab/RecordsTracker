@@ -13,7 +13,10 @@ from sqlalchemy.engine import Connection
 
 from ccld_complaints.hosted_app import ccld_facility_lookup as facility_lookup
 from ccld_complaints.hosted_app import facility_review_signals as review_signals
-from ccld_complaints.hosted_app.app import route_response
+from ccld_complaints.hosted_app.app import (
+    _legacy_compare_facilities_redirect_location,
+    route_response,
+)
 from ccld_complaints.hosted_app.audit_events import hosted_audit_events
 from ccld_complaints.hosted_app.auth import (
     AuthenticatedActor,
@@ -71,6 +74,9 @@ from ccld_complaints.hosted_app.seeded_import import (
 FIXTURE = Path("tests/fixtures/hosted_seeded_corpus/validated_seeded_corpus.json")
 TEST_SCOPE = LOCAL_REVIEWER_UI_SCOPE
 APPROVED_PROGRAM_REFERENCE_RESOURCE_ID = "c9df723a-437f-4dcd-be37-ec73ae518bb9"
+CANONICAL_LICENSE_ACTIVITY_PATH = (
+    f"{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}?view=licensing-visit-activity"
+)
 
 
 class _ButtonClassParser(HTMLParser):
@@ -1072,7 +1078,7 @@ def test_ccld_facility_lookup_page_renders_results_and_use_link() -> None:
     assert "Continue to Request Records" in html
     assert "Showing 1 of 1 matching facility." in normalized_html
     assert "Continue to Request Records" in html
-    assert "Open facility hub when loaded context is available" in html
+    assert "Open Facility Overview when loaded context is available" in html
     assert f"{CCLD_FACILITY_REVIEW_HUB_PATH}?facility_number=900000001" in html
     assert "Find a facility" in html
     assert request_href in html
@@ -1116,7 +1122,7 @@ def test_ccld_facility_review_hub_renders_safe_directory_context() -> None:
 
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
-    assert "Facility review hub" in html
+    assert "Facility Overview" in html
     assert "Primary facility facts" in html
     assert "Synthetic Orchard Child Care" in html
     assert visible_text.count("Synthetic Orchard Child Care") == 1
@@ -1170,7 +1176,7 @@ def test_ccld_facility_review_hub_renders_safe_directory_context() -> None:
     assert "source_record_key" not in html
     assert "raw_sha256" not in html
     assert "connector" not in html.casefold()
-    assert "Facility hub review actions" not in html
+    assert 'aria-label="Facility Overview actions"' in html
     assert "Opening this page leaves source-derived records" not in normalized_html
     assert "Example Licensee" not in html
     assert "555-0101" not in html
@@ -1211,7 +1217,7 @@ def test_ccld_facility_review_hub_known_loaded_preloaded_example_renders(
 
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
-    assert "Facility review hub" in html
+    assert "Facility Overview" in html
     assert "Facility-directory result not found" not in html
     assert "7 MAGIC FLOWERS BILINGUAL MONTESSORI PRESCHOOL" in html
     assert "434417302" in html
@@ -1331,10 +1337,10 @@ def test_ccld_facility_review_hub_renders_signal_only_context_without_mutation(
     assert content_type == "text/html; charset=utf-8"
     assert before_source_rows == after_source_rows
     assert before_counts == after_counts == _empty_reviewer_counts()
-    assert "Facility summary" in html
+    assert "Facility Overview" in html
     assert "signal-only facility hub" not in html
     assert "Facility-directory record not available" in html
-    assert "Uploaded summary signals exist" in html
+    assert "Supported public licensing and visit observations are available" in html
     assert "A. MIRIAM JAMISON CHILDREN&#x27;S CENTER" in html
     assert "157806098" in html
     assert "TEMPORARY SHELTER CARE FACILITY" not in html
@@ -1372,7 +1378,7 @@ def test_ccld_facility_review_hub_renders_signal_only_context_without_mutation(
     assert "Coverage and interpretation limits" in html
     assert "local/test" not in normalized_html
     assert (
-        "uploaded summary signals exist"
+        "supported public licensing and visit observations are available"
         in normalized_html
     )
     assert "Signal-only hub actions" not in html
@@ -1554,7 +1560,7 @@ def test_ccld_facility_review_hub_review_next_cautious_reason_rows() -> None:
     assert_no_secret_html(html)
 
 
-def test_ccld_facility_review_hub_renders_uploaded_public_summary_signals(
+def test_ccld_facility_overview_renders_supported_public_licensing_observations(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
@@ -1630,7 +1636,11 @@ def test_ccld_facility_review_hub_renders_uploaded_public_summary_signals(
     assert 'class="technical-details diagnostic-details"' not in html
     assert "How to use these signals" not in html
     assert html.count("CCLD source availability") == 1
-    assert "uploaded public summary counts and dates are planning cues only" in normalized_html
+    assert (
+        "supported public licensing, visit, citation, and Plan of Correction "
+        "counts and dates are review observations only"
+        in normalized_html
+    )
     assert "ChildCareCenters06072026.csv" not in html
     assert "loaded June 7, 2026" not in html
     assert _definition_terms(html).count("Facility type") == 1
@@ -1643,8 +1653,10 @@ def test_ccld_facility_review_hub_renders_uploaded_public_summary_signals(
     assert "43 total; 0 inspection; 12 complaint; 31 other" in html
     assert "2 citation value(s); 1 Type A value(s); 2 Type B value(s)" in html
     assert "POC date indicators" in html
-    assert "Possible delay" in html
-    assert "Check source" in html
+    assert "Complaint-related visit activity" in html
+    assert "Citation activity" in html
+    assert "Plan of Correction activity" in html
+    assert "Recent visit activity" in html
     assert "verified complaint" not in normalized_html.casefold()
     assert "facility has no complaints" not in normalized_html.casefold()
     assert "source complete." not in normalized_html.casefold()
@@ -1707,45 +1719,53 @@ def test_ccld_facility_review_hub_keeps_source_dataset_filename_outside_primary_
 
 
 def test_ccld_facility_review_priority_page_empty_state_is_safe() -> None:
-    status, content_type, body = route_response(
-        CCLD_FACILITY_REVIEW_PRIORITY_PATH,
-        page_data_mode="fixture-demo",
-    )
+    with _seeded_connection() as connection:
+        status, content_type, body = route_response(
+            CANONICAL_LICENSE_ACTIVITY_PATH,
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
     html = body.decode("utf-8")
     normalized_html = " ".join(html.split())
 
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
-    assert "Facility review priority" in html
-    assert "uploaded public summary fields" in html
-    assert "review cue" in html
+    assert "Find Facilities That May Need Closer Review" in html
+    assert "Licensing and Visit Activity" in html
+    assert "supported public licensing and visit information" in html
+    assert "uploaded summary" not in _visible_text(html).casefold()
+    assert "Supported observations" in html
     assert "button-secondary" in " ".join(_button_classes(html, "Apply filters"))
-    _assert_collapsed_disclosure(
-        html,
-        "How to use these review cues",
-    )
+    assert "<details" not in html
     assert html.index("Apply filters") < html.index(
-        "How to use these review cues"
+        "How to use this information"
     )
-    assert html.index("No facility review priority rows are available") < html.index(
-        "How to use these review cues"
+    assert html.index("No licensing or visit activity is available") < html.index(
+        "How to use this information"
     )
-    assert "No facility review priority rows are available" in html
-    assert "Use these cues to choose facility hubs" in normalized_html
-    # Empty state must link back to facility lookup (clear next action)
-    assert "Back to search" in normalized_html
-    assert CCLD_FACILITY_LOOKUP_PATH in html
-    # Empty state must note planning views are optional reviewer context.
-    assert (
-        "Optional planning views provide supplemental facility-review context when available"
-        in normalized_html
-    )
-    assert "not required for Request Records or review" in normalized_html
+    assert "No licensing or visit activity is available" in html
+    assert "remain separate from loaded complaint counts" in normalized_html
+    assert "Clear Filters" in html
     assert_no_secret_html(html)
 
 
-def test_ccld_facility_lookup_page_review_priority_link_is_collapsed_not_primary() -> None:
-    """Review-priority link must be inside a <details> element, not a primary button."""
+def test_legacy_licensing_activity_route_redirects_with_search_and_cues() -> None:
+    legacy_path = (
+        f"{CCLD_FACILITY_REVIEW_PRIORITY_PATH}?q=Alpha"
+        "&cue=Complaint+visit+activity+present"
+    )
+
+    status, _content_type, body = route_response(legacy_path)
+    location = _legacy_compare_facilities_redirect_location(legacy_path)
+
+    assert status == 302
+    assert location == (
+        f"{CANONICAL_LICENSE_ACTIVITY_PATH}&q=Alpha"
+        "&cue=Complaint+visit+activity+present"
+    )
+    assert b"Continue to Compare Facilities" in body
+
+
+def test_ccld_facility_lookup_page_uses_one_canonical_compare_facilities_action() -> None:
     status, _content_type, body = route_response(
         CCLD_FACILITY_LOOKUP_PATH,
         page_data_mode="fixture-demo",
@@ -1759,6 +1779,9 @@ def test_ccld_facility_lookup_page_review_priority_link_is_collapsed_not_primary
     assert "Optional planning views" in html
     assert "Open optional planning views" in html
     assert "Optional: review-priority and intelligence" not in html
+    assert visible_text.count("Compare Facilities") == 2
+    assert CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH in html
+    assert CCLD_FACILITY_REVIEW_PRIORITY_PATH not in html
     assert (
         "Optional planning views provide supplemental facility-review context when available"
         in normalized_html
@@ -1819,53 +1842,73 @@ def test_ccld_facility_review_priority_page_orders_filters_and_links_to_hubs(
     )
     monkeypatch.setenv(FACILITY_REVIEW_SIGNALS_CSVS_ENV, str(signals_csv))
 
-    status, content_type, body = route_response(
-        CCLD_FACILITY_REVIEW_PRIORITY_PATH,
-        page_data_mode="fixture-demo",
-    )
+    with _seeded_connection() as connection:
+        context = reviewer_ui_context_for_connection(connection)
+        status, content_type, body = route_response(
+            CANONICAL_LICENSE_ACTIVITY_PATH,
+            reviewer_ui_context=context,
+        )
+        filtered_status, _filtered_content_type, filtered_body = route_response(
+            f"{CANONICAL_LICENSE_ACTIVITY_PATH}&cue=Complaint+visit+activity+present",
+            reviewer_ui_context=context,
+        )
+        all_cue_status, _all_cue_content_type, all_cue_body = route_response(
+            f"{CANONICAL_LICENSE_ACTIVITY_PATH}&cue=all",
+            reviewer_ui_context=context,
+        )
     html = body.decode("utf-8")
     normalized_html = " ".join(html.split())
 
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
-    assert "Priority cue" in html
+    assert "All supported observations" in html
     assert '<div class="dense-section-header">' in html
-    assert "Possible delay" in html
-    assert "Check source" in html
-    assert "120+ day gap" in html
+    expected_labels = {
+        "Multiple supported observations": "Multiple signal types present",
+        "Complaint-related visit activity": "Complaint visit activity present",
+        "Citation activity": "Citation indicator present",
+        "Plan of Correction activity": "POC indicator present",
+        "Recent visit activity": "Recent visit activity",
+        "Capacity of 50 or more": "High-capacity facility",
+        "Closed licensing status": "Closed status in uploaded summary",
+        "Last recorded visit before 2023": "Long gap since last visit",
+    }
+    for label, cue in expected_labels.items():
+        assert f'<input type="checkbox" name="cue" value="{cue}"' in html
+        assert f"<span>{label}</span>" in html
+    assert "Priority cue" not in html
+    assert "Check source" not in html
+    assert "Possible delay" not in html
+    assert "uploaded summary" not in _visible_text(html).casefold()
     assert "Multiple signal types present review cue" not in html
     assert html.index("Multi Cue Facility") < html.index("Single Cue Facility")
     assert html.index("Single Cue Facility") < html.index("Long Gap Facility")
     assert f"{CCLD_FACILITY_REVIEW_HUB_PATH}?facility_number=900000002" in html
-    assert "Open facility review hub for 900000002" in html
-    _assert_collapsed_disclosure(
-        html,
-        "How to use these review cues",
-    )
+    assert 'aria-label="Open Facility Overview for Multi Cue Facility"' in html
+    assert "<details" not in html
     assert html.index("Apply filters") < html.index(
-        "How to use these review cues"
+        "How to use this information"
     )
-    assert html.index("Review cue summary") < html.index(
-        "Detailed priority table"
+    assert html.index("Observation summary") < html.index(
+        "Licensing and visit activity by facility"
     )
-    assert html.index("Detailed priority table") < html.index(
-        "How to use these review cues"
+    assert html.index("Licensing and visit activity by facility") < html.index(
+        "How to use this information"
     )
     assert "review label hidden" in html
     assert "Secret Garden Fixture" not in html
     assert "3 total visits; 2 complaint visits" in html
     assert "2 citation value(s); 1 POC date(s)" in html
-    assert "Use these cues to choose facility hubs" in normalized_html
+    assert "remain separate from loaded complaint counts" in normalized_html
+    assert "Supported summary CSV sources loaded" not in html
+    assert "Malformed or shifted rows skipped" not in html
+    assert "Open Facility Overview" in html
     assert "verified complaint" not in normalized_html.casefold()
     assert "risk score" not in normalized_html.casefold()
     assert "facility has no complaints" not in normalized_html.casefold()
     assert "official finding." not in normalized_html.casefold()
     assert_no_secret_html(html)
 
-    filtered_status, _filtered_content_type, filtered_body = route_response(
-        f"{CCLD_FACILITY_REVIEW_PRIORITY_PATH}?cue=Complaint+visit+activity+present",
-        page_data_mode="fixture-demo",
-    )
     filtered_html = filtered_body.decode("utf-8")
 
     assert filtered_status == 200
@@ -1874,14 +1917,10 @@ def test_ccld_facility_review_priority_page_orders_filters_and_links_to_hubs(
     assert "Long Gap Facility" not in filtered_html
 
     # cue=all must show the same result set as the unfiltered default, not 0 rows.
-    all_cue_status, _all_cue_content_type, all_cue_body = route_response(
-        f"{CCLD_FACILITY_REVIEW_PRIORITY_PATH}?cue=all",
-        page_data_mode="fixture-demo",
-    )
     all_cue_html = all_cue_body.decode("utf-8")
 
     assert all_cue_status == 200
-    assert "No facility review priority rows are available" not in all_cue_html
+    assert "No licensing or visit activity is available" not in all_cue_html
     assert "Multi Cue Facility" in all_cue_html
     assert "Single Cue Facility" in all_cue_html
     assert "Long Gap Facility" in all_cue_html
@@ -1911,7 +1950,7 @@ def test_ccld_facility_review_priority_page_does_not_mutate_hosted_tables(
         before_source_rows = _source_rows(connection)
         before_counts = _table_counts(connection)
         status, content_type, body = route_response(
-            CCLD_FACILITY_REVIEW_PRIORITY_PATH,
+            CANONICAL_LICENSE_ACTIVITY_PATH,
             page_data_mode="fixture-demo",
             ccld_record_request_ui_context=ccld_record_request_context_for_reviewer_context(
                 reviewer_ui_context_for_connection(
@@ -1929,7 +1968,7 @@ def test_ccld_facility_review_priority_page_does_not_mutate_hosted_tables(
     assert content_type == "text/html; charset=utf-8"
     assert before_source_rows == after_source_rows
     assert before_counts == after_counts == _empty_reviewer_counts()
-    assert "Facility review priority" in html
+    assert "Licensing and Visit Activity" in html
     assert "A. MIRIAM JAMISON CHILDREN&#x27;S CENTER" in html
     assert_no_secret_html(html)
 
@@ -1970,7 +2009,7 @@ def test_ccld_facility_review_intelligence_dashboard_filters_sorts_and_links(
 
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
-    assert "Cross-facility intelligence" in html
+    assert "Find Facilities That May Need Closer Review" in html
     assert "Which facilities may warrant review next?" not in html
     filter_grid = _facility_intelligence_filter_grid(html)
     assert filter_grid.labels == [
@@ -1993,7 +2032,7 @@ def test_ccld_facility_review_intelligence_dashboard_filters_sorts_and_links(
     assert "Facility ID</strong>" in html
     assert "157806098" in html
     assert "1 exact contributing complaint" in html
-    assert "Open facility" in html
+    assert "Open Facility Overview" in html
     assert f"{CCLD_FACILITY_REVIEW_HUB_PATH}?facility_number=157806098" in html
     assert "Open filtered complaint queue" not in html
     assert "Open next complaint" in html
@@ -2017,7 +2056,6 @@ def test_ccld_facility_review_intelligence_dashboard_filters_sorts_and_links(
     assert "raw_sha256" not in html
     assert "data/raw" not in html
     assert_no_secret_html(html)
-
 
 def test_ccld_facility_review_intelligence_dashboard_does_not_mutate_hosted_tables(
     monkeypatch: pytest.MonkeyPatch,
@@ -2059,7 +2097,7 @@ def test_ccld_facility_review_intelligence_dashboard_does_not_mutate_hosted_tabl
     assert content_type == "text/html; charset=utf-8"
     assert before_source_rows == after_source_rows
     assert before_counts == after_counts == _empty_reviewer_counts()
-    assert "Cross-facility intelligence" in html
+    assert "Find Facilities That May Need Closer Review" in html
     assert "A. MIRIAM JAMISON CHILDREN&#x27;S CENTER" in html
     assert "1 exact contributing complaint" in html
     assert "Signal-only" not in html

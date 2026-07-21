@@ -745,6 +745,26 @@ repository-readable package is the approved controlled variance for #419,
 #502, and #503; it does not claim an editable Figma change and it preserves all
 applicable visual-acceptance gates.
 
+### Issue #419 controlled-variance implementation record
+
+The repository implementation maps the Issue #501 controlled variance to the
+canonical `/ccld/facilities/intelligence` route, the `Compare Facilities`
+navigation label, the `Find Facilities That May Need Closer Review` H1, and the
+three approved plain-link information views. Legacy route renderers are
+superseded by query-preserving redirects only after their unique behavior is
+available in the canonical experience. Automated evidence records
+`RT-UI-GATE-001` through `RT-UI-GATE-009`; it does not claim a Figma update or
+the explicit visual-acceptance decision required by gate 009.
+
+The reviewer-facing terminology correction uses `Facility Overview` for the
+facility destination and `Complaint Worklist` for complaint work. Licensing
+filters identify the supported public condition represented by their existing
+data rather than exposing generic or implementation-centric cue names. When a
+source-backed facility name is unavailable, the result says `Facility name
+unavailable` and presents the public Facility ID separately; internal stable
+identities remain implementation details. This correction does not change the
+global navigation or Help content owned by Issues #502 and #503.
+
 The approved Checkpoint 3 reference frames carry this label:
 
 > Approved implementation reference — variance requires approval

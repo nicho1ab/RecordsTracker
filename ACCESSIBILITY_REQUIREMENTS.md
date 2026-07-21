@@ -239,3 +239,19 @@ is a release blocker.
   distinct visible wording that assistive technology can read. A visual badge,
   icon, tooltip, position, or color difference alone does not establish the
   state.
+
+## Compare Facilities
+
+- `/ccld/facilities/intelligence` is one canonical navigation destination.
+  `Complaint Patterns`, `Licensing and Visit Activity`, and `Complaint Activity
+  Over Time` are ordinary links with one programmatic current-page state, not a
+  tab interaction.
+- Contributing complaint records and licensing/visit observations are primary
+  comparison evidence and remain visible without a disclosure control.
+- Filters have persistent labels, record actions have facility- or
+  complaint-specific accessible names, and a fragment-targeted filter receives
+  focus for the governed keyboard evidence scenario.
+- The page must reflow without horizontal page scrolling at desktop, 1024 px,
+  390 px, and the governed 720 px 200% approximation. Print hides navigation and
+  interactive filters while retaining the comparison evidence and its text
+  meaning.

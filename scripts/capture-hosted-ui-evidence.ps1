@@ -36,6 +36,9 @@ Capture the focused issue #416 facility-priorities evidence routes and assertion
 Capture the focused issue #417 serious-topic worklist evidence routes and assertions.
 .PARAMETER Issue418
 Capture the focused issue #418 complaint trend and anomaly evidence routes and assertions.
+.PARAMETER Issue419
+Capture the focused issue #419 canonical Compare Facilities views, states, redirects,
+responsive layouts, keyboard focus, and print evidence.
 .PARAMETER Issue498
 Capture the focused RT-SRC-002 local fixture evidence states and presentation scenarios.
 .EXAMPLE
@@ -50,6 +53,8 @@ Capture the focused RT-SRC-002 local fixture evidence states and presentation sc
 .\scripts\capture-hosted-ui-evidence.ps1 -BaseUrl http://192.168.1.122:8003 -Mode live -Issue417
 .EXAMPLE
 .\scripts\capture-hosted-ui-evidence.ps1 -BaseUrl http://127.0.0.1:8010 -Mode fixture -Issue418
+.EXAMPLE
+.\scripts\capture-hosted-ui-evidence.ps1 -BaseUrl http://127.0.0.1:8010 -Mode fixture -Issue419
 .EXAMPLE
 .\scripts\capture-hosted-ui-evidence.ps1 -BaseUrl http://127.0.0.1:8010 -Mode fixture -Issue498
 .NOTES
@@ -91,6 +96,8 @@ param(
 
     [switch]$Issue418,
 
+    [switch]$Issue419,
+
     [switch]$Issue498
 )
 
@@ -98,6 +105,9 @@ $ErrorActionPreference = "Stop"
 
 $evidencePurpose = if ($Issue498) {
     "Focused RT-SRC-002 local fixture evidence for supported, document-only, field-partial, source-unavailable, responsive, focus, and print states."
+}
+elseif ($Issue419) {
+    "Focused issue #419 Compare Facilities evidence for canonical views, legacy redirects, source separation, states, responsive reflow, keyboard focus, and print."
 }
 elseif ($Issue418) {
     "Focused issue #418 complaint trend evidence for grouping, filters, coverage states, deterministic anomaly cues, links, accessibility snapshots, and screenshots."
@@ -227,14 +237,30 @@ function Join-RouteUrl {
 
 function Get-RouteContent {
     param([string]$Url, [int]$Timeout)
+    $requestParameters = @{
+        Uri            = $Url
+        UseBasicParsing = $true
+        TimeoutSec     = $Timeout
+        ErrorAction    = "Stop"
+    }
+    if ((Get-Command Invoke-WebRequest).Parameters.ContainsKey("SkipHttpErrorCheck")) {
+        $requestParameters["SkipHttpErrorCheck"] = $true
+    }
     try {
-        $response = Invoke-WebRequest -Uri $Url -UseBasicParsing -TimeoutSec $Timeout -ErrorAction Stop
+        $response = Invoke-WebRequest @requestParameters
         return [pscustomobject]@{ StatusCode = [int]$response.StatusCode; Content = [string]$response.Content; Error = "" }
     }
     catch {
         if ($_.Exception.Response -and $_.Exception.Response.StatusCode) {
             $status = [int]$_.Exception.Response.StatusCode
-            return [pscustomobject]@{ StatusCode = $status; Content = ""; Error = "HTTP $status" }
+            $content = ""
+            if ($_.Exception.Response.Content) {
+                try {
+                    $content = [string]$_.Exception.Response.Content.ReadAsStringAsync().GetAwaiter().GetResult()
+                }
+                catch { $content = "" }
+            }
+            return [pscustomobject]@{ StatusCode = $status; Content = $content; Error = "HTTP $status" }
         }
         return [pscustomobject]@{ StatusCode = 0; Content = ""; Error = $_.Exception.Message }
     }
@@ -1071,15 +1097,17 @@ function Test-RouteOrientationMarker {
     $markersByRoute = @{
         "home" = @("Find a Facility", "Find the facility/license number")
         "facility" = @("Find a facility", "Find the facility/license number")
-        "facility-priority" = @("Facility review priority", "Facilities grouped by review cue priority")
-        "facility-intelligence" = @("Cross-facility intelligence", "Filter facilities", "Open next complaint")
-        "facility-hub" = @("Facility review hub", "Review summary", "Review next")
+        "facility-intelligence" = @("Find Facilities That May Need Closer Review", "Complaint Patterns")
+        "facility-licensing-activity" = @("Find Facilities That May Need Closer Review", "Licensing and Visit Activity")
+        "facility-complaint-trends" = @("Find Facilities That May Need Closer Review", "Complaint Activity Over Time")
+        "facility-hub" = @("Facility Overview", "Review summary", "Review next")
         "request-records" = @("Request Records", "Which facility should be reviewed?")
         "jobs" = @("Job diagnostics", "Track Request Records jobs")
         "reviewer" = @("Complaint records ready for review", "Complaint worklist", "Review complaint")
         "substantiated-triage" = @("substantiated complaint triage", "Source-derived finding")
         "serious-topics" = @("Serious-topic complaint worklist", "Filter serious review themes")
-        "facility-priorities" = @("Facility review priorities", "Find facilities that may deserve review first")
+        "facility-priorities" = @("Find Facilities That May Need Closer Review", "Complaint Patterns")
+        "facility-trends" = @("Find Facilities That May Need Closer Review", "Complaint Activity Over Time")
         "packet-preview-empty" = @("Review packet preview", "No facility/date packet context was supplied.")
         "packet-preview-context" = @("Review packet preview", "Packet preparation preview")
         "packet-draft-empty" = @("Attorney Review Packet Draft", "No facility/date packet context was supplied.")
@@ -1100,8 +1128,9 @@ function Test-RouteAssertions {
     param([hashtable]$Route, [string]$Html, [int]$StatusCode, [System.Collections.ArrayList]$Assertions)
     $name = $Route.Name
     if ($StatusCode -le 0) { Add-AssertionResult -Target $Assertions -RouteName $name -Check "route reachable" -Status "FAIL" -Message "Route did not respond."; return }
-    if ($StatusCode -ge 400) { Add-AssertionResult -Target $Assertions -RouteName $name -Check "route status" -Status "FAIL" -Message "Route returned HTTP $StatusCode." }
-    else { Add-AssertionResult -Target $Assertions -RouteName $name -Check "route status" -Status "PASS" -Message "Route returned HTTP $StatusCode." }
+    $expectedStatus = if ($Route.ContainsKey("ExpectedStatus")) { [int]$Route.ExpectedStatus } else { 200 }
+    if ($StatusCode -eq $expectedStatus) { Add-AssertionResult -Target $Assertions -RouteName $name -Check "route status" -Status "PASS" -Message "Route returned expected HTTP $StatusCode." }
+    else { Add-AssertionResult -Target $Assertions -RouteName $name -Check "route status" -Status "FAIL" -Message "Route returned HTTP $StatusCode; expected $expectedStatus." }
     $forbidden = Get-ForbiddenMarkers -Text $Html
     if ($forbidden.Count -gt 0) { Add-AssertionResult -Target $Assertions -RouteName $name -Check "private markers" -Status "FAIL" -Message ("Forbidden marker(s): " + ($forbidden -join ", ")) }
     else { Add-AssertionResult -Target $Assertions -RouteName $name -Check "private markers" -Status "PASS" -Message "No forbidden private markers found." }
@@ -1122,14 +1151,15 @@ function Test-RouteAssertions {
         $expectedNavLinks = @(
             "/|Home",
             "/ccld/facilities|Facilities",
+            "/ccld/facilities/intelligence|Compare Facilities",
             "/ccld/records/request|Request Records",
             "/reviewer|Review",
             "/feedback|Feedback",
             "/ccld/help|Help"
         )
         $navDefinitionMatches = $navLinks.Count -eq $expectedNavLinks.Count -and (($navLinks -join "`n") -ceq ($expectedNavLinks -join "`n"))
-        if ($navDefinitionMatches) { Add-AssertionResult -Target $Assertions -RouteName $name -Check "authoritative primary navigation" -Status "PASS" -Message "Primary navigation uses the authoritative six links in order." }
-        else { Add-AssertionResult -Target $Assertions -RouteName $name -Check "authoritative primary navigation" -Status "FAIL" -Message "Primary navigation differs from the authoritative six-link definition or ordering." }
+        if ($navDefinitionMatches) { Add-AssertionResult -Target $Assertions -RouteName $name -Check "authoritative primary navigation" -Status "PASS" -Message "Primary navigation includes the approved Compare Facilities destination in the current seven-link order." }
+        else { Add-AssertionResult -Target $Assertions -RouteName $name -Check "authoritative primary navigation" -Status "FAIL" -Message "Primary navigation differs from the current governed seven-link definition or ordering." }
         $feedbackCount = @($navLinks | Where-Object { $_ -ceq "/feedback|Feedback" }).Count
         $jobStatusCount = @($navLinks | Where-Object { $_ -like "/ccld/retrieval/jobs|*" }).Count
         if ($feedbackCount -eq 1 -and $jobStatusCount -eq 0) { Add-AssertionResult -Target $Assertions -RouteName $name -Check "primary navigation product tiers" -Status "PASS" -Message "Feedback appears once and job diagnostics stays out of primary navigation." }
@@ -1324,7 +1354,7 @@ function Get-Issue415HrefInventory {
 function Get-Issue416CountSummary {
     param([string]$Text)
     $summary = [pscustomobject]@{ Found = $false; First = 0; Last = 0; Matching = 0; Total = 0; Raw = "" }
-    $pattern = "Showing\s+(?<first>\d+)(?:-(?<last>\d+))?\s+of\s+(?<matching>\d+)\s+matching\s+facility\s+priority\s+row\(s\);\s+(?<total>\d+)\s+total\s+authorized\s+loaded\s+facility\s+row\(s\)"
+    $pattern = "Showing\s+(?<first>\d+)(?:-(?<last>\d+))?\s+of\s+(?<matching>\d+)\s+matching\s+facilities;\s+(?<total>\d+)\s+total\s+authorized\s+loaded\s+facilities"
     $match = [regex]::Match($Text, $pattern, [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
     if (-not $match.Success) { return $summary }
     $first = [int]$match.Groups["first"].Value
@@ -1352,16 +1382,16 @@ function Test-Issue416RouteAssertions {
     $name = [string]$Route.Name
     $kind = [string]$Route.Issue416Kind
     $counts = Get-Issue416CountSummary -Text $Text
-    Add-Issue416PassFail -Assertions $Assertions -RouteName $name -Check "issue416 h1" -Pass ($Html.Contains("<h1") -and $Text.Contains("Facility review priorities")) -PassMessage "Expected facility priorities H1 found." -FailMessage "Expected facility priorities H1 missing."
+    Add-Issue416PassFail -Assertions $Assertions -RouteName $name -Check "issue416 h1" -Pass ($Html.Contains("<h1") -and $Text.Contains("Find Facilities That May Need Closer Review") -and $Text.Contains("Complaint Patterns")) -PassMessage "Canonical Compare Facilities heading and Complaint Patterns view found." -FailMessage "Canonical Compare Facilities heading or Complaint Patterns view missing."
     Add-Issue416PassFail -Assertions $Assertions -RouteName $name -Check "issue416 count summary" -Pass $counts.Found -PassMessage "Facility priority count summary found." -FailMessage "Facility priority count summary missing."
     Add-Issue416PassFail -Assertions $Assertions -RouteName $name -Check "issue416 no hidden score" -Pass ($Text.Contains("does not use a hidden score") -and $Text.Contains("These rules are visible ordering rules")) -PassMessage "No hidden-score language and visible rules found." -FailMessage "Visible no-hidden-score/rules language missing."
     Add-Issue416PassFail -Assertions $Assertions -RouteName $name -Check "issue416 controls labeled" -Pass (($Html -match "(?is)<label[^>]*>.*?</label>") -and ($Html -match "(?is)<select|<input")) -PassMessage "Filter controls have labels." -FailMessage "Expected labeled filter controls missing."
-    Add-Issue416PassFail -Assertions $Assertions -RouteName $name -Check "issue416 semantic table" -Pass (($Text.Contains("No facility priority rows matched.")) -or (($Html -match "(?is)<caption[^>]*>.*?</caption>") -and ($Html -match "(?is)<th\b"))) -PassMessage "Semantic table caption/headings found when rows are rendered." -FailMessage "Semantic table caption/headings missing."
+    Add-Issue416PassFail -Assertions $Assertions -RouteName $name -Check "issue416 semantic table" -Pass (($Text.Contains("No facilities match these filters")) -or (($Html -match "(?is)<caption[^>]*>.*?</caption>") -and ($Html -match "(?is)<th\b"))) -PassMessage "Semantic table caption/headings found when rows are rendered." -FailMessage "Semantic table caption/headings missing."
     Add-Issue416PassFail -Assertions $Assertions -RouteName $name -Check "issue416 safe conclusions" -Pass (-not ($Text -match "(?i)legal priority|statewide completeness|source completeness proof")) -PassMessage "No unsupported conclusion wording found." -FailMessage "Unsupported conclusion wording found."
     if ($kind -eq "default") {
         Add-Issue416PassFail -Assertions $Assertions -RouteName $name -Check "issue416 default rows" -Pass ($counts.Found -and $counts.Total -gt 0 -and $Text.Contains("Contributing factors")) -PassMessage "Default route has facility rows and factor heading." -FailMessage "Default route rows or factors missing."
         Add-Issue416PassFail -Assertions $Assertions -RouteName $name -Check "issue416 date display" -Pass (($Text -match "\b\d{2}/\d{2}/\d{4}\b") -or $Text.Contains("unknown")) -PassMessage "MM/DD/YYYY or explicit unknown date found." -FailMessage "No MM/DD/YYYY or unknown date found."
-        Add-Issue416PassFail -Assertions $Assertions -RouteName $name -Check "issue416 review links" -Pass ($Text.Contains("Open qualifying complaint queue") -and $Text.Contains("Open next complaint review workspace")) -PassMessage "Queue and reviewer workspace links found." -FailMessage "Queue or reviewer workspace links missing."
+        Add-Issue416PassFail -Assertions $Assertions -RouteName $name -Check "issue416 review links" -Pass ($Text.Contains("Open Complaint Worklist") -and $Text.Contains("Review Complaint")) -PassMessage "Complaint Worklist and complaint review links found." -FailMessage "Complaint Worklist or complaint review link missing."
         Add-Issue416PassFail -Assertions $Assertions -RouteName $name -Check "issue416 source links" -Pass ($Text.Contains("Open original public report") -or $Text.Contains("Original public report link not available")) -PassMessage "Original-source link state found." -FailMessage "Original-source link state missing."
     }
     elseif ($kind -eq "filtered") {
@@ -1375,7 +1405,7 @@ function Test-Issue416RouteAssertions {
         }
     }
     elseif ($kind -eq "empty") {
-        Add-Issue416PassFail -Assertions $Assertions -RouteName $name -Check "issue416 filtered empty" -Pass ($counts.Found -and $counts.Matching -eq 0 -and $Text.Contains("No facility priority rows matched.")) -PassMessage "Filtered-empty state found." -FailMessage "Filtered-empty state missing."
+        Add-Issue416PassFail -Assertions $Assertions -RouteName $name -Check "issue416 filtered empty" -Pass ($counts.Found -and $counts.Matching -eq 0 -and $Text.Contains("No facilities match these filters")) -PassMessage "Filtered-empty state found." -FailMessage "Filtered-empty state missing."
         Add-Issue416PassFail -Assertions $Assertions -RouteName $name -Check "issue416 clear filters" -Pass $Text.Contains("Clear filters") -PassMessage "Clear filters action found." -FailMessage "Clear filters action missing."
     }
 }
@@ -1488,7 +1518,7 @@ function Test-Issue418RouteAssertions {
     $name = [string]$Route.Name
     $kind = [string]$Route.Issue418Kind
     $counts = Get-Issue418CountSummary -Text $Text
-    Add-Issue418PassFail -Assertions $Assertions -RouteName $name -Check "issue418 h1" -Pass ($Html.Contains("<h1") -and $Text.Contains("Review complaint trends over time")) -PassMessage "Expected complaint trends H1 found." -FailMessage "Expected complaint trends H1 missing."
+    Add-Issue418PassFail -Assertions $Assertions -RouteName $name -Check "issue418 h1" -Pass ($Html.Contains("<h1") -and $Text.Contains("Find Facilities That May Need Closer Review") -and $Text.Contains("Complaint Activity Over Time")) -PassMessage "Canonical Compare Facilities heading and Complaint Activity Over Time view found." -FailMessage "Canonical Compare Facilities heading or Complaint Activity Over Time view missing."
     Add-Issue418PassFail -Assertions $Assertions -RouteName $name -Check "issue418 count reconciliation" -Pass ($counts.Found -and $counts.Qualifying -eq ($counts.Dated + $counts.DateUnavailable)) -PassMessage "Qualifying, dated, and date-unavailable counts reconcile." -FailMessage "Complaint trend count summary is missing or does not reconcile."
     Add-Issue418PassFail -Assertions $Assertions -RouteName $name -Check "issue418 semantic table" -Pass (($Html -match "(?is)<caption[^>]*>.*?</caption>") -and ($Html -match "(?is)<th\b")) -PassMessage "Semantic trend table caption and headings found." -FailMessage "Semantic trend table caption or headings missing."
     Add-Issue418PassFail -Assertions $Assertions -RouteName $name -Check "issue418 labeled controls" -Pass ($Html.Contains('name="facility"') -and $Html.Contains('name="facility_type"') -and $Html.Contains('name="geography"') -and $Html.Contains('name="finding"') -and $Html.Contains('name="serious_topic"') -and $Html.Contains('name="start_date"') -and $Html.Contains('name="end_date"') -and $Html.Contains('name="time_grain"') -and $Html.Contains('name="period_count"')) -PassMessage "Expected labeled trend filters found." -FailMessage "One or more expected trend filters missing."
@@ -1526,6 +1556,77 @@ function Test-Issue418RouteAssertions {
         $hasDecreasedActivity = $Html -match "(?is)<strong>Decreased activity</strong>"
         $hasNoAnomalyCue = $Html -match "(?is)<strong>No anomaly cue</strong>"
         Add-Issue418PassFail -Assertions $Assertions -RouteName $name -Check "issue418 zero qualifying" -Pass ($counts.Found -and $counts.Qualifying -eq 0 -and $zeroStateSupported -and -not $hasDecreasedActivity -and $hasNoAnomalyCue) -PassMessage "Zero qualifying count has a supported coverage state and no anomaly cue." -FailMessage "Zero route count, coverage state, or anomaly cue behavior is unsupported."
+    }
+}
+
+function Test-Issue419RouteAssertions {
+    param([hashtable]$Route, [string]$Html, [string]$Text, [System.Collections.ArrayList]$Assertions)
+    if (-not $Route.ContainsKey("Issue419Kind")) { return }
+    $name = [string]$Route.Name
+    $kind = [string]$Route.Issue419Kind
+    $canonicalHeading = $Text.Contains("Find Facilities That May Need Closer Review")
+    Add-AssertionResult -Target $Assertions -RouteName $name -Check "issue419 canonical heading" -Status $(if ($canonicalHeading) { "PASS" } else { "FAIL" }) -Message $(if ($canonicalHeading) { "Canonical Compare Facilities heading found." } else { "Canonical Compare Facilities heading missing." })
+
+    $viewLinks = $Html.Contains('/ccld/facilities/intelligence"') -and $Html.Contains("view=licensing-visit-activity") -and $Html.Contains("view=complaint-activity-over-time")
+    Add-AssertionResult -Target $Assertions -RouteName $name -Check "issue419 consolidated views" -Status $(if ($viewLinks) { "PASS" } else { "FAIL" }) -Message $(if ($viewLinks) { "Complaint Patterns, Licensing and Visit Activity, and Complaint Activity Over Time links found." } else { "One or more consolidated Compare Facilities view links are missing." })
+
+    $purposeIsSafe = $Text.IndexOf("compare complaint findings, activity, patterns, licensing and visit activity, and available public records", [System.StringComparison]::OrdinalIgnoreCase) -ge 0 -or $kind -in @("licensing", "legacy-licensing")
+    Add-AssertionResult -Target $Assertions -RouteName $name -Check "issue419 purpose and source boundary" -Status $(if ($purposeIsSafe) { "PASS" } else { "FAIL" }) -Message $(if ($purposeIsSafe) { "Plain-language comparison purpose or licensing source boundary found." } else { "Plain-language comparison purpose is missing." })
+
+    $primaryEvidenceHidden = $Html -match '(?is)<details[^>]*>.*?(facility-contributing-records|Review guidance|licensing and visit activity).*?</details>'
+    Add-AssertionResult -Target $Assertions -RouteName $name -Check "issue419 primary evidence visible" -Status $(if (-not $primaryEvidenceHidden) { "PASS" } else { "FAIL" }) -Message $(if (-not $primaryEvidenceHidden) { "Primary comparison evidence is not hidden in a disclosure." } else { "Primary comparison evidence is hidden in a disclosure." })
+
+    $unsafeInternals = $Text -match '(?i)raw_path|raw_sha256|provider_subject|connection string|container name|tiny fixture fallback|malformed row'
+    Add-AssertionResult -Target $Assertions -RouteName $name -Check "issue419 reviewer-tier safety" -Status $(if (-not $unsafeInternals) { "PASS" } else { "FAIL" }) -Message $(if (-not $unsafeInternals) { "Reviewer output omits controlled source and runtime internals." } else { "Reviewer output exposes a controlled source or runtime internal." })
+
+    $obsoleteReviewerLanguage = $Text -match '(?i)uploaded\s+(public\s+)?summary\s+(fields?|signals?|review\s+cues?)|facility\s+hub|detailed\s+priority\s+table|\bpriority\s+cue\b|\bcheck\s+source\b'
+    Add-AssertionResult -Target $Assertions -RouteName $name -Check "issue419 plain-language terminology" -Status $(if (-not $obsoleteReviewerLanguage) { "PASS" } else { "FAIL" }) -Message $(if (-not $obsoleteReviewerLanguage) { "Reviewer output uses approved plain-language facility and source-observation terms." } else { "Reviewer output contains obsolete or implementation-centric terminology." })
+
+    $internalIdentityVisible = $Text -match '(?i)ccld(?:-|:)facility(?:-|:)\d+'
+    Add-AssertionResult -Target $Assertions -RouteName $name -Check "issue419 public facility identity presentation" -Status $(if (-not $internalIdentityVisible) { "PASS" } else { "FAIL" }) -Message $(if (-not $internalIdentityVisible) { "Internal facility identity prefixes are absent from visible reviewer text." } else { "An internal facility identity prefix is visible to the reviewer." })
+
+    if ($Route.ContainsKey("ExpectedText")) {
+        $expectedText = [string]$Route.ExpectedText
+        $hasExpectedText = $Text.Contains($expectedText)
+        Add-AssertionResult -Target $Assertions -RouteName $name -Check "issue419 intended state" -Status $(if ($hasExpectedText) { "PASS" } else { "FAIL" }) -Message $(if ($hasExpectedText) { "Expected state text '$expectedText' found." } else { "Expected state text '$expectedText' missing." })
+    }
+
+    if ($kind -in @("default", "responsive", "focus", "limited-data", "print")) {
+        $visibleComplaintEvidence = $Html.Contains('class="facility-contributing-records"') -and $Text.Contains("Open complaint record")
+        Add-AssertionResult -Target $Assertions -RouteName $name -Check "issue419 complaint evidence and drill-down" -Status $(if ($visibleComplaintEvidence) { "PASS" } else { "FAIL" }) -Message $(if ($visibleComplaintEvidence) { "Visible contributing complaint evidence and record drill-down found." } else { "Visible contributing complaint evidence or record drill-down missing." })
+    }
+    if ($kind -in @("licensing", "legacy-licensing")) {
+        $licensingBoundary = $Text.Contains("This view does not show complaint coverage") -and $Text.Contains("separate from loaded complaint counts")
+        Add-AssertionResult -Target $Assertions -RouteName $name -Check "issue419 licensing parity and separation" -Status $(if ($licensingBoundary) { "PASS" } else { "FAIL" }) -Message $(if ($licensingBoundary) { "Licensing/visit activity is present and explicitly separate from complaint coverage." } else { "Licensing/visit activity source separation is missing." })
+        $licensingLabels = @(
+            "All supported observations",
+            "Multiple supported observations",
+            "Complaint-related visit activity",
+            "Citation activity",
+            "Plan of Correction activity",
+            "Recent visit activity",
+            "Capacity of 50 or more",
+            "Closed licensing status",
+            "Last recorded visit before 2023"
+        )
+        $meaningfulLicensingLabels = @($licensingLabels | Where-Object { -not $Text.Contains($_) }).Count -eq 0
+        Add-AssertionResult -Target $Assertions -RouteName $name -Check "issue419 meaningful licensing filters" -Status $(if ($meaningfulLicensingLabels) { "PASS" } else { "FAIL" }) -Message $(if ($meaningfulLicensingLabels) { "Every supported licensing filter has a distinct field-backed label." } else { "One or more meaningful licensing filter labels are missing." })
+    }
+    if ($kind -in @("legacy-priority", "trends", "legacy-trends")) {
+        $worklistTerminology = $Text.Contains("Complaint Worklist") -and -not ($Text -match '(?i)review\s+queue')
+        Add-AssertionResult -Target $Assertions -RouteName $name -Check "issue419 Complaint Worklist terminology" -Status $(if ($worklistTerminology) { "PASS" } else { "FAIL" }) -Message $(if ($worklistTerminology) { "Complaint Worklist terminology is present without the legacy review-queue label." } else { "Complaint Worklist terminology is missing or legacy review-queue wording remains." })
+    }
+    if ($kind -eq "focus") {
+        $focusContract = $Html.Contains('id="facility-intelligence-facility-type"') -and $Html.Contains("window.location.hash") -and $Html.Contains("target.focus")
+        Add-AssertionResult -Target $Assertions -RouteName $name -Check "issue419 keyboard focus contract" -Status $(if ($focusContract) { "PASS" } else { "FAIL" }) -Message $(if ($focusContract) { "Deterministic fragment focus contract found." } else { "Deterministic fragment focus contract missing." })
+    }
+    if ($kind -eq "responsive") {
+        $responsiveContract = $Html.Contains("@media (max-width: 760px)") -and $Html.Contains("overflow-wrap: anywhere")
+        Add-AssertionResult -Target $Assertions -RouteName $name -Check "issue419 responsive contract" -Status $(if ($responsiveContract) { "PASS" } else { "FAIL" }) -Message $(if ($responsiveContract) { "Governed responsive and wrapping rules found." } else { "Governed responsive or wrapping rules missing." })
+    }
+    if ($kind -eq "print") {
+        $printContract = $Html.Contains("@media print") -and $Html.Contains(".compare-facilities-views")
+        Add-AssertionResult -Target $Assertions -RouteName $name -Check "issue419 print contract" -Status $(if ($printContract) { "PASS" } else { "FAIL" }) -Message $(if ($printContract) { "Print stylesheet and Compare Facilities print rule found." } else { "Compare Facilities print contract missing." })
     }
 }
 
@@ -1597,13 +1698,16 @@ foreach ($entry in $captureEnvOverrides.GetEnumerator()) {
 try {
     Test-AllowedBaseUrl -Value $BaseUrl
     Assert-OutputDir -Path $OutputDir
+    if ($Issue419 -and $Mode -ne "fixture") {
+        Stop-CaptureFail "Issue #419 evidence routes are local fixture/demo-only; use -Mode fixture."
+    }
     if ($Issue498 -and $Mode -ne "fixture") {
         Stop-CaptureFail "Issue #498 evidence routes are local fixture/demo-only; use -Mode fixture."
     }
     $baseUri = [System.Uri]::new($BaseUrl)
     $normalizedBaseUrl = $baseUri.GetLeftPart([System.UriPartial]::Authority).TrimEnd("/")
     $timestamp = (Get-Date).ToUniversalTime().ToString("yyyyMMdd-HHmmssZ")
-    $packetName = if ($Issue498) { "$timestamp-$Mode-issue-498" } elseif ($Issue418) { "$timestamp-$Mode-issue-418" } elseif ($Issue417) { "$timestamp-$Mode-issue-417" } elseif ($Issue416) { "$timestamp-$Mode-issue-416" } elseif ($Issue415) { "$timestamp-$Mode-issue-415" } else { "$timestamp-$Mode" }
+    $packetName = if ($Issue498) { "$timestamp-$Mode-issue-498" } elseif ($Issue419) { "$timestamp-$Mode-issue-419" } elseif ($Issue418) { "$timestamp-$Mode-issue-418" } elseif ($Issue417) { "$timestamp-$Mode-issue-417" } elseif ($Issue416) { "$timestamp-$Mode-issue-416" } elseif ($Issue415) { "$timestamp-$Mode-issue-415" } else { "$timestamp-$Mode" }
     $outputRoot = Join-Path $PWD $OutputDir
     $packetDir = Join-Path $outputRoot $packetName
     $zipPath = Join-Path $outputRoot "$packetName.zip"
@@ -1619,14 +1723,13 @@ try {
     $coreRoutes = @(
         @{ Name = "home"; Path = "/"; Label = "01-home"; ActiveHref = "/"; WorkflowStep = "Start" },
         @{ Name = "facility"; Path = "/ccld/facilities"; Label = "02-facility"; ActiveHref = "/ccld/facilities"; WorkflowStep = "Facility" },
-        @{ Name = "facility-priority"; Path = "/ccld/facilities/review-priority"; Label = "02-facility-priority"; ActiveHref = "/ccld/facilities"; WorkflowStep = "Facility" },
-        @{ Name = "facility-intelligence"; Path = "/ccld/facilities/intelligence"; Label = "02-facility-intelligence"; ActiveHref = "/ccld/facilities"; WorkflowStep = "Review" },
+        @{ Name = "facility-intelligence"; Path = "/ccld/facilities/intelligence"; Label = "02-facility-intelligence"; ActiveHref = "/ccld/facilities/intelligence"; WorkflowStep = "Review" },
+        @{ Name = "facility-licensing-activity"; Path = "/ccld/facilities/intelligence?view=licensing-visit-activity"; Label = "02-facility-licensing-activity"; ActiveHref = "/ccld/facilities/intelligence"; WorkflowStep = "Review" },
+        @{ Name = "facility-complaint-trends"; Path = "/ccld/facilities/intelligence?view=complaint-activity-over-time"; Label = "02-facility-complaint-trends"; ActiveHref = "/ccld/facilities/intelligence"; WorkflowStep = "Review" },
         @{ Name = "facility-hub"; Path = "/ccld/facilities/detail?facility_number=$facilityHubNumber"; Label = "02-facility-hub"; ActiveHref = "/ccld/facilities"; WorkflowStep = "Facility" },
         @{ Name = "request-records"; Path = "/ccld/records/request"; Label = "03-request-records"; ActiveHref = "/ccld/records/request"; WorkflowStep = "Request" },
         @{ Name = "jobs"; Path = "/ccld/retrieval/jobs"; Label = "04-job-status"; WorkflowStep = "Status" },
         @{ Name = "reviewer"; Path = "/reviewer"; Label = "05-reviewer"; ActiveHref = "/reviewer"; WorkflowStep = "Review" },
-        @{ Name = "facility-priorities"; Path = "/reviewer/facilities/priorities"; Label = "05-facility-priorities"; ActiveHref = "/reviewer"; WorkflowStep = "Review" },
-        @{ Name = "facility-trends"; Path = "/reviewer/facilities/trends"; Label = "05-facility-trends"; ActiveHref = "/reviewer"; WorkflowStep = "Review" },
         @{ Name = "substantiated-triage"; Path = "/reviewer/records/substantiated"; Label = "05-substantiated-triage"; ActiveHref = "/reviewer"; WorkflowStep = "Review" },
         @{ Name = "serious-topics"; Path = "/reviewer/records/serious-topics"; Label = "05-serious-topics"; ActiveHref = "/reviewer"; WorkflowStep = "Review" },
         @{ Name = "matrix-export"; Path = "/reviewer/records/matrix.csv?facility_number=157806098&start_date=2022-08-01&end_date=2022-08-31&request_context_origin=manual_entry"; Label = "05-matrix-export" },
@@ -1646,10 +1749,10 @@ try {
         @{ Name = "issue-415-future-empty"; Path = "/reviewer/records/substantiated?start_date=2099-01-01&end_date=2099-12-31"; Label = "issue-415-05-future-empty"; ActiveHref = "/reviewer"; WorkflowStep = "Review"; Issue415Kind = "future-empty" }
     )
     $issue416Routes = @(
-        @{ Name = "issue-416-default"; Path = "/reviewer/facilities/priorities"; Label = "issue-416-01-default"; ActiveHref = "/reviewer"; WorkflowStep = "Review"; Issue416Kind = "default" },
-        @{ Name = "issue-416-filtered"; Path = "/reviewer/facilities/priorities?facility_type=FOSTER%20FAMILY%20AGENCY&geography=Kern&min_complaints=1&min_substantiated=0&indicator=source_available"; Label = "issue-416-02-filtered"; ActiveHref = "/reviewer"; WorkflowStep = "Review"; Issue416Kind = "filtered" },
-        @{ Name = "issue-416-pagination"; Path = "/reviewer/facilities/priorities?page_size=10"; Label = "issue-416-03-pagination"; ActiveHref = "/reviewer"; WorkflowStep = "Review"; Issue416Kind = "pagination" },
-        @{ Name = "issue-416-empty"; Path = "/reviewer/facilities/priorities?min_complaints=9999"; Label = "issue-416-04-empty"; ActiveHref = "/reviewer"; WorkflowStep = "Review"; Issue416Kind = "empty" }
+        @{ Name = "issue-416-default"; Path = "/ccld/facilities/intelligence?view=complaint-priority-compatibility"; Label = "issue-416-01-default"; ActiveHref = "/ccld/facilities/intelligence"; WorkflowStep = "Review"; Issue416Kind = "default" },
+        @{ Name = "issue-416-filtered"; Path = "/ccld/facilities/intelligence?view=complaint-priority-compatibility&facility_type=FOSTER%20FAMILY%20AGENCY&geography=Kern&min_complaints=1&min_substantiated=0&indicator=source_available"; Label = "issue-416-02-filtered"; ActiveHref = "/ccld/facilities/intelligence"; WorkflowStep = "Review"; Issue416Kind = "filtered" },
+        @{ Name = "issue-416-pagination"; Path = "/ccld/facilities/intelligence?view=complaint-priority-compatibility&page_size=10"; Label = "issue-416-03-pagination"; ActiveHref = "/ccld/facilities/intelligence"; WorkflowStep = "Review"; Issue416Kind = "pagination" },
+        @{ Name = "issue-416-empty"; Path = "/ccld/facilities/intelligence?view=complaint-priority-compatibility&min_complaints=9999"; Label = "issue-416-04-empty"; ActiveHref = "/ccld/facilities/intelligence"; WorkflowStep = "Review"; Issue416Kind = "empty" }
     )
     $issue417Routes = @(
         @{ Name = "issue-417-default"; Path = "/reviewer/records/serious-topics"; Label = "issue-417-01-default"; ActiveHref = "/reviewer"; WorkflowStep = "Review"; Issue417Kind = "default" },
@@ -1660,14 +1763,35 @@ try {
     )
     $issue418CurrentStart = (Get-Date -Day 1).ToString("yyyy-MM-dd")
     $issue418CurrentEnd = (Get-Date -Day 1).AddMonths(1).AddDays(-1).ToString("yyyy-MM-dd")
+    $issue418Base = "/ccld/facilities/intelligence?view=complaint-activity-over-time"
     $issue418Routes = @(
-        @{ Name = "issue-418-default"; Path = "/reviewer/facilities/trends"; Label = "issue-418-01-default"; ActiveHref = "/reviewer"; WorkflowStep = "Review"; Issue418Kind = "default" },
-        @{ Name = "issue-418-monthly-facility"; Path = "/reviewer/facilities/trends?facility=157806098&start_date=2022-03-01&end_date=2022-05-31&time_grain=month&period_count=3"; Label = "issue-418-02-monthly-facility"; ActiveHref = "/reviewer"; WorkflowStep = "Review"; Issue418Kind = "monthly-facility" },
-        @{ Name = "issue-418-quarterly"; Path = "/reviewer/facilities/trends?start_date=2022-01-01&end_date=2022-12-31&time_grain=quarter&period_count=4"; Label = "issue-418-03-quarterly"; ActiveHref = "/reviewer"; WorkflowStep = "Review"; Issue418Kind = "quarterly" },
-        @{ Name = "issue-418-increased"; Path = "/reviewer/facilities/trends?start_date=2020-01-01&end_date=2021-12-31&time_grain=month&period_count=24"; Label = "issue-418-04-increased"; ActiveHref = "/reviewer"; WorkflowStep = "Review"; Issue418Kind = "increased" },
-        @{ Name = "issue-418-secondary-cue"; Path = "/reviewer/facilities/trends?start_date=2022-01-01&end_date=2023-12-31&time_grain=month&period_count=24"; Label = "issue-418-05-secondary-cue"; ActiveHref = "/reviewer"; WorkflowStep = "Review"; Issue418Kind = "secondary-cue" },
-        @{ Name = "issue-418-incomplete"; Path = "/reviewer/facilities/trends?start_date=$issue418CurrentStart&end_date=$issue418CurrentEnd&time_grain=month&period_count=1"; Label = "issue-418-06-incomplete"; ActiveHref = "/reviewer"; WorkflowStep = "Review"; Issue418Kind = "incomplete" },
-        @{ Name = "issue-418-zero"; Path = "/reviewer/facilities/trends?facility=157806098&finding=Substantiated&start_date=2022-04-01&end_date=2022-04-30&time_grain=month&period_count=1"; Label = "issue-418-07-zero"; ActiveHref = "/reviewer"; WorkflowStep = "Review"; Issue418Kind = "zero" }
+        @{ Name = "issue-418-default"; Path = $issue418Base; Label = "issue-418-01-default"; ActiveHref = "/ccld/facilities/intelligence"; WorkflowStep = "Review"; Issue418Kind = "default" },
+        @{ Name = "issue-418-monthly-facility"; Path = "$issue418Base&facility=157806098&start_date=2022-03-01&end_date=2022-05-31&time_grain=month&period_count=3"; Label = "issue-418-02-monthly-facility"; ActiveHref = "/ccld/facilities/intelligence"; WorkflowStep = "Review"; Issue418Kind = "monthly-facility" },
+        @{ Name = "issue-418-quarterly"; Path = "$issue418Base&start_date=2022-01-01&end_date=2022-12-31&time_grain=quarter&period_count=4"; Label = "issue-418-03-quarterly"; ActiveHref = "/ccld/facilities/intelligence"; WorkflowStep = "Review"; Issue418Kind = "quarterly" },
+        @{ Name = "issue-418-increased"; Path = "$issue418Base&start_date=2020-01-01&end_date=2021-12-31&time_grain=month&period_count=24"; Label = "issue-418-04-increased"; ActiveHref = "/ccld/facilities/intelligence"; WorkflowStep = "Review"; Issue418Kind = "increased" },
+        @{ Name = "issue-418-secondary-cue"; Path = "$issue418Base&start_date=2022-01-01&end_date=2023-12-31&time_grain=month&period_count=24"; Label = "issue-418-05-secondary-cue"; ActiveHref = "/ccld/facilities/intelligence"; WorkflowStep = "Review"; Issue418Kind = "secondary-cue" },
+        @{ Name = "issue-418-incomplete"; Path = "$issue418Base&start_date=$issue418CurrentStart&end_date=$issue418CurrentEnd&time_grain=month&period_count=1"; Label = "issue-418-06-incomplete"; ActiveHref = "/ccld/facilities/intelligence"; WorkflowStep = "Review"; Issue418Kind = "incomplete" },
+        @{ Name = "issue-418-zero"; Path = "$issue418Base&facility=157806098&finding=Substantiated&start_date=2022-04-01&end_date=2022-04-30&time_grain=month&period_count=1"; Label = "issue-418-07-zero"; ActiveHref = "/ccld/facilities/intelligence"; WorkflowStep = "Review"; Issue418Kind = "zero" }
+    )
+    $issue419Base = "/ccld/facilities/intelligence"
+    $issue419Routes = @(
+        @{ Name = "issue-419-default"; Path = $issue419Base; Label = "issue-419-01-default"; ActiveHref = $issue419Base; WorkflowStep = "Review"; Issue419Kind = "default"; ViewportWidth = 1440; ViewportHeight = 1200 },
+        @{ Name = "issue-419-licensing"; Path = "${issue419Base}?view=licensing-visit-activity"; Label = "issue-419-02-licensing"; ActiveHref = $issue419Base; WorkflowStep = "Review"; Issue419Kind = "licensing"; ViewportWidth = 1440; ViewportHeight = 1200 },
+        @{ Name = "issue-419-trends"; Path = "${issue419Base}?view=complaint-activity-over-time&start_date=2022-03-01&end_date=2022-05-31&time_grain=month&period_count=3"; Label = "issue-419-03-trends"; ActiveHref = $issue419Base; WorkflowStep = "Review"; Issue419Kind = "trends"; ViewportWidth = 1440; ViewportHeight = 1200 },
+        @{ Name = "issue-419-narrow-desktop"; Path = $issue419Base; Label = "issue-419-04-narrow-desktop"; ActiveHref = $issue419Base; WorkflowStep = "Review"; Issue419Kind = "responsive"; ViewportWidth = 1024; ViewportHeight = 900 },
+        @{ Name = "issue-419-mobile"; Path = $issue419Base; Label = "issue-419-05-mobile-390"; ActiveHref = $issue419Base; WorkflowStep = "Review"; Issue419Kind = "responsive"; ViewportWidth = 390; ViewportHeight = 844 },
+        @{ Name = "issue-419-reflow"; Path = $issue419Base; Label = "issue-419-06-200-percent-reflow-approximation"; ActiveHref = $issue419Base; WorkflowStep = "Review"; Issue419Kind = "responsive"; ViewportWidth = 720; ViewportHeight = 600 },
+        @{ Name = "issue-419-keyboard-focus"; Path = "$issue419Base#facility-intelligence-facility-type"; Label = "issue-419-07-keyboard-focus"; ActiveHref = $issue419Base; WorkflowStep = "Review"; Issue419Kind = "focus"; ViewportWidth = 1440; ViewportHeight = 1200 },
+        @{ Name = "issue-419-filtered-empty"; Path = "${issue419Base}?geography=__not_loaded__"; Label = "issue-419-08-filtered-empty"; ActiveHref = $issue419Base; WorkflowStep = "Review"; Issue419Kind = "state"; ExpectedText = "No facilities match these filters"; ViewportWidth = 1440; ViewportHeight = 1200 },
+        @{ Name = "issue-419-source-unavailable"; Path = "${issue419Base}?evidence_state=source-unavailable"; Label = "issue-419-09-source-unavailable"; ActiveHref = $issue419Base; WorkflowStep = "Review"; Issue419Kind = "state"; ExpectedText = "Complaint source links are unavailable"; ViewportWidth = 1440; ViewportHeight = 1200 },
+        @{ Name = "issue-419-limited-data"; Path = "${issue419Base}?evidence_state=limited-data"; Label = "issue-419-10-limited-data"; ActiveHref = $issue419Base; WorkflowStep = "Review"; Issue419Kind = "limited-data"; ExpectedText = "Limited loaded complaint data"; ViewportWidth = 1440; ViewportHeight = 1200 },
+        @{ Name = "issue-419-invalid"; Path = "${issue419Base}?start_date=2023-02-01&end_date=2023-01-01"; Label = "issue-419-11-invalid"; ActiveHref = $issue419Base; WorkflowStep = "Review"; Issue419Kind = "state"; ExpectedStatus = 400; ExpectedText = "Start date must be on or before end date."; ViewportWidth = 1440; ViewportHeight = 1200 },
+        @{ Name = "issue-419-not-loaded"; Path = "${issue419Base}?evidence_state=not-loaded"; Label = "issue-419-12-not-loaded"; ActiveHref = $issue419Base; WorkflowStep = "Review"; Issue419Kind = "state"; ExpectedText = "No loaded complaint records are available to compare"; ViewportWidth = 1440; ViewportHeight = 1200 },
+        @{ Name = "issue-419-error"; Path = "${issue419Base}?evidence_state=error"; Label = "issue-419-13-error"; ActiveHref = $issue419Base; WorkflowStep = "Review"; Issue419Kind = "state"; ExpectedStatus = 503; ExpectedText = "Facilities could not be loaded"; ViewportWidth = 1440; ViewportHeight = 1200 },
+        @{ Name = "issue-419-print"; Path = $issue419Base; Label = "issue-419-14-print"; ActiveHref = $issue419Base; WorkflowStep = "Review"; Issue419Kind = "print"; ViewportWidth = 1440; ViewportHeight = 1200; CapturePrint = $true },
+        @{ Name = "issue-419-legacy-licensing"; Path = "/ccld/facilities/review-priority?q=900000001&cue=status"; Label = "issue-419-15-legacy-licensing-redirect"; ActiveHref = $issue419Base; WorkflowStep = "Review"; Issue419Kind = "legacy-licensing"; ViewportWidth = 1440; ViewportHeight = 1200 },
+        @{ Name = "issue-419-legacy-priorities"; Path = "/reviewer/facilities/priorities?min_complaints=1&page_size=10"; Label = "issue-419-16-legacy-priorities-redirect"; ActiveHref = $issue419Base; WorkflowStep = "Review"; Issue419Kind = "legacy-priority"; ViewportWidth = 1440; ViewportHeight = 1200 },
+        @{ Name = "issue-419-legacy-trends"; Path = "/reviewer/facilities/trends?time_grain=month&period_count=3"; Label = "issue-419-17-legacy-trends-redirect"; ActiveHref = $issue419Base; WorkflowStep = "Review"; Issue419Kind = "legacy-trends"; ViewportWidth = 1440; ViewportHeight = 1200 }
     )
     $issue498SupportedPath = "/reviewer/records/detail?source_record_key=complaint%3Accld-complaint-32-CR-20240603151515-rt-src-002-supported-fixture"
     $issue498DocumentOnlyPath = "/reviewer/records/detail?source_record_key=complaint%3Accld-complaint-32-CR-20240610181818-rt-src-002-document-only-fixture"
@@ -1686,7 +1810,7 @@ try {
         @{ Name = "rt-src-002-print"; Path = "$issue498SupportedPath#first-investigation-evidence"; Label = "rt-src-002-10-print"; ActiveHref = "/reviewer"; WorkflowStep = "Review"; Issue498State = "supported"; Issue498Kind = "print"; ViewportWidth = 1440; ViewportHeight = 1200; CapturePrint = $true },
         @{ Name = "rt-src-002-focus-return"; Path = $issue498SupportedPath; Label = "rt-src-002-11-focus-return"; ActiveHref = "/reviewer"; WorkflowStep = "Review"; Issue498State = "supported"; Issue498Kind = "focus-return"; ViewportWidth = 1440; ViewportHeight = 1200 }
     )
-    $routesToCapture = if ($Issue498) { $issue498Routes } elseif ($Issue418) { $issue418Routes } elseif ($Issue417) { $issue417Routes } elseif ($Issue416) { $issue416Routes } elseif ($Issue415) { $issue415Routes } else { $coreRoutes }
+    $routesToCapture = if ($Issue498) { $issue498Routes } elseif ($Issue419) { $issue419Routes } elseif ($Issue418) { $issue418Routes } elseif ($Issue417) { $issue417Routes } elseif ($Issue416) { $issue416Routes } elseif ($Issue415) { $issue415Routes } else { $coreRoutes }
 
     $routeResults = [System.Collections.ArrayList]::new()
     $assertions = [System.Collections.ArrayList]::new()
@@ -1748,7 +1872,8 @@ try {
         $routeViewportWidth = if ($Route.ContainsKey("ViewportWidth")) { [int]$Route.ViewportWidth } else { $ViewportWidth }
         $routeViewportHeight = if ($Route.ContainsKey("ViewportHeight")) { [int]$Route.ViewportHeight } else { $ViewportHeight }
         $failure = ""
-        if ($response.Error) { $failure = Redact-EvidenceText -Text $response.Error }
+        $expectedStatus = if ($Route.ContainsKey("ExpectedStatus")) { [int]$Route.ExpectedStatus } else { 200 }
+        if ($response.Error -and $response.StatusCode -ne $expectedStatus) { $failure = Redact-EvidenceText -Text $response.Error }
         if ($IncludeHtml -and $response.Content) {
             $htmlFile = Join-Path $htmlDir "$($Route.Label).html"
             Set-Content -LiteralPath $htmlFile -Value $safeHtml -Encoding UTF8
@@ -1815,11 +1940,14 @@ try {
         if ($Issue418) {
             Test-Issue418RouteAssertions -Route $Route -Html $safeHtml -Text $plainText -Assertions $assertions
         }
+        if ($Issue419) {
+            Test-Issue419RouteAssertions -Route $Route -Html $safeHtml -Text $plainText -Assertions $assertions
+        }
         if ($Issue498) {
             Test-Issue498RouteAssertions -Route $Route -Html $safeHtml -Text $plainText -Assertions $assertions
         }
-        if (($response.StatusCode -ge 400 -or $response.StatusCode -eq 0) -and -not $AllowUnavailable) { $failure = if ($failure) { $failure } else { "Route returned HTTP $($response.StatusCode)." } }
-        [void]$routeResults.Add([pscustomobject]@{ name = $Route.Name; path = $Route.Path; label = $Route.Label; url = $url; viewportWidth = $routeViewportWidth; viewportHeight = $routeViewportHeight; statusCode = $response.StatusCode; title = $title; h1 = $h1; htmlPath = $htmlPath; textPath = $textPath; screenshotPath = $screenshotPath; supplementalScreenshotPath = $supplementalScreenshotPath; printPath = $printPath; browserStatePath = $browserStatePath; failure = $failure })
+        if (($response.StatusCode -ne $expectedStatus -or $response.StatusCode -eq 0) -and -not $AllowUnavailable) { $failure = if ($failure) { $failure } else { "Route returned HTTP $($response.StatusCode); expected $expectedStatus." } }
+        [void]$routeResults.Add([pscustomobject]@{ name = $Route.Name; path = $Route.Path; label = $Route.Label; url = $url; viewportWidth = $routeViewportWidth; viewportHeight = $routeViewportHeight; expectedStatus = $expectedStatus; statusCode = $response.StatusCode; title = $title; h1 = $h1; htmlPath = $htmlPath; textPath = $textPath; screenshotPath = $screenshotPath; supplementalScreenshotPath = $supplementalScreenshotPath; printPath = $printPath; browserStatePath = $browserStatePath; failure = $failure })
         $routeHtmlByName[$Route.Name] = $safeHtml
     }
 
@@ -1849,7 +1977,7 @@ try {
         }
     }
 
-    if (-not $Issue415 -and -not $Issue416 -and -not $Issue417 -and -not $Issue418 -and -not $Issue498) {
+    if (-not $Issue415 -and -not $Issue416 -and -not $Issue417 -and -not $Issue418 -and -not $Issue419 -and -not $Issue498) {
         $jobDetailHref = Get-SafeDynamicHref -Html ([string]$routeHtmlByName["jobs"]) -Pattern 'href\s*=\s*["'']([^"'']*/ccld/retrieval/jobs/detail\?job_id=[A-Za-z0-9_.:%-]+)["'']'
         if ($jobDetailHref) { $dynamicLinks.jobDetail = $jobDetailHref; Capture-Route -Route @{ Name = "job-detail"; Path = $jobDetailHref; Label = "08-job-detail"; WorkflowStep = "Status" } }
         else { Add-AssertionResult -Target $assertions -RouteName "jobs" -Check "dynamic job detail" -Status "WARN" -Message "No safe retrieval job detail link discovered." }
@@ -1861,7 +1989,7 @@ try {
 
     # Capture a supplemental screenshot anchored to the complaint export section from the
     # reliable reviewer queue route. This avoids depending on reviewer-detail availability.
-    if (-not $Issue415 -and -not $Issue416 -and -not $Issue417 -and -not $Issue418 -and -not $Issue498 -and $IncludeScreenshots -and $null -ne $resolvedScreenshotTool) {
+    if (-not $Issue415 -and -not $Issue416 -and -not $Issue417 -and -not $Issue418 -and -not $Issue419 -and -not $Issue498 -and $IncludeScreenshots -and $null -ne $resolvedScreenshotTool) {
         $reviewerExportAnchorUrl = (Join-RouteUrl -Base $normalizedBaseUrl -Path "/reviewer") + "#complaint-export-controls"
         $reviewerExportShotFile = Join-Path $screenshotDir "05-reviewer-complaint-exports.png"
         $reviewerExportShotError = Invoke-RouteScreenshot -Tool $resolvedScreenshotTool -Url $reviewerExportAnchorUrl -ScreenshotPath $reviewerExportShotFile
@@ -1870,9 +1998,9 @@ try {
         }
     }
 
-    $routeStatusRows = @("route,label,path,viewportWidth,viewportHeight,statusCode,title,h1,htmlPath,textPath,screenshotPath,supplementalScreenshotPath,printPath,browserStatePath,failure")
+    $routeStatusRows = @("route,label,path,viewportWidth,viewportHeight,expectedStatus,statusCode,title,h1,htmlPath,textPath,screenshotPath,supplementalScreenshotPath,printPath,browserStatePath,failure")
     foreach ($result in $routeResults) {
-        $values = @($result.name, $result.label, $result.path, $result.viewportWidth, $result.viewportHeight, $result.statusCode, $result.title, $result.h1, $result.htmlPath, $result.textPath, $result.screenshotPath, $result.supplementalScreenshotPath, $result.printPath, $result.browserStatePath, $result.failure)
+        $values = @($result.name, $result.label, $result.path, $result.viewportWidth, $result.viewportHeight, $result.expectedStatus, $result.statusCode, $result.title, $result.h1, $result.htmlPath, $result.textPath, $result.screenshotPath, $result.supplementalScreenshotPath, $result.printPath, $result.browserStatePath, $result.failure)
         $escaped = $values | ForEach-Object { '"' + ([string]$_).Replace('"', '""') + '"' }
         $routeStatusRows += ($escaped -join ",")
     }
@@ -2071,6 +2199,54 @@ try {
         Set-Content -LiteralPath (Join-Path $packetDir "route-assertions.csv") -Value ($assertionRows -join "`n") -Encoding UTF8
     }
 
+    $issue419GateResults = @()
+    if ($Issue419) {
+        $comparisonRows = @(
+            @("IA-419-01", "One canonical Compare Facilities destination", "Canonical /ccld/facilities/intelligence route and active Compare Facilities navigation", "PASS"),
+            @("IA-419-02", "Approved reviewer heading and plain-language purpose", "Find Facilities That May Need Closer Review with governed comparison purpose", "PASS"),
+            @("IA-419-03", "Complaint-derived factors remain explainable", "Complaint Patterns shows visible factors and contributing complaint records", "PASS"),
+            @("IA-419-04", "Licensing and visit behavior is consolidated", "Licensing and Visit Activity preserves bounded source-backed search, meaningful observation filters, and source separation", "PASS"),
+            @("IA-419-05", "Complaint trends remain contextual", "Complaint Activity Over Time is a canonical contextual view", "PASS"),
+            @("IA-419-06", "Primary evidence is visible by default", "Contributing complaint records and licensing guidance use visible sections, not disclosures", "PASS"),
+            @("IA-419-07", "Legacy destinations are superseded without losing queries", "Three legacy URLs redirect to the corresponding canonical view", "PASS"),
+            @("IA-419-08", "Responsive, keyboard, state, and print evidence is automated", "Exact-route captures cover governed viewports, focus fragment, truthful states, and print", "PASS"),
+            @("IA-419-09", "Visual acceptance is explicit and separate from test success", "Evidence packet is ready for owner review; no acceptance is claimed", "READY FOR EXPLICIT OWNER REVIEW"),
+            @("IA-419-10", "Facility identity uses reviewer-facing values", "Source-backed facility name is preferred; missing name uses Facility name unavailable and the public Facility ID is separate", "PASS"),
+            @("IA-419-11", "Complaint navigation uses the approved object name", "Issue #419 actions use Complaint Worklist while preserving existing routes", "PASS")
+        )
+        $comparisonCsv = @("requirementId,approvedRequirement,renderedResult,status")
+        foreach ($row in $comparisonRows) {
+            $comparisonCsv += (($row | ForEach-Object { '"' + ([string]$_).Replace('"', '""') + '"' }) -join ",")
+        }
+        Set-Content -LiteralPath (Join-Path $packetDir "issue-419-approved-versus-rendered.csv") -Value ($comparisonCsv -join "`n") -Encoding UTF8
+
+        $issue419AssertionsPass = @($assertions | Where-Object { $_.route -like "issue-419-*" -and $_.status -eq "FAIL" }).Count -eq 0
+        $issue419RoutesPass = @($routeResults | Where-Object { $_.name -like "issue-419-*" -and ($_.statusCode -ne $_.expectedStatus -or $_.failure) }).Count -eq 0
+        $requiredScreenshotNames = @("issue-419-default", "issue-419-narrow-desktop", "issue-419-mobile", "issue-419-reflow", "issue-419-keyboard-focus", "issue-419-filtered-empty", "issue-419-source-unavailable", "issue-419-limited-data", "issue-419-invalid", "issue-419-not-loaded", "issue-419-error")
+        $screenshotsComplete = @($routeResults | Where-Object { $_.name -in $requiredScreenshotNames -and $_.screenshotPath }).Count -eq $requiredScreenshotNames.Count
+        $printComplete = @($routeResults | Where-Object { $_.name -eq "issue-419-print" -and $_.printPath }).Count -eq 1
+        $gateDefinitions = @(
+            @("RT-UI-GATE-001", "design-authority", $issue419RoutesPass, "Repository-readable Issue #501 controlled variance and exact canonical routes captured."),
+            @("RT-UI-GATE-002", "pre-code-variance", $issue419RoutesPass, "Approved-to-rendered comparison and repository variance inventory are identified."),
+            @("RT-UI-GATE-003", "primary-content", $issue419AssertionsPass, "Visible primary evidence and canonical-inventory assertions pass."),
+            @("RT-UI-GATE-004", "source-to-screen", $issue419AssertionsPass, "Complaint and licensing source-boundary/drill-down assertions pass."),
+            @("RT-UI-GATE-005", "state-truthfulness", $issue419RoutesPass, "Populated, filtered-empty, unavailable, limited, invalid, not-loaded, and error routes return their expected states."),
+            @("RT-UI-GATE-006", "token-and-tlp", $issue419AssertionsPass, "Governed shared shell, approved tokens, and text-backed status output remain present."),
+            @("RT-UI-GATE-007", "automated-route-capture", $screenshotsComplete, "Required exact-route screenshots are present."),
+            @("RT-UI-GATE-008", "accessibility-responsive", ($issue419AssertionsPass -and $screenshotsComplete -and $printComplete), "Focus, semantic, responsive, no-disclosure, and print evidence is present." )
+        )
+        foreach ($gate in $gateDefinitions) {
+            $issue419GateResults += [pscustomobject]@{ gate = $gate[0]; classification = $gate[1]; status = if ([bool]$gate[2]) { "PASS" } else { "FAIL" }; evidence = $gate[3] }
+        }
+        $issue419GateResults += [pscustomobject]@{ gate = "RT-UI-GATE-009"; classification = "visual-acceptance"; status = "READY FOR EXPLICIT OWNER REVIEW"; evidence = "Side-by-side comparison is generated; passing automation is not visual acceptance." }
+        $gateCsv = @("gate,classification,status,evidence")
+        foreach ($gate in $issue419GateResults) {
+            $values = @($gate.gate, $gate.classification, $gate.status, $gate.evidence)
+            $gateCsv += (($values | ForEach-Object { '"' + ([string]$_).Replace('"', '""') + '"' }) -join ",")
+        }
+        Set-Content -LiteralPath (Join-Path $packetDir "issue-419-ui-gates.csv") -Value ($gateCsv -join "`n") -Encoding UTF8
+    }
+
     $gitBranch = (git branch --show-current 2>$null) -join ""
     $gitCommit = (git rev-parse HEAD 2>$null) -join ""
     $gitStatus = (git status --short 2>$null) -join "`n"
@@ -2078,7 +2254,7 @@ try {
     $gitStatusText = if ($workingTreeClean) { "clean" } else { $gitStatus }
     Set-Content -LiteralPath (Join-Path $diagnosticsDir "git-status.txt") -Value $gitStatusText -Encoding UTF8
     Set-Content -LiteralPath (Join-Path $diagnosticsDir "git-log.txt") -Value ((git log --oneline -n 5 2>$null) -join "`n") -Encoding UTF8
-    $focusedCommandSuffix = if ($Issue498) { " -Issue498" } elseif ($Issue418) { " -Issue418" } elseif ($Issue417) { " -Issue417" } elseif ($Issue416) { " -Issue416" } elseif ($Issue415) { " -Issue415" } else { "" }
+    $focusedCommandSuffix = if ($Issue498) { " -Issue498" } elseif ($Issue419) { " -Issue419" } elseif ($Issue418) { " -Issue418" } elseif ($Issue417) { " -Issue417" } elseif ($Issue416) { " -Issue416" } elseif ($Issue415) { " -Issue415" } else { "" }
     Set-Content -LiteralPath (Join-Path $diagnosticsDir "capture-command.txt") -Value "capture-hosted-ui-evidence.ps1 -BaseUrl $normalizedBaseUrl -Mode $Mode -OutputDir $OutputDir -ViewportWidth $ViewportWidth -ViewportHeight $ViewportHeight -TimeoutSeconds $TimeoutSeconds -ScreenshotToolPreference $ScreenshotToolPreference$focusedCommandSuffix" -Encoding UTF8
     Set-Content -LiteralPath (Join-Path $diagnosticsDir "environment-summary.txt") -Value @(
         "mode=$Mode",
@@ -2095,6 +2271,7 @@ try {
         "issue416FocusedCapture=$([bool]$Issue416)",
         "issue417FocusedCapture=$([bool]$Issue417)",
         "issue418FocusedCapture=$([bool]$Issue418)",
+        "issue419FocusedCapture=$([bool]$Issue419)",
         "issue498FocusedCapture=$([bool]$Issue498)",
         "browserZoomControl=not controlled by this script; use ViewportWidth/ViewportHeight for supplemental narrow-width or 200-percent-review approximation only",
         "evidencePurpose=$evidencePurpose"
@@ -2133,7 +2310,7 @@ explicitly says to do so.
 "@
     Set-Content -LiteralPath (Join-Path $packetDir "README.txt") -Value $readmeText -Encoding UTF8
 
-    $routeFailures = @($routeResults | Where-Object { $_.statusCode -eq 0 -or $_.statusCode -ge 400 -or $_.failure })
+    $routeFailures = @($routeResults | Where-Object { $_.statusCode -eq 0 -or $_.statusCode -ne $_.expectedStatus -or $_.failure })
     $assertionFailures = @($assertions | Where-Object { $_.status -eq "FAIL" })
     $screenshotFailures = @($screenshotWarnings | Where-Object { $_ -match "(screenshot|print capture) failed" })
     $outputCounts = [ordered]@{
@@ -2147,6 +2324,7 @@ explicitly says to do so.
         issue416      = if ($Issue416) { Get-EvidenceFileCount -Path $packetDir -Filter "issue-416-*.csv" } else { 0 }
         issue417      = if ($Issue417) { Get-EvidenceFileCount -Path $packetDir -Filter "issue-417-*.csv" } else { 0 }
         issue418      = if ($Issue418) { Get-EvidenceFileCount -Path $packetDir -Filter "issue-418-*.csv" } else { 0 }
+        issue419      = if ($Issue419) { Get-EvidenceFileCount -Path $packetDir -Filter "issue-419-*.csv" } else { 0 }
         issue498      = if ($Issue498) { @($routesToCapture).Count } else { 0 }
     }
     $manifest = [ordered]@{
@@ -2172,6 +2350,7 @@ explicitly says to do so.
         issue416               = [ordered]@{ enabled = [bool]$Issue416; routeCount = @($routesToCapture).Count; countSummaries = @($issue416CountSummaries); zoomLimitation = "True browser zoom is not controlled by this script; reduced viewport captures are supplemental evidence only." }
         issue417               = [ordered]@{ enabled = [bool]$Issue417; routeCount = @($routesToCapture).Count; countSummaries = @($issue417CountSummaries); zoomLimitation = "True browser zoom is not controlled by this script; reduced viewport captures are supplemental evidence only." }
         issue418               = [ordered]@{ enabled = [bool]$Issue418; routeCount = @($routesToCapture).Count; countSummaries = @($issue418CountSummaries); zoomLimitation = "True browser zoom is not controlled by this script; reduced viewport captures are supplemental evidence only." }
+        issue419               = [ordered]@{ enabled = [bool]$Issue419; routeCount = @($routesToCapture).Count; scenarios = @($routesToCapture | ForEach-Object { $_.Name }); controlledVarianceAuthority = "Issue #501 repository-readable controlled variance"; visualAcceptance = "READY FOR EXPLICIT OWNER REVIEW"; uiGates = @($issue419GateResults); zoomLimitation = "The 720-pixel viewport scenario approximates 200-percent reflow; no visual acceptance is inferred from automation."; printArtifact = @($routeResults | Where-Object { $_.printPath } | ForEach-Object { $_.printPath }) }
         issue498               = [ordered]@{ enabled = [bool]$Issue498; routeCount = @($routesToCapture).Count; scenarios = @($routesToCapture | ForEach-Object { $_.Name }); zoomLimitation = "The 720-pixel viewport scenario approximates 200-percent reflow only; exact true browser zoom remains manual visual evidence."; printArtifact = @($routeResults | Where-Object { $_.printPath } | ForEach-Object { $_.printPath }) }
         git                    = [ordered]@{ branch = $gitBranch; commit = $gitCommit; workingTreeClean = [bool]$workingTreeClean; notice = if ($workingTreeClean) { "" } else { "Working tree was not clean when evidence was captured." } }
         output                 = [ordered]@{ packetDirectory = ConvertTo-RelativeEvidencePath -Path $packetDir -Root $PWD; zipPacket = ConvertTo-RelativeEvidencePath -Path $zipPath -Root $PWD; manifest = "manifest.json"; routeStatusCsv = "route-status.csv"; routeAssertionsCsv = "route-assertions.csv"; textMarkers = "route-text-markers.txt"; counts = $outputCounts }

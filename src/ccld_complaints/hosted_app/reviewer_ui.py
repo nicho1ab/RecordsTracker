@@ -54,6 +54,7 @@ from ccld_complaints.hosted_app.ccld_facility_lookup import (
     CcldFacilityComplaintContext,
     CcldFacilityReviewContext,
     load_active_ccld_facility_reference,
+    render_ccld_facility_review_priority_page,
 )
 from ccld_complaints.hosted_app.facility_case_brief import (
     FacilityCaseBrief,
@@ -123,7 +124,10 @@ from ccld_complaints.hosted_app.source_derived_routes import (
     SourceDerivedApiContext,
     route_source_derived_api_response,
 )
-from ccld_complaints.hosted_app.ui_shell import render_page_shell
+from ccld_complaints.hosted_app.ui_shell import (
+    render_compare_facilities_views,
+    render_page_shell,
+)
 from ccld_complaints.presentation_values import (
     NOT_APPLICABLE,
     SOURCE_UNAVAILABLE,
@@ -544,6 +548,7 @@ class ReviewerUiContext:
     workflow_shell_context: ReviewerWorkflowShellContext
     engine: Engine | None = None
     manage_read_transactions: bool = False
+    allow_visual_evidence_states: bool = False
 
 
 @dataclass(frozen=True)
@@ -736,6 +741,7 @@ def build_local_test_reviewer_ui_context() -> ReviewerUiContext:
             scope=LOCAL_REVIEWER_UI_SCOPE,
         ),
         engine=engine,
+        allow_visual_evidence_states=True,
     )
 
 
@@ -1209,7 +1215,56 @@ def _facility_intelligence_response(
     context: ReviewerUiContext,
 ) -> tuple[int, str, bytes]:
     query_values = parse_qs(query, keep_blank_values=True)
+    view = _first_form_value(query_values, "view").strip().casefold()
+    if view in {"licensing-visit-activity"}:
+        return _html_response(
+            200,
+            render_ccld_facility_review_priority_page(query_values),
+        )
+    if view == "complaint-activity-over-time":
+        return _facility_trends_response(query, context)
+    if view == "complaint-priority-compatibility":
+        return _facility_priorities_response(query, context)
+    if view not in {"", "complaint-patterns"}:
+        filters = _facility_intelligence_filters(query_values)
+        return _html_response(
+            400,
+            _render_facility_intelligence(
+                [],
+                filters=filters,
+                filter_options=FacilityIntelligenceFilterOptions(),
+                pagination=FacilityIntelligencePagination(),
+                total_authorized_facility_count=0,
+                review_next_facility_identity=None,
+                state_summaries={},
+                reviewer_state_available=False,
+                actor_label=_signed_in_actor_label(context),
+                page_state="invalid-view",
+            ),
+        )
     filters = _facility_intelligence_filters(query_values)
+    evidence_state = (
+        _first_form_value(query_values, "evidence_state").strip().casefold()
+        if context.allow_visual_evidence_states
+        else ""
+    )
+    if evidence_state in {"loading", "not-loaded", "source-unavailable", "error"}:
+        page_state = "no-data" if evidence_state == "not-loaded" else evidence_state
+        return _html_response(
+            503 if evidence_state == "error" else 200,
+            _render_facility_intelligence(
+                [],
+                filters=filters,
+                filter_options=FacilityIntelligenceFilterOptions(),
+                pagination=FacilityIntelligencePagination(),
+                total_authorized_facility_count=(0 if evidence_state == "not-loaded" else 1),
+                review_next_facility_identity=None,
+                state_summaries={},
+                reviewer_state_available=False,
+                actor_label=_signed_in_actor_label(context),
+                page_state=page_state,
+            ),
+        )
     if (
         filters.start_date is not None
         and filters.end_date is not None
@@ -1332,6 +1387,7 @@ def _facility_intelligence_response(
             state_summaries=state_summaries,
             reviewer_state_available=reviewer_state_available,
             actor_label=_signed_in_actor_label(context),
+            page_state=("limited-data" if evidence_state == "limited-data" else None),
         ),
     )
 
@@ -1577,7 +1633,7 @@ def _facility_hub_active_filters(
 ) -> tuple[tuple[str, str], ...]:
     values: list[tuple[str, str]] = []
     if origin == "facility_intelligence":
-        values.append(("Opened from", "Facility review intelligence"))
+        values.append(("Opened from", "Compare Facilities"))
     values.append(("Date used", date_dimension_label(filters.date_dimension)))
     if filters.start_date or filters.end_date:
         values.append(
@@ -2040,12 +2096,13 @@ def _render_facility_intelligence(
         continuation_error=continuation_error,
     )
     return _page(
-        title="Cross-facility intelligence",
-        heading="Cross-facility intelligence",
+        title="Compare Facilities",
+        heading="Find Facilities That May Need Closer Review",
         actor_label=actor_label,
         active_path=CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH,
         main=f"""
-        <p class="intelligence-purpose">Review area · Compare loaded complaint records to decide which facility or complaint to open next.</p>
+        <p class="intelligence-purpose">Compare complaint findings, activity, patterns, licensing and visit activity, and available public records to decide where to review first. Open a facility or complaint to review the source.</p>
+        {render_compare_facilities_views('complaint-patterns')}
         <section class="intelligence-scope" aria-label="Loaded complaint corpus scope">
           <p>{_facility_intelligence_scope_text(total_authorized_facility_count, filters)}</p>
           <p>Ordered by governed priority factors. Exact reasons appear in each row.</p>
@@ -2055,6 +2112,7 @@ def _render_facility_intelligence(
         {status_markup}
 {result_markup}
         {_DETAIL_COPY_SCRIPT}
+        {_COMPARE_FACILITIES_FOCUS_SCRIPT}
 """,
     )
 
@@ -2083,14 +2141,20 @@ def _facility_intelligence_page_status(
 ) -> str:
     if page_state == "loading":
         return """        <section class="intelligence-message intelligence-message--info" aria-live="polite" aria-busy="true">
-          <h2>Loading facility intelligence</h2>
+          <h2>Loading facilities</h2>
           <p>Filters remain visible and actions are temporarily disabled.</p>
         </section>"""
     if page_state == "error":
         return f"""        <section class="intelligence-message intelligence-message--error" role="alert">
-          <h2>Facility intelligence could not be loaded</h2>
+          <h2>Facilities could not be loaded</h2>
           <p>Retry the page or <a href="/feedback">report the problem</a>.</p>
-          <p><a class="button button-secondary" href="{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}">Retry facility intelligence</a></p>
+          <p><a class="button button-secondary" href="{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}">Try Again</a></p>
+        </section>"""
+    if page_state == "invalid-view":
+        return f"""        <section class="intelligence-message intelligence-message--error" role="alert">
+          <h2>Comparison view needs attention</h2>
+          <p>The requested comparison view is not supported.</p>
+          <p><a class="button button-secondary" href="{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}">Return to Complaint Patterns</a></p>
         </section>"""
     if page_state == "date-error":
         return """        <section class="intelligence-message intelligence-message--error" role="alert">
@@ -2106,14 +2170,24 @@ def _facility_intelligence_page_status(
         </section>"""
     if page_state == "no-data":
         return """        <section class="intelligence-message" aria-labelledby="facility-intelligence-no-data-heading">
-          <h2 id="facility-intelligence-no-data-heading">No source-derived facility data</h2>
-          <p>No authorized loaded complaint records are available for this page.</p>
-          <p><a href="/ccld/records/request">Request records</a> or <a href="/ccld/facilities">find a facility</a>.</p>
+          <h2 id="facility-intelligence-no-data-heading">No loaded complaint records are available to compare</h2>
+          <p>This state describes the authorized loaded corpus; it does not mean no public records exist.</p>
+          <p><a href="/ccld/facilities">Find a Facility</a> or <a href="/ccld/records/request">Get Complaint Records</a>.</p>
         </section>"""
     if page_state == "filtered-empty":
         return """        <section class="intelligence-message" aria-labelledby="facility-intelligence-empty-heading">
           <h2 id="facility-intelligence-empty-heading">No facilities match these filters</h2>
           <p>Clear one filter or clear all filters to restore results.</p>
+        </section>"""
+    if page_state == "source-unavailable":
+        return """        <section class="intelligence-message intelligence-message--review" aria-labelledby="facility-intelligence-source-unavailable-heading">
+          <h2 id="facility-intelligence-source-unavailable-heading">Complaint source links are unavailable</h2>
+          <p>The comparison cannot show source-backed complaint actions in this controlled state. Try again or use Feedback if the problem continues.</p>
+        </section>"""
+    if page_state == "limited-data":
+        return """        <section class="intelligence-message intelligence-message--review" aria-labelledby="facility-intelligence-limited-heading">
+          <h2 id="facility-intelligence-limited-heading">Limited loaded complaint data</h2>
+          <p>Compare the available records, but do not treat this loaded subset as statewide completeness.</p>
         </section>"""
     if any(item.coverage.status == "partial" for item in summaries):
         return """        <section class="intelligence-message intelligence-message--review">
@@ -2445,6 +2519,15 @@ def _render_facility_intelligence_result(
     selected: bool,
 ) -> str:
     summary = item.priority
+    facility_name = _compare_facilities_name(
+        summary.facility_name,
+        summary.facility_number,
+        summary.facility_identity,
+    )
+    public_facility_id = _compare_facilities_public_id(
+        summary.facility_number,
+        summary.facility_identity,
+    )
     result_id = _facility_intelligence_result_id(summary)
     badges = _render_facility_intelligence_badges(item)
     next_complaint = summary.complaints[0]
@@ -2456,7 +2539,7 @@ def _render_facility_intelligence_result(
     )
     source_region = _render_facility_intelligence_source_region(next_complaint)
     facility_action = (
-        f'<a class="button" href="{_escape(_facility_intelligence_hub_href(summary, filters))}" aria-label="Open facility {_escape(summary.facility_name)}">Open facility</a>'
+        f'<a class="button" href="{_escape(_facility_intelligence_hub_href(summary, filters))}" aria-label="Open Facility Overview for {_escape(facility_name)}">Open Facility Overview</a>'
         if summary.facility_number != "unknown"
         else '<span class="button button-disabled" aria-disabled="true">Open facility unavailable</span>'
     )
@@ -2466,24 +2549,25 @@ def _render_facility_intelligence_result(
               <article aria-labelledby="{result_id}-heading">
                 <div class="facility-row-identity">
                   {selection_label}
-                  <h3 id="{result_id}-heading">{_escape(summary.facility_name)}</h3>
-                  <p><strong>Facility ID</strong> {_copyable_value('Facility ID', summary.facility_number)}</p>
+                  <h3 id="{result_id}-heading">{_escape(facility_name)}</h3>
+                  <p><strong>Facility ID</strong> {_copyable_value('Facility ID', public_facility_id)}</p>
                   <p>{_glossary_term(_reviewer_value_text(summary.facility_type), 'The facility type shown in the loaded public record.', f'{result_id}-facility-type')} <span aria-hidden="true">·</span> {_escape(_reviewer_value_text(summary.geography))}</p>
                 </div>
                 <div class="facility-row-reason">
                   <h4>{summary.complaint_count} contributing complaint{'s' if summary.complaint_count != 1 else ''}</h4>
                   <p class="ordering-explanation">{_escape(_facility_intelligence_ordering_explanation(summary))}</p>
                   {badges}
+                  {_render_facility_intelligence_facility_contributors(item, filters, f'{result_id}-contributors')}
                 </div>
                 {source_region}
                 <section class="facility-row-reviewer" aria-labelledby="{result_id}-reviewer-heading">
                   <h4 id="{result_id}-reviewer-heading">Reviewer state</h4>
                   <p>{_review_chip_markup(reviewer_status)}</p>
-                  <a class="button button-secondary" href="{_escape(detail_href)}#reviewer-state-heading" aria-label="Update reviewer status for {_escape(summary.facility_name)}">Update status</a>
+                  <a class="button button-secondary" href="{_escape(detail_href)}#reviewer-state-heading" aria-label="Update reviewer status for {_escape(facility_name)}">Update status</a>
                 </section>
-                <div class="facility-row-actions" aria-label="Actions for {_escape(summary.facility_name)}">
+                <div class="facility-row-actions" aria-label="Actions for {_escape(facility_name)}">
                   {facility_action}
-                  <a class="button button-secondary" href="{_escape(detail_href)}" aria-label="Open next complaint for {_escape(summary.facility_name)}">Open next complaint</a>
+                  <a class="button button-secondary" href="{_escape(detail_href)}" aria-label="Open next complaint for {_escape(facility_name)}">Open next complaint</a>
                 </div>
               </article>
             </li>"""
@@ -2610,12 +2694,12 @@ def _render_facility_intelligence_facility_contributors(
         _facility_intelligence_contributor_item(complaint, summary, filters)
         for complaint in summary.complaints
     )
-    return f"""                <details id="{contributor_id}" class="technical-details">
-                  <summary>Open {summary.complaint_count} exact contributing complaint record(s)</summary>
+    return f"""                <section id="{contributor_id}" class="facility-contributing-records" aria-labelledby="{contributor_id}-heading">
+                  <h5 id="{contributor_id}-heading">Contributing complaint records</h5>
                   <ul class="compact-list">
 {links}
                   </ul>
-                </details>"""
+                </section>"""
 
 
 def _facility_intelligence_unique_complaints(
@@ -2702,7 +2786,11 @@ def _facility_intelligence_detail_href(
             start_date=filters.start_date,
             end_date=filters.end_date,
             context_origin="facility_intelligence",
-            lookup_facility_name=summary.facility_name,
+            lookup_facility_name=_compare_facilities_source_name(
+                summary.facility_name,
+                summary.facility_number,
+                summary.facility_identity,
+            ),
         ),
     ).replace("source_record_key", "source%5Frecord%5Fkey")
 
@@ -2714,7 +2802,11 @@ def _facility_intelligence_request_href(
     values = {
         "facility_number": summary.facility_number,
         "request_context_origin": "prefilled_link",
-        "lookup_facility_name": summary.facility_name,
+        "lookup_facility_name": _compare_facilities_source_name(
+            summary.facility_name,
+            summary.facility_number,
+            summary.facility_identity,
+        ),
     }
     if filters.start_date:
         values["start_date"] = filters.start_date
@@ -2749,6 +2841,64 @@ def _facility_intelligence_hub_href(
 def _facility_intelligence_result_id(summary: FacilityPrioritySummary) -> str:
     suffix = re.sub(r"[^a-zA-Z0-9_-]+", "-", summary.facility_identity).strip("-")
     return f"facility-intelligence-result-{suffix or 'unknown'}"
+
+
+def _compare_facilities_public_id(
+    facility_number: str,
+    facility_identity: str = "",
+) -> str:
+    for value in (facility_number, facility_identity):
+        normalized = value.strip()
+        if normalized.isdigit():
+            return normalized
+        match = re.fullmatch(
+            r"ccld(?:-|:)facility(?:-|:)(\d+)",
+            normalized,
+            flags=re.IGNORECASE,
+        )
+        if match is not None:
+            return match.group(1)
+    return _reviewer_value_text(facility_number)
+
+
+def _compare_facilities_source_name(
+    facility_name: str,
+    facility_number: str,
+    facility_identity: str = "",
+) -> str:
+    normalized_name = facility_name.strip()
+    fallback_names = {
+        "",
+        "unknown",
+        facility_number.strip().casefold(),
+        facility_identity.strip().casefold(),
+        f"facility id {facility_number.strip()}".casefold(),
+        f"facility id {facility_identity.strip()}".casefold(),
+    }
+    if normalized_name.casefold() in fallback_names:
+        return ""
+    if re.fullmatch(
+        r"(?:facility id\s+)?ccld(?:-|:)facility(?:-|:)\d+",
+        normalized_name,
+        flags=re.IGNORECASE,
+    ):
+        return ""
+    return normalized_name
+
+
+def _compare_facilities_name(
+    facility_name: str,
+    facility_number: str,
+    facility_identity: str = "",
+) -> str:
+    return (
+        _compare_facilities_source_name(
+            facility_name,
+            facility_number,
+            facility_identity,
+        )
+        or "Facility name unavailable"
+    )
 
 
 def _facility_priorities_filters(
@@ -3253,14 +3403,14 @@ def _render_facility_priorities(
     )
     if not summaries:
         list_markup = f"""        <section class="hero-card" aria-labelledby="facility-priorities-empty-heading">
-          <h2 id="facility-priorities-empty-heading">No facility priority rows matched.</h2>
+          <h2 id="facility-priorities-empty-heading">No facilities match these filters</h2>
           {summary}
           <p>Adjust the filters or clear them to return to all authorized loaded facilities with deduplicated complaint records.</p>
         </section>"""
     else:
         rows = "\n".join(_render_facility_priority_row(summary) for summary in summaries)
         list_markup = f"""        <section aria-labelledby="facility-priorities-results-heading">
-          <h2 id="facility-priorities-results-heading">Facility review priority worklist</h2>
+          <h2 id="facility-priorities-results-heading">Complaint Patterns</h2>
           {summary}
           <table>
             <caption>Explainable facility review prioritization over authorized loaded complaint records</caption>
@@ -3283,13 +3433,16 @@ def _render_facility_priorities(
           {_render_facility_priorities_pagination(filters, pagination, result_count)}
         </section>"""
     return _page(
-        title="Facility review priorities",
-        heading="Facility review priorities",
+        title="Compare Facilities",
+        heading="Find Facilities That May Need Closer Review",
         actor_label=actor_label,
+        active_path=CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH,
         main=f"""
+        <p class="intelligence-purpose">Compare complaint findings, activity, patterns, licensing and visit activity, and available public records to decide where to review first.</p>
+        {render_compare_facilities_views('complaint-patterns')}
         <section class="quiet-section" aria-labelledby="facility-priorities-decision-heading">
           <h2 id="facility-priorities-decision-heading">Find facilities that may deserve review first</h2>
-          <p>This reviewer worklist aggregates authorized loaded complaint records by stable source-derived facility identity and shows the source-derived factors that surfaced each facility. It does not use a hidden score, machine learning, or unsupported legal conclusions.</p>
+          <p>This Complaint Worklist view aggregates authorized loaded complaint records by stable source-derived facility identity and shows the source-derived factors that surfaced each facility. It does not use a hidden score, machine learning, or unsupported legal conclusions.</p>
           <p>Counts are based on deduplicated complaint identities in the loaded corpus available to this reviewer. Missing and unavailable values use explicit labels, and missing source links are identified rather than silently omitted.</p>
         </section>
 {filter_markup}
@@ -3299,10 +3452,10 @@ def _render_facility_priorities(
         <section class="quiet-section" aria-labelledby="facility-priorities-next-heading">
           <h2 id="facility-priorities-next-heading">Next steps</h2>
           <ul>
-            <li><a href="{REVIEWER_UI_FACILITY_TRENDS_PATH}">Compare complaint trends over time</a></li>
+            <li><a href="{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}?view=complaint-activity-over-time">Open Complaint Activity Over Time</a></li>
             <li><a href="{REVIEWER_UI_SUBSTANTIATED_TRIAGE_PATH}">Open substantiated complaint worklist</a></li>
-            <li><a href="{REVIEWER_UI_RECORDS_PATH}">Return to review queue</a></li>
-            <li><a href="{CCLD_RECORD_REQUEST_PATH}">Return to CCLD request queue</a></li>
+            <li><a href="{REVIEWER_UI_RECORDS_PATH}">Return to Complaint Worklist</a></li>
+            <li><a href="{CCLD_RECORD_REQUEST_PATH}">Return to Request Records</a></li>
           </ul>
         </section>
 """,
@@ -3321,7 +3474,8 @@ def _render_facility_priorities_filter_form(
     )
     return f"""        <section class="quiet-section" aria-labelledby="facility-priorities-filters-heading">
           <h2 id="facility-priorities-filters-heading">Filter</h2>
-          <form class="compact-filter-form" method="get" action="{REVIEWER_UI_FACILITY_PRIORITIES_PATH}">
+          <form class="compact-filter-form" method="get" action="{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}">
+            <input type="hidden" name="view" value="complaint-priority-compatibility">
             <div class="facility-intelligence-filter-grid">
               <p>
                 <label for="facility-priorities-date-dimension">Date used for this range</label>
@@ -3378,7 +3532,7 @@ def _render_facility_priorities_filter_form(
             </div>
             <div class="form-actions">
               <button class="button" type="submit">Apply filters</button>
-              <a class="button button-secondary" href="{REVIEWER_UI_FACILITY_PRIORITIES_PATH}">Clear filters</a>
+              <a class="button button-secondary" href="{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}?view=complaint-priority-compatibility">Clear filters</a>
             </div>
           </form>
         </section>"""
@@ -3404,21 +3558,30 @@ def _render_facility_priorities_count_summary(
         last = min(offset + page_size, result_count)
         shown_range = f"Showing {first}-{last}"
     return (
-        f"<p>{shown_range} of {result_count} matching facility priority row(s); "
-        f"{total_facility_count} total authorized loaded facility row(s) with "
+        f"<p>{shown_range} of {result_count} matching facilities; "
+        f"{total_facility_count} total authorized loaded facilities with "
         "deduplicated complaint records.</p>"
         f"<p class=\"helper-text\">Page {page} of {pagination['total_pages']}.</p>"
     )
 
 
 def _render_facility_priority_row(summary: FacilityPrioritySummary) -> str:
+    facility_name = _compare_facilities_name(
+        summary.facility_name,
+        summary.facility_number,
+        summary.facility_identity,
+    )
+    public_facility_id = _compare_facilities_public_id(
+        summary.facility_number,
+        summary.facility_identity,
+    )
     factors = "\n".join(f"              <li>{_escape(factor)}</li>" for factor in summary.factors)
     complaint_queue_href = _facility_priority_queue_href(summary)
     next_complaint = summary.complaints[0] if summary.complaints else None
     next_review_link = ""
     source_link = "Original public report link not available for the first qualifying complaint."
     if next_complaint is not None:
-        next_review_link = f'<a class="button" href="{_escape(next_complaint.detail_href)}">Open next complaint review workspace</a>'
+        next_review_link = f'<a class="button" href="{_escape(next_complaint.detail_href)}" aria-label="Review complaint {_escape(next_complaint.complaint_control_number)} for {_escape(facility_name)}">Review Complaint</a>'
         if next_complaint.source_url_href:
             suffix = (
                 f" for {next_complaint.complaint_control_number}"
@@ -3427,7 +3590,7 @@ def _render_facility_priority_row(summary: FacilityPrioritySummary) -> str:
             )
             source_link = f'<a href="{_escape(next_complaint.source_url_href)}">Open original public report{_escape(suffix)}</a>'
     return f"""        <tr>
-          <th scope="row">{_escape(_reviewer_value_text(summary.facility_name))}<br><span class="helper-text">Facility ID: {_escape(_reviewer_value_text(summary.facility_number))}</span></th>
+          <th scope="row">{_escape(facility_name)}<br><span class="helper-text">Facility ID: {_escape(public_facility_id)}</span></th>
           <td>{_escape(_reviewer_value_text(summary.facility_type))}</td>
           <td>{_escape(_reviewer_value_text(summary.geography))}</td>
           <td>{summary.complaint_count}</td>
@@ -3440,7 +3603,7 @@ def _render_facility_priority_row(summary: FacilityPrioritySummary) -> str:
           </td>
           <td>
             <div class="form-actions">
-              <a class="button button-secondary" href="{_escape(complaint_queue_href)}">Open qualifying complaint queue</a>
+              <a class="button button-secondary" href="{_escape(complaint_queue_href)}">Open Complaint Worklist</a>
               {next_review_link}
             </div>
             <p>{source_link}</p>
@@ -3484,6 +3647,7 @@ def _facility_priorities_page_href(
     page: int,
 ) -> str:
     query_values = {
+        "view": "complaint-priority-compatibility",
         "start_date": filters.start_date or "",
         "end_date": filters.end_date or "",
         "date_dimension": filters.date_dimension,
@@ -3495,7 +3659,7 @@ def _facility_priorities_page_href(
         "page_size": str(filters.page_size),
         "page": str(page),
     }
-    return f"{REVIEWER_UI_FACILITY_PRIORITIES_PATH}?{urlencode(query_values)}"
+    return f"{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}?{urlencode(query_values)}"
 
 
 def _render_facility_priority_rules_disclosure() -> str:
@@ -3519,8 +3683,8 @@ def _facility_trends_response(
     ):
         return _html_response(
             400,
-            _render_blocked_page(
-                title="Complaint trend dates need attention",
+            _render_compare_facilities_message(
+                view="complaint-activity-over-time",
                 heading="Complaint trend dates need attention",
                 message="Start date must be on or before end date.",
             ),
@@ -3559,6 +3723,27 @@ def _facility_trends_response(
             all_complaints=complaints,
             actor_label=_signed_in_actor_label(context),
         ),
+    )
+
+
+def _render_compare_facilities_message(
+    *,
+    view: str,
+    heading: str,
+    message: str,
+) -> str:
+    return _page(
+        title="Compare Facilities",
+        heading="Find Facilities That May Need Closer Review",
+        active_path=CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH,
+        main=f"""
+        <p class="intelligence-purpose">Compare complaint findings, activity, patterns, licensing and visit activity, and available public records to decide where to review first.</p>
+        {render_compare_facilities_views(view)}
+        <section class="intelligence-message intelligence-message--error" role="alert">
+          <h2>{_escape(heading)}</h2>
+          <p>{_escape(message)}</p>
+        </section>
+""",
     )
 
 
@@ -3751,11 +3936,17 @@ def _render_facility_trends(
         query_end=filters.end_date.isoformat() if filters.end_date else None,
     )
     return _page(
-        title="Complaint trends over time",
-        heading="Review complaint trends over time",
+        title="Compare Facilities",
+        heading="Find Facilities That May Need Closer Review",
         actor_label=actor_label,
+        active_path=CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH,
         main=f"""
-        <p>Compare deduplicated loaded complaint and finding activity by {period_label}, then open the contributing complaint records for review.</p>
+        <p class="intelligence-purpose">Compare complaint findings, activity, patterns, licensing and visit activity, and available public records to decide where to review first.</p>
+        {render_compare_facilities_views('complaint-activity-over-time')}
+        <section aria-labelledby="complaint-activity-over-time-heading">
+          <h2 id="complaint-activity-over-time-heading">Complaint Activity Over Time</h2>
+          <p>Compare qualifying loaded complaint activity by {period_label} and open the contributing complaints.</p>
+        </section>
         {_render_facility_trend_filter_form(filters, all_complaints)}
         {aggregate_context}
         <section aria-labelledby="facility-trends-results-heading">
@@ -3781,8 +3972,8 @@ def _render_facility_trends(
         </section>
         {_render_facility_trend_rules()}
         <nav class="form-actions" aria-label="Complaint trend next actions">
-          <a class="button button-secondary" href="{REVIEWER_UI_RECORDS_PATH}">Return to review queue</a>
-          <a class="button button-secondary" href="{REVIEWER_UI_FACILITY_PRIORITIES_PATH}">Open facility review priorities</a>
+          <a class="button button-secondary" href="{REVIEWER_UI_RECORDS_PATH}">Return to Complaint Worklist</a>
+          <a class="button button-secondary" href="{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}">Return to Complaint Patterns</a>
         </nav>
 """,
     )
@@ -3795,7 +3986,11 @@ def _render_facility_trend_filter_form(
     facility_options = _substantiated_filter_options(
         value
         for item in all_complaints
-        for value in (item.facility_name, item.facility_number)
+        for value in (
+            _compare_facilities_source_name(item.facility_name, item.facility_number),
+            _compare_facilities_public_id(item.facility_number),
+        )
+        if value
     )
     facility_type_options = _substantiated_filter_options(
         item.facility_type for item in all_complaints
@@ -3811,7 +4006,8 @@ def _render_facility_trend_filter_form(
     )
     return f"""        <section class="quiet-section" aria-labelledby="facility-trends-filters-heading">
           <h2 id="facility-trends-filters-heading">Choose facilities and periods</h2>
-          <form class="compact-filter-form" method="get" action="{REVIEWER_UI_FACILITY_TRENDS_PATH}">
+          <form class="compact-filter-form" method="get" action="{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}">
+            <input type="hidden" name="view" value="complaint-activity-over-time">
             <div class="facility-intelligence-filter-grid">
               <p>
                 <label for="facility-trends-facility">Facility name or ID</label>
@@ -3866,7 +4062,7 @@ def _render_facility_trend_filter_form(
             </div>
             <div class="form-actions">
               <button class="button" type="submit">Compare complaint activity</button>
-              <a class="button button-secondary" href="{REVIEWER_UI_FACILITY_TRENDS_PATH}">Clear filters</a>
+              <a class="button button-secondary" href="{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}?view=complaint-activity-over-time">Clear filters</a>
             </div>
           </form>
         </section>"""
@@ -9452,6 +9648,16 @@ document.querySelectorAll('[data-source-evidence-toggle]').forEach(function (but
     button.focus();
   }
 });
+</script>"""
+
+_COMPARE_FACILITIES_FOCUS_SCRIPT = """<script>
+(function () {
+  'use strict';
+  if (!window.location.hash) return;
+  var target = document.getElementById(window.location.hash.slice(1));
+  if (!target || !target.matches('a, button, input, select, textarea, [tabindex]')) return;
+  window.requestAnimationFrame(function () { target.focus(); });
+}());
 </script>"""
 
 

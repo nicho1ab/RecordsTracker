@@ -436,7 +436,7 @@ def test_required_routes_use_one_governed_shared_shell_and_primary_navigation(
         (
             "/ccld/facilities/intelligence",
             "Skip to main reviewer content",
-            "/ccld/facilities",
+            "/ccld/facilities/intelligence",
         ),
         (
             "/ccld/records/request",
@@ -450,6 +450,7 @@ def test_required_routes_use_one_governed_shared_shell_and_primary_navigation(
     expected_primary_links = (
         ("/", "Home"),
         ("/ccld/facilities", "Facilities"),
+        ("/ccld/facilities/intelligence", "Compare Facilities"),
         ("/ccld/records/request", "Request Records"),
         ("/reviewer", "Review"),
         ("/feedback", "Feedback"),
@@ -546,7 +547,7 @@ def test_shared_shell_uses_approved_civic_ledger_foundation() -> None:
         assert region_index > previous_region_index
         previous_region_index = region_index
     assert "grid-template-columns: minmax(16rem, 1fr) auto minmax(32rem, auto)" in html
-    assert "grid-template-columns: repeat(6, minmax(5rem, auto))" in html
+    assert "grid-template-columns: repeat(7, minmax(5rem, auto))" in html
     facts_bar_css = (
         ".top-fact-strip {\n"
         "      background: #F8FAFB;\n"
@@ -1290,13 +1291,8 @@ def test_route_active_nav_highlights_correct_item() -> None:
         ("/ccld/facilities", "/ccld/facilities", "Facilities"),
         (
             "/ccld/facilities/intelligence",
-            "/ccld/facilities",
-            "Facilities",
-        ),
-        (
-            "/ccld/facilities/review-priority",
-            "/ccld/facilities",
-            "Facilities",
+            "/ccld/facilities/intelligence",
+            "Compare Facilities",
         ),
         ("/ccld/facilities/detail", "/ccld/facilities", "Facilities"),
         ("/ccld/records/request", "/ccld/records/request", "Request Records"),
@@ -1319,7 +1315,7 @@ def test_route_active_nav_highlights_correct_item() -> None:
             f"Check that active_path is set correctly for this route."
         )
         # Exactly one aria-current="page" in nav
-        active_count = html.count('aria-current="page"')
+        active_count = primary_navigation_markup(html).count('aria-current="page"')
         assert active_count == 1, (
             f"Route {path}: expected exactly 1 aria-current=page in nav, got {active_count}."
         )
@@ -1334,8 +1330,9 @@ def test_active_nav_route_prefixes_require_a_path_segment_boundary() -> None:
         active_path="/ccld/facilities-extra/intelligence",
     )
 
-    assert 'aria-current="page" href="/ccld/facilities">Facilities' not in html
-    assert html.count('aria-current="page"') == 0
+    primary_nav = primary_navigation_markup(html)
+    assert 'aria-current="page" href="/ccld/facilities">Facilities' not in primary_nav
+    assert primary_nav.count('aria-current="page"') == 0
 
 
 def test_shared_shell_runtime_mode_disclosure_uses_runtime_environment(

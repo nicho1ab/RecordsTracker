@@ -8,8 +8,14 @@ from sqlalchemy import create_engine, func, select
 from sqlalchemy.engine import Connection
 
 from ccld_complaints.hosted_app import reviewer_ui
-from ccld_complaints.hosted_app.app import route_response
+from ccld_complaints.hosted_app.app import (
+    _legacy_compare_facilities_redirect_location,
+    route_response,
+)
 from ccld_complaints.hosted_app.auth import HostedAccessScope
+from ccld_complaints.hosted_app.ccld_facility_lookup import (
+    CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH,
+)
 from ccld_complaints.hosted_app.facility_trends import (
     COMPLETE_PERIOD,
     COVERAGE_UNAVAILABLE,
@@ -37,6 +43,9 @@ from ccld_complaints.hosted_app.seeded_import import (
 
 TEST_SCOPE = LOCAL_REVIEWER_UI_SCOPE
 OTHER_SCOPE = HostedAccessScope("seeded_corpus", "other-trend-corpus")
+CANONICAL_TRENDS_PATH = (
+    f"{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}?view=complaint-activity-over-time"
+)
 
 
 def test_monthly_quarterly_grouping_boundaries_and_reconciliation() -> None:
@@ -252,7 +261,7 @@ def test_facility_trends_route_is_accessible_linked_compact_and_deduplicated() -
         )
         status, content_type, body = route_response(
             (
-                f"{REVIEWER_UI_FACILITY_TRENDS_PATH}?facility=Alpha"
+                f"{CANONICAL_TRENDS_PATH}&facility=Alpha"
                 "&facility_type=children&geography=kern&finding=Substantiated"
                 "&serious_topic=Supervision&start_date=2026-01-01"
                 "&end_date=2026-03-31&time_grain=month&period_count=3"
@@ -263,7 +272,8 @@ def test_facility_trends_route_is_accessible_linked_compact_and_deduplicated() -
     html = body.decode("utf-8")
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
-    assert "Review complaint trends over time" in html
+    assert "Find Facilities That May Need Closer Review" in html
+    assert "Complaint Activity Over Time" in html
     assert "01/01/2026–01/31/2026" in html
     assert "Complete period" in html
     assert "Zero qualifying records" in html
@@ -281,7 +291,9 @@ def test_facility_trends_route_is_accessible_linked_compact_and_deduplicated() -
     assert "DO NOT SHOW" not in html
     assert "legal conclusion" not in html.casefold()
     assert "risk score" not in html.casefold()
-    assert html.count("Compare deduplicated loaded complaint and finding activity") == 1
+    assert html.count("Compare qualifying loaded complaint activity") == 1
+    assert "Return to Complaint Worklist" in html
+    assert "return to review queue" not in html.casefold()
 
 
 def test_facility_trends_authorization_batch_isolation_and_no_mutation() -> None:
@@ -307,7 +319,7 @@ def test_facility_trends_authorization_batch_isolation_and_no_mutation() -> None
         before = _table_counts(connection)
 
         denied_status, _denied_type, denied_body = route_response(
-            REVIEWER_UI_FACILITY_TRENDS_PATH,
+            CANONICAL_TRENDS_PATH,
             reviewer_ui_context=reviewer_ui_context_for_connection(
                 connection,
                 actor=None,
@@ -315,7 +327,7 @@ def test_facility_trends_authorization_batch_isolation_and_no_mutation() -> None
         )
         status, _content_type, body = route_response(
             (
-                f"{REVIEWER_UI_FACILITY_TRENDS_PATH}?facility=Allowed"
+                f"{CANONICAL_TRENDS_PATH}&facility=Allowed"
                 "&start_date=2026-01-01&end_date=2026-01-31&period_count=1"
             ),
             reviewer_ui_context=reviewer_ui_context_for_connection(connection),
@@ -335,8 +347,8 @@ def test_facility_trends_rejects_reversed_date_range_accessibly() -> None:
     with _trend_connection() as connection:
         status, content_type, body = route_response(
             (
-                f"{REVIEWER_UI_FACILITY_TRENDS_PATH}"
-                "?start_date=2026-02-01&end_date=2026-01-01"
+                f"{CANONICAL_TRENDS_PATH}"
+                "&start_date=2026-02-01&end_date=2026-01-01"
             ),
             reviewer_ui_context=reviewer_ui_context_for_connection(connection),
         )
@@ -346,6 +358,23 @@ def test_facility_trends_rejects_reversed_date_range_accessibly() -> None:
     assert content_type == "text/html; charset=utf-8"
     assert "Complaint trend dates need attention" in html
     assert "Start date must be on or before end date." in html
+
+
+def test_legacy_facility_trends_redirect_preserves_supported_query() -> None:
+    legacy_path = (
+        f"{REVIEWER_UI_FACILITY_TRENDS_PATH}?facility=Alpha"
+        "&time_grain=quarter&period_count=6"
+    )
+
+    status, _content_type, body = route_response(legacy_path)
+    location = _legacy_compare_facilities_redirect_location(legacy_path)
+
+    assert status == 302
+    assert location == (
+        f"{CANONICAL_TRENDS_PATH}&facility=Alpha"
+        "&time_grain=quarter&period_count=6"
+    )
+    assert b"Continue to Compare Facilities" in body
 
 
 def test_facility_trend_flat_record_helper_deduplicates_stable_identity() -> None:

@@ -473,6 +473,14 @@ required; matching anchor text alone is insufficient.
 6. **Implement #503.** Rebuild Help around the four approved category groups,
    visible primary guidance, working browser fragment/focus behavior, official
    point-of-use definitions, and tier-correct troubleshooting.
+
+Issue #419 repository status: step 4 is implemented on its assigned branch.
+Complaint Patterns, Licensing and Visit Activity, and Complaint Activity Over
+Time are available under the canonical route, and the three legacy URLs use
+query-preserving redirects. The repository evidence is ready for explicit owner
+review; hosted/representative-data evidence, visual acceptance, and stakeholder
+confirmation remain pending. This status does not start or complete #502 or
+#503 and does not claim a Figma update.
 7. **Run cross-route visual acceptance.** Capture exact canonical routes,
    merged views, legacy redirects, desktop, narrow, mobile 390 px, 200% zoom,
    keyboard focus, empty/partial/unavailable/error/loading states, and print.

@@ -287,55 +287,56 @@ available CSV fields, show bounded readable results, carry the selected
 facility/license number into the request form, preserve manual entry, and clearly
 state that lookup rows are local/test reference assistance rather than complaint
 source truth or completeness proof.
-When a selected facility has its own hub route, the hub should remain a
+When a selected facility has its own Facility Overview route, that page should remain a
 facility-directory context page rather than a new data source. It may show safe
 directory fields, summarize already-loaded local/test complaint-review context,
-and offer links or forms into existing request, reviewer queue, packet preview,
+and offer links or forms into existing request, Complaint Worklist, packet preview,
 and packet draft routes. It must keep directory data separate from complaint
 records and must not imply complaint coverage, source completeness, license
 validity, legal conclusions, official findings, assignment, claiming,
 correction application, export approval, certified report status, retrieval
 submission, or source-derived/reviewer-created mutation.
-Facility review signals on that hub may summarize supported uploaded public
-summary fields when they help testers decide what to review next. They should
-use cautious `review cue` wording, prefer concise scalar counts/dates/statuses,
-and direct testers to complaint request, loaded records, reviewer queue, and
+Supported public licensing, visit, citation, Plan of Correction, status, and
+capacity observations on Facility Overview may help testers decide what to
+review next. They should use plain-language condition labels, prefer concise
+scalar counts/dates/statuses, and direct testers to complaint request, loaded
+records, Complaint Worklist, and
 source traceability checks. They must not score facilities, verify sources,
 confirm complaints, imply complaint absence, or treat licensing/visit/citation
 summary rows as legal findings, complaint records, license validity, complaint
 coverage, or source-completeness proof.
-If a facility number has uploaded public summary signals but no current local
-directory row, the hub may render as a signal-only facility hub. It should say
-the facility-directory record is not available locally, show only safe summary
-fields, preserve normal next actions, and avoid implying a directory problem,
+If a facility number has supported public observations but no current local
+directory row, Facility Overview may still render. It should say the
+facility-directory record is not available locally, show only safe supported
+observations, preserve normal next actions, and avoid implying a directory problem,
 verified source state, complaint coverage, source completeness, legal findings,
 license validity, assignment, claiming, correction, or export readiness.
-Facility review priority pages may group those same review cues across facilities
-to help testers choose which facility hub to open next. Default ordering should
-be transparent and cue-based rather than opaque scoring, with facilities that
+Licensing and Visit Activity may group those same observations across facilities
+to help testers choose which Facility Overview to open next. Default ordering
+should be transparent and condition-based rather than opaque scoring, with facilities that
 have multiple cue types, complaint visit activity, citation indicators, POC
 indicators, recent visit activity, high capacity, closed status, or long visit
-gaps surfaced clearly. Rows should link to facility hubs and keep the same
+gaps surfaced clearly. Rows should link to Facility Overview and keep the same
 not-legal-finding, not-source-verification, not-complaint-coverage, and not-
 source-completeness boundaries visible.
-Facility review intelligence dashboards may combine the same uploaded public
-summary-field review cues with active local/test facility-directory context to
+Compare Facilities may combine the same supported public observations with
+active local/test facility-directory context to
 help reviewers decide where to spend time first. They should show why each
 facility appears, support transparent filters and sorting over existing public
-fields, and link to facility hubs, complaint requests, and reviewer queues. They
+fields, and link to Facility Overview, complaint requests, and the Complaint Worklist. They
 must not introduce risk scores, wrongdoing determinations, legal conclusions,
 complaint coverage, source verification, source completeness, assignment,
 claiming, correction, packet lifecycle, export readiness, or source-derived or
 reviewer-created mutation.
-The request and queue pages should also make the active request context visible:
+The request and Complaint Worklist pages should also make the active request context visible:
 whether it came from facility lookup or manual entry, which facility/license
 number and date range are being used, which local/test facility reference source
-is active, and how to change facility/date criteria before reviewing queue
+is active, and how to change facility/date criteria before reviewing worklist
 results.
-Request and queue friction cues should keep recovery links close to the current
+Request and worklist friction cues should keep recovery links close to the current
 state. When a request has a facility/license number, pages should link to the
-facility hub or signal-only facility hub when active local/test inputs support
-one, the facility review priority list, the same request/queue path, and the
+Facility Overview when active local/test inputs support one, Licensing and Visit
+Activity, the same request/worklist path, and the
 complaint request flow. No-match and filtered-empty states should state that no
 loaded local/test records matched the current request context or filter, explain
 what to try next, and avoid implying complaint coverage, source completeness,
@@ -538,8 +539,8 @@ information-architecture implementation. In particular:
 - the global attorney navigation is `Home`, `Find a Facility`, `Compare
   Facilities`, `Complaint Worklist`, `Feedback`, and `Help`;
 - `/ccld/facilities/intelligence` is the canonical Compare Facilities route;
-- public summary-field review behavior, complaint-derived facility priority,
-  and complaint trends must move into governed views or filters of that
+- supported public licensing and visit observations, complaint-derived facility
+  priority, and complaint trends must move into governed views or filters of that
   canonical destination before their legacy routes redirect;
 - `/reviewer` is the canonical Complaint Worklist, with substantiated and
   serious-review topics expressed as governed filters rather than duplicate
@@ -564,6 +565,17 @@ implementation sequence. No editable Figma artifact was changed. #419, #502,
 and #503 may consume that package only with requirement-ID mapping, a pre-code
 variance inventory, automated exact-route evidence, every applicable
 `RT-UI-GATE-001` through `RT-UI-GATE-009`, and explicit visual acceptance.
+
+Issue #419 implements that controlled variance as one `Compare Facilities`
+destination with the approved H1 `Find Facilities That May Need Closer Review`.
+Its three plain-link views preserve complaint patterns, licensing/visit
+activity, and complaint activity over time without tabs or duplicate facility
+inventories. Reviewer-facing labels use `Facility Overview` and `Complaint
+Worklist`; licensing filters name the supported public condition they represent;
+and a missing source-backed facility name renders as `Facility name unavailable`
+with the public Facility ID shown separately. This repository implementation and automated evidence do not claim
+that Figma changed or that visual acceptance has occurred; `RT-UI-GATE-009`
+remains an explicit owner decision.
 
 ## Feedback and help direction
 

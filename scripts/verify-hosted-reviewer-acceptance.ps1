@@ -116,8 +116,9 @@ $checks = @(
     @{ Name = "home-start"; Path = "/"; Required = @("Find a Facility", "Find the Facility ID", "Search CCLD facilities", "Continue to Request Records") },
     @{ Name = "ccld-start"; Path = "/ccld/"; Required = @("Request Records", "Request complaint records for a facility", "Which facility should be reviewed?") },
     @{ Name = "facility-lookup"; Path = "/ccld/facilities"; Required = @("Find a facility", "Find the Facility ID", "Search by name, Facility ID, city, county, ZIP") },
-    @{ Name = "facility-priority"; Path = "/ccld/facilities/review-priority"; Required = @("Facility review priority", "review cue", "uploaded public summary fields") },
-    @{ Name = "facility-intelligence"; Path = "/ccld/facilities/intelligence"; Required = @("Facility review intelligence", "review cue", "How to use these indicators") },
+    @{ Name = "facility-intelligence"; Path = "/ccld/facilities/intelligence"; Required = @("Find Facilities That May Need Closer Review", "Complaint Patterns", "Contributing complaint records") },
+    @{ Name = "facility-licensing-activity"; Path = "/ccld/facilities/intelligence?view=licensing-visit-activity"; Required = @("Find Facilities That May Need Closer Review", "Licensing and Visit Activity", "This view does not show complaint coverage") },
+    @{ Name = "facility-complaint-trends"; Path = "/ccld/facilities/intelligence?view=complaint-activity-over-time"; Required = @("Find Facilities That May Need Closer Review", "Complaint Activity Over Time", "Current period:") },
     @{ Name = "facility-hub"; Path = "/ccld/facilities/detail?facility_number=$PreloadedFacilityNumber"; Required = @("Facility review hub", "Facility review hub", "Back to search") },
     @{ Name = "record-request"; Path = "/ccld/records/request"; Required = @("Which facility should be reviewed?", "Confirm facility", "Request complaint records for a facility") },
     @{ Name = "record-request-context"; Path = "/ccld/records/request?$contextQuery"; Required = @($ContextFacilityNumber, "Open loaded records or request complaint records", "Show existing queue", "Date range") },
@@ -231,7 +232,7 @@ if ($IncludeCapture) {
             $routeStatusCsv = Join-Path $evidencePath 'route-status.csv'
             if (Test-Path -LiteralPath $routeStatusCsv) {
                 $routeStatusRows = Import-Csv -Path $routeStatusCsv
-                foreach ($routeName in @('home', 'facility', 'facility-priority', 'facility-intelligence', 'facility-hub', 'request-records', 'reviewer', 'matrix-export', 'packet-preview-empty', 'packet-preview-context', 'packet-draft-empty', 'packet-draft-context', 'feedback', 'help')) {
+                foreach ($routeName in @('home', 'facility', 'facility-intelligence', 'facility-licensing-activity', 'facility-complaint-trends', 'facility-hub', 'request-records', 'reviewer', 'matrix-export', 'packet-preview-empty', 'packet-preview-context', 'packet-draft-empty', 'packet-draft-context', 'feedback', 'help')) {
                     if (-not ($routeStatusRows | Where-Object { $_.route -eq $routeName -or $_.name -eq $routeName })) {
                         Write-Host "[NOTICE] Evidence route-status.csv is missing route: $routeName"
                         $failCount++

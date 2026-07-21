@@ -296,17 +296,7 @@ language terms for CCLD request context, facility/date request, loaded local/tes
 CCLD records, source-derived records, reviewer-created notes/status, reviewer-
 status filter, suggested next record, and manual feedback checklist on the
 changed pages without changing behavior.
-Hosted facility-priorities tests must prove `/reviewer/facilities/priorities`
-aggregates deduplicated complaint records by stable source-derived facility
-identity, orders rows by visible deterministic factors with stable tie-breaking,
-filters by facility type, geography, activity date window, minimum complaint
-count, minimum substantiated/equivalent count, and supported indicators, renders
-missing values, low-data rows, empty results, bounded pagination, complaint
-queue/detail links, and original-source link availability accessibly, preserves
-authorization and import-batch scope, excludes fixture/demo fallback data in
-production mode, and does not mutate source-derived, reviewer-created, audit,
-import, feedback, retrieval-job, or operational rows.
-Hosted cross-facility intelligence tests must prove
+Hosted Compare Facilities tests must prove
 `/ccld/facilities/intelligence` reads the authorized loaded complaint corpus,
 deduplicates by stable complaint identity, reuses governed facility priority,
 substantiated/equivalent, serious-topic, trend/anomaly, and aggregate coverage
@@ -321,7 +311,17 @@ PostgreSQL setup failure without fixture/synthetic fallback, semantic headings
 and labeled controls, descriptive links, badge text meaning, MM/DD/YYYY display,
 filter context preservation, no raw traceability internals or secrets, and
 source-derived versus reviewer-created state separation. Exact-route hosted UI
-evidence must assert the decision heading and recommended-next action.
+evidence must assert the approved heading, visible contributing records,
+responsive and focus behavior, state wording, and print contract. Compatibility
+tests must also prove the complaint-priority filters and bounded pagination remain
+available inside the canonical Complaint Patterns experience; bounded public
+licensing/visit search, deterministic 100-row bound, meaningful condition labels,
+licensing/visit/citation/POC/status/capacity observations, public Facility ID
+presentation without an internal identity prefix used as a facility name, and
+source-domain separation remain available in `Licensing and Visit Activity`;
+Complaint Worklist wording remains consistent on Issue #419 pages; and all three
+legacy GET URLs return 302 before any data read,
+preserve supported query parameters, and resolve to the intended canonical view.
 Hosted facility review hub tests must prove `/ccld/facilities/detail` reuses
 those governed cross-facility calculations for one Facility ID; preserves
 useful intelligence origin/filter context; reconciles deduplicated complaint,
@@ -335,8 +335,9 @@ definitions; badge-only review-flag expression; active Facilities navigation;
 safe narrow-width/zoom CSS; no mutation; no fixture/synthetic PostgreSQL
 fallback; and no raw traceability internals, note text, private values, or
 secrets.
-Hosted facility-trends tests must prove `/reviewer/facilities/trends` groups
-authorized loaded complaints by month and quarter using stable complaint
+Hosted facility-trends tests must prove the `Complaint Activity Over Time` view
+on `/ccld/facilities/intelligence` groups authorized loaded complaints by month
+and quarter using stable complaint
 identity, honors inclusive date boundaries and combined facility, facility type,
 geography, finding/status, and governed serious-topic filters, reconciles total,
 substantiated/equivalent, serious-topic, and unavailable-date counts, and orders
@@ -345,7 +346,9 @@ incomplete-current, zero-qualifying, unavailable-coverage, and unavailable-date
 states; increased, new, decreased, and no-cue rules with both contributing
 counts; semantic tables and labeled controls; reviewer-detail/source access;
 authorization and import-batch separation; no raw narrative or private output;
-and no mutation. Focused hosted evidence for this slice uses `-Issue418`.
+and no mutation. The legacy `/reviewer/facilities/trends` URL is tested only as
+a query-preserving redirect. Focused hosted evidence for this slice uses
+`-Issue418`; consolidated Issue #419 evidence uses `-Issue419` in fixture mode.
 Hosted serious-topic worklist tests must prove `/reviewer/records/serious-topics`
 uses only governed deterministic source categories and governed keyword cues,
 labels official allegation categories as source-derived, allows keyword-assisted

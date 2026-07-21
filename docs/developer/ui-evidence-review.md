@@ -22,23 +22,18 @@ The capture command performs GET-only requests against an already-running local 
 - a facility-hub route capture that exercises `/ccld/facilities/detail` as a
   GET-only per-facility review summary with Review next guidance and exact
   contributing-complaint access.
-- a facility-priority route capture that exercises `/ccld/facilities/review-priority`
-  as a GET-only view over uploaded public summary-field review cues.
-- a facility-intelligence route capture that exercises `/ccld/facilities/intelligence`
-  and asserts the approved cross-facility heading, canonical inventory, and
-  next-complaint action over authorized loaded records as a GET-only dashboard
-  over transparent public summary-field review-priority indicators.
+- Compare Facilities route captures that exercise
+  `/ccld/facilities/intelligence` and its `Complaint Patterns`, `Licensing and
+  Visit Activity`, and `Complaint Activity Over Time` views. They assert the
+  approved heading, canonical complaint inventory, visible primary evidence,
+  separate source domains, deterministic next actions, and legacy redirect
+  compatibility.
 - a matrix-export route capture that exercises `/reviewer/records/matrix.csv`
 	as a GET-only CSV export over loaded local/test complaint records for the
 	stable sample facility/date context.
-- a reviewer facility-priorities route capture that exercises
-  `/reviewer/facilities/priorities` as a GET-only worklist over authorized
-  loaded complaint records with deterministic factors, filters, pagination,
-  complaint-review links, and original-source link states.
-- a reviewer facility-trends route capture that exercises
-  `/reviewer/facilities/trends` as a GET-only monthly/quarterly comparison over
-  authorized loaded complaint records with coverage states, visible anomaly
-  rules and contributing counts, filters, and complaint-detail links.
+- compatibility captures for `/ccld/facilities/review-priority`,
+  `/reviewer/facilities/priorities`, and `/reviewer/facilities/trends`; each must
+  resolve to the intended canonical view with supported query values preserved.
 - `diagnostics/` git state, recent log, capture command, and non-secret capture settings.
 - `screenshots/` route screenshots when local screenshot tooling is available.
 - a sibling `.zip` packet after successful capture, suitable for local review
@@ -193,6 +188,21 @@ want to stop the process currently listening on that port.
 ## Screenshot Support
 
 The capture command tries to use local Playwright first when available, then local Microsoft Edge or Chrome headless capture. If no screenshot tool is available, the command still writes `manifest.json`, `route-status.csv`, HTML snapshots, text summaries, assertion rows, and accessibility summaries. Screenshot absence is reported in the manifest and command output. Such a packet may support nonvisual diagnostics, but it fails `RT-UI-GATE-007` for a reviewer-facing visual or interaction implementation.
+
+For the Issue #419 controlled variance, start the local fixture server and run:
+
+```powershell
+.\scripts\capture-hosted-ui-evidence.ps1 -BaseUrl http://127.0.0.1:8010 -Mode fixture -Issue419
+```
+
+The packet adds `issue-419-approved-versus-rendered.csv` and
+`issue-419-ui-gates.csv`. Its route assertions also prove meaningful
+source-backed licensing filters, removal of uploaded-summary implementation
+language, public Facility ID presentation without internal stable identities as
+facility names, approved Complaint Worklist wording, and preserved legacy
+redirects. `RT-UI-GATE-009` remains `READY FOR EXPLICIT OWNER
+REVIEW`; passing automation is not visual acceptance and does not claim that
+Figma was updated.
 
 Do not add CI requirements for screenshot capture. Visual comparison screenshots remain outside CI because they depend on workstation browser tooling, but automated local evidence and explicit visual acceptance are still required before a reviewer-facing visual or interaction change can merge.
 

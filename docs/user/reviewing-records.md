@@ -43,7 +43,7 @@ primary review action remains reachable without horizontal scrolling.
 
 In the hosted reviewer workflow, use `/reviewer/records/serious-topics` to filter loaded complaint records by governed serious-review themes. Treat `Source category` rows as official source-derived categories and `Keyword-assisted cue` rows as separate review prompts when the source category is missing or unknown. Do not summarize keyword cues as findings or verified events.
 
-Use `/reviewer/facilities/trends` when the review task is to compare loaded complaint and finding activity over time. Coverage and anomaly labels describe only the displayed, qualifying loaded records; open the contributing complaint record and its existing public-report action before relying on an individual complaint.
+Use **Complaint Activity Over Time** from `/ccld/facilities/intelligence` when the review task is to compare loaded complaint and finding activity over time. Coverage and anomaly labels describe only the displayed, qualifying loaded records; open the contributing complaint record and its existing public-report action before relying on an individual complaint.
 
 Use `/ccld/facilities/intelligence` when the task starts across facilities. The
 dashboard applies complaint-level filters before reconciling facility counts,
@@ -52,10 +52,15 @@ canonical facility inventory. Start with the selected first row under the
 visible governed ordering. Its source and reviewer-state regions refer to that
 row's deterministic next complaint, with actions to open the facility, complaint,
 or public source. These indicators describe only the authorized loaded corpus.
+Use **Licensing and Visit Activity** for separate supported public licensing,
+visit, citation, Plan of Correction, status, and capacity observations; do not
+interpret that view as complaint coverage. The old
+facility-priority, reviewer-priorities, and reviewer-trends URLs redirect to the
+corresponding Compare Facilities view.
 
-## Facility hub fact placement
+## Facility Overview fact placement
 
-The facility hub gives each selected reviewer-facing facility fact one home:
+Facility Overview gives each selected reviewer-facing facility fact one home:
 
 | Facility fact | Disposition | Reviewer-facing home |
 | --- | --- | --- |
