@@ -169,6 +169,7 @@ def test_capture_script_declares_parameters_routes_and_outputs() -> None:
         "Issue416",
         "Issue417",
         "Issue418",
+        "Issue419",
         "Issue498",
         "manifest.json",
         "route-status.csv",
@@ -178,6 +179,8 @@ def test_capture_script_declares_parameters_routes_and_outputs() -> None:
         "issue-416-count-summaries.csv",
         "issue-417-count-summaries.csv",
         "issue-418-count-summaries.csv",
+        "issue-419-approved-versus-rendered.csv",
+        "issue-419-ui-gates.csv",
         "route-text-markers.txt",
         "keyboard flow text",
         "accessibility",
@@ -187,6 +190,7 @@ def test_capture_script_declares_parameters_routes_and_outputs() -> None:
         "Compress-Archive",
         "Invoke-NativeCaptureCommand",
         "Test-HtmlScreenshotCandidate",
+        "SkipHttpErrorCheck",
         "native screenshot command timed out",
         "$visibilityDeadline",
         "Start-Sleep -Milliseconds 50",
@@ -228,15 +232,14 @@ def test_capture_script_declares_parameters_routes_and_outputs() -> None:
     assert '$Html.Contains("Review complaint")' in script
     assert (
         '"facility-intelligence" = @('
-        '"Cross-facility intelligence", '
-        '"Filter facilities", '
-        '"Open next complaint")'
+        '"Find Facilities That May Need Closer Review", '
+        '"Complaint Patterns")'
         in script
     )
     assert (
         'Path = "/ccld/facilities/intelligence"; '
         'Label = "02-facility-intelligence"; '
-        'ActiveHref = "/ccld/facilities"; '
+        'ActiveHref = "/ccld/facilities/intelligence"; '
         'WorkflowStep = "Review"'
         in script
     )
@@ -261,6 +264,7 @@ def test_capture_script_declares_parameters_routes_and_outputs() -> None:
     assert "-Issue416" in script
     assert "-Issue417" in script
     assert "-Issue418" in script
+    assert "-Issue419" in script
     assert "-Issue498" in script
     for issue_415_route in (
         "/reviewer/records/substantiated?facility=107207198",
@@ -280,9 +284,9 @@ def test_capture_script_declares_parameters_routes_and_outputs() -> None:
     ):
         assert issue_415_assertion in script
     for issue_416_route in (
-        "/reviewer/facilities/priorities?facility_type=FOSTER%20FAMILY%20AGENCY&geography=Kern&min_complaints=1&min_substantiated=0&indicator=source_available",
-        "/reviewer/facilities/priorities?page_size=10",
-        "/reviewer/facilities/priorities?min_complaints=9999",
+        "view=complaint-priority-compatibility&facility_type=FOSTER%20FAMILY%20AGENCY&geography=Kern&min_complaints=1&min_substantiated=0&indicator=source_available",
+        "view=complaint-priority-compatibility&page_size=10",
+        "view=complaint-priority-compatibility&min_complaints=9999",
     ):
         assert issue_416_route in script
     for issue_416_assertion in (
@@ -312,7 +316,8 @@ def test_capture_script_declares_parameters_routes_and_outputs() -> None:
     ):
         assert issue_417_assertion in script
     for issue_418_route in (
-        "/reviewer/facilities/trends?facility=157806098",
+        "view=complaint-activity-over-time",
+        "facility=157806098",
         "time_grain=quarter&period_count=4",
         'Issue418Kind = "increased"',
         'Issue418Kind = "secondary-cue"',
@@ -332,6 +337,45 @@ def test_capture_script_declares_parameters_routes_and_outputs() -> None:
         "issue418 safe aggregate output",
     ):
         assert issue_418_assertion in script
+    for issue_419_scenario in (
+        "issue-419-default",
+        "issue-419-licensing",
+        "issue-419-trends",
+        "issue-419-narrow-desktop",
+        "issue-419-mobile",
+        "issue-419-reflow",
+        "issue-419-keyboard-focus",
+        "issue-419-filtered-empty",
+        "issue-419-source-unavailable",
+        "issue-419-limited-data",
+        "issue-419-invalid",
+        "issue-419-not-loaded",
+        "issue-419-error",
+        "issue-419-print",
+        "issue-419-legacy-licensing",
+        "issue-419-legacy-priorities",
+        "issue-419-legacy-trends",
+    ):
+        assert issue_419_scenario in script
+    for issue_419_contract in (
+        "issue419 canonical heading",
+        "issue419 consolidated views",
+        "issue419 primary evidence visible",
+        "issue419 reviewer-tier safety",
+        "issue419 plain-language terminology",
+        "issue419 public facility identity presentation",
+        "issue419 complaint evidence and drill-down",
+        "issue419 licensing parity and separation",
+        "issue419 meaningful licensing filters",
+        "issue419 Complaint Worklist terminology",
+        "issue419 keyboard focus contract",
+        "issue419 responsive contract",
+        "issue419 print contract",
+        "RT-UI-GATE-009",
+        "READY FOR EXPLICIT OWNER REVIEW",
+        "Issue #501 repository-readable controlled variance",
+    ):
+        assert issue_419_contract in script
     for issue_498_scenario in (
         "rt-src-002-supported-closed",
         "rt-src-002-supported-open",
@@ -912,7 +956,8 @@ def run_issue_418_zero_assertion(
     cue: str = "No anomaly cue",
 ) -> dict[str, object]:
     html_text = (
-        "<html><body><h1>Review complaint trends over time</h1>"
+        "<html><body><h1>Find Facilities That May Need Closer Review</h1>"
+        "<h2>Complaint Activity Over Time</h2>"
         "<table><caption>Complaint trends</caption><tr><th>Period</th></tr></table>"
         '<input name="facility"><input name="facility_type">'
         '<input name="geography"><input name="finding">'
@@ -923,7 +968,7 @@ def run_issue_418_zero_assertion(
     )
     text = " ".join(
         (
-            "Review complaint trends over time",
+            "Find Facilities That May Need Closer Review Complaint Activity Over Time",
             (
                 f"{qualifying} qualifying complaint record(s): {qualifying} "
                 "assigned to displayed periods and 0 with date unavailable"
@@ -1294,7 +1339,7 @@ def test_capture_script_issue_416_mode_writes_focused_artifacts() -> None:
         assert manifest["issue416"]["routeCount"] == 4
         assert manifest["output"]["counts"]["issue416"] == 1
         assert len(manifest["routeList"]) == 4
-        assert "/reviewer/facilities/priorities?page_size=10" in count_csv
+        assert "view=complaint-priority-compatibility&page_size=10" in count_csv
         assert "issue416 h1" in assertions_csv
         assert "-Issue416" in capture_command
         assert "Focused issue #416 facility prioritization evidence" in manifest["evidencePurpose"]
@@ -1407,10 +1452,75 @@ def test_capture_script_issue_418_mode_writes_focused_artifacts() -> None:
         assert manifest["issue418"]["routeCount"] == 7
         assert manifest["output"]["counts"]["issue418"] == 1
         assert len(manifest["routeList"]) == 7
-        assert "/reviewer/facilities/trends?facility=157806098" in count_csv
+        assert "view=complaint-activity-over-time&facility=157806098" in count_csv
         assert "issue418 h1" in assertions_csv
         assert "-Issue418" in capture_command
         assert "Focused issue #418 complaint trend evidence" in manifest["evidencePurpose"]
+    finally:
+        shutil.rmtree(output_dir, ignore_errors=True)
+
+
+def test_capture_script_issue_419_mode_writes_governed_review_artifacts() -> None:
+    output_dir = ROOT / "data" / "processed" / "ui-evidence-test"
+    shutil.rmtree(output_dir, ignore_errors=True)
+    try:
+        result = subprocess.run(
+            [
+                powershell(),
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                str(CAPTURE_SCRIPT),
+                "-BaseUrl",
+                "http://127.0.0.1:9",
+                "-Mode",
+                "fixture",
+                "-OutputDir",
+                "data/processed/ui-evidence-test",
+                "-TimeoutSeconds",
+                "1",
+                "-IncludeScreenshots:$false",
+                "-Issue419",
+                "-AllowUnavailable",
+            ],
+            cwd=ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        output = plain_output(result)
+
+        assert result.returncode == 0, output
+        packets = sorted(output_dir.glob("*-fixture-issue-419"))
+        assert packets, output
+        packet = packets[-1]
+        manifest = json.loads((packet / "manifest.json").read_text(encoding="utf-8-sig"))
+        comparison_csv = (packet / "issue-419-approved-versus-rendered.csv").read_text(
+            encoding="utf-8-sig"
+        )
+        gates_csv = (packet / "issue-419-ui-gates.csv").read_text(encoding="utf-8-sig")
+        capture_command = (packet / "diagnostics" / "capture-command.txt").read_text(
+            encoding="utf-8-sig"
+        )
+
+        assert manifest["issue419"]["enabled"] is True
+        assert manifest["issue419"]["routeCount"] == 17
+        assert manifest["output"]["counts"]["issue419"] == 2
+        assert len(manifest["routeList"]) == 17
+        assert manifest["issue419"]["controlledVarianceAuthority"] == (
+            "Issue #501 repository-readable controlled variance"
+        )
+        assert manifest["issue419"]["visualAcceptance"] == (
+            "READY FOR EXPLICIT OWNER REVIEW"
+        )
+        assert "IA-419-01" in comparison_csv
+        assert "IA-419-09" in comparison_csv
+        for gate_number in range(1, 10):
+            assert f"RT-UI-GATE-{gate_number:03d}" in gates_csv
+        assert "READY FOR EXPLICIT OWNER REVIEW" in gates_csv
+        assert "-Issue419" in capture_command
+        assert "Focused issue #419 Compare Facilities evidence" in manifest["evidencePurpose"]
     finally:
         shutil.rmtree(output_dir, ignore_errors=True)
 

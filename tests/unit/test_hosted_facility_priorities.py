@@ -16,7 +16,10 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.exc import OperationalError
 
 from ccld_complaints.hosted_app import reviewer_ui, source_derived_reads
-from ccld_complaints.hosted_app.app import route_response
+from ccld_complaints.hosted_app.app import (
+    _legacy_compare_facilities_redirect_location,
+    route_response,
+)
 from ccld_complaints.hosted_app.auth import (
     AuthenticatedActor,
     HostedAccessScope,
@@ -55,6 +58,9 @@ from ccld_complaints.hosted_app.seeded_import import (
 
 TEST_SCOPE = LOCAL_REVIEWER_UI_SCOPE
 OTHER_SCOPE = HostedAccessScope("seeded_corpus", "outside-loaded-corpus")
+CANONICAL_PRIORITY_PATH = (
+    f"{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}?view=complaint-priority-compatibility"
+)
 
 
 def test_facility_priorities_orders_by_visible_factors_and_links_to_records() -> None:
@@ -93,14 +99,15 @@ def test_facility_priorities_orders_by_visible_factors_and_links_to_records() ->
         )
 
         status, content_type, body = route_response(
-            REVIEWER_UI_FACILITY_PRIORITIES_PATH,
+            CANONICAL_PRIORITY_PATH,
             reviewer_ui_context=reviewer_ui_context_for_connection(connection),
         )
 
     html = body.decode("utf-8")
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
-    assert "Facility review priorities" in html
+    assert "Find Facilities That May Need Closer Review" in html
+    assert "Complaint Patterns" in html
     assert "hidden score" in html
     assert "machine learning" in html
     assert html.index("Alpha Center") < html.index("Gamma Center") < html.index("Beta Center")
@@ -108,14 +115,34 @@ def test_facility_priorities_orders_by_visible_factors_and_links_to_records() ->
     assert "1 source-derived substantiated/equivalent finding(s)." in html
     assert "strongest available flag is 120+ days" in html
     assert "1 complaint record(s) missing an original public report link." in html
-    assert "Open qualifying complaint queue" in html
+    assert "Open Complaint Worklist" in html
+    assert "Return to Complaint Worklist" in html
+    assert "review queue" not in html.casefold()
     assert "/ccld/records/request?facility_number=100001" in html
-    assert "Open next complaint review workspace" in html
+    assert "Review Complaint" in html
     assert "/reviewer/records/detail?source_record_key=complaint%3Accld%3Acomplaint%3AA-1" in html
     assert "Open original public report for A-1" in html
     assert "raw_sha256" not in html
     assert "data/raw" not in html
     assert "legal priority" not in html.casefold()
+
+
+def test_legacy_facility_priorities_redirect_preserves_supported_query() -> None:
+    legacy_path = (
+        f"{REVIEWER_UI_FACILITY_PRIORITIES_PATH}?facility_type=children"
+        "&min_complaints=2&page=3&page_size=10"
+    )
+
+    status, _content_type, body = route_response(legacy_path)
+    location = _legacy_compare_facilities_redirect_location(legacy_path)
+
+    assert status == 302
+    assert location == (
+        f"{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}"
+        "?view=complaint-priority-compatibility&facility_type=children"
+        "&min_complaints=2&page=3&page_size=10"
+    )
+    assert b"Continue to Compare Facilities" in body
 
 
 def test_facility_priorities_filters_date_type_geography_counts_and_indicator() -> None:
@@ -144,8 +171,8 @@ def test_facility_priorities_filters_date_type_geography_counts_and_indicator() 
 
         status, _content_type, body = route_response(
             (
-                f"{REVIEWER_UI_FACILITY_PRIORITIES_PATH}"
-                "?facility_type=children&geography=kern&start_date=2026-04-01"
+                f"{CANONICAL_PRIORITY_PATH}"
+                "&facility_type=children&geography=kern&start_date=2026-04-01"
                 "&end_date=2026-05-31&min_complaints=2&min_substantiated=1"
                 "&indicator=delay"
             ),
@@ -156,7 +183,7 @@ def test_facility_priorities_filters_date_type_geography_counts_and_indicator() 
     assert status == 200
     assert "Alpha Center" in html
     assert "Beta Center" not in html
-    assert "Showing 1-1 of 1 matching facility priority row(s); 2 total" in html
+    assert "Showing 1-1 of 1 matching facilities; 2 total" in html
     assert 'value="children"' in html
     assert 'value="kern"' in html
     assert 'value="2"' in html
@@ -184,15 +211,15 @@ def test_facility_priorities_handles_missing_low_data_empty_and_pagination() -> 
             )
 
         status, _content_type, body = route_response(
-            f"{REVIEWER_UI_FACILITY_PRIORITIES_PATH}?indicator=low_data&page_size=10",
+            f"{CANONICAL_PRIORITY_PATH}&indicator=low_data&page_size=10",
             reviewer_ui_context=reviewer_ui_context_for_connection(connection),
         )
         missing_status, _missing_type, missing_body = route_response(
-            f"{REVIEWER_UI_FACILITY_PRIORITIES_PATH}?indicator=source_link_missing&page_size=100",
+            f"{CANONICAL_PRIORITY_PATH}&indicator=source_link_missing&page_size=100",
             reviewer_ui_context=reviewer_ui_context_for_connection(connection),
         )
         empty_status, _empty_type, empty_body = route_response(
-            f"{REVIEWER_UI_FACILITY_PRIORITIES_PATH}?min_complaints=99",
+            f"{CANONICAL_PRIORITY_PATH}&min_complaints=99",
             reviewer_ui_context=reviewer_ui_context_for_connection(connection),
         )
 
@@ -208,10 +235,10 @@ def test_facility_priorities_handles_missing_low_data_empty_and_pagination() -> 
         "Original public report link not available for the first qualifying complaint."
         in missing_html
     )
-    assert "Showing 1-10 of 12 matching facility priority row(s)" in html
+    assert "Showing 1-10 of 12 matching facilities" in html
     assert "Next page" in html
     assert "page_size=10" in html
-    assert "No facility priority rows matched." in empty_html
+    assert "No facilities match these filters" in empty_html
     assert "Clear filters" in empty_html
     assert "not public-source absence" not in empty_html.casefold()
 
@@ -238,14 +265,14 @@ def test_facility_priorities_preserves_authorization_and_batch_isolation() -> No
         )
 
         denied_status, _denied_type, denied_body = route_response(
-            REVIEWER_UI_FACILITY_PRIORITIES_PATH,
+            CANONICAL_PRIORITY_PATH,
             reviewer_ui_context=reviewer_ui_context_for_connection(
                 connection,
                 actor=None,
             ),
         )
         status, _content_type, body = route_response(
-            REVIEWER_UI_FACILITY_PRIORITIES_PATH,
+            CANONICAL_PRIORITY_PATH,
             reviewer_ui_context=reviewer_ui_context_for_connection(connection),
         )
 
@@ -272,7 +299,7 @@ def test_facility_priorities_get_does_not_mutate_hosted_tables() -> None:
         before = _table_counts(connection)
 
         status, _content_type, body = route_response(
-            REVIEWER_UI_FACILITY_PRIORITIES_PATH,
+            CANONICAL_PRIORITY_PATH,
             reviewer_ui_context=reviewer_ui_context_for_connection(connection),
         )
 
@@ -287,7 +314,7 @@ def test_facility_priorities_production_mode_does_not_fall_back_to_fixture_data(
     auth_runtime_config = load_hosted_auth_runtime_config(environ={})
 
     status, _content_type, body = route_response(
-        REVIEWER_UI_FACILITY_PRIORITIES_PATH,
+        CANONICAL_PRIORITY_PATH,
         auth_runtime_config=auth_runtime_config,
         page_data_mode="postgres",
     )
@@ -317,8 +344,8 @@ def test_facility_intelligence_database_unavailability_returns_governed_503(
 
     html = body.decode("utf-8")
     assert status == 503
-    assert "Facility intelligence could not be loaded" in html
-    assert "Retry facility intelligence" in html
+    assert "Facilities could not be loaded" in html
+    assert "Try Again" in html
 
 
 def test_facility_priority_helper_deduplicates_complaint_records() -> None:
@@ -508,7 +535,7 @@ def test_facility_intelligence_coverage_missing_date_empty_and_invalid_range_sta
     assert "No facilities match these filters" in empty_html
     assert "Clear one filter or clear all filters" in empty_html
     assert "Start date must be on or before end date." in invalid_html
-    assert "Cross-facility intelligence" in invalid_html
+    assert "Find Facilities That May Need Closer Review" in invalid_html
     assert "Date range needs attention" in invalid_html
     assert 'value="2026-06-01"' in invalid_html
     assert 'value="2026-05-01"' in invalid_html
@@ -582,12 +609,12 @@ def test_facility_intelligence_accessible_structure_and_safe_language() -> None:
     assert '<label for="facility-intelligence-coverage">' in html
     assert '<button class="button" type="submit">Apply filters</button>' in html
     assert 'aria-label="Finding and review flags"' in html
-    assert 'aria-current="page" href="/ccld/facilities">Facilities</a>' in html
+    assert 'aria-current="page" href="/ccld/facilities/intelligence">Compare Facilities</a>' in html
     assert "Source record" in html
     assert "Reviewer state" in html
     assert "Facility ID" in html
     assert 'aria-live="polite"' in html
-    assert "Cross-facility intelligence" in html
+    assert "Find Facilities That May Need Closer Review" in html
     assert "Which facilities may warrant review next?" not in html
     assert "What the active filters surface" not in html
     assert "All contributing complaint records" not in html
@@ -651,14 +678,14 @@ def test_facility_intelligence_approved_state_variants_and_filter_recovery() -> 
     no_data_html = no_data_body.decode("utf-8")
     filtered_html = filtered_body.decode("utf-8")
     assert no_data_status == filtered_status == 200
-    assert "No source-derived facility data" in no_data_html
+    assert "No loaded complaint records are available to compare" in no_data_html
     assert "No facility rows are rendered." in no_data_html
     assert "No facilities match these filters" in filtered_html
     assert "1 facility · Loaded complaint corpus" in filtered_html
     assert "Showing 0–0 of 0 facilities" in filtered_html
     assert 'aria-label="Clear Geography filter"' in filtered_html
     assert ">Clear all</a>" in filtered_html
-    assert "Loading facility intelligence" in loading_html
+    assert "Loading facilities" in loading_html
     assert 'aria-busy="true"' in loading_html
     assert "Loading source-backed ordering reasons" in loading_html
 
@@ -746,6 +773,38 @@ def test_facility_intelligence_distinguishes_verified_zero_and_unavailable_value
     assert "No substantiated count" not in html
     assert "Copy next complaint source URL unavailable" in html
     assert 'aria-disabled="true">Source unavailable</span>' in html
+
+
+def test_facility_intelligence_uses_public_identity_fallback_for_missing_name() -> None:
+    with _priority_connection() as connection:
+        _insert_complaint_without_facility(
+            connection,
+            facility_number="157806098",
+            control="MISSING-NAME-1",
+            finding="Pending",
+        )
+        status, _content_type, body = route_response(
+            CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH,
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+
+    html = body.decode("utf-8")
+    visible_text = re.sub(r"<[^>]+>", " ", html)
+    assert status == 200
+    assert "Facility name unavailable" in visible_text
+    assert re.search(r"Facility ID\s+157806098", visible_text)
+    assert "ccld:facility:157806098" not in visible_text
+    assert (
+        reviewer_ui._compare_facilities_public_id("ccld-facility-157806098")
+        == "157806098"
+    )
+    assert (
+        reviewer_ui._compare_facilities_name(
+            "Facility ID ccld-facility-157806098",
+            "ccld-facility-157806098",
+        )
+        == "Facility name unavailable"
+    )
 
 
 def test_facility_intelligence_pagination_boundaries_and_exact_position_wording() -> None:
@@ -1404,7 +1463,7 @@ def test_facility_hub_reuses_intelligence_aggregates_state_and_tie_order() -> No
     assert ">Alpha Center<button" in html
     assert html.count("Primary facility facts") == 1
     assert html.count("<dt>Facility type</dt>") == 1
-    assert "Opened from</dt><dd>Facility review intelligence" in html
+    assert "Opened from</dt><dd>Compare Facilities" in html
     assert "04/01/2026 to 05/31/2026" in html
     assert "Source coverage</dt><dd>Partial" in html
     assert "4</a></strong><span>Deduplicated complaints" in html
@@ -1496,7 +1555,7 @@ def test_facility_hub_renders_complaint_context_without_directory_row() -> None:
     assert "Untrusted Query Facility" not in html
     assert "Review summary" in html
     assert "Review next" in html
-    assert "Opened from</dt><dd>Facility review intelligence" in html
+    assert "Opened from</dt><dd>Compare Facilities" in html
     assert "complaint received date" in html.casefold()
     assert "157806098" in html
     assert "Different Directory Facility" not in html

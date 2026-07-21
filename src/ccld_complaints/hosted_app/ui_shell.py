@@ -14,10 +14,25 @@ FAVICON_PATH = "/favicon.ico"
 PRIMARY_NAV_LINKS: tuple[tuple[str, str], ...] = (
     ("Home", "/"),
     ("Facilities", "/ccld/facilities"),
+    ("Compare Facilities", "/ccld/facilities/intelligence"),
     ("Request Records", "/ccld/records/request"),
     ("Review", "/reviewer"),
     ("Feedback", "/feedback"),
     ("Help", "/ccld/help"),
+)
+COMPARE_FACILITIES_PATH = "/ccld/facilities/intelligence"
+COMPARE_FACILITIES_VIEWS: tuple[tuple[str, str, str], ...] = (
+    ("complaint-patterns", "Complaint Patterns", COMPARE_FACILITIES_PATH),
+    (
+        "licensing-visit-activity",
+        "Licensing and Visit Activity",
+        f"{COMPARE_FACILITIES_PATH}?view=licensing-visit-activity",
+    ),
+    (
+        "complaint-activity-over-time",
+        "Complaint Activity Over Time",
+        f"{COMPARE_FACILITIES_PATH}?view=complaint-activity-over-time",
+    ),
 )
 OPERATOR_NAV_LINKS: tuple[tuple[str, str], ...] = (
     ("Source coverage", "/operator/source-coverage"),
@@ -223,6 +238,23 @@ def render_action_group(
     return "\n".join(part for part in (button_markup, reference_markup) if part)
 
 
+def render_compare_facilities_views(active_view: str) -> str:
+    """Render plain-link Compare Facilities views without a tab interaction."""
+    items = []
+    for view_id, label, href in COMPARE_FACILITIES_VIEWS:
+        current = ' aria-current="page"' if view_id == active_view else ""
+        items.append(
+            f'          <li><a href="{html.escape(href, quote=True)}"{current}>'
+            f"{html.escape(label)}</a></li>"
+        )
+    return f"""      <nav class="compare-facilities-views" aria-label="Compare facility information">
+        <p><strong>Choose information to compare</strong></p>
+        <ul>
+{chr(10).join(items)}
+        </ul>
+      </nav>"""
+
+
 def _action_anchor(item: ActionItem, class_name: str) -> str:
     class_attr = f' class="{html.escape(class_name, quote=True)}"' if class_name else ""
     aria_attr = (
@@ -339,6 +371,10 @@ def _is_active_nav(href: str, active_path: str | None) -> bool:
     return False
   if href == "/":
     return active_path == "/"
+  if active_path == COMPARE_FACILITIES_PATH or active_path.startswith(
+    f"{COMPARE_FACILITIES_PATH}/"
+  ):
+    return href == COMPARE_FACILITIES_PATH
   return active_path == href or active_path.startswith(f"{href}/")
 
 
@@ -2778,7 +2814,7 @@ SHARED_CSS = r"""
     .civic-nav ul {
       display: grid;
       gap: 0.75rem;
-      grid-template-columns: repeat(6, minmax(5rem, auto));
+      grid-template-columns: repeat(7, minmax(5rem, auto));
       list-style: none;
       margin: 0;
       padding: 0;
@@ -2814,6 +2850,31 @@ SHARED_CSS = r"""
     .intelligence-purpose {
       color: var(--muted);
       margin-bottom: 1rem;
+    }
+    .compare-facilities-views {
+      border-block: 1px solid #b8b1a5;
+      margin-bottom: 1rem;
+      padding-block: 0.75rem;
+    }
+    .compare-facilities-views p {
+      margin: 0 0 0.5rem;
+    }
+    .compare-facilities-views ul {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem 1rem;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    .compare-facilities-views a {
+      display: inline-block;
+      font-weight: 650;
+      padding: 0.35rem 0;
+    }
+    .compare-facilities-views a[aria-current="page"] {
+      text-decoration-thickness: 0.2rem;
+      text-underline-offset: 0.35rem;
     }
     .intelligence-scope,
     .intelligence-filters,
@@ -3200,7 +3261,7 @@ SHARED_CSS = r"""
         grid-column: 1 / -1;
       }
       .civic-nav ul {
-        grid-template-columns: repeat(6, minmax(0, 1fr));
+        grid-template-columns: repeat(7, minmax(0, 1fr));
       }
       .civic-ledger-page .facility-intelligence-filter-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3332,7 +3393,8 @@ SHARED_CSS = r"""
       .site-header, .civic-header, .guided-stepper, .site-footer, .civic-footer,
       .packet-draft-actions, .technical-details, .skip-link, .mode-panel,
       .copy-icon-button, .copy-text-control, .facility-intelligence-sort,
-      .facility-pagination, .facility-row-actions {
+      .facility-pagination, .facility-row-actions, .compare-facilities-views,
+      .intelligence-filters, .compact-filter-panel {
         display: none !important;
       }
       .shell {

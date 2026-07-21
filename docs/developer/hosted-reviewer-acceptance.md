@@ -75,8 +75,9 @@ requests and stable tester-readiness markers:
 - `home-start`: `/`
 - `ccld-start`: `/ccld/`
 - `facility-lookup`: `/ccld/facilities`
-- `facility-priority`: `/ccld/facilities/review-priority`
 - `facility-intelligence`: `/ccld/facilities/intelligence`
+- `facility-licensing-activity`: `/ccld/facilities/intelligence?view=licensing-visit-activity`
+- `facility-complaint-trends`: `/ccld/facilities/intelligence?view=complaint-activity-over-time`
 - `facility-hub`: `/ccld/facilities/detail?facility_number=434417302`
 - `record-request`: `/ccld/records/request`
 - `record-request-context`: `/ccld/records/request?facility_number=157806098&start_date=2026-01-01&end_date=2026-01-31&request_context_origin=manual_entry`

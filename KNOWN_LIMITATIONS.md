@@ -69,12 +69,16 @@
   selected date dimension/range, source coverage, and explicit zero,
   unavailable, partial, or truncated cause. These counts describe authorized
   loaded records only; they do not prove statewide or public-source completeness.
-- `/ccld/facilities/intelligence` covers only authorized loaded complaint
-  records. Its available, partial, and unavailable states describe original
-  public-report links on those contributing records, not statewide or portal
-  completeness. Monthly anomaly cues are limited to the existing governed
-  24-period comparison window, and records missing the selected date dimension
-  remain explicit but cannot match an active date range.
+- `/ccld/facilities/intelligence` is the canonical Compare Facilities route.
+  Its complaint views cover only authorized loaded complaint records; available,
+  partial, and unavailable states describe original public-report links, not
+  statewide or portal completeness. `Licensing and Visit Activity` reads a
+  separate supported public licensing and visit source domain and does not establish
+  complaint coverage. Monthly anomaly cues remain limited to the governed
+  24-period window, and records missing the selected date dimension remain
+  explicit but cannot match an active date range. Issue #419 still requires
+  hosted capture, representative real-data reconciliation, duplicate/synthetic-
+  fallback checks, explicit visual acceptance, and stakeholder confirmation.
 - Source-derived list reads and complaint exports have no implicit 100-row cap.
   A caller-requested limit reports eligible count, returned count, and
   truncation status. Ordinary reviewer pagination remains presentation paging,
@@ -253,8 +257,10 @@
     automation, or audit coverage for reset/reload, exports, feedback,
     annotations, corrections, provider login, role changes, or operational
     actions.
-- The read-only `/reviewer/facilities/trends` page compares only authorized
-    loaded complaint records. Period availability is bounded by the first and
+- The read-only `Complaint Activity Over Time` view at
+    `/ccld/facilities/intelligence` compares only authorized loaded complaint
+    records. The old `/reviewer/facilities/trends` URL redirects to this view.
+    Period availability is bounded by the first and
     last loaded complaint-received-date period for the selected facility group;
     `Coverage unavailable` does not mean no public records exist. Complaint rows
     without a complaint received date remain in the separate `Date unavailable`
@@ -308,23 +314,25 @@
     values, bridge other reference fields, fetch fresh public data, or prove
     reference completeness or currency. Facilities without approved matching
     reference rows retain their existing nonblank values and setup warnings.
-- The local hosted scaffold facility hub can show facility review signals from
-    supported ignored uploaded public licensing/visit/citation summary CSVs.
-    A directory-backed hub shows facility name, Facility ID, facility type,
+- The local hosted scaffold Facility Overview can show supported public
+    licensing, visit, citation, Plan of Correction, status, and capacity
+    observations from configured local public-source data.
+    A directory-backed Facility Overview shows facility name, Facility ID, facility type,
     status, one composed address, county, and capacity once in the primary fact
     block; program type, regional office, and closed date appear once in a
     secondary disclosure. Raw source column names and source dataset filenames
     remain outside the primary page.
-    These signals are uploaded public summary fields only, not complaint records,
+    These are supported public observations only, not complaint records,
     not source verification, not legal findings, not complaint-coverage
     determinations, and not source-completeness proof. Malformed, shifted, or
     unsupported rows are skipped or counted internally without displaying raw row
     contents. Missing signals do not mean a facility has no complaints, visits,
     citations, POC dates, or public-source records.
-    When a facility-directory row is not available locally but supported signals
-    are available, the hub can render a signal-only facility hub with only its
-    safe facility name/ID and review cues. That fallback is a navigation aid over
-    uploaded public summary fields only; it does not
+    When a facility-directory row is not available locally but supported
+    observations are available, Facility Overview can render with a source-backed
+    facility name or `Facility name unavailable`, plus the public Facility ID and
+    supported observations. That fallback is a navigation aid over supported
+    public observations only; it does not
     diagnose official directory status, validate a license, verify a source,
     prove complaint coverage, or create complaint records.
     When authorized complaint records are loaded, the same route reuses the

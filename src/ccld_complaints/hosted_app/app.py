@@ -12,7 +12,7 @@ from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, parse_qsl, urlencode, urlparse
 
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import SQLAlchemyError
@@ -125,6 +125,8 @@ from ccld_complaints.hosted_app.reviewer_created_state_routes import (
 from ccld_complaints.hosted_app.reviewer_ui import (
     LOCAL_REVIEWER_UI_SCOPE,
     POSTGRES_REVIEWER_UI_SCOPE,
+    REVIEWER_UI_FACILITY_PRIORITIES_PATH,
+    REVIEWER_UI_FACILITY_TRENDS_PATH,
     REVIEWER_UI_PREFIX,
     REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH,
     ReviewerUiContext,
@@ -1103,6 +1105,10 @@ def route_response(
 ) -> tuple[int, str, bytes]:
     parsed_url = urlparse(path)
     parsed_path = parsed_url.path
+    if method == "GET":
+        redirect_location = _legacy_compare_facilities_redirect_location(path)
+        if redirect_location is not None:
+            return _redirect_response(redirect_location)
     if parsed_path == FAVICON_PATH:
         if not FAVICON_FILE.is_file():
             return 404, "text/plain; charset=utf-8", b"Not found"
@@ -1790,6 +1796,9 @@ class HostedScaffoldHandler(BaseHTTPRequestHandler):
         )
         self.send_response(status)
         self.send_header("Content-Type", content_type)
+        redirect_location = _redirect_location_header(self.path, status)
+        if redirect_location is not None:
+            self.send_header("Location", redirect_location)
         disposition = _content_disposition_header(self.path, status, content_type)
         if disposition is not None:
             self.send_header("Content-Disposition", disposition)
@@ -1817,6 +1826,43 @@ class HostedScaffoldHandler(BaseHTTPRequestHandler):
 
     def log_message(self, format: str, *args: Any) -> None:
         return
+
+
+def _legacy_compare_facilities_redirect_location(path: str) -> str | None:
+    parsed = urlparse(path)
+    view_by_path = {
+        CCLD_FACILITY_REVIEW_PRIORITY_PATH: "licensing-visit-activity",
+        REVIEWER_UI_FACILITY_PRIORITIES_PATH: "complaint-priority-compatibility",
+        REVIEWER_UI_FACILITY_TRENDS_PATH: "complaint-activity-over-time",
+    }
+    view = view_by_path.get(parsed.path)
+    if view is None:
+        return None
+    preserved = [
+        (key, value)
+        for key, value in parse_qsl(parsed.query, keep_blank_values=True)
+        if key != "view"
+    ]
+    query = urlencode([("view", view), *preserved])
+    return f"{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}?{query}"
+
+
+def _redirect_location_header(path: str, status: int) -> str | None:
+    if status not in {301, 302, 303, 307, 308}:
+        return None
+    return _legacy_compare_facilities_redirect_location(path)
+
+
+def _redirect_response(location: str) -> tuple[int, str, bytes]:
+    safe_location = html.escape(location, quote=True)
+    body = render_page_shell(
+        title="Moving to Compare Facilities",
+        heading="Moving to Compare Facilities",
+        skip_label="Skip to main content",
+        active_path=CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH,
+        main=f'<p><a href="{safe_location}">Continue to Compare Facilities</a>.</p>',
+    ).encode("utf-8")
+    return 302, "text/html; charset=utf-8", body
 
 
 def create_server(host: str, port: int) -> ThreadingHTTPServer:

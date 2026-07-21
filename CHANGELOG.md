@@ -1,6 +1,19 @@
 # Changelog
 
 ## Unreleased
+- Consolidated cross-facility review under the canonical `Compare Facilities`
+  destination at `/ccld/facilities/intelligence`. Complaint Patterns now keeps
+  primary contributing records visible, Licensing and Visit Activity preserves
+  bounded public licensing, visit, citation, Plan of Correction, status, and
+  capacity observations as a separate source domain, and Complaint
+  Activity Over Time preserves governed trend behavior. The three former route
+  surfaces redirect with supported query parameters preserved; authorization,
+  source/reviewer-state separation, exports, and mutation boundaries are
+  unchanged. Reviewer-facing labels use Facility Overview, Complaint Worklist,
+  meaningful source-backed licensing filters, and a public Facility ID fallback
+  without exposing internal stable identities as facility names. Added
+  deterministic route, state, responsive, focus, print, and RT-UI-GATE evidence
+  while leaving visual acceptance and hosted/real-data confirmation pending.
 - Added the governed development-loop label taxonomy for Issue #530, including
   fail-closed eligibility and conflict rules, human authority, a deterministic
   machine-readable contract, an idempotent GitHub CLI create/update and verify

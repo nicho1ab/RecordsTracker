@@ -47,7 +47,7 @@ The hosted reviewer route `/reviewer/records/serious-topics` filters authorized 
 
 The serious-topic filters can be combined with finding, facility, geography, and complaint received date. Use the reviewer detail link and original public report link before relying on a row; the worklist intentionally does not show raw allegation narrative text in the primary table.
 
-## Cross-facility intelligence
+## Compare Facilities
 
 Use `/ccld/facilities/intelligence` to decide which loaded facilities and
 complaints to open next. Filters cover facility type, the best available
@@ -61,14 +61,23 @@ substantiated/equivalent count, filtered complaint count, strongest existing
 timing flag, recent supported activity, facility name, and stable facility
 identity. This is deterministic ordering, not a hidden score. Each dashboard
 row explains the visible factors that placed it in the current order. The first
-row is selected and links to its Facility Review Hub and deterministic next
+row is selected and links to its Facility Overview and deterministic next
 complaint. Its separate source and reviewer-state regions remain bound to that
 same complaint. Applied-filter chips can clear one filter at a time; **Clear
-all** restores the default inventory. The Facility Review Hub preserves the
+all** restores the default inventory. Facility Overview preserves the
 useful intelligence origin, date, finding, serious-review, and coverage filters.
+
+Choose **Licensing and Visit Activity** to search supported public licensing,
+visit, citation, Plan of Correction, status, and capacity observations. Its
+filters name those conditions directly, including source-unavailable and
+multiple-observation states where the existing data supports them. Those
+observations do not establish complaint coverage. Choose **Complaint Activity
+Over Time** to compare loaded complaint
+activity by month or quarter. These choices are links, not tabs, and the primary
+comparison evidence remains visible.
 
 ## Hosted complaint trends
 
-Use `/reviewer/facilities/trends` to compare deduplicated loaded complaint activity by month or quarter for one facility or a filtered facility group. Filters cover facility, facility type, geography, finding/status, supported serious review topic, start date, end date, time grain, and a bounded period count.
+Use `/ccld/facilities/intelligence?view=complaint-activity-over-time` to compare deduplicated loaded complaint activity by month or quarter for one facility or a filtered facility group. Filters cover facility, facility type, geography, finding/status, supported serious review topic, start date, end date, time grain, and a bounded period count. The former `/reviewer/facilities/trends` URL redirects here and preserves supported filters.
 
 Each period shows total complaints, substantiated/equivalent findings, serious-topic qualifying complaints, a compact coverage state, and direct links to contributing complaint records. An anomaly cue appears only when adjacent periods are complete and comparable: new activity is at least 3 complaints after 0; increased activity is at least 3 and at least twice the preceding count; decreased activity follows at least 3 complaints and is no more than half the preceding count. Incomplete, unavailable, partial, or otherwise non-comparable periods receive no anomaly cue.

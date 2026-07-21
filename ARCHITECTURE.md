@@ -147,16 +147,20 @@ seam, a narrow local/test authenticated reviewer note creation route seam over
 the existing reviewer-created state scaffold, a narrow local/test workflow-shell
 note action and status action over the selected source-derived detail context,
 a thin browser-accessible local/test reviewer UI shell at `/reviewer` and
-`/reviewer/records` over those existing seams, a thin browser-accessible
-read-only facility trend route at `/reviewer/facilities/trends` over authorized
-loaded source-derived records with deterministic monthly/quarterly aggregation,
-coverage labels, anomaly cues, and complaint-detail links,
-a cross-facility attorney decision route at
-`/ccld/facilities/intelligence` over the same authorized loaded corpus that
+`/reviewer/records` over those existing seams, and one cross-facility attorney
+decision route at `/ccld/facilities/intelligence`. Its default `Complaint
+Patterns` view reads the authorized loaded corpus and
 reuses stable complaint deduplication, facility-priority ordering factors,
 substantiated/equivalent and serious-topic classification, monthly anomaly
 rules, and aggregate source-coverage semantics while linking counts to reviewer
-detail and carrying facility/date context into existing review routes,
+detail and carrying facility/date context into existing review routes. Its
+`Licensing and Visit Activity` view preserves bounded deterministic public
+licensing, visit, citation, Plan of Correction, status, and capacity observations
+as a separate source domain, and its `Complaint Activity
+Over Time` view preserves deterministic monthly/quarterly aggregation, coverage
+labels, anomaly cues, and complaint-detail links. The three former route
+surfaces redirect before data access to the corresponding canonical view while
+preserving supported query parameters,
 a per-facility attorney review hub at `/ccld/facilities/detail` that consumes
 those same governed calculations for one Facility ID, adds separately read
 reviewer-created status/note summaries, and reconciles every aggregate to stable

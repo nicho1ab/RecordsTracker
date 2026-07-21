@@ -23,8 +23,8 @@ through the CCLD-only review path in plain language:
 3. Choose a complaint date range and retrieve or show loaded local/test records.
 4. Work a facility/date-scoped review queue with progress counts, status
    filters, source-traceability cues, and suggested next-record guidance.
-5. Start across facilities in Facility Review Intelligence, then open a
-   Facility Review Hub for deduplicated complaint, finding, serious-review,
+5. Start across facilities in Compare Facilities, then open a
+   Facility Overview for deduplicated complaint, finding, serious-review,
    trend, source-coverage, reviewer-state, and recommended-next context linked
    to exact complaint records.
 6. Use the serious-topic worklist when attorney reviewers need governed
@@ -169,14 +169,13 @@ for the bundled seeded complaint review context.
 ```text
 http://127.0.0.1:8000/
 http://127.0.0.1:8000/ccld/facilities
-http://127.0.0.1:8000/ccld/facilities/review-priority
 http://127.0.0.1:8000/ccld/facilities/intelligence
+http://127.0.0.1:8000/ccld/facilities/intelligence?view=licensing-visit-activity
+http://127.0.0.1:8000/ccld/facilities/intelligence?view=complaint-activity-over-time
 http://127.0.0.1:8000/ccld/facilities/detail?facility_number=434417302
 http://127.0.0.1:8000/ccld/records/request
 http://127.0.0.1:8000/ccld/retrieval/jobs
 http://127.0.0.1:8000/reviewer
-http://127.0.0.1:8000/reviewer/facilities/priorities
-http://127.0.0.1:8000/reviewer/facilities/trends
 http://127.0.0.1:8000/reviewer/records/serious-topics
 http://127.0.0.1:8000/reviewer/records/matrix.csv?facility_number=157806098&start_date=2022-08-01&end_date=2022-08-31&request_context_origin=manual_entry
 http://127.0.0.1:8000/reviewer/packet/preview
@@ -188,9 +187,18 @@ Use `/ccld/facilities/intelligence` to narrow the authorized loaded corpus by
 facility type, geography, date range, finding, serious-review category, and
 source coverage. Facility results explain their visible ordering factors, link
 every count to its exact contributing complaint records, and continue to the
-Facility Review Hub, the filtered complaint queue, or the deterministic next
-complaint. The route does not use uploaded summary CSVs or tiny fixture fallback
-facilities in PostgreSQL mode.
+Facility Overview, the Complaint Worklist, or the deterministic next
+complaint. Complaint Patterns remains separate from licensing and visit
+observations and does not add tiny fixture fallback facilities in PostgreSQL mode.
+
+`Complaint Patterns` is the default view. `Licensing and Visit Activity`
+preserves bounded search over supported public licensing, visit, citation, Plan
+of Correction, status, and capacity observations while keeping that source
+domain separate from complaint coverage. `Complaint Activity Over Time`
+preserves the governed monthly and quarterly comparison. The older
+`/ccld/facilities/review-priority`, `/reviewer/facilities/priorities`, and
+`/reviewer/facilities/trends` URLs redirect to their corresponding canonical
+view and preserve supported query parameters.
 
 For local live public CCLD retrieval, use the explicit live startup command:
 

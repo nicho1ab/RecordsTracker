@@ -183,16 +183,20 @@ on the row instead of silently hiding the record. Use this page as a triage aid
 only: values are source-derived and not independently verified by
 RecordsTracker, and an empty list means no currently loaded records matched (not
 that no substantiated public reports exist).
-Open `http://127.0.0.1:8000/reviewer/facilities/priorities` when you need a
-facility-level starting point over the same authorized loaded complaint corpus.
-The page groups deduplicated complaint records by stable source-derived facility
+Open `http://127.0.0.1:8000/ccld/facilities/intelligence` and choose **Complaint
+Patterns** when you need a facility-level starting point over the same authorized
+loaded complaint corpus. The page groups deduplicated complaint records by stable source-derived facility
 identity, shows complaint and substantiated/equivalent counts, supported recent
 activity, missing-value/source-link cues, and deterministic contributing factors,
-and links onward to the qualifying complaint queue, reviewer detail, and original
+and links onward to the Complaint Worklist, reviewer detail, and original
 public report when available. Use the filters for facility type, geography, date
 window, minimum counts, supported indicators, and rows per page. Treat this page
 as an explainable review-ordering aid over loaded records, not a hidden score,
 public-source completeness claim, legal priority, or facility-wide finding.
+Choose **Licensing and Visit Activity** for supported public licensing, visit,
+citation, Plan of Correction, status, and capacity observations, or **Complaint
+Activity Over Time** for monthly/quarterly complaint
+comparisons. These views do not create a second facility inventory.
 Missing local/test values should be described as not available in the local/test
 record, not as public-source absence, record incompleteness, or data loss. After adding a note or status in reviewer detail, return to the
 CCLD request page and submit the same request to see updated progress.
