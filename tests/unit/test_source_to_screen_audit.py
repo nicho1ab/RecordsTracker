@@ -742,7 +742,7 @@ def test_coverage_package_is_deterministic_portable_reconciled_and_value_free(
     assert first == second
     assert first.report_id == (
         "coverage-report-v1-"
-        "ae70bf79d50bb9d3ea399f3d39f10ae829bb98370df575d62dc22f41f36c8c81"
+        "6b6670913151e7bb7f4ef3225f309cdd95a6724090a31f8ca9f1943f6d9a60cd"
     )
     assert re.fullmatch(r"coverage-report-v1-[0-9a-f]{64}", first.report_id)
     assert validate_coverage_package(first_dir, repo_root=REPO_ROOT) == first.manifest
@@ -786,6 +786,23 @@ def test_coverage_package_is_deterministic_portable_reconciled_and_value_free(
         for row in reconciliation["invariants"]
     )
     assert first.report["release_assessment"]["status"] == "passed"
+    facility_reference = coverage["facility_reference"]
+    assert facility_reference["availability"] == "available"
+    assert facility_reference["snapshot"]["selection_state"] == "active_accepted"
+    assert facility_reference["release_assessment"]["status"] == "passed"
+    assert first.report["source_governance"] == {
+        "primary_current_source_family": (
+            "ccld-transparencyapi-facility-reference"
+        ),
+        "primary_selection_state": "active_accepted",
+        "arcgis_role": "supplementary",
+        "ckan_program_role": "historical_or_controlled_fallback",
+        "complaint_time_role": "historical_complaint_context",
+        "current_and_complaint_time_separate": True,
+        "refresh_schedule_status": "not_approved",
+        "raw_733_mapping_status": "unresolved",
+        "raw_733_descriptive_label_emitted": False,
+    }
 
     report_bytes = first_files["coverage-report.json"]
     csv_bytes = first_files["aggregate-coverage.csv"]

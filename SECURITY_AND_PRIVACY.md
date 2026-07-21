@@ -57,6 +57,16 @@ promote snapshots, write canonical or reviewer-created state, or expose
 credentials, cookies, authentication claims, private paths, or uncontrolled
 exception content.
 
+Issue #453 contract `1.1.0` measures the accepted TransparencyAPI/shared-
+projection path through allowlisted aggregate counts only. The validator rejects
+facility names, addresses, telephone, CONTACT and administrator values, public
+Facility IDs, source bodies and rows, complaint or event text, reviewer-created
+state, record-level conflicts, unsafe report URLs, authentication material, and
+machine-specific absolute paths. The runtime adapter performs only authorized
+`SELECT` reads and emits explicit unavailable states when an approved source
+dimension is not present; it does not query a public source or write application
+data.
+
 ## Secrets
 
 Local secrets must use environment variables or untracked `.env` files. `.env` is ignored by Git.

@@ -49,12 +49,18 @@ from ccld_complaints.source_to_screen_catalog import (
     discover_element_specs,
     safe_facility_source_header,
 )
+from ccld_complaints.source_to_screen_facility_coverage import (
+    build_runtime_facility_coverage,
+    canonical_facility_coverage,
+    governed_fixture_facility_coverage,
+    unavailable_facility_coverage,
+)
 
 AuditMode = Literal["local", "runtime"]
 
 AUDIT_SCHEMA_VERSION = 1
-COVERAGE_CONTRACT_VERSION = "1.0.0"
-COVERAGE_MINIMUM_CONSUMER_VERSION = "1.0.0"
+COVERAGE_CONTRACT_VERSION = "1.1.0"
+COVERAGE_MINIMUM_CONSUMER_VERSION = "1.1.0"
 COVERAGE_PRODUCER_SCHEMA_ID = "issues-453-477-coverage-report-v1"
 COVERAGE_PRODUCER_VERSION = "source-to-screen-audit-v1"
 COVERAGE_SCHEMA_PATH = Path("schemas/issues-453-477-coverage-report-v1.schema.json")
@@ -3310,8 +3316,6 @@ def _coverage_source_snapshots(value: Any) -> tuple[Mapping[str, Any], ...]:
         raise CoverageContractError("Source snapshot identifiers must be unique.")
     if not any(item["selection_state"] == "retained_existing" for item in ordered):
         raise CoverageContractError("The retained existing source family must be represented.")
-    if not any(item["selection_state"] == "inactive_candidate" for item in ordered):
-        raise CoverageContractError("The inactive statewide candidate must be represented.")
     return ordered
 
 
@@ -4121,6 +4125,7 @@ def _coverage_csv_bytes(
     terminal_eligible_count: int,
     operations: Mapping[str, Any],
     release_assessment: Mapping[str, Any],
+    facility_reference_coverage: Mapping[str, Any],
 ) -> bytes:
     rows: list[Mapping[str, Any]] = []
     blank = ""
@@ -4257,6 +4262,58 @@ def _coverage_csv_bytes(
                 "status": snapshot["availability"],
                 "criteria_set_id": criteria_set_id,
                 "source_snapshot_id": snapshot["source_snapshot_id"],
+            }
+        )
+    facility_snapshot = _coverage_mapping(
+        facility_reference_coverage["snapshot"],
+        context="facility-reference snapshot",
+    )
+    facility_snapshot_id = facility_snapshot.get("source_snapshot_id") or blank
+    for metric in _coverage_sequence(
+        facility_reference_coverage["aggregate_metrics"],
+        context="facility-reference metrics",
+    ):
+        metric_value = _coverage_mapping(metric, context="facility-reference metric")
+        rows.append(
+            {
+                "contract_version": COVERAGE_CONTRACT_VERSION,
+                "report_id": report_id,
+                "dimension": "facility_reference_metric",
+                "field_id": blank,
+                "stage": blank,
+                "category": metric_value["metric_id"],
+                "numerator_count": metric_value["count"],
+                "denominator_count": blank,
+                "percentage": blank,
+                "status": metric_value["status"],
+                "criteria_set_id": facility_reference_coverage["criteria_set_id"],
+                "source_snapshot_id": facility_snapshot_id,
+            }
+        )
+    for check in _coverage_sequence(
+        _coverage_mapping(
+            facility_reference_coverage["release_assessment"],
+            context="facility-reference release assessment",
+        )["checks"],
+        context="facility-reference release checks",
+    ):
+        check_value = _coverage_mapping(
+            check, context="facility-reference release check"
+        )
+        rows.append(
+            {
+                "contract_version": COVERAGE_CONTRACT_VERSION,
+                "report_id": report_id,
+                "dimension": "facility_reference_release",
+                "field_id": blank,
+                "stage": blank,
+                "category": check_value["criterion_id"],
+                "numerator_count": check_value["observed_count"],
+                "denominator_count": check_value["threshold_count"],
+                "percentage": blank,
+                "status": check_value["status"],
+                "criteria_set_id": facility_reference_coverage["criteria_set_id"],
+                "source_snapshot_id": facility_snapshot_id,
             }
         )
     rows.sort(
@@ -4428,7 +4485,7 @@ def _coverage_fixture_input(value: Mapping[str, Any]) -> Mapping[str, Any]:
             "retention",
             "provenance",
         ),
-        optional=("unavailable_dimensions",),
+        optional=("facility_reference_coverage", "unavailable_dimensions"),
     )
     _reject_prohibited_coverage_content(value)
     if value["contract_version"] != COVERAGE_CONTRACT_VERSION:
@@ -4469,6 +4526,40 @@ def generate_coverage_package(
         fixture["producer_version"], context="producer_version"
     )
     source_snapshots = _coverage_source_snapshots(fixture["source_snapshots"])
+    facility_reference_input = _coverage_mapping(
+        fixture.get(
+            "facility_reference_coverage",
+            unavailable_facility_coverage("fixture-not-provided"),
+        ),
+        context="facility-reference coverage",
+    )
+    facility_reference_coverage = (
+        governed_fixture_facility_coverage(
+            _coverage_identifier(
+                facility_reference_input["fixture_profile"],
+                context="facility-reference fixture profile",
+            )
+        )
+        if set(facility_reference_input) == {"fixture_profile"}
+        else canonical_facility_coverage(facility_reference_input)
+    )
+    if facility_reference_coverage["availability"] == "available":
+        facility_snapshot = _coverage_mapping(
+            facility_reference_coverage["snapshot"],
+            context="facility-reference snapshot",
+        )
+        if not any(
+            snapshot["source_snapshot_id"]
+            == facility_snapshot["source_snapshot_id"]
+            and snapshot["source_family_id"]
+            == facility_reference_coverage["source_family_id"]
+            and snapshot["selection_state"] == "active_accepted"
+            for snapshot in source_snapshots
+        ):
+            raise CoverageContractError(
+                "Available facility-reference coverage requires its active accepted "
+                "source snapshot in the package manifest."
+            )
     report_id = _coverage_identity(
         evaluation_id=evaluation_id,
         source_snapshots=source_snapshots,
@@ -4504,6 +4595,58 @@ def generate_coverage_package(
         field_count=len(specs),
     )
     criteria = _coverage_criteria(fixture["criteria"])
+    facility_release = _coverage_mapping(
+        facility_reference_coverage["release_assessment"],
+        context="facility-reference release assessment",
+    )
+    facility_failed_checks = sum(
+        _coverage_mapping(check, context="facility-reference release check")[
+            "status"
+        ]
+        == "failed"
+        for check in _coverage_sequence(
+            facility_release["checks"],
+            context="facility-reference release checks",
+        )
+    )
+    if facility_failed_checks:
+        observed_metrics = dict(
+            cast(Mapping[str, int], criteria["observed_metrics"])
+        )
+        observed_metrics["required_stage_regression_total"] += facility_failed_checks
+        criteria = {**criteria, "observed_metrics": dict(sorted(observed_metrics.items()))}
+        stage_exception = next(
+            (
+                str(item["exception_id"])
+                for item in cast(
+                    Sequence[Mapping[str, Any]], criteria["reviewed_exceptions"]
+                )
+                if item["criterion_id"]
+                == "release.source-to-screen-stage-regression"
+            ),
+            None,
+        )
+        if stage_exception is not None:
+            facility_reference_coverage = canonical_facility_coverage(
+                {
+                    **facility_reference_coverage,
+                    "release_assessment": {
+                        "status": "reviewed_exception_required",
+                        "checks": [
+                            {
+                                **check,
+                                "status": "reviewed_exception_required",
+                                "exception_id": stage_exception,
+                            }
+                            if check["status"] == "failed"
+                            else check
+                            for check in cast(
+                                Sequence[Mapping[str, Any]], facility_release["checks"]
+                            )
+                        ],
+                    },
+                }
+            )
     release_assessment = _coverage_release_assessment(
         criteria=criteria,
         operations=operations,
@@ -4522,6 +4665,8 @@ def generate_coverage_package(
         unavailable_dimensions.add("operator_facility_index")
     if operation_metadata["job_index_availability"] == "unavailable":
         unavailable_dimensions.add("operator_job_index")
+    if facility_reference_coverage["availability"] == "unavailable":
+        unavailable_dimensions.add("facility_reference_coverage")
     package_availability = (
         "reconciliation_failed"
         if reconciliation["reconciliation_status"] == "failed"
@@ -4545,6 +4690,7 @@ def generate_coverage_package(
             "field_stage_coverage": list(stage_rows),
             "terminal_classification_eligible_count": terminal_eligible_count,
             "terminal_classification_counts": terminal_counts,
+            "facility_reference": facility_reference_coverage,
         },
         "operations": operations,
         "criteria": criteria,
@@ -4556,6 +4702,19 @@ def generate_coverage_package(
             "statewide_candidate_selection_state": "inactive_candidate",
             "statewide_completeness_baseline": "not_established",
             "cadence_status": "not_approved",
+            "raw_733_mapping_status": "unresolved",
+            "raw_733_descriptive_label_emitted": False,
+        },
+        "source_governance": {
+            "primary_current_source_family": (
+                "ccld-transparencyapi-facility-reference"
+            ),
+            "primary_selection_state": "active_accepted",
+            "arcgis_role": "supplementary",
+            "ckan_program_role": "historical_or_controlled_fallback",
+            "complaint_time_role": "historical_complaint_context",
+            "current_and_complaint_time_separate": True,
+            "refresh_schedule_status": "not_approved",
             "raw_733_mapping_status": "unresolved",
             "raw_733_descriptive_label_emitted": False,
         },
@@ -4580,6 +4739,7 @@ def generate_coverage_package(
         terminal_eligible_count=terminal_eligible_count,
         operations=operations,
         release_assessment=release_assessment,
+        facility_reference_coverage=facility_reference_coverage,
     )
     artifacts = (
         _coverage_artifact_entry(
@@ -5176,12 +5336,87 @@ def _runtime_source_snapshot(
     return snapshot, {"input_manifest_id": input_manifest_id}
 
 
+def _runtime_governed_reference_snapshots(
+    connection: Connection,
+    *,
+    facility_reference_coverage: Mapping[str, Any],
+) -> tuple[Mapping[str, Any], ...]:
+    from ccld_complaints.connectors.arcgis_ccl_facilities.contract import (
+        ARCGIS_SUPPLEMENT_SOURCE_FAMILY_ID,
+    )
+    from ccld_complaints.connectors.ccld_transparency_api.contract import (
+        SOURCE_FAMILY_ID as TRANSPARENCY_SOURCE_FAMILY_ID,
+    )
+    from ccld_complaints.hosted_app.source_snapshot_lifecycle import (
+        source_snapshot_pointers,
+        source_snapshots,
+    )
+
+    tables = set(inspect(connection).get_table_names())
+    if not {source_snapshots.name, source_snapshot_pointers.name}.issubset(tables):
+        return ()
+    rows = tuple(
+        dict(row)
+        for row in connection.execute(
+            select(source_snapshots)
+            .join(
+                source_snapshot_pointers,
+                source_snapshot_pointers.c.active_snapshot_id
+                == source_snapshots.c.snapshot_id,
+            )
+            .where(
+                source_snapshots.c.source_family_id.in_(
+                    (
+                        TRANSPARENCY_SOURCE_FAMILY_ID,
+                        ARCGIS_SUPPLEMENT_SOURCE_FAMILY_ID,
+                    )
+                ),
+                source_snapshots.c.lifecycle_state == "accepted",
+            )
+            .order_by(source_snapshots.c.snapshot_id)
+        ).mappings()
+    )
+    coverage_snapshot = _coverage_mapping(
+        facility_reference_coverage["snapshot"],
+        context="facility-reference snapshot",
+    )
+    snapshots: list[Mapping[str, Any]] = []
+    for row in rows:
+        source_family_id = str(row["source_family_id"])
+        is_transparency = source_family_id == TRANSPARENCY_SOURCE_FAMILY_ID
+        snapshots.append(
+            {
+                "source_snapshot_id": str(row["snapshot_id"]),
+                "source_family_id": source_family_id,
+                "selection_state": "active_accepted",
+                "safe_version_label": (
+                    "transparencyapi-connector-v1"
+                    if is_transparency
+                    else "arcgis-supplement-v1"
+                ),
+                "observed_at": _runtime_timestamp(row.get("recorded_at")),
+                "row_count": (
+                    int(coverage_snapshot["eligible_facility_count"])
+                    if is_transparency
+                    else int(row["row_count"])
+                ),
+                "schema_fingerprint": str(row["schema_fingerprint"]),
+                "content_fingerprint": str(row["normalized_content_sha256"]),
+                "availability": "available",
+                "reason_category": "none",
+                "cadence_status": "not_approved",
+            }
+        )
+    return tuple(snapshots)
+
+
 def build_runtime_coverage_input(
     connection: Connection,
     audit_result: AuditResult,
     *,
     repo_root: Path | None = None,
     previous_accepted_report_id: str | None = None,
+    previous_facility_reference_coverage: Mapping[str, Any] | None = None,
 ) -> Mapping[str, Any]:
     """Build the v1 package input using SELECT-only runtime measurements."""
 
@@ -5189,6 +5424,10 @@ def build_runtime_coverage_input(
     specs = discover_element_specs(root, include_retained_artifacts=False)
     stats_by_id = _runtime_population_stats(audit_result)
     coverage, unavailable = _runtime_coverage_measurements(specs, stats_by_id)
+    facility_reference_coverage = build_runtime_facility_coverage(
+        connection,
+        previous=previous_facility_reference_coverage,
+    )
     runtime_snapshot, snapshot_metadata = _runtime_source_snapshot(
         connection,
         audit_result=audit_result,
@@ -5209,6 +5448,8 @@ def build_runtime_coverage_input(
         for stage in cast(Mapping[str, Mapping[str, int]], field).values()
     )
     unavailable_dimensions = set(unavailable) | set(facility_unavailable)
+    if facility_reference_coverage["availability"] == "unavailable":
+        unavailable_dimensions.add("facility_reference_coverage")
     unavailable_dimensions.add("operator_job_index")
     return {
         "fixture_id": "runtime-governed-registry-v1",
@@ -5221,19 +5462,10 @@ def build_runtime_coverage_input(
         "generation_mode": "read_only_boundary",
         "source_snapshots": [
             runtime_snapshot,
-            {
-                "source_snapshot_id": "statewide-candidate-unavailable-v1",
-                "source_family_id": "ccld-statewide-candidate",
-                "selection_state": "inactive_candidate",
-                "safe_version_label": None,
-                "observed_at": None,
-                "row_count": None,
-                "schema_fingerprint": None,
-                "content_fingerprint": None,
-                "availability": "unavailable",
-                "reason_category": "read_boundary_unavailable",
-                "cadence_status": "not_approved",
-            },
+            *_runtime_governed_reference_snapshots(
+                connection,
+                facility_reference_coverage=facility_reference_coverage,
+            ),
         ],
         "criteria": {
             "baseline_metrics": {
@@ -5261,6 +5493,7 @@ def build_runtime_coverage_input(
             "reviewed_exceptions": [],
         },
         "coverage": coverage,
+        "facility_reference_coverage": facility_reference_coverage,
         "operational": {
             "facility_index": facility_index,
             "job_index": {
@@ -5309,15 +5542,187 @@ def _write_runtime_generation_status(
     os.replace(temporary, status_path)
 
 
-def _runtime_previous_manifest(output_dir: Path) -> Mapping[str, Any] | None:
+def _runtime_previous_package_context(
+    output_dir: Path,
+) -> tuple[Mapping[str, Any], Mapping[str, Any] | None] | None:
     if not output_dir.is_dir():
         return None
     from ccld_complaints.source_to_screen_coverage import (
+        CoverageReadError,
         load_validated_coverage_package,
     )
 
-    package = load_validated_coverage_package(output_dir)
-    return package.manifest
+    try:
+        package = load_validated_coverage_package(output_dir)
+    except CoverageReadError:
+        return _runtime_previous_v1_context(output_dir)
+    coverage = _coverage_mapping(package.report["coverage"], context="previous coverage")
+    facility_reference = coverage.get("facility_reference")
+    return (
+        package.manifest,
+        canonical_facility_coverage(
+            _coverage_mapping(
+                facility_reference,
+                context="previous facility-reference coverage",
+            )
+        )
+        if facility_reference is not None
+        else None,
+    )
+
+
+def _runtime_previous_v1_context(
+    output_dir: Path,
+) -> tuple[Mapping[str, Any], None]:
+    """Validate and retain a deployed v1.0 package during the v1.1 transition."""
+
+    manifest_path = output_dir / "manifest.json"
+    try:
+        manifest_bytes = manifest_path.read_bytes()
+        parsed_manifest = json.loads(manifest_bytes.decode("utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise CoverageContractError(
+            "The previous runtime coverage package is unavailable."
+        ) from error
+    if not isinstance(parsed_manifest, dict):
+        raise CoverageContractError("The previous runtime coverage manifest is invalid.")
+    manifest = cast(Mapping[str, Any], parsed_manifest)
+    if manifest_bytes != _canonical_json_bytes(manifest):
+        raise CoverageContractError(
+            "The previous runtime coverage manifest serialization is invalid."
+        )
+    _reject_prohibited_coverage_content(manifest)
+    if (
+        manifest.get("contract_version") != "1.0.0"
+        or manifest.get("minimum_consumer_version") != "1.0.0"
+        or manifest.get("producer_schema_id") != COVERAGE_PRODUCER_SCHEMA_ID
+        or not isinstance(manifest.get("report_id"), str)
+        or not re.fullmatch(r"coverage-report-v1-[0-9a-f]{64}", str(manifest["report_id"]))
+    ):
+        raise CoverageContractError(
+            "The previous runtime coverage package version is not supported."
+        )
+    _coverage_timestamp(manifest.get("generated_at"), context="previous generated_at")
+    entries_value = manifest.get("artifacts")
+    if not isinstance(entries_value, list):
+        raise CoverageContractError("The previous runtime artifact manifest is invalid.")
+    entries = {
+        str(entry.get("name")): entry
+        for entry in entries_value
+        if isinstance(entry, Mapping) and isinstance(entry.get("name"), str)
+    }
+    expected_media_types = {
+        "coverage-report.json": "application/json",
+        "operator-facility-index.jsonl": "application/x-ndjson",
+        "operator-job-index.jsonl": "application/x-ndjson",
+        "aggregate-coverage.csv": "text/csv",
+    }
+    if len(entries_value) != len(expected_media_types) or set(entries) != set(
+        expected_media_types
+    ):
+        raise CoverageContractError("The previous runtime artifact set is invalid.")
+    report: Mapping[str, Any] | None = None
+    for name in sorted(expected_media_types):
+        entry = entries[name]
+        if set(entry) != {
+            "name",
+            "availability",
+            "reason_category",
+            "byte_count",
+            "sha256",
+            "media_type",
+        }:
+            raise CoverageContractError(
+                "The previous runtime artifact metadata is invalid."
+            )
+        if entry.get("media_type") != expected_media_types[name]:
+            raise CoverageContractError(
+                "The previous runtime artifact media type is invalid."
+            )
+        availability = entry.get("availability")
+        if availability == "unavailable":
+            _coverage_enum(
+                entry.get("reason_category"),
+                _COVERAGE_AVAILABILITY_REASON_CATEGORIES,
+                context="previous artifact reason",
+            )
+            if name in {"coverage-report.json", "aggregate-coverage.csv"}:
+                raise CoverageContractError(
+                    "The previous runtime required artifact is unavailable."
+                )
+            if (
+                entry.get("byte_count") != 0
+                or entry.get("sha256") is not None
+                or (output_dir / name).exists()
+            ):
+                raise CoverageContractError(
+                    "The previous runtime unavailable artifact is invalid."
+                )
+            continue
+        if availability != "available":
+            raise CoverageContractError(
+                "The previous runtime artifact availability is invalid."
+            )
+        if entry.get("reason_category") != "none":
+            raise CoverageContractError(
+                "The previous runtime available artifact reason is invalid."
+            )
+        try:
+            value = (output_dir / name).read_bytes()
+        except OSError as error:
+            raise CoverageContractError(
+                "A previous runtime coverage artifact is unavailable."
+            ) from error
+        if (
+            entry.get("byte_count") != len(value)
+            or entry.get("sha256") != hashlib.sha256(value).hexdigest()
+        ):
+            raise CoverageContractError(
+                "A previous runtime coverage artifact failed hash validation."
+            )
+        if name == "coverage-report.json":
+            try:
+                parsed_report = json.loads(value.decode("utf-8"))
+            except (UnicodeDecodeError, json.JSONDecodeError) as error:
+                raise CoverageContractError(
+                    "The previous runtime coverage report is invalid."
+                ) from error
+            if not isinstance(parsed_report, dict):
+                raise CoverageContractError(
+                    "The previous runtime coverage report is invalid."
+                )
+            report = cast(Mapping[str, Any], parsed_report)
+            if value != _canonical_json_bytes(report):
+                raise CoverageContractError(
+                    "The previous runtime coverage report serialization is invalid."
+                )
+        elif name == "aggregate-coverage.csv":
+            expected_header = ",".join(COVERAGE_AGGREGATE_CSV_FIELDNAMES).encode(
+                "utf-8"
+            ) + b"\n"
+            if not value.startswith(expected_header):
+                raise CoverageContractError(
+                    "The previous runtime aggregate header is invalid."
+                )
+    if report is None:
+        raise CoverageContractError("The previous runtime coverage report is unavailable.")
+    _reject_prohibited_coverage_content(report)
+    if (
+        report.get("contract_version") != "1.0.0"
+        or report.get("report_id") != manifest["report_id"]
+        or report.get("package_availability") not in {"available", "partial"}
+    ):
+        raise CoverageContractError("The previous runtime coverage report is invalid.")
+    try:
+        if manifest_path.read_bytes() != manifest_bytes:
+            raise CoverageContractError(
+                "The previous runtime coverage manifest changed during validation."
+            )
+    except OSError as error:
+        raise CoverageContractError(
+            "The previous runtime coverage manifest became unavailable."
+        ) from error
+    return manifest, None
 
 
 def _unused_runtime_archive_path(
@@ -5367,7 +5772,11 @@ def publish_runtime_coverage_package(
     report_id: str | None = None
     archived_path: Path | None = None
     try:
-        previous_manifest = _runtime_previous_manifest(effective_output_dir)
+        previous_context = _runtime_previous_package_context(effective_output_dir)
+        previous_manifest = None if previous_context is None else previous_context[0]
+        previous_facility_reference = (
+            None if previous_context is None else previous_context[1]
+        )
         previous_report_id = (
             None
             if previous_manifest is None
@@ -5378,6 +5787,7 @@ def publish_runtime_coverage_package(
             audit_result,
             repo_root=root,
             previous_accepted_report_id=previous_report_id,
+            previous_facility_reference_coverage=previous_facility_reference,
         )
         package = generate_coverage_package(
             runtime_input,

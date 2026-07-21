@@ -156,6 +156,17 @@ remain authorization-before-read and `SELECT`-only. This change adds no
 materialized projection, schema, migration, production snapshot promotion,
 canonical backfill execution, refresh schedule, or reviewer-created-state write.
 
+Issue #453 source-to-screen contract `1.1.0` reports this projection only as
+aggregate coverage. It records the active accepted snapshot identity and safe
+fingerprints; eligible, leading-zero, quarantine, field-state, source-conflict,
+surface-availability, and threshold counts; and explicit unavailable states.
+CONTACT and detail-status coverage remain unavailable when detail observations
+are not part of the accepted persisted snapshot. Complaint-linked conflict
+counts likewise remain unavailable unless those authorized historical rows are
+included in the measured projection. An unavailable measurement is never
+serialized as a verified zero. No public Facility ID or facility, contact,
+complaint, source-row, or reviewer-created value enters this aggregate report.
+
 ## Offline ArcGIS source-specific snapshot lifecycle
 
 Issue #518 adds an independently useful, source-reference-only lifecycle

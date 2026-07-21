@@ -2,14 +2,19 @@
 
 ## Scope and authority
 
-This report describes the isolated Issue #453 producer implementation. It is not
-a final issue-completion report and does not authorize Issue #477 UI work,
-integration, lifecycle actions, a source selection, a deployed runtime read,
-retention automation, or an operational job action.
+This report describes the Issue #453 producer and its repository-complete
+TransparencyAPI/shared-projection extension. It is not a final issue-completion
+report: deployment and every applicable non-provider Hosted acceptance gate
+remain required. The product owner accepts the residual risk when the approved
+automated Cloudflare authenticated-UI assertion provider is unavailable, so
+provider unavailability alone does not block completion and must not be reported
+as a passed authenticated-UI run. This report does not authorize
+lifecycle actions, source retrieval or activation, retention automation,
+canonical backfill, scheduling, deployment, or an operational job action.
 
 - Planning merge SHA: `fa5ad12b434020162f813dce34f72a9462a878d8`.
-- Shared contract: `1.0.0`.
-- Minimum consumer version: `1.0.0`.
+- Shared contract: `1.1.0`.
+- Minimum consumer version: `1.1.0`.
 - Producer schema ID: `issues-453-477-coverage-report-v1`.
 - Producer version: `source-to-screen-audit-v1`.
 - JSON Schema:
@@ -20,6 +25,45 @@ The producer reuses
 the existing source-to-screen catalog and tracked inventory. The contract schema
 and Issue #490 technical profile schema are package/report schemas, not canonical
 field catalogs.
+
+Contract `1.1.0` extends the same report with
+`coverage.facility_reference`; it does not add a competing coverage framework.
+The extension reuses the active accepted TransparencyAPI lifecycle and
+ADR-0017's authorization-before-read shared projection. TransparencyAPI is the
+primary current-reference family, ArcGIS remains supplementary, CKAN/program
+observations remain historical or controlled fallback, and complaint/report-
+time observations remain historical. The older Issue #490 inactive-statewide-
+candidate statements later in this report are retained as historical v1.0
+context and do not override these merged Issues #553/#554/#482 decisions.
+
+## TransparencyAPI and shared-projection extension
+
+The facility-reference object records safe active-snapshot identity and
+fingerprints plus closed aggregate inventories for 16 public projection fields,
+10 stages, 11 failure categories, 8 applicable surface IDs, 29 metrics, and 13
+release criteria. It includes eligible and leading-zero Facility Number counts;
+blank, duplicate, malformed-block, and unknown-code quarantines; valid-zero type
+`777`; unresolved raw `733`; address, telephone, administrator, bulk status, and
+Closed Date population; placeholder preservation; current/supplementary/
+historical conflicts; surface availability; unsafe-report checks; quarantine
+exclusion; and reviewer-state immutability.
+
+CONTACT, detail status, and complaint-linked conflict metrics use explicit
+`unavailable` status when those authorized detail or historical rows are not in
+the measured accepted snapshot/projection. The producer never converts missing
+authority into a verified zero. Field-stage rows retain separate blank, absent,
+unavailable, invalid, conflict, failure, and not-applicable counts. Surface rows
+measure public-projection availability and carry a repository-versus-hosted
+evidence status; they do not claim that repository checks are a deployed Hosted
+browser run.
+
+The release extension compares the current aggregate object with the prior
+accepted package when one exists. Zero-tolerance checks cover facility-count,
+blank-state, unresolved-code/label, source-conflict, stored-row/projection
+reconciliation, read-model, surface-rendering, stage-balance, quarantine,
+placeholder, context-conflation, and unsafe-report regressions. A breach fails,
+or becomes `reviewed_exception_required` only when the existing explicit
+reviewed-exception input names it; the producer never approves the exception.
 
 ## Package and identity
 
@@ -237,9 +281,54 @@ Retention duration is unresolved. Until a separate policy is approved,
 automated destructive cleanup is authorized. A previous accepted report ID can
 be recorded without labeling it current.
 
-## Issue #490 limits
+## Contract 1.1 local acceptance evidence
 
-The package explicitly preserves the Issue #490 outcome:
+Controlled evidence is retained under the ignored repository-relative root
+`data/processed/source-to-screen-audit/issue-453-transparencyapi-acceptance/`.
+No file under that root is tracked. Two fixture packages generated from the
+assigned secondary worktree with the documented primary interpreter and fixed
+UTC time are byte-identical:
+
+| Artifact | Bytes | SHA-256 |
+| --- | ---: | --- |
+| `aggregate-coverage.csv` | 1,830,569 | `01c330d102bac9f88257eaf6bde4ea0752bc93742ac3b713d1c0c153c8a1539d` |
+| `coverage-report.json` | 326,572 | `91bc2a8e9dcdc4e35856d5259a27c6c8019e26a4e111e2b63b1cb8cea19c1be1` |
+| `manifest.json` | 3,042 | `bf1f35180c6aa47b7c08f2332206eead58a3f756b62c78234cf92b63d1fdb9a1` |
+| `operator-facility-index.jsonl` | 2,028 | `93297aa46bada8c25f9ed01de30b01d399d47e98b7382081a48b8ac5e2df9216` |
+| `operator-job-index.jsonl` | 689 | `a300a8160e25f9909bd083a0141ffff03a3ad4df6fbb6a3cb6959e23c435b036` |
+
+The fixture report ID is
+`coverage-report-v1-6b6670913151e7bb7f4ef3225f309cdd95a6724090a31f8ca9f1943f6d9a60cd`.
+An isolated disposable PostgreSQL 16 run produced report
+`coverage-report-v1-12205f2b28224704e9d00afa4b82ff9a29b0c84c922bafa41454c7738f33c1a5`.
+Its reconciliation and facility release assessment passed; repeated generation
+had the same report ID and artifact bytes; and reviewer-created-state count was
+unchanged at one row. The aggregate summary SHA-256 is
+`2fa4e29597f5d89483530bbb081651c050bf02a5eabd074531a24310c0db4d1f`.
+The applicable PostgreSQL snapshot-lifecycle module completed with three passes;
+one separately governed ArcGIS controlled-real-candidate case skipped because
+its live manifest was not supplied. The disposable database container was
+removed after validation.
+
+Automated scans found no facility/contact values, complaint text, raw report
+URL, `fakeout.gov`, source body, credential, token, cookie, authentication
+material, private path, or local absolute path in the aggregate extension or
+summary. This evidence is local and does not claim deployment or an automated
+authenticated Hosted UI pass.
+
+Final validation at the repository-stable point completed with `1,427 passed,
+6 skipped`. Full-repository Ruff passed; mypy reported no issues across 83 source
+files; documentation validation passed; 57 documentation-quality tests passed;
+the bounded secret scan and dependency check passed; Alembic reported the single
+head `20260721_0010`; and `git diff --check` passed. The six full-suite skips are
+environment- or optional-evidence-gated tests and are not Issue #453 failures.
+No production code changed after this full-suite run.
+
+## Historical Issue #490 limits
+
+The original v1.0 package explicitly preserved the then-current Issue #490
+outcome. Issues #553/#554/#482 supersede only its forward-looking source-family
+selection; the evaluation artifacts remain historical evidence:
 
 - the existing program-specific source family is retained for the evaluated
   scope without a completeness or freshness claim;
@@ -249,7 +338,7 @@ The package explicitly preserves the Issue #490 outcome:
 - raw `733` mapping status remains `unresolved`, with no STRTP or other
   descriptive label emitted.
 
-## Validation and remaining evidence
+## Historical v1.0 validation and evidence
 
 Focused validation completed against the assigned worktree:
 

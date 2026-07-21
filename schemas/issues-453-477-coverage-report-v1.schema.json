@@ -293,6 +293,227 @@
         "failed": { "$ref": "#/$defs/count" }
       }
     },
+    "facilityCoverageStageRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "field_id",
+        "stage",
+        "eligible_count",
+        "successful_count",
+        "blank_count",
+        "absent_count",
+        "unavailable_count",
+        "invalid_count",
+        "conflict_count",
+        "failure_count",
+        "not_applicable_count"
+      ],
+      "properties": {
+        "field_id": { "$ref": "#/$defs/safeId" },
+        "stage": {
+          "enum": [
+            "source_presence",
+            "extraction",
+            "normalization",
+            "source_specific_allocation",
+            "postgresql_population",
+            "read_model_exposure",
+            "complaint_page_rendering",
+            "facility_overview_rendering",
+            "packet_rendering",
+            "export_exposure"
+          ]
+        },
+        "eligible_count": { "$ref": "#/$defs/count" },
+        "successful_count": { "$ref": "#/$defs/count" },
+        "blank_count": { "$ref": "#/$defs/count" },
+        "absent_count": { "$ref": "#/$defs/count" },
+        "unavailable_count": { "$ref": "#/$defs/count" },
+        "invalid_count": { "$ref": "#/$defs/count" },
+        "conflict_count": { "$ref": "#/$defs/count" },
+        "failure_count": { "$ref": "#/$defs/count" },
+        "not_applicable_count": { "$ref": "#/$defs/count" }
+      }
+    },
+    "facilityCoverageMetric": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["metric_id", "count", "status"],
+      "properties": {
+        "metric_id": { "$ref": "#/$defs/safeId" },
+        "count": { "$ref": "#/$defs/count" },
+        "status": { "enum": ["measured", "valid-zero", "unavailable", "not-applicable"] }
+      }
+    },
+    "facilityCoverageSurface": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "surface_id",
+        "eligible_count",
+        "read_model_exposed_count",
+        "rendered_count",
+        "missing_count",
+        "incorrect_vocabulary_count",
+        "unavailable_count",
+        "status"
+      ],
+      "properties": {
+        "surface_id": { "$ref": "#/$defs/safeId" },
+        "eligible_count": { "$ref": "#/$defs/count" },
+        "read_model_exposed_count": { "$ref": "#/$defs/count" },
+        "rendered_count": { "$ref": "#/$defs/count" },
+        "missing_count": { "$ref": "#/$defs/count" },
+        "incorrect_vocabulary_count": { "$ref": "#/$defs/count" },
+        "unavailable_count": { "$ref": "#/$defs/count" },
+        "status": { "enum": ["repository-verified", "hosted-evidence-pending"] }
+      }
+    },
+    "facilityCoverageReleaseCheck": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "criterion_id",
+        "status",
+        "baseline_count",
+        "observed_count",
+        "threshold_count",
+        "exception_id"
+      ],
+      "properties": {
+        "criterion_id": { "$ref": "#/$defs/safeId" },
+        "status": { "enum": ["passed", "warning", "failed", "reviewed_exception_required"] },
+        "baseline_count": { "$ref": "#/$defs/count" },
+        "observed_count": { "$ref": "#/$defs/count" },
+        "threshold_count": { "$ref": "#/$defs/count" },
+        "exception_id": {
+          "oneOf": [
+            { "$ref": "#/$defs/safeId" },
+            { "type": "null" }
+          ]
+        }
+      }
+    },
+    "facilityReferenceCoverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract_id",
+        "criteria_set_id",
+        "source_family_id",
+        "connector_version",
+        "availability",
+        "reason_category",
+        "snapshot",
+        "aggregate_metrics",
+        "field_stage_coverage",
+        "failure_category_counts",
+        "surface_coverage",
+        "release_assessment"
+      ],
+      "properties": {
+        "contract_id": { "const": "transparencyapi-shared-projection-v1" },
+        "criteria_set_id": { "const": "transparencyapi-projection-release-v1" },
+        "source_family_id": { "const": "ccld-transparencyapi-facility-reference" },
+        "connector_version": { "const": "1.0.0" },
+        "availability": { "enum": ["available", "unavailable"] },
+        "reason_category": { "$ref": "#/$defs/safeId" },
+        "snapshot": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "source_snapshot_id",
+            "selection_state",
+            "schema_fingerprint",
+            "content_fingerprint",
+            "eligible_facility_count"
+          ],
+          "properties": {
+            "source_snapshot_id": {
+              "oneOf": [
+                { "$ref": "#/$defs/safeId" },
+                { "type": "null" }
+              ]
+            },
+            "selection_state": { "enum": ["active_accepted", "unavailable"] },
+            "schema_fingerprint": {
+              "oneOf": [
+                { "$ref": "#/$defs/sha256" },
+                { "type": "null" }
+              ]
+            },
+            "content_fingerprint": {
+              "oneOf": [
+                { "$ref": "#/$defs/sha256" },
+                { "type": "null" }
+              ]
+            },
+            "eligible_facility_count": { "$ref": "#/$defs/count" }
+          }
+        },
+        "aggregate_metrics": {
+          "type": "array",
+          "minItems": 29,
+          "maxItems": 29,
+          "items": { "$ref": "#/$defs/facilityCoverageMetric" }
+        },
+        "field_stage_coverage": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/facilityCoverageStageRow" }
+        },
+        "failure_category_counts": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "present-but-not-extracted",
+            "extracted-but-not-allocated",
+            "allocated-but-not-imported",
+            "stored-but-not-read",
+            "read-but-not-rendered",
+            "rendered-incorrectly",
+            "present-blank",
+            "source-absent",
+            "source-unavailable",
+            "unsupported-layout",
+            "conflicting-source"
+          ],
+          "properties": {
+            "present-but-not-extracted": { "$ref": "#/$defs/count" },
+            "extracted-but-not-allocated": { "$ref": "#/$defs/count" },
+            "allocated-but-not-imported": { "$ref": "#/$defs/count" },
+            "stored-but-not-read": { "$ref": "#/$defs/count" },
+            "read-but-not-rendered": { "$ref": "#/$defs/count" },
+            "rendered-incorrectly": { "$ref": "#/$defs/count" },
+            "present-blank": { "$ref": "#/$defs/count" },
+            "source-absent": { "$ref": "#/$defs/count" },
+            "source-unavailable": { "$ref": "#/$defs/count" },
+            "unsupported-layout": { "$ref": "#/$defs/count" },
+            "conflicting-source": { "$ref": "#/$defs/count" }
+          }
+        },
+        "surface_coverage": {
+          "type": "array",
+          "minItems": 8,
+          "maxItems": 8,
+          "items": { "$ref": "#/$defs/facilityCoverageSurface" }
+        },
+        "release_assessment": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "checks"],
+          "properties": {
+            "status": { "enum": ["passed", "warning", "failed", "reviewed_exception_required"] },
+            "checks": {
+              "type": "array",
+              "minItems": 13,
+              "maxItems": 13,
+              "items": { "$ref": "#/$defs/facilityCoverageReleaseCheck" }
+            }
+          }
+        }
+      }
+    },
     "operations": {
       "type": "object",
       "additionalProperties": false,
@@ -562,8 +783,8 @@
         "retention"
       ],
       "properties": {
-        "contract_version": { "const": "1.0.0" },
-        "minimum_consumer_version": { "const": "1.0.0" },
+        "contract_version": { "const": "1.1.0" },
+        "minimum_consumer_version": { "const": "1.1.0" },
         "report_id": { "$ref": "#/$defs/reportId" },
         "generated_at": { "$ref": "#/$defs/timestamp" },
         "evaluation_id": { "$ref": "#/$defs/safeId" },
@@ -622,10 +843,11 @@
         "reconciliation",
         "release_assessment",
         "unavailable_dimensions",
-        "issue_490_boundaries"
+        "issue_490_boundaries",
+        "source_governance"
       ],
       "properties": {
-        "contract_version": { "const": "1.0.0" },
+        "contract_version": { "const": "1.1.0" },
         "report_id": { "$ref": "#/$defs/reportId" },
         "generated_at": { "$ref": "#/$defs/timestamp" },
         "evaluation_id": { "$ref": "#/$defs/safeId" },
@@ -645,7 +867,8 @@
             "inventory_field_total",
             "field_stage_coverage",
             "terminal_classification_eligible_count",
-            "terminal_classification_counts"
+            "terminal_classification_counts",
+            "facility_reference"
           ],
           "properties": {
             "inventory_field_total": { "$ref": "#/$defs/count" },
@@ -654,7 +877,8 @@
               "items": { "$ref": "#/$defs/stageRow" }
             },
             "terminal_classification_eligible_count": { "$ref": "#/$defs/count" },
-            "terminal_classification_counts": { "$ref": "#/$defs/terminalCounts" }
+            "terminal_classification_counts": { "$ref": "#/$defs/terminalCounts" },
+            "facility_reference": { "$ref": "#/$defs/facilityReferenceCoverage" }
           }
         },
         "operations": { "$ref": "#/$defs/operations" },
@@ -713,6 +937,32 @@
             "raw_733_mapping_status": { "const": "unresolved" },
             "raw_733_descriptive_label_emitted": { "const": false }
           }
+        },
+        "source_governance": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "primary_current_source_family",
+            "primary_selection_state",
+            "arcgis_role",
+            "ckan_program_role",
+            "complaint_time_role",
+            "current_and_complaint_time_separate",
+            "refresh_schedule_status",
+            "raw_733_mapping_status",
+            "raw_733_descriptive_label_emitted"
+          ],
+          "properties": {
+            "primary_current_source_family": { "const": "ccld-transparencyapi-facility-reference" },
+            "primary_selection_state": { "const": "active_accepted" },
+            "arcgis_role": { "const": "supplementary" },
+            "ckan_program_role": { "const": "historical_or_controlled_fallback" },
+            "complaint_time_role": { "const": "historical_complaint_context" },
+            "current_and_complaint_time_separate": { "const": true },
+            "refresh_schedule_status": { "const": "not_approved" },
+            "raw_733_mapping_status": { "const": "unresolved" },
+            "raw_733_descriptive_label_emitted": { "const": false }
+          }
         }
       }
     },
@@ -746,7 +996,7 @@
         "last_job_id"
       ],
       "properties": {
-        "contract_version": { "const": "1.0.0" },
+        "contract_version": { "const": "1.1.0" },
         "report_id": { "$ref": "#/$defs/reportId" },
         "facility_entry_id": {
           "type": "string",
@@ -846,7 +1096,7 @@
       ],
       "properties": {
         "job_id": { "$ref": "#/$defs/safeId" },
-        "contract_version": { "const": "1.0.0" },
+        "contract_version": { "const": "1.1.0" },
         "report_id": { "$ref": "#/$defs/reportId" },
         "job_state": { "enum": ["queued", "active", "completed", "interrupted", "failed"] },
         "execution_mode": { "enum": ["dry_run", "apply"] },

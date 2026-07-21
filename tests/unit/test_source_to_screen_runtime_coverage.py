@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from datetime import UTC, datetime
 from pathlib import Path
@@ -178,6 +179,50 @@ def test_runtime_publication_preserves_previous_package_on_failure_and_success(
     )
 
 
+def test_runtime_publication_validates_and_archives_previous_v1_package(
+    tmp_path: Path,
+) -> None:
+    engine = create_engine("sqlite://")
+    current = tmp_path / "runtime-current"
+    _write_previous_v1_package(current)
+    previous_bytes = _tree_bytes(current)
+    with engine.connect() as connection:
+        _seed_runtime(connection)
+        structural = audit.run_audit(
+            mode="runtime",
+            output_dir=tmp_path / "runtime-audit",
+            repo_root=REPO_ROOT,
+            runtime_connection=connection,
+            generated_at=FIXED_TIME,
+        )
+        package = audit.publish_runtime_coverage_package(
+            connection,
+            structural,
+            output_dir=current,
+            repo_root=REPO_ROOT,
+            generated_at=FIXED_TIME,
+        )
+
+    archives = tuple((tmp_path / "runtime-current-instances").iterdir())
+    assert len(archives) == 1
+    assert _tree_bytes(archives[0]) == previous_bytes
+    assert package.manifest["contract_version"] == "1.1.0"
+    assert package.manifest["retention"]["previous_accepted_report_id"] == (
+        "coverage-report-v1-" + "a" * 64
+    )
+
+
+def test_runtime_v1_transition_rejects_tampered_previous_artifact(
+    tmp_path: Path,
+) -> None:
+    current = tmp_path / "runtime-current"
+    _write_previous_v1_package(current)
+    (current / "coverage-report.json").write_bytes(b"tampered\n")
+
+    with pytest.raises(audit.CoverageContractError, match="hash validation"):
+        audit._runtime_previous_package_context(current)
+
+
 def test_runtime_publication_lock_prevents_concurrent_generation(tmp_path: Path) -> None:
     engine = create_engine("sqlite://")
     current = tmp_path / "runtime-current"
@@ -246,4 +291,67 @@ def _tree_bytes(root: Path) -> dict[str, bytes]:
         path.relative_to(root).as_posix(): path.read_bytes()
         for path in sorted(root.rglob("*"))
         if path.is_file()
+    }
+
+
+def _write_previous_v1_package(root: Path) -> None:
+    root.mkdir()
+    report_id = "coverage-report-v1-" + "a" * 64
+    report = json.dumps(
+        {
+            "contract_version": "1.0.0",
+            "package_availability": "partial",
+            "report_id": report_id,
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8") + b"\n"
+    aggregate = (
+        ",".join(audit.COVERAGE_AGGREGATE_CSV_FIELDNAMES).encode("utf-8") + b"\n"
+    )
+    (root / "coverage-report.json").write_bytes(report)
+    (root / "aggregate-coverage.csv").write_bytes(aggregate)
+    manifest = {
+        "contract_version": "1.0.0",
+        "minimum_consumer_version": "1.0.0",
+        "producer_schema_id": "issues-453-477-coverage-report-v1",
+        "report_id": report_id,
+        "generated_at": "2026-07-19T19:00:00Z",
+        "artifacts": [
+            _legacy_artifact("coverage-report.json", "application/json", report),
+            _legacy_artifact("aggregate-coverage.csv", "text/csv", aggregate),
+            _legacy_unavailable_artifact(
+                "operator-facility-index.jsonl", "application/x-ndjson"
+            ),
+            _legacy_unavailable_artifact(
+                "operator-job-index.jsonl", "application/x-ndjson"
+            ),
+        ],
+    }
+    (root / "manifest.json").write_bytes(
+        (json.dumps(manifest, sort_keys=True, separators=(",", ":")) + "\n").encode(
+            "utf-8"
+        )
+    )
+
+
+def _legacy_artifact(name: str, media_type: str, value: bytes) -> dict[str, Any]:
+    return {
+        "name": name,
+        "availability": "available",
+        "reason_category": "none",
+        "byte_count": len(value),
+        "sha256": hashlib.sha256(value).hexdigest(),
+        "media_type": media_type,
+    }
+
+
+def _legacy_unavailable_artifact(name: str, media_type: str) -> dict[str, Any]:
+    return {
+        "name": name,
+        "availability": "unavailable",
+        "reason_category": "read_boundary_unavailable",
+        "byte_count": 0,
+        "sha256": None,
+        "media_type": media_type,
     }

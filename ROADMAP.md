@@ -218,13 +218,19 @@ implementation evidence, not current source-selection direction.
   keyset pagination, fail-closed validation states, and automated local hosted
   evidence are included. Added the production-style bridge that authenticates a
   narrowly allowlisted operator through the existing verified Cloudflare Access
-  JWT boundary, publishes a validated contract `1.0.0` package atomically from
+  JWT boundary, publishes a validated contract package atomically from
   SELECT-only PostgreSQL aggregates, reconciles the safe Facility ID index, and
   supports automated local-production-auth and header-provider hosted
   acceptance. The supported read-only Issue #477 repository scope is complete;
   mutation, persistence, scheduling, retrieval/import, job/checkpoint mutation,
   retention automation, deployment, and Hosted execution remain separately
   governed or human-controlled work and do not block closing #477.
+- Extended Issue #453's existing producer to contract `1.1.0` for active
+  accepted TransparencyAPI and shared-projection aggregate coverage. The
+  repository implementation now measures source/field stages, quarantine and
+  conflict categories, surface availability, prior-package baselines, and
+  release thresholds without record-level output or database writes. A later
+  deployed Hosted run remains required before #453 closes.
 - Completed the Issue #490 statewide facility-source evaluation with the final
   verdict **inconclusive; retain existing program-specific sources and keep the
   statewide candidate inactive**. That result remains historical evaluation
@@ -736,11 +742,15 @@ implementation evidence, not current source-selection direction.
   documentation, final SHA, and release tag. The exact next repository issue is
   #518. Safe parallel implementation may begin only after the ArcGIS-specific
   Phase C identity and reconciliation contract is merged.
-- Use Issue #453's v1 producer and Issue #477's read-only dashboard through the
+- Use Issue #453's `1.1.0` producer and Issue #477's read-only dashboard through the
   completed production-auth/runtime-package bridge while preserving explicit
-  fixture, runtime, and unavailable evidence labels. Hosted acceptance still
-  requires deployment by the human QNAP operator and a user-approved ephemeral
-  Cloudflare assertion provider. Issue #477 is closed and repository-complete
+  fixture, runtime, and unavailable evidence labels. The repository extension
+  for TransparencyAPI/shared-projection coverage is complete. Deployment and
+  applicable non-provider Hosted acceptance remain human-operated. If the
+  approved ephemeral Cloudflare assertion provider is unavailable, the product
+  owner accepts that residual automation risk; provider absence alone is not a
+  completion blocker and is never recorded as a passed authenticated-UI run.
+  Issue #477 is closed and repository-complete
   for its supported read-only dashboard. Any later operational or mutation
   phase requires separate issue
   authority; do not infer retry, apply, cancel, resume, backfill, persistence,

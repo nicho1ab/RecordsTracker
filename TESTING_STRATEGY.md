@@ -459,6 +459,19 @@ consumers rather than introducing source-specific rendering branches. The
 isolated PostgreSQL regression exercises both active-snapshot projection and
 JSON-backed bounded search when the two documented nonproduction flags are set.
 
+Issue #453 contract `1.1.0` tests extend the existing producer, package, and
+stable-consumer suite rather than introducing a second audit framework. Tiny
+fictional fixtures and isolated database rows prove active accepted
+TransparencyAPI selection, leading-zero identity counts, quarantine exclusion,
+raw `733` unresolved treatment, valid zero-row type `777`, address/telephone
+placeholder preservation, distinct administrator/CONTACT and bulk/detail
+availability, current/supplementary/historical conflict accounting, surface
+availability, and reviewer-state immutability. Baseline tests prove facility,
+field-state, read-model, rendering, conflict, and unresolved-code regressions;
+stored-row/projection mismatch; stage imbalance; unsafe URL prevention; and the
+explicit reviewed-exception result. Deterministic runs compare complete package
+bytes, and redaction/path tests reject record values and machine paths.
+
 Issue #518 snapshot-lifecycle fixtures remain clearly fictional. They prove the
 exact official 19-field schema, narrower approved source-specific normalized
 subset, snapshot-plus-`ObjectId` identity, non-unique `FAC_NBR` grouping without

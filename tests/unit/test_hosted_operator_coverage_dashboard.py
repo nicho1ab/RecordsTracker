@@ -24,7 +24,6 @@ from ccld_complaints.hosted_app.auth import (
     HostedTesterRole,
 )
 from ccld_complaints.hosted_app.operator_coverage_dashboard import (
-    CONTRACT_VERSION,
     FACILITY_ID_GROUPS,
     OPERATOR_COVERAGE_EXPORT_PATH,
     OPERATOR_COVERAGE_FACILITIES_PATH,
@@ -82,7 +81,7 @@ def test_contract_fixture_matrix_is_complete_and_adapter_states_are_truthful() -
             FIXTURE_ROOT / scenario, allow_legacy_fixture=True
         )
         assert (package.state, len(package.facility_rows), len(package.job_rows)) == outcome
-        assert package.manifest["contract_version"] == CONTRACT_VERSION
+        assert package.manifest["contract_version"] == "1.0.0"
         assert package.report["report_id"] == package.manifest["report_id"]
 
     failures = {
@@ -102,6 +101,7 @@ def test_contract_fixture_matrix_is_complete_and_adapter_states_are_truthful() -
 def test_real_issue_453_package_loads_through_stable_contract_boundary(
     tmp_path: Path,
 ) -> None:
+    assert dashboard.CONSUMER_VERSION == "1.1.0"
     fixture = load_coverage_fixture_scenario(
         Path("tests/fixtures/source_to_screen_coverage/scenarios.json"),
         "complete-balanced",

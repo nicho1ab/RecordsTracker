@@ -1,7 +1,7 @@
 {
   "fixture_bundle_id": "issue-453-coverage-scenarios-v1",
   "base": {
-    "contract_version": "1.0.0",
+    "contract_version": "1.1.0",
     "evaluation_id": "fixture.complete-balanced.v1",
     "criteria_set_id": "retained-existing-scope-v1",
     "scope_id": "governed-fixture-scope",
@@ -9,6 +9,19 @@
     "producer_version": "source-to-screen-audit-v1",
     "generation_mode": "governed_fixture",
     "source_snapshots": [
+      {
+        "source_snapshot_id": "transparencyapi-fixture-snapshot-v1",
+        "source_family_id": "ccld-transparencyapi-facility-reference",
+        "selection_state": "active_accepted",
+        "safe_version_label": "transparencyapi-snapshot-v1",
+        "observed_at": "2026-07-19T12:00:00Z",
+        "row_count": 2,
+        "schema_fingerprint": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "content_fingerprint": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "availability": "available",
+        "reason_category": "none",
+        "cadence_status": "not_approved"
+      },
       {
         "source_snapshot_id": "program-specific-snapshot-v1",
         "source_family_id": "ccld-program-specific",
@@ -36,6 +49,9 @@
         "cadence_status": "not_approved"
       }
     ],
+    "facility_reference_coverage": {
+      "fixture_profile": "complete"
+    },
     "criteria": {
       "baseline_metrics": {
         "existing_facility_total": 2,
@@ -167,6 +183,19 @@
       "evaluation_id": "fixture.empty-verified.v1",
       "source_snapshots": [
         {
+          "source_snapshot_id": "transparencyapi-fixture-snapshot-v1",
+          "source_family_id": "ccld-transparencyapi-facility-reference",
+          "selection_state": "active_accepted",
+          "safe_version_label": "transparencyapi-snapshot-v1",
+          "observed_at": "2026-07-19T12:00:00Z",
+          "row_count": 2,
+          "schema_fingerprint": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "content_fingerprint": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+          "availability": "available",
+          "reason_category": "none",
+          "cadence_status": "not_approved"
+        },
+        {
           "source_snapshot_id": "program-specific-snapshot-v1",
           "source_family_id": "ccld-program-specific",
           "selection_state": "retained_existing",
@@ -222,6 +251,38 @@
         }
       },
       "unavailable_dimensions": ["postgresql_population"]
+    },
+    "transparencyapi-source-unavailable": {
+      "evaluation_id": "fixture.transparencyapi-source-unavailable.v1",
+      "facility_reference_coverage": {
+        "fixture_profile": "source-unavailable"
+      }
+    },
+    "transparencyapi-read-but-not-rendered": {
+      "evaluation_id": "fixture.transparencyapi-read-but-not-rendered.v1",
+      "facility_reference_coverage": {
+        "fixture_profile": "read-but-not-rendered"
+      }
+    },
+    "transparencyapi-stage-imbalanced": {
+      "evaluation_id": "fixture.transparencyapi-stage-imbalanced.v1",
+      "facility_reference_coverage": {
+        "fixture_profile": "stage-imbalanced"
+      }
+    },
+    "transparencyapi-reviewed-exception": {
+      "evaluation_id": "fixture.transparencyapi-reviewed-exception.v1",
+      "facility_reference_coverage": {
+        "fixture_profile": "read-but-not-rendered"
+      },
+      "criteria": {
+        "reviewed_exceptions": [
+          {
+            "criterion_id": "release.source-to-screen-stage-regression",
+            "exception_id": "reviewed-exception-453-v1"
+          }
+        ]
+      }
     },
     "failed-reconciliation": {
       "evaluation_id": "fixture.failed-reconciliation.v1",
