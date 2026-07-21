@@ -31,6 +31,10 @@ class CheckDocsModule(Protocol):
         self, root: Path = Path(".")
     ) -> list[str]: ...
 
+    def find_attorney_information_architecture_contract_violations(
+        self, root: Path = Path(".")
+    ) -> list[str]: ...
+
 
 def _load_check_docs_module() -> CheckDocsModule:
     path = Path("scripts/check_docs.py")
@@ -146,6 +150,133 @@ def test_reviewer_ui_governance_requires_evidence_and_blocking_result(
     violations = check_docs.find_reviewer_ui_governance_contract_violations(tmp_path)
     assert "RT-UI-GATE-005: required evidence cell is empty" in violations
     assert "RT-UI-GATE-005: blocking result must be BLOCK" in violations
+
+
+ATTORNEY_IA_FILES = (
+    "DESIGN_AND_USABILITY.md",
+    "docs/planning/records-tracker-ui-ux-data-completeness-remediation-plan.md",
+    "docs/product/records-tracker-approved-design-decisions.md",
+    "docs/product/records-tracker-attorney-information-architecture.md",
+)
+
+
+def _copy_attorney_ia_files(tmp_path: Path) -> None:
+    for relative_path in ATTORNEY_IA_FILES:
+        target = tmp_path / relative_path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(relative_path, target)
+
+
+def test_attorney_information_architecture_contract_is_complete() -> None:
+    check_docs = _load_check_docs_module()
+
+    assert check_docs.find_attorney_information_architecture_contract_violations() == []
+
+
+@pytest.mark.parametrize(
+    ("relative_path", "heading"),
+    [
+        (
+            "docs/product/records-tracker-attorney-information-architecture.md",
+            "Route dispositions",
+        ),
+        (
+            "DESIGN_AND_USABILITY.md",
+            "Issue #501 attorney information architecture",
+        ),
+        (
+            "docs/planning/records-tracker-ui-ux-data-completeness-remediation-plan.md",
+            "Issue #501 dependent design sequence",
+        ),
+    ],
+)
+def test_attorney_information_architecture_requires_authoritative_sections(
+    tmp_path: Path,
+    relative_path: str,
+    heading: str,
+) -> None:
+    check_docs = _load_check_docs_module()
+    _copy_attorney_ia_files(tmp_path)
+    path = tmp_path / relative_path
+    content = path.read_text(encoding="utf-8")
+    path.write_text(
+        content.replace(f"## {heading}", f"## Removed {heading}", 1),
+        encoding="utf-8",
+    )
+
+    violations = check_docs.find_attorney_information_architecture_contract_violations(
+        tmp_path
+    )
+    assert (
+        f"{relative_path}: expected exactly one section heading: ## {heading}"
+        in violations
+    )
+
+
+def test_attorney_information_architecture_requires_canonical_route_dispositions(
+    tmp_path: Path,
+) -> None:
+    check_docs = _load_check_docs_module()
+    _copy_attorney_ia_files(tmp_path)
+    path = tmp_path / "docs/product/records-tracker-attorney-information-architecture.md"
+    content = path.read_text(encoding="utf-8")
+    path.write_text(
+        content.replace(
+            "| `/ccld/facilities/review-priority` | merge |",
+            "| `/ccld/facilities/review-priority` | retain |",
+            1,
+        ),
+        encoding="utf-8",
+    )
+
+    violations = check_docs.find_attorney_information_architecture_contract_violations(
+        tmp_path
+    )
+    assert (
+        "/ccld/facilities/review-priority: expected disposition merge, found retain"
+        in violations
+    )
+
+
+def test_attorney_information_architecture_requires_navigation_order(
+    tmp_path: Path,
+) -> None:
+    check_docs = _load_check_docs_module()
+    _copy_attorney_ia_files(tmp_path)
+    path = tmp_path / "docs/product/records-tracker-attorney-information-architecture.md"
+    content = path.read_text(encoding="utf-8")
+    path.write_text(
+        content.replace(
+            "Home, Find a Facility, Compare Facilities,\nComplaint Worklist, "
+            "Feedback, Help",
+            "Home, Find a Facility, Complaint Worklist, Feedback, Help",
+            1,
+        ),
+        encoding="utf-8",
+    )
+
+    violations = check_docs.find_attorney_information_architecture_contract_violations(
+        tmp_path
+    )
+    assert any("attorney navigation order must be exactly" in item for item in violations)
+
+
+def test_attorney_information_architecture_requires_design_requirement_ids(
+    tmp_path: Path,
+) -> None:
+    check_docs = _load_check_docs_module()
+    _copy_attorney_ia_files(tmp_path)
+    path = tmp_path / "docs/product/records-tracker-approved-design-decisions.md"
+    content = path.read_text(encoding="utf-8")
+    path.write_text(
+        content.replace("### RT-NAV-001 —", "### Removed RT-NAV-001 —", 1),
+        encoding="utf-8",
+    )
+
+    violations = check_docs.find_attorney_information_architecture_contract_violations(
+        tmp_path
+    )
+    assert "approved design register must define exactly one RT-NAV-001" in violations
 
 
 def test_pull_request_template_contract_is_complete() -> None:

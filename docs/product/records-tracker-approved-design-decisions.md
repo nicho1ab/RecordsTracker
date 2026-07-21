@@ -239,6 +239,75 @@ An implementation must not silently redefine an approved decision.
   accordion, tab, or collapsed card.
 - **Required evidence before acceptance:** Markup and screenshot review.
 
+### RT-IA-004 — One canonical destination per attorney task
+
+- **Approved decision:** Home, facility discovery, cross-facility comparison,
+  and the complaint worklist each have one distinct purpose and one canonical
+  destination. Specialized priority, trend, substantiated, and serious-topic
+  experiences become governed views, filters, or merged behavior instead of
+  equally promoted duplicate inventories.
+- **Scope:** Sitewide attorney information architecture under Issue #501.
+- **Figma proof:** Repository product direction is approved in
+  `records-tracker-attorney-information-architecture.md`; the exact Issue #501
+  Figma frames listed there remain pending. No implementation is authorized
+  until those frames are approved or the product owner records a controlled
+  variance.
+- **Responsive requirement:** Reflow preserves the same canonical destinations
+  and inventory; it does not introduce alternate mobile-only route concepts.
+- **Accessibility requirement:** Destination and view/filter controls have
+  descriptive accessible names, logical focus order, and useful recovery after
+  redirects or filter changes.
+- **Prohibited regression:** Duplicate facility or complaint inventories kept
+  as separate destinations solely because legacy routes or tests exist.
+- **Required evidence before acceptance:** Canonical-route and legacy-redirect
+  evidence, query/filter preservation, DOM inventory checks, and exact-route
+  screenshots for every approved state and viewport.
+
+### RT-NAV-001 — Task-predictive attorney navigation
+
+- **Approved decision:** The attorney global navigation is exactly `Home`,
+  `Find a Facility`, `Compare Facilities`, `Complaint Worklist`, `Feedback`,
+  and `Help`, in that order. Record retrieval, facility detail, complaint
+  detail, packet, export, job diagnostics, operator, and developer routes remain
+  contextual or tier-specific.
+- **Scope:** Shared attorney shell under Issue #501.
+- **Figma proof:** Repository product direction is approved in
+  `records-tracker-attorney-information-architecture.md`; `Issue 501 — Product
+  shell navigation` desktop, narrow, mobile, 200% zoom, focus, active, stress,
+  and print frames remain pending.
+- **Responsive requirement:** The same ordered destinations reflow without
+  clipping, horizontal page scrolling, or a second unapproved navigation model.
+- **Accessibility requirement:** Active state uses `aria-current`, every item
+  retains visible focus, and order remains logical after reflow.
+- **Prohibited regression:** `Request Records`, diagnostics, packet/export,
+  operator, debug, or duplicate specialized inventory routes in global attorney
+  navigation.
+- **Required evidence before acceptance:** Exact-route shell screenshots for
+  every destination and required viewport, active-state assertions, keyboard
+  focus evidence, and print evidence with navigation hidden.
+
+### RT-LANG-001 — Task-predictive product language and source-term fidelity
+
+- **Approved decision:** RecordsTracker-created labels identify an object,
+  action, result, or decision that predicts what happens next. Official CCLD
+  terms remain exact and receive point-of-use explanation rather than an
+  inaccurate synonym.
+- **Scope:** Sitewide attorney and Help language under Issue #501.
+- **Figma proof:** The governed terminology table is in
+  `records-tracker-attorney-information-architecture.md`; visual placement in
+  the exact Issue #501 frames remains pending.
+- **Responsive requirement:** Labels and explanations wrap without clipping or
+  losing their relationship to the affected control or value.
+- **Accessibility requirement:** Official-term definitions work with keyboard
+  focus and do not rely on hover, color, position, placeholder text, or an
+  inaccessible abbreviation alone.
+- **Prohibited regression:** Abstract RecordsTracker labels such as
+  `intelligence`, `hub`, `planning views`, `review cues`, `reference data
+  details`, or `request context` used as presumed final attorney terminology.
+- **Required evidence before acceptance:** Governed-string assertions,
+  accessible-name review, point-of-use glossary interaction evidence, and
+  exact-route screenshots.
+
 ### RT-ID-001 — Facility identity displayed once per page context
 
 - **Approved decision:** Facility identity is displayed once per page context.

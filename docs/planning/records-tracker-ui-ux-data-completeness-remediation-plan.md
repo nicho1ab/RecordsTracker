@@ -49,6 +49,14 @@ Upload the current version to the ChatGPT Project Sources section. When Codex ch
 - #484 — Add approved-design variance review to hosted UI evidence.
 - #498 — Govern and deliver the approved narrow reviewer-detail source-to-claim
   evidence interaction for First investigation activity date only.
+- #501 — Define the attorney-facing information architecture and plain-language
+  naming before dependent route or page implementation.
+- #502 — Separate Home from facility discovery and simplify facility intake;
+  blocked on the approved #501 design package.
+- #503 — Rebuild Help around attorney tasks and working navigation; blocked on
+  the approved #501 design package.
+- #504 — Prevent obsolete UI decisions from fossilizing in tests and governance;
+  its classification process must be applied by dependent #501 implementation.
 
 The issue-management script accompanying this plan creates additional issues and adds comments to affected existing issues.
 
@@ -105,6 +113,10 @@ Each important page must have:
 - Use meaningful source-backed complaint subjects, not generic lineage labels.
 - Primary pages answer the user decision and next action above the fold.
 - Reviewer, help, operator, developer, and data-enrichment tiers remain distinct.
+- The Issue #501 attorney task model, canonical-route decisions, exact
+  navigation, terminology, tier allocation, and legacy-route preservation rules
+  are authoritative in
+  `docs/product/records-tracker-attorney-information-architecture.md`.
 
 ## Required Figma frames
 
@@ -115,6 +127,31 @@ Each important page must have:
 5. Cross-facility dashboard frame for #419, if the current implementation does not already have an approved final design.
 
 Each frame must be labeled `Approved implementation reference — variance requires approval`.
+
+### Issue #501 required frames and states
+
+Before #502, #503, or cross-facility consolidation begins, Figma must add or
+update the exact frame groups named in
+`docs/product/records-tracker-attorney-information-architecture.md`:
+
+1. `Issue 501 — Product shell navigation`;
+2. `Issue 502 — Home task launch`;
+3. `Issue 502 — Find a Facility`;
+4. `Issue 501 — Compare Facilities`;
+5. `Issue 501 — Facility Overview naming and actions`;
+6. `Issue 501 — Complaint Worklist naming and filters`;
+7. `Issue 501 — Contextual record request`;
+8. `Issue 503 — Help by attorney task`; and
+9. `Issue 501 — Shared shell on contextual pages`.
+
+The package must cover desktop, narrow desktop, mobile 390 px, 200% zoom,
+keyboard focus, print, and every applicable populated, empty, filtered-empty,
+partial, unavailable, loading, error, selected, valid-unmatched-ID, malformed-
+ID, disabled, and recovery state listed in that record. Existing pagination
+nodes under `59:463` remain authoritative and must be updated without weakening
+`RT-PAG-001`. No editable Figma artifact was changed by the repository-only
+Issue #501 task, so these frames remain an explicit approval dependency unless
+the product owner records a controlled variance.
 
 ## Approved Issue #419 large-corpus pagination variance
 
@@ -241,6 +278,38 @@ For every supplied evidence packet or screenshot set, inspect:
 9. Resolve #475 and #476 and complete controlled backfills.
 10. Complete automated source-to-screen coverage under #453.
 11. Perform final stakeholder acceptance under #421.
+
+## Issue #501 dependent design sequence
+
+The Issue #501 information-architecture sequence takes precedence for its
+dependent pages and routes:
+
+1. Merge the repository-readable Issue #501 decision record without application
+   behavior changes.
+2. Complete and approve all named Issue #501/#502/#503 Figma frames, or record
+   an explicit controlled variance with affected requirement IDs.
+3. Apply #504 classification governance before or within each dependent UI
+   change so stale presentation assertions are rewritten while durable
+   accessibility, security, source, data, pagination, export, and reviewer-state
+   contracts remain enforced.
+4. Under separately explicit implementation authority, consolidate the
+   complaint-derived facility priority, complaint trends, substantiated and
+   serious-topic entry points, and public licensing/visit summary behavior into
+   the canonical Compare Facilities and Complaint Worklist experiences. Prove
+   parity and source separation before adding legacy redirects.
+5. Implement #502 for the distinct Home launch, single-input facility
+   discovery, six-destination global navigation, contextual record request, and
+   tier-correct reference diagnostics.
+6. Implement #503 for task-organized Help, visible primary guidance, working
+   fragment/focus behavior, point-of-use terminology, and tier-correct
+   troubleshooting.
+7. Run automated exact-route, redirect, responsive, keyboard, state, print, and
+   visual-variance evidence against the approved frames before recommending any
+   dependent merge.
+
+This sequence does not authorize #502, #503, #504, route implementation, or a
+new issue. The product owner must explicitly assign the intermediate
+cross-facility implementation scope before coding begins.
 
 ## Change-control procedure for this file
 

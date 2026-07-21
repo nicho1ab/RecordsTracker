@@ -525,6 +525,44 @@ cautious-language, tester feedback, and reviewer-state boundaries.
   topics.
 - Feedback should be standardized across pages and integrated with GitHub safely.
 
+## Issue #501 attorney information architecture
+
+The approved route, navigation, terminology, information-tier, responsive,
+state, Figma-dependency, and implementation-sequence decisions for Issue #501
+are recorded in
+`docs/product/records-tracker-attorney-information-architecture.md`.
+
+That record is authoritative for later #502, #503, and cross-facility
+information-architecture implementation. In particular:
+
+- the global attorney navigation is `Home`, `Find a Facility`, `Compare
+  Facilities`, `Complaint Worklist`, `Feedback`, and `Help`;
+- `/ccld/facilities/intelligence` is the canonical Compare Facilities route;
+- public summary-field review behavior, complaint-derived facility priority,
+  and complaint trends must move into governed views or filters of that
+  canonical destination before their legacy routes redirect;
+- `/reviewer` is the canonical Complaint Worklist, with substantiated and
+  serious-review topics expressed as governed filters rather than duplicate
+  worklists;
+- `/ccld/records/request` remains a contextual Get Complaint Records step after
+  facility selection and leaves global navigation;
+- `/ccld/facilities/detail` is named `Facility Overview`, with `Review Facility`
+  as the leading contextual action into it; and
+- reference counts, source-file and fallback mechanics, malformed-row
+  diagnostics, lookup-versus-manual-entry guidance, and a standalone manual
+  Facility ID section do not belong on ordinary reviewer pages.
+
+The new decisions supersede older reviewer-facing names such as `Facility Hub`,
+`Facility Review Intelligence`, `Optional planning views`, and `Review Queue`.
+Older numbered inventory entries remain useful historical scope records, but
+they do not override the Issue #501 decision or require obsolete wording or
+page structure to survive.
+
+The repository decision does not substitute for the visual design package.
+Issue #502, #503, and cross-facility implementation remain blocked until the
+exact Figma frames listed in the decision record are approved or the product
+owner explicitly accepts a controlled variance.
+
 ## Feedback and help direction
 
 - Use one GitHub feedback flow for bugs, feature requests, confusing workflow or
