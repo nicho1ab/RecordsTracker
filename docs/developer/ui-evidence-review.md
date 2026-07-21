@@ -75,6 +75,23 @@ Merging this governance foundation does not complete Issue #479. The issue may
 close only after a later reviewer-facing implementation cites and satisfies this
 contract with the required automated visual evidence and acceptance decision.
 
+## Redesign evidence contract changes
+
+For a material reviewer-facing redesign, apply
+`../product/records-tracker-reviewer-redesign-artifact-governance.md` before
+editing the active capture contract. Legacy route lists, headings, marker text,
+and screenshot labels are current implementation assertions, not permanent
+product requirements. Update them in the same dependent change that replaces
+the route or presentation, while preserving exact-route coverage, unique useful
+behavior, redirects or migrations, privacy checks, accessibility evidence,
+truthful states, and every applicable visual gate.
+
+Existing evidence packets remain historical evidence for the commit they
+captured and must not be rewritten. Matching a superseded marker does not prove
+the replacement design. The replacement packet must capture the canonical
+route or view plus legacy redirect behavior and supported query or fragment
+preservation where applicable.
+
 ## Port Convention
 
 Use these ports for UI evidence review unless a task handoff says otherwise:

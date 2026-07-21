@@ -8,12 +8,13 @@ information-tier implementation. It does not itself change application
 behavior.
 
 The product owner approved the direction recorded here after inventorying the
-current application. The approved design system remains Direction A — Civic
-Ledger in `records-tracker-approved-design-decisions.md`. Figma remains the
-visual authority. The Issue #501 frames named below have not yet been created or
-updated in Figma, so #502, #503, and the cross-facility consolidation must not
-begin until those frames are approved or the product owner explicitly approves
-a repository-readable controlled variance.
+current application and subsequently approved this repository-readable package
+as a controlled design variance for #419, #502, and #503. The approved design
+system remains Direction A — Civic Ledger in
+`records-tracker-approved-design-decisions.md`. No editable Figma artifact was
+changed. The variance preserves requirement mapping, pre-code variance
+inventory, automated exact-route evidence, every applicable visual gate, and
+explicit visual acceptance.
 
 This record does not authorize a new route, redirect, route retirement,
 retrieval, data mutation, source change, export change, authentication change,
@@ -323,10 +324,12 @@ implementation reference — variance requires approval`:
 ### Package status
 
 No editable Figma artifact was accessed or changed in Issue #501 repository
-work. No new node ID or approval is claimed. The repository decisions are ready
-to drive those frames, but the visual design package is **pending**. #502,
-#503, and cross-facility implementation remain blocked until the listed frames
-are approved or the product owner explicitly records a controlled variance.
+work. No new node ID or Figma approval is claimed. The visual design package is
+**pending** as future Figma work, but the product owner explicitly approved this
+repository-readable package as the controlled variance for #419, #502, and
+#503. Dependent implementation must cite its requirement IDs, provide the
+pre-code variance inventory, capture automated exact-route evidence, satisfy
+applicable visual gates, and receive explicit visual acceptance.
 
 ## Approved requirement mapping
 
@@ -343,8 +346,9 @@ are approved or the product owner explicitly records a controlled variance.
 
 This is an Issue #501 inventory, not the reusable anti-fossilization process
 assigned to #504. Dependent changes must classify each affected artifact under
-#504 and preserve durable outcomes while rewriting superseded presentation
-assertions.
+#504 by using
+`records-tracker-reviewer-redesign-artifact-governance.md`, and preserve durable
+outcomes while rewriting superseded presentation assertions.
 
 ### Application and route contracts to change later
 
@@ -444,11 +448,12 @@ required; matching anchor text alone is insufficient.
 
 1. **Merge this repository-readable Issue #501 decision record.** No application
    behavior changes in this step.
-2. **Complete and approve the Figma package.** Update every named shell, Home,
-   Facilities, Compare Facilities, Facility Overview, Complaint Worklist,
-   request, Help, contextual, responsive, focus, state, and print frame. If the
-   product owner accepts a prose-only controlled variance, record its exact
-   scope and affected requirement IDs before coding.
+2. **Consume the approved controlled variance.** The product owner approved
+   this repository-readable package for #419, #502, and #503 without claiming a
+   Figma update. Each dependent task must record the exact requirements it
+   consumes, its pre-code variance inventory, automated evidence, gate results,
+   and explicit visual acceptance. The named Figma frames remain useful future
+   design work, not a prerequisite for this bounded sequence.
 3. **Apply #504 classification governance.** Prefer merging #504 before the
    first dependent UI PR. If scheduling differs, each dependent PR must still
    classify every affected assertion and may not preserve superseded UI or
@@ -458,9 +463,8 @@ required; matching anchor text alone is insufficient.
    complaint trends, substantiated/serious-topic entry points, and Licensing and
    Visit Activity to the approved canonical inventories/views. Prove parity,
    source separation, redirects, query mapping, pagination, reconciliation, and
-   all states before removing any legacy rendering. The product owner must
-   assign this work to #502 or another governed implementation scope; this
-   design task does not create an issue.
+   all states before removing any legacy rendering. The product owner assigned
+   this work to #419; this design record does not itself authorize coding.
 5. **Implement #502.** Build the distinct Home launch and single-input Find a
    Facility page; apply the six-link global navigation; move Request Records to
    contextual actions; remove reviewer-facing reference mechanics only after a
@@ -480,10 +484,10 @@ two equally promoted canonical facility or complaint inventories.
 
 ## Completion gates and non-goals
 
-The repository information-architecture decision is complete when this record,
-its requirement mapping, and focused documentation validation merge. The full
-Issue #501 design package is complete only after the required Figma frames are
-updated and approved or a controlled variance is explicitly accepted.
+The repository information-architecture decision and its design authority are
+complete because this record, its requirement mapping, and the explicitly
+accepted controlled variance merged. The named Figma frames remain pending
+future design work and must not be described as updated by this decision.
 
 No dependent implementation may:
 

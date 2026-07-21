@@ -41,6 +41,25 @@ Complete this section only for UI or accessibility changes. Otherwise state
 
 - Evidence: <!-- Routes/states, viewport or zoom, keyboard/focus behavior, accessibility checks, print, and visual artifacts as applicable -->
 
+## Reviewer-facing redesign artifact classification (when applicable)
+
+Complete this section for a material reviewer-facing removal, merge, rename,
+relocation, replacement, or redesign. Otherwise state
+`Not applicable - <specific reason>`.
+
+| Artifact or assertion | Class | Disposition | Durable reason or requirement ID | Replacement evidence |
+| --- | --- | --- | --- | --- |
+| <!-- One affected assertion per row --> | <!-- 1 through 7 --> | <!-- preserve, rewrite, remove, or historical only --> | <!-- Governed reason --> | <!-- Test, redirect, document, or exact-route evidence --> |
+
+- Preserved assertions:
+- Rewritten assertions:
+- Removed assertions:
+- Historical-only artifacts:
+- Intentionally superseded behavior or routes:
+- Redirect or migration behavior:
+- Controlled-variance approval, if used:
+- Durable protections weakened: <!-- Must be None, or Concern - review required -->
+
 ## Documentation, assumptions, and remaining risks
 
 - Documentation impact: <!-- Updated docs, or why no user-facing or documentation-impacting behavior changed -->

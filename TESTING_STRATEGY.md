@@ -649,6 +649,23 @@ git show HEAD:tests/fixtures/ccld/raw/<fixture-name>.html
 
 ## Reviewer UI design-conformance and source-to-screen tests
 
+Material reviewer-facing redesign tests must follow
+`docs/product/records-tracker-reviewer-redesign-artifact-governance.md`.
+Inventory each affected assertion before coding and classify it by the outcome
+or boundary it protects. Preserve durable outcome, accessibility/safety, and
+source/data/domain tests. Update approved design requirements and their tests
+together. Rewrite or remove implementation and presentation assertions in the
+same change that supersedes them; do not keep obsolete UI solely to keep a test
+green.
+
+Prefer user-visible outcomes, accessible names, navigation results, state
+transitions, reconciliation, and invariant boundaries over full-copy or DOM
+snapshots. Exact wording requires a governed, legal, safety, accessibility,
+official-source, or approved-terminology reason. DOM structure requires a
+semantic or approved-design reason. Use browser automation where static markup
+cannot prove focus, navigation, responsive reflow, keyboard interaction, print,
+or state changes. Design-bound tests must cite applicable requirement IDs.
+
 Reviewer-facing facility hub and complaint-detail coverage must prove:
 
 - only one canonical complaint inventory appears for the current page context;

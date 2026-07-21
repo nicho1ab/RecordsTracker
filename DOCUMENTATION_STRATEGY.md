@@ -101,6 +101,22 @@ should not become the default next milestone when validation is passing and the
 documentation is current; future work should then come from the active roadmap
 backlog.
 
+## Redesign artifact currency
+
+For a material reviewer-facing redesign, classify directly affected active and
+historical documentation under
+`docs/product/records-tracker-reviewer-redesign-artifact-governance.md`.
+Current user and developer guidance must change with the implementation.
+Accurate changelog entries, accepted evidence reports, and prior decision
+records remain historical documentation and must not be rewritten to look
+current or allowed to govern the replacement design.
+
+An exact heading, route name, helper paragraph, disclosure, screenshot label,
+or markup description in active documentation requires an approved design or
+other durable reason. Otherwise update or remove it when the approved design
+supersedes it. The PR and handoff must state which documentation assertions
+were preserved, rewritten, removed, or retained as history.
+
 ## ChatGPT Project Sources precedence and currency
 
 Repository `main` is authoritative. ChatGPT Project Sources are static

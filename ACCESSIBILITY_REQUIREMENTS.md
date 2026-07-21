@@ -210,6 +210,23 @@ Use a combination of:
 
 A release cannot be marked stable if known accessibility blockers exist without being documented in `KNOWN_LIMITATIONS.md`.
 
+## Accessibility invariants during redesign
+
+Accessibility requirements are Class 2 invariants under
+`docs/product/records-tracker-reviewer-redesign-artifact-governance.md`, but a
+temporary page name, helper paragraph, route, or disclosure structure appearing
+in this document is not automatically permanent. An approved redesign may
+rewrite that presentation while preserving the underlying keyboard, focus,
+semantic structure, accessible-name, non-color, reflow, zoom, print, and
+assistive-technology outcome.
+
+Tests should prove the accessible outcome. Exact wording or markup is required
+only when the wording or structure is accessibility-critical or an approved
+design requirement. Static matching `href` and `id` strings does not prove
+browser focus, fragment navigation, Back/Forward behavior, reflow, or keyboard
+operation. Removing a genuine accessibility invariant as a redesign shortcut
+is a release blocker.
+
 ## Primary record inventory and disclosure accessibility
 
 - Primary complaint inventories and supporting evidence must not require repeated expansion of disclosure controls before a user can identify records, findings, dates, source availability, or available actions.

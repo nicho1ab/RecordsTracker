@@ -128,10 +128,9 @@ Each important page must have:
 
 Each frame must be labeled `Approved implementation reference — variance requires approval`.
 
-### Issue #501 required frames and states
+### Issue #501 frames, states, and controlled variance
 
-Before #502, #503, or cross-facility consolidation begins, Figma must add or
-update the exact frame groups named in
+The planned Figma work includes the exact frame groups named in
 `docs/product/records-tracker-attorney-information-architecture.md`:
 
 1. `Issue 501 — Product shell navigation`;
@@ -150,8 +149,16 @@ partial, unavailable, loading, error, selected, valid-unmatched-ID, malformed-
 ID, disabled, and recovery state listed in that record. Existing pagination
 nodes under `59:463` remain authoritative and must be updated without weakening
 `RT-PAG-001`. No editable Figma artifact was changed by the repository-only
-Issue #501 task, so these frames remain an explicit approval dependency unless
-the product owner records a controlled variance.
+Issue #501 task. These frames were an explicit approval dependency until the
+product owner recorded the controlled variance below.
+
+The product owner subsequently approved the repository-readable Issue #501
+package as that controlled variance for #419, #502, and #503. The frames remain
+useful future design work, but they are no longer a prerequisite for that
+bounded sequence. No Figma update is claimed. Each implementation still must
+map requirement IDs, provide a pre-code variance inventory, capture automated
+exact-route evidence, satisfy applicable `RT-UI-GATE-001` through
+`RT-UI-GATE-009`, and receive explicit visual acceptance.
 
 ## Approved Issue #419 large-corpus pagination variance
 
@@ -286,12 +293,15 @@ dependent pages and routes:
 
 1. Merge the repository-readable Issue #501 decision record without application
    behavior changes.
-2. Complete and approve all named Issue #501/#502/#503 Figma frames, or record
-   an explicit controlled variance with affected requirement IDs.
+2. Consume the approved Issue #501 repository-readable controlled variance,
+   cite every affected requirement ID, and do not claim the planned Figma
+   frames were changed.
 3. Apply #504 classification governance before or within each dependent UI
    change so stale presentation assertions are rewritten while durable
    accessibility, security, source, data, pagination, export, and reviewer-state
-   contracts remain enforced.
+   contracts remain enforced. Use
+   `docs/product/records-tracker-reviewer-redesign-artifact-governance.md` as
+   the authoritative classification and PR/handoff contract.
 4. Under separately explicit implementation authority, consolidate the
    complaint-derived facility priority, complaint trends, substantiated and
    serious-topic entry points, and public licensing/visit summary behavior into
@@ -307,9 +317,10 @@ dependent pages and routes:
    visual-variance evidence against the approved frames before recommending any
    dependent merge.
 
-This sequence does not authorize #502, #503, #504, route implementation, or a
-new issue. The product owner must explicitly assign the intermediate
-cross-facility implementation scope before coding begins.
+This sequence does not authorize #419, #502, #503, route implementation, or a
+new issue. The product owner assigned the intermediate cross-facility scope to
+#419, but a separately authorized implementation task is still required before
+coding begins.
 
 ## Change-control procedure for this file
 

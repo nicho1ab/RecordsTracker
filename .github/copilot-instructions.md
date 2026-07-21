@@ -217,6 +217,13 @@ The repository identity check must treat organization acronyms as standalone ter
 
 ## Reviewer-facing design implementation rules
 
+- Material reviewer-facing redesigns must use
+  `docs/product/records-tracker-reviewer-redesign-artifact-governance.md`.
+  Before coding, classify affected tests, evidence assertions, documentation,
+  routes, accessibility requirements, changelog text, and design requirements.
+  The PR and handoff must identify which assertions were preserved, rewritten,
+  removed, or retained as history and why. Unexplained preservation of
+  superseded UI or removal of a durable protection is a stop condition.
 - A reviewer-facing redesign must not introduce accordion- or disclosure-based primary content unless the approved design blueprint explicitly requires it.
 - Tests expecting generic `<details>` markup do not override approved product direction. Update stale tests rather than preserving an unapproved disclosure-heavy layout.
 - Do not duplicate the same complaint under multiple aggregate headings. Implement one canonical complaint inventory and connect metrics through filters, chips, highlighting, or links.
