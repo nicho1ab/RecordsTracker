@@ -59,7 +59,34 @@ source bodies, arbitrary source values, URLs, headers, contact details, reviewer
 database connection values, and local paths. The only named record checks are the three
 explicitly approved public Facility ID/name pairs in `dry-run`.
 
-The CLI cannot retrieve a package. A human operator must place one already-preserved,
-complete source family in an approved mounted raw-data path and pass its `manifest.json`.
-The CLI also provides no scheduler, automatic refresh, canonical allocation/backfill,
-reviewer-state mutation, snapshot deletion, browser route, or deployment hook.
+The lifecycle CLI cannot retrieve a package. A human operator must place one
+already-preserved, complete source family in an approved mounted raw-data path and pass
+its `manifest.json`. The lifecycle CLI also provides no scheduler, automatic refresh,
+canonical allocation/backfill, reviewer-state mutation, snapshot deletion, browser
+route, or deployment hook.
+
+### Local package capture
+
+The separate local capture CLI invokes `TransparencyApiConnector.capture_snapshot` and
+then validates the resulting manifest with `inspect_transparencyapi_package`:
+
+```text
+python -m ccld_complaints.cli.transparencyapi_snapshot_capture capture --output-dir <repo-root>
+```
+
+`--output-dir` must be a RecordsTracker repository root. The connector creates a new
+timestamped package under the ignored
+`data/raw/ccld/transparencyapi-facility-reference` directory. No URL argument exists.
+The command always requests exactly the seven approved bulk exports followed by `Group/`
+and `CACounty`; it does not call `FacilitySearch`, facility detail, or report endpoints.
+
+Each response body is written before parsing. A successful command requires nine exact
+artifacts and a rejection-free lifecycle inspection. It emits aggregate-safe JSON with
+the repository-relative package directory, manifest filename, snapshot and hash
+identities, counts, and timestamp. It neither reads nor writes a database.
+
+If transport or validation fails, the command returns nonzero and emits only a sanitized
+failure category on stderr. Any partial timestamped directory left by a transport failure
+is preserved evidence, not a complete package: it has no acceptance authority and must
+not be transferred, staged, or reconstructed. Capture is manual and local-only; the CLI
+does not schedule retrieval, upload files, access QNAP, or invoke lifecycle mutations.

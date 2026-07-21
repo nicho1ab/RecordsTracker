@@ -186,8 +186,25 @@ These commands operate only on a complete TransparencyAPI package that the human
 operator has already preserved under the app's mounted raw-data volume. The recommended
 container path is
 `/app/data/raw/ccld/transparencyapi-operator/<snapshot-id>/manifest.json`. The CLI does
-not retrieve or copy source data. Confirm the package directory contains the governed
-manifest and all referenced raw artifacts before using it.
+not retrieve or copy source data.
+
+When no retained package exists, capture a new package from a clean local RecordsTracker
+checkout with the local-only command below. Do not run capture on QNAP, and do not reuse a
+missing package's snapshot ID or expected hashes:
+
+```powershell
+python -m ccld_complaints.cli.transparencyapi_snapshot_capture capture --output-dir <repo-root>
+```
+
+The command writes under the repository's ignored
+`data/raw/ccld/transparencyapi-facility-reference` directory, validates the new manifest
+locally, and prints aggregate-safe JSON. It does not access a database. The operator must
+review that output, run the lifecycle CLI's local `inspect-package` command against the
+new manifest, and transfer the complete package separately through the approved human
+workflow. A partial or rejected package must not be transferred or reconstructed.
+
+After human transfer, confirm the mounted package directory contains the governed
+manifest and every referenced raw artifact before using the QNAP lifecycle commands.
 
 Run read-only checks first from `/share/Public/RecordsTracker` in the standalone QNAP
 SSH client. Substitute only the governed container manifest path:
