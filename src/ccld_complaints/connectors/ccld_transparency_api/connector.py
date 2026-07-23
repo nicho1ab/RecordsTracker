@@ -168,9 +168,17 @@ class ParsedExport:
 class DetailObservation:
     facility_number: str
     raw_record: Mapping[str, Any]
+    facility_name: Any
+    facility_address: Any
+    facility_city: Any
+    facility_state: Any
+    facility_zip: Any
+    facility_telephone_number: Any
     contact: Any
     facility_administrator: Any
+    licensee: Any
     detail_status: Any
+    closed_date: Any
     facility_type_code: str | None
     sentinel: bool
     quarantine_categories: tuple[str, ...]
@@ -512,30 +520,55 @@ def parse_detail_response(
     if not isinstance(payload, Mapping):
         raise TransparencyApiConnectorError("FacilityDetail response must be a JSON object.")
     raw = dict(payload)
-    sentinel = any("facility number not found" in str(value).casefold() for value in raw.values())
-    returned_number = _mapping_value(raw, "FacilityNumber", "FACILITYNUMBER", "FAC_NBR")
+    detail_values = _detail_values(raw)
+    sentinel = any(
+        "facility number not found" in str(value).casefold()
+        for value in (*raw.values(), *detail_values.values())
+    )
+    returned_number = _mapping_value(
+        detail_values, "FacilityNumber", "FACILITYNUMBER", "FAC_NBR"
+    )
     quarantines: list[str] = []
     if sentinel:
         quarantines.append("facility_detail_sentinel")
     if returned_number not in (None, "") and str(returned_number).strip() != facility_number:
         quarantines.append("facility_detail_identity_mismatch")
     type_code = _optional_text(
-        _mapping_value(raw, "TYPE", "TypeCode", "FacilityTypeCode", "GROUPID")
+        _mapping_value(
+            detail_values, "TYPE", "TypeCode", "FacilityTypeCode", "GROUPID", "FACILITYTYPE"
+        )
     )
     if known_type_codes is not None and type_code and type_code not in known_type_codes:
         quarantines.append("unknown_facility_type_code")
     return DetailObservation(
         facility_number=facility_number,
         raw_record=raw,
-        contact=_mapping_value(raw, "CONTACT", "Contact"),
-        facility_administrator=_mapping_value(
-            raw, "Facility Administrator", "FacilityAdministrator", "ADMINISTRATOR"
+        facility_name=_mapping_value(detail_values, "FACILITYNAME", "Facility Name"),
+        facility_address=_mapping_value(detail_values, "STREETADDRESS", "Facility Address"),
+        facility_city=_mapping_value(detail_values, "CITY", "Facility City"),
+        facility_state=_mapping_value(detail_values, "STATE", "Facility State"),
+        facility_zip=_mapping_value(detail_values, "ZIPCODE", "Facility Zip"),
+        facility_telephone_number=_mapping_value(
+            detail_values, "TELEPHONE", "Facility Telephone Number"
         ),
-        detail_status=_mapping_value(raw, "STATUS", "FacilityStatus", "FACILITYSTATUS"),
+        contact=_mapping_value(detail_values, "CONTACT", "Contact"),
+        facility_administrator=_mapping_value(
+            detail_values, "Facility Administrator", "FacilityAdministrator", "ADMINISTRATOR"
+        ),
+        licensee=_mapping_value(detail_values, "LICENSEENAME", "Licensee"),
+        detail_status=_mapping_value(detail_values, "STATUS", "FacilityStatus", "FACILITYSTATUS"),
+        closed_date=_mapping_value(detail_values, "DATECLOSED", "Closed Date"),
         facility_type_code=type_code,
         sentinel=sentinel,
         quarantine_categories=tuple(quarantines),
     )
+
+
+def _detail_values(payload: Mapping[str, Any]) -> Mapping[str, Any]:
+    """Return the governed FacilityDetail object without discarding its raw wrapper."""
+
+    nested = payload.get("FacilityDetail")
+    return nested if isinstance(nested, Mapping) else payload
 
 
 def parse_report_list(content: bytes, *, facility_number: str) -> tuple[ReportListItem, ...]:
