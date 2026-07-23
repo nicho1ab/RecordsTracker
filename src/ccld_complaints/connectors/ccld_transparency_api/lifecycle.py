@@ -99,6 +99,7 @@ transparency_rows = Table(
     Column("raw_record", JSON(none_as_null=True), nullable=False),
     Column("normalized_record", JSON(none_as_null=True), nullable=False),
     Column("resolved_current_reference", JSON(none_as_null=True), nullable=False),
+    Column("autocomplete_search_text", Text, nullable=False, server_default=""),
     Column("complaint_blocks", JSON(none_as_null=True), nullable=False),
     Column("row_fingerprint", String(64), nullable=False),
     Column("is_quarantined", Boolean, nullable=False),
@@ -119,6 +120,16 @@ Index(
     "ix_transparencyapi_rows_snapshot_facility_number",
     transparency_rows.c.snapshot_id,
     transparency_rows.c.facility_number,
+)
+
+_AUTOCOMPLETE_SEARCH_FIELDS = (
+    "facility_name",
+    "facility_city",
+    "county_name",
+    "facility_zip",
+    "facility_state",
+    "facility_type",
+    "bulk_status",
 )
 
 transparency_quarantines = Table(
@@ -370,6 +381,10 @@ def inspect_transparencyapi_package(
                 "raw_record": dict(row.raw_record),
                 "normalized_record": normalized,
                 "resolved_current_reference": resolved,
+                "autocomplete_search_text": _autocomplete_search_text(
+                    row.facility_number,
+                    resolved,
+                ),
                 "complaint_blocks": complaint_blocks,
                 "row_fingerprint": row_fingerprint,
                 "is_quarantined": bool(categories),
@@ -638,6 +653,21 @@ def rollback_transparencyapi_snapshot(
         expected_prior_scope=SNAPSHOT_SCOPE,
         rolled_back_at=rolled_back_at,
     )
+
+
+def _autocomplete_search_text(
+    facility_number: str | None,
+    resolved_current_reference: Mapping[str, Any],
+) -> str:
+    values = [facility_number or ""]
+    for field_name in _AUTOCOMPLETE_SEARCH_FIELDS:
+        observation = resolved_current_reference.get(field_name)
+        if not isinstance(observation, Mapping):
+            continue
+        value = observation.get("value")
+        if value is not None:
+            values.append(str(value))
+    return " ".join(" ".join(value.split()).casefold() for value in values if value.strip())
 
 
 def _resolve_reference(manifest_path: Path, reference: str) -> Path:
