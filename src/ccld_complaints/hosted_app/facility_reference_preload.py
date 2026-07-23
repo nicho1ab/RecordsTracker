@@ -445,14 +445,16 @@ def search_facility_reference_records(
 ) -> CcldFacilityLookupResult:
     if result_limit < 1:
         raise ValueError("result_limit must be at least 1.")
-    source = facility_reference_source_summary_from_connection(connection)
-    if source.source_kind == "postgres_transparencyapi_reference":
+    active_snapshot_id = _active_transparency_snapshot_id(connection)
+    if active_snapshot_id is not None:
         return _search_active_transparency_reference_records(
             connection,
             query,
-            source=source,
+            source=_active_transparency_reference_source(),
+            active_snapshot_id=active_snapshot_id,
             result_limit=result_limit,
         )
+    source = facility_reference_source_summary_from_connection(connection)
     query_tokens = _normalized_query_tokens(query)
     if not query_tokens:
         return CcldFacilityLookupResult(
@@ -512,15 +514,15 @@ def _search_active_transparency_reference_records(
     query: str,
     *,
     source: CcldFacilityReferenceSource,
+    active_snapshot_id: str,
     result_limit: int,
 ) -> CcldFacilityLookupResult:
     from ccld_complaints.connectors.ccld_transparency_api.lifecycle import (
         transparency_rows,
     )
 
-    active_snapshot_id = _active_transparency_snapshot_id(connection)
     query_tokens = _normalized_query_tokens(query)
-    if active_snapshot_id is None or not query_tokens:
+    if not query_tokens:
         return CcldFacilityLookupResult(
             query=query.strip(),
             total_match_count=0,
@@ -535,30 +537,64 @@ def _search_active_transparency_reference_records(
         transparency_rows.c.facility_number.is_not(None),
         *filters,
     )
-    total_match_count = connection.execute(
-        select(func.count(func.distinct(transparency_rows.c.facility_number))).where(
-            *base_conditions
+    suggestion_columns = _transparency_suggestion_columns()
+    normalized_query = query.strip()
+    if normalized_query.isdigit() and len(normalized_query) == 9:
+        rows = connection.execute(
+            select(*suggestion_columns)
+            .where(
+                *base_conditions,
+                transparency_rows.c.facility_number == normalized_query,
+            )
+            .order_by(
+                transparency_rows.c.export_id,
+                transparency_rows.c.row_ordinal,
+            )
+            .limit(1)
+        ).mappings().all()
+        records = tuple(
+            _lookup_record_from_transparency_suggestion_row(dict(row)) for row in rows
         )
-    ).scalar_one()
-    name_expression = _transparency_value_expression("facility_name")
-    rows = connection.execute(
-        select(transparency_rows)
-        .where(*base_conditions)
-        .order_by(
-            func.lower(func.coalesce(name_expression, "")),
-            transparency_rows.c.facility_number,
-            transparency_rows.c.export_id,
-            transparency_rows.c.row_ordinal,
+        total_match_count = len(records)
+    else:
+        ranked_matches = _ranked_transparency_suggestions(
+            *base_conditions,
+            suggestion_columns=suggestion_columns,
         )
-        .limit(result_limit)
-    ).mappings()
-    records = tuple(_lookup_record_from_transparency_row(dict(row)) for row in rows)
+        name_expression = ranked_matches.c.facility_name
+        rows = connection.execute(
+            select(
+                *(ranked_matches.c[column.key] for column in suggestion_columns),
+                func.count().over().label("_total_match_count"),
+            )
+            .where(ranked_matches.c._facility_rank == 1)
+            .order_by(
+                func.lower(func.coalesce(name_expression, "")),
+                ranked_matches.c.facility_number,
+            )
+            .limit(result_limit)
+        ).mappings().all()
+        records = tuple(
+            _lookup_record_from_transparency_suggestion_row(dict(row)) for row in rows
+        )
+        total_match_count = int(rows[0]["_total_match_count"]) if rows else 0
     return CcldFacilityLookupResult(
         query=query.strip(),
         total_match_count=total_match_count,
         returned_records=records,
         result_limit=result_limit,
         reference_source=source,
+    )
+
+
+def _active_transparency_reference_source() -> CcldFacilityReferenceSource:
+    return CcldFacilityReferenceSource(
+        source_kind="postgres_transparencyapi_reference",
+        label="Accepted CCLD facility reference snapshot",
+        path_label="active accepted TransparencyAPI snapshot",
+        records=(),
+        notices=(),
+        record_count=None,
     )
 
 
@@ -636,6 +672,88 @@ def _transparency_search_token_filter(token: str) -> Any:
             func.lower(func.coalesce(sql_cast(value, String), "")).like(pattern)
             for value in searchable_values
         )
+    )
+
+
+def _transparency_suggestion_columns() -> tuple[Any, ...]:
+    from ccld_complaints.connectors.ccld_transparency_api.lifecycle import (
+        transparency_rows,
+    )
+
+    return (
+        transparency_rows.c.facility_number.label("facility_number"),
+        *(
+            _transparency_value_expression(field_name).label(field_name)
+            for field_name in (
+                "facility_name",
+                "facility_city",
+                "facility_state",
+                "county_name",
+                "facility_zip",
+                "facility_type",
+                "facility_capacity",
+                "bulk_status",
+                "closed_date",
+                "facility_address",
+                "regional_office",
+                "facility_administrator",
+                "licensee",
+                "facility_telephone_number",
+            )
+        ),
+    )
+
+
+def _ranked_transparency_suggestions(
+    *conditions: Any,
+    suggestion_columns: tuple[Any, ...],
+) -> Any:
+    from ccld_complaints.connectors.ccld_transparency_api.lifecycle import (
+        transparency_rows,
+    )
+
+    return (
+        select(
+            *suggestion_columns,
+            func.row_number()
+            .over(
+                partition_by=transparency_rows.c.facility_number,
+                order_by=(
+                    transparency_rows.c.export_id,
+                    transparency_rows.c.row_ordinal,
+                ),
+            )
+            .label("_facility_rank"),
+        )
+        .where(*conditions)
+        .cte("ranked_active_transparency_suggestions")
+    )
+
+
+def _lookup_record_from_transparency_suggestion_row(
+    row: Mapping[str, Any],
+) -> CcldFacilityLookupRecord:
+    def value(field_name: str) -> str:
+        selected = row.get(field_name)
+        return "" if selected is None else str(selected).strip()
+
+    return CcldFacilityLookupRecord(
+        facility_number=value("facility_number"),
+        facility_name=value("facility_name"),
+        city=value("facility_city"),
+        state=value("facility_state"),
+        county=value("county_name"),
+        zip_code=value("facility_zip"),
+        facility_type=value("facility_type"),
+        program_type="",
+        capacity=value("facility_capacity"),
+        status=value("bulk_status"),
+        closed_date=value("closed_date"),
+        address=value("facility_address"),
+        regional_office=value("regional_office"),
+        administrator=value("facility_administrator"),
+        licensee=value("licensee"),
+        telephone=value("facility_telephone_number"),
     )
 
 
