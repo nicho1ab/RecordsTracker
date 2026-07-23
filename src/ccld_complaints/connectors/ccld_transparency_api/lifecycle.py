@@ -115,6 +115,11 @@ Index(
     "ix_transparencyapi_rows_facility_number",
     transparency_rows.c.facility_number,
 )
+Index(
+    "ix_transparencyapi_rows_snapshot_facility_number",
+    transparency_rows.c.snapshot_id,
+    transparency_rows.c.facility_number,
+)
 
 transparency_quarantines = Table(
     "hosted_transparencyapi_snapshot_quarantines",

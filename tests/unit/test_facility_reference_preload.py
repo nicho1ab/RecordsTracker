@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 import importlib.util
+import json
 import os
 import shutil
 import subprocess
@@ -10,7 +12,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from sqlalchemy import create_engine, func, inspect, select
+from sqlalchemy import create_engine, event, func, inspect, select
 from sqlalchemy.engine import Connection
 
 from ccld_complaints.connectors.ccld_transparency_api.contract import (
@@ -25,10 +27,15 @@ from ccld_complaints.connectors.ccld_transparency_api.contract import (
 from ccld_complaints.connectors.ccld_transparency_api.lifecycle import (
     transparency_rows,
 )
+from ccld_complaints.hosted_app import app as app_module
 from ccld_complaints.hosted_app import facility_reference_preload as preload_module
 from ccld_complaints.hosted_app.app import route_response
 from ccld_complaints.hosted_app.auth import load_hosted_auth_runtime_config
-from ccld_complaints.hosted_app.ccld_facility_lookup import CCLD_FACILITY_LOOKUP_PATH
+from ccld_complaints.hosted_app.ccld_facility_lookup import (
+    CCLD_FACILITY_LOOKUP_PATH,
+    CCLD_FACILITY_SUGGESTIONS_PATH,
+    CcldFacilityLookupResult,
+)
 from ccld_complaints.hosted_app.ccld_record_request_ui import (
     ccld_record_request_context_for_reviewer_context,
 )
@@ -517,6 +524,231 @@ def test_active_transparency_snapshot_is_the_searchable_primary_reference() -> N
     assert quarantined.returned_records == ()
 
 
+def test_active_transparency_autocomplete_uses_bounded_direct_snapshot_queries(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    hosted_facility_reference_metadata.create_all(engine)
+    source_snapshot_metadata.create_all(engine)
+    snapshot_id = "transparency-autocomplete-active"
+    with engine.begin() as connection:
+        _seed_active_transparency_snapshot(
+            connection,
+            snapshot_id=snapshot_id,
+            rows=(
+                _transparency_search_row(
+                    "001234567",
+                    "Exact Facility",
+                    city="Direct City",
+                    county="Direct County",
+                    zip_code="95814",
+                ),
+                _transparency_search_row("002345678", "Single Result Facility"),
+                *(
+                    _transparency_search_row(
+                        f"7000000{ordinal:02d}",
+                        f"Wide Result Facility {ordinal:02d}",
+                    )
+                    for ordinal in range(30)
+                ),
+            ),
+        )
+        _seed_transparency_snapshot(
+            connection,
+            snapshot_id="transparency-autocomplete-inactive",
+            rows=(_transparency_search_row("888888888", "Inactive Snapshot Only"),),
+        )
+        connection.execute(
+            hosted_facility_reference_records.insert().values(
+                **_diagnostic_reference_row(
+                    facility_number="999999999",
+                    facility_name="Legacy Fixture Only",
+                    address=None,
+                    city=None,
+                    state=None,
+                    zip_code=None,
+                    original_row_json={"FAC_NBR": "999999999"},
+                )
+            )
+        )
+        monkeypatch.setattr(
+            preload_module,
+            "_active_transparency_snapshot_id",
+            lambda _connection: snapshot_id,
+        )
+        statements: list[tuple[str, Any]] = []
+        statements_by_query: dict[str, tuple[tuple[str, Any], ...]] = {}
+
+        def record_statement(
+            _connection: object,
+            _cursor: object,
+            statement: str,
+            _parameters: object,
+            _context: object,
+            _executemany: object,
+        ) -> None:
+            statements.append((statement, _parameters))
+
+        event.listen(connection, "before_cursor_execute", record_statement)
+        try:
+            results: dict[str, tuple[CcldFacilityLookupResult, int]] = {}
+            for query in (
+                "001234567",
+                "Single Result",
+                "Direct City",
+                "Direct County",
+                "95814",
+                "Wide Result",
+                "Inactive Snapshot Only",
+                "Legacy Fixture Only",
+            ):
+                statements.clear()
+                results[query] = (
+                    search_facility_reference_records(connection, query),
+                    len(statements),
+                )
+                statements_by_query[query] = tuple(statements)
+        finally:
+            event.remove(connection, "before_cursor_execute", record_statement)
+        exact_statement, exact_parameters = statements_by_query["001234567"][0]
+        connection.exec_driver_sql("ANALYZE")
+        exact_query_plan = connection.exec_driver_sql(
+            f"EXPLAIN QUERY PLAN {exact_statement}",
+            exact_parameters,
+        ).all()
+
+    exact, exact_statement_count = results["001234567"]
+    partial_name, partial_name_statement_count = results["Single Result"]
+    city, city_statement_count = results["Direct City"]
+    county, county_statement_count = results["Direct County"]
+    zip_code, zip_statement_count = results["95814"]
+    many, many_statement_count = results["Wide Result"]
+    inactive, inactive_statement_count = results["Inactive Snapshot Only"]
+    legacy, legacy_statement_count = results["Legacy Fixture Only"]
+
+    assert exact_statement_count == 1
+    assert partial_name_statement_count == 1
+    assert city_statement_count == 1
+    assert county_statement_count == 1
+    assert zip_statement_count == 1
+    assert many_statement_count == 1
+    assert inactive_statement_count == 1
+    assert legacy_statement_count == 1
+    assert exact.returned_records[0].facility_number == "001234567"
+    assert partial_name.total_match_count == 1
+    assert partial_name.returned_records[0].facility_name == "Single Result Facility"
+    assert city.returned_records[0].city == "Direct City"
+    assert county.returned_records[0].county == "Direct County"
+    assert zip_code.returned_records[0].zip_code == "95814"
+    assert many.total_match_count == 30
+    assert len(many.returned_records) == 25
+    assert inactive.total_match_count == 0
+    assert inactive.returned_records == ()
+    assert legacy.total_match_count == 0
+    assert legacy.returned_records == ()
+    assert any(
+        "ix_transparencyapi_rows_snapshot_facility_number" in str(plan)
+        for plan in exact_query_plan
+    ), exact_query_plan
+
+
+def test_active_transparency_suggestions_bypass_full_identity_projection(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    hosted_seeded_import_metadata.create_all(engine)
+    hosted_facility_reference_metadata.create_all(engine)
+    source_snapshot_metadata.create_all(engine)
+    with engine.begin() as connection:
+        _seed_active_transparency_snapshot(
+            connection,
+            snapshot_id="transparency-autocomplete-endpoint",
+            rows=(
+                _transparency_search_row(
+                    "001234567",
+                    "Direct Endpoint Facility",
+                    city="Direct City",
+                    county="Direct County",
+                    zip_code="95814",
+                ),
+                *(
+                    _transparency_search_row(
+                        f"6000000{ordinal:02d}",
+                        f"Endpoint Wide Result {ordinal:02d}",
+                    )
+                    for ordinal in range(30)
+                ),
+            ),
+        )
+    with engine.connect() as connection:
+        context = ccld_record_request_context_for_reviewer_context(
+            reviewer_ui_context_for_connection(connection)
+        )
+
+        def full_projection_must_not_run(*_args: object, **_kwargs: object) -> object:
+            raise AssertionError("Suggestions must not invoke the full identity projection.")
+
+        monkeypatch.setattr(
+            app_module,
+            "_projected_lookup_result",
+            full_projection_must_not_run,
+        )
+        status, content_type, body = route_response(
+            f"{CCLD_FACILITY_SUGGESTIONS_PATH}?q=001234567",
+            auth_runtime_config=load_hosted_auth_runtime_config(
+                environ={
+                    "CCLD_HOSTED_TESTER_AUTH_MODE": "local-dev",
+                    "CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH": "enabled",
+                }
+            ),
+            page_data_mode="postgres",
+            ccld_record_request_ui_context=context,
+        )
+        wide_status, wide_content_type, wide_body = route_response(
+            f"{CCLD_FACILITY_SUGGESTIONS_PATH}?q=Endpoint%20Wide%20Result",
+            auth_runtime_config=load_hosted_auth_runtime_config(
+                environ={
+                    "CCLD_HOSTED_TESTER_AUTH_MODE": "local-dev",
+                    "CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH": "enabled",
+                }
+            ),
+            page_data_mode="postgres",
+            ccld_record_request_ui_context=context,
+        )
+
+    payload = json.loads(body.decode("utf-8"))
+    wide_payload = json.loads(wide_body.decode("utf-8"))
+
+    assert status == 200
+    assert content_type == "application/json; charset=utf-8"
+    assert set(payload) == {"query", "records", "result_limit", "total_match_count"}
+    assert payload["total_match_count"] == 1
+    assert payload["records"] == [
+        {
+            "address": "Not provided",
+            "cap": "Not provided",
+            "city": "Direct City",
+            "co": "Direct County",
+            "n": "Direct Endpoint Facility",
+            "num": "001234567",
+            "p": "",
+            "regional_office": "Not provided",
+            "s": "Licensed",
+            "sc": False,
+            "ss": "populated",
+            "state": "CA",
+            "t": "Child Care Center",
+            "tc": False,
+            "ts": "populated",
+            "zip": "95814",
+        }
+    ]
+    assert wide_status == 200
+    assert wide_content_type == "application/json; charset=utf-8"
+    assert wide_payload["total_match_count"] == 30
+    assert len(wide_payload["records"]) == 25
+
+
 def test_address_diagnostic_distinguishes_raw_absence_from_mapping_gap() -> None:
     with _connection() as connection:
         connection.execute(
@@ -843,6 +1075,104 @@ def _diagnostic_reference_row(
 
 def _transparency_observation(value: object) -> dict[str, object]:
     return {"state": "populated", "raw": value, "value": value}
+
+
+def _transparency_search_row(
+    facility_number: str,
+    facility_name: str,
+    *,
+    city: str = "Search City",
+    county: str = "Search County",
+    zip_code: str = "90000",
+) -> dict[str, object]:
+    return {
+        "facility_number": facility_number,
+        "resolved_current_reference": {
+            "facility_name": _transparency_observation(facility_name),
+            "facility_type": _transparency_observation("Child Care Center"),
+            "bulk_status": _transparency_observation("Licensed"),
+            "facility_city": _transparency_observation(city),
+            "facility_state": _transparency_observation("CA"),
+            "facility_zip": _transparency_observation(zip_code),
+            "county_name": _transparency_observation(county),
+        },
+    }
+
+
+def _seed_active_transparency_snapshot(
+    connection: Connection,
+    *,
+    snapshot_id: str,
+    rows: tuple[dict[str, object], ...],
+) -> None:
+    _seed_transparency_snapshot(connection, snapshot_id=snapshot_id, rows=rows)
+    connection.execute(
+        source_snapshot_pointers.insert().values(
+            source_family_id=TRANSPARENCY_SOURCE_FAMILY_ID,
+            active_snapshot_id=snapshot_id,
+            prior_accepted_snapshot_id=None,
+            updated_at="2026-07-22T00:00:00+00:00",
+        )
+    )
+
+
+def _seed_transparency_snapshot(
+    connection: Connection,
+    *,
+    snapshot_id: str,
+    rows: tuple[dict[str, object], ...],
+) -> None:
+    recorded_at = "2026-07-22T00:00:00+00:00"
+    snapshot_hash = hashlib.sha256(snapshot_id.encode("utf-8")).hexdigest()
+    connection.execute(
+        source_snapshots.insert().values(
+            snapshot_id=snapshot_id,
+            source_family_id=TRANSPARENCY_SOURCE_FAMILY_ID,
+            fixture_scope=TRANSPARENCY_SNAPSHOT_SCOPE,
+            observation_kind=TRANSPARENCY_OBSERVATION_KIND,
+            lifecycle_state="accepted",
+            manifest_ref="ignored-evidence/manifest.json",
+            manifest_sha256=snapshot_hash,
+            raw_payload_ref="ignored-evidence/raw",
+            raw_payload_sha256=hashlib.sha256((snapshot_id + "-raw").encode("utf-8")).hexdigest(),
+            normalized_content_sha256="3" * 64,
+            schema_fingerprint="4" * 64,
+            domain_fingerprint="5" * 64,
+            row_count=len(rows),
+            stored_row_count=len(rows),
+            duplicate_object_id_count=0,
+            duplicate_facility_number_count=0,
+            omitted_field_count=0,
+            invalid_field_count=0,
+            warning_count=0,
+            rejection_reason_count=0,
+            validation_report={},
+            recorded_at=recorded_at,
+            validated_at=recorded_at,
+            rejected_at=None,
+            accepted_at=recorded_at,
+        )
+    )
+    connection.execute(
+        transparency_rows.insert(),
+        tuple(
+            {
+                "snapshot_id": snapshot_id,
+                "export_id": "ChildCareCenters",
+                "row_ordinal": ordinal,
+                "facility_number": row["facility_number"],
+                "raw_row_sha256": f"{ordinal:064x}",
+                "raw_values": [],
+                "raw_record": {"Facility Number": row["facility_number"]},
+                "normalized_record": row["resolved_current_reference"],
+                "resolved_current_reference": row["resolved_current_reference"],
+                "complaint_blocks": [],
+                "row_fingerprint": f"{ordinal + 100:064x}",
+                "is_quarantined": False,
+            }
+            for ordinal, row in enumerate(rows, start=1)
+        ),
+    )
 
 
 def _load_preload_cli_module() -> Any:

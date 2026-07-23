@@ -3086,15 +3086,21 @@ def _facility_suggestions_payload(
     reference_source = project_ccld_facility_reference_source(
         reference_source or load_active_ccld_facility_reference()
     )
-    result = (
-        project_ccld_facility_lookup_result(lookup_result, reference_source)
-        if lookup_result is not None
-        else search_ccld_facilities(
-            query,
-            reference_source.records,
-            reference_source=reference_source,
+    if (
+        lookup_result is not None
+        and reference_source.source_kind == "postgres_transparencyapi_reference"
+    ):
+        result = lookup_result
+    else:
+        result = (
+            project_ccld_facility_lookup_result(lookup_result, reference_source)
+            if lookup_result is not None
+            else search_ccld_facilities(
+                query,
+                reference_source.records,
+                reference_source=reference_source,
+            )
         )
-    )
     return {
         "query": result.query,
         "total_match_count": result.total_match_count,

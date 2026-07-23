@@ -1223,25 +1223,42 @@ def route_response(
                 parse_qs(parsed_url.query, keep_blank_values=True),
                 "q",
             )
-            facility_reference = _facility_reference_summary_from_context(
-                active_ccld_context
-            )
-            if facility_reference.source_kind in {
-                "postgres_facility_reference",
-                "postgres_transparencyapi_reference",
-            }:
+            if parsed_path == CCLD_FACILITY_SUGGESTIONS_PATH:
                 try:
                     source_context = active_ccld_context.reviewer_ui_context.workflow_shell_context.source_derived_api_context
                     lookup_result = search_facility_reference_records(
                         source_context.connection,
                         query,
                     )
-                    lookup_result = _projected_lookup_result(
-                        active_ccld_context,
-                        lookup_result,
+                    facility_reference = (
+                        lookup_result.reference_source
+                        or _facility_reference_summary_from_context(active_ccld_context)
                     )
                 except SQLAlchemyError:
                     lookup_result = None
+                    facility_reference = _facility_reference_summary_from_context(
+                        active_ccld_context
+                    )
+            else:
+                facility_reference = _facility_reference_summary_from_context(
+                    active_ccld_context
+                )
+                if facility_reference.source_kind in {
+                    "postgres_facility_reference",
+                    "postgres_transparencyapi_reference",
+                }:
+                    try:
+                        source_context = active_ccld_context.reviewer_ui_context.workflow_shell_context.source_derived_api_context
+                        lookup_result = search_facility_reference_records(
+                            source_context.connection,
+                            query,
+                        )
+                        lookup_result = _projected_lookup_result(
+                            active_ccld_context,
+                            lookup_result,
+                        )
+                    except SQLAlchemyError:
+                        lookup_result = None
         else:
             facility_reference = _facility_reference_from_context(active_ccld_context)
         facility_number = _first_query_value(

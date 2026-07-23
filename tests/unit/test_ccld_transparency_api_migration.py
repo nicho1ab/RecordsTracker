@@ -22,20 +22,34 @@ def test_transparencyapi_migration_upgrades_and_downgrades_without_history() -> 
     lifecycle = _load("20260720_0008_source_snapshot_lifecycle.py")
     live_scope = _load("20260720_0009_live_arcgis_query_scope.py")
     migration = _load("20260721_0010_transparencyapi_source_snapshot.py")
+    autocomplete_index = _load("20260722_0011_transparencyapi_autocomplete_index.py")
     engine = sa.create_engine("sqlite+pysqlite:///:memory:")
     with engine.begin() as connection:
         operations = Operations(MigrationContext.configure(connection))
         lifecycle.op = operations
         live_scope.op = operations
         migration.op = operations
+        autocomplete_index.op = operations
         lifecycle.upgrade()
         live_scope.upgrade()
         migration.upgrade()
+        autocomplete_index.upgrade()
         inspector = sa.inspect(connection)
         assert NEW_TABLES <= set(inspector.get_table_names())
         assert inspector.get_pk_constraint("hosted_transparencyapi_snapshot_rows")[
             "constrained_columns"
         ] == ["snapshot_id", "export_id", "row_ordinal"]
+        assert "ix_transparencyapi_rows_snapshot_facility_number" in {
+            index["name"]
+            for index in inspector.get_indexes("hosted_transparencyapi_snapshot_rows")
+        }
+        autocomplete_index.downgrade()
+        assert "ix_transparencyapi_rows_snapshot_facility_number" not in {
+            index["name"]
+            for index in sa.inspect(connection).get_indexes(
+                "hosted_transparencyapi_snapshot_rows"
+            )
+        }
         migration.downgrade()
         assert NEW_TABLES.isdisjoint(sa.inspect(connection).get_table_names())
     engine.dispose()
@@ -89,6 +103,13 @@ def test_transparencyapi_migration_extends_single_head() -> None:
     migration = _load("20260721_0010_transparencyapi_source_snapshot.py")
     assert migration.revision == "20260721_0010"
     assert migration.down_revision == "20260720_0009"
+
+
+def test_transparencyapi_autocomplete_index_migration_extends_single_head() -> None:
+    migration = _load("20260722_0011_transparencyapi_autocomplete_index.py")
+
+    assert migration.revision == "20260722_0011"
+    assert migration.down_revision == "20260721_0010"
 
 
 def _snapshot_values() -> dict[str, Any]:
