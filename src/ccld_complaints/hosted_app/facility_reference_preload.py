@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import csv
 import re
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from pathlib import Path
@@ -27,7 +27,7 @@ from sqlalchemy import (
 from sqlalchemy import (
     cast as sql_cast,
 )
-from sqlalchemy.engine import Connection
+from sqlalchemy.engine import Connection, RowMapping
 
 from ccld_complaints.hosted_app.ccld_facility_lookup import (
     MAX_FACILITY_LOOKUP_RESULTS,
@@ -521,6 +521,7 @@ def _search_active_transparency_reference_records(
         transparency_rows,
     )
 
+    normalized_query_phrase = _normalized_query_phrase(query)
     query_tokens = _normalized_query_tokens(query)
     if not query_tokens:
         return CcldFacilityLookupResult(
@@ -555,43 +556,25 @@ def _search_active_transparency_reference_records(
         )
         total_match_count = len(records)
     else:
-        candidate_rows = _ranked_transparency_suggestions(
-            *snapshot_conditions,
-            *(_transparency_search_token_filter(token) for token in query_tokens),
+        rows = _load_ranked_active_transparency_suggestions(
+            connection,
+            snapshot_conditions=snapshot_conditions,
+            suggestion_columns=suggestion_columns,
+            search_conditions=(
+                _transparency_search_phrase_filter(normalized_query_phrase),
+            ),
+            result_limit=result_limit,
         )
-        if connection.dialect.name == "postgresql":
-            candidate_rows = candidate_rows.prefix_with("MATERIALIZED", dialect="postgresql")
-        selected_rows = (
-            select(
-                candidate_rows.c.snapshot_id,
-                candidate_rows.c.export_id,
-                candidate_rows.c.row_ordinal,
+        if not rows and _supports_bounded_transparency_token_fallback(query_tokens):
+            rows = _load_ranked_active_transparency_suggestions(
+                connection,
+                snapshot_conditions=snapshot_conditions,
+                suggestion_columns=suggestion_columns,
+                search_conditions=tuple(
+                    _transparency_search_token_filter(token) for token in query_tokens
+                ),
+                result_limit=result_limit,
             )
-            .where(candidate_rows.c._facility_rank == 1)
-            .cte("selected_active_transparency_suggestions")
-        )
-        name_expression = _transparency_value_expression("facility_name")
-        rows = connection.execute(
-            select(
-                *suggestion_columns,
-                func.count().over().label("_total_match_count"),
-            )
-            .select_from(
-                transparency_rows.join(
-                    selected_rows,
-                    and_(
-                        transparency_rows.c.snapshot_id == selected_rows.c.snapshot_id,
-                        transparency_rows.c.export_id == selected_rows.c.export_id,
-                        transparency_rows.c.row_ordinal == selected_rows.c.row_ordinal,
-                    ),
-                )
-            )
-            .order_by(
-                func.lower(func.coalesce(name_expression, "")),
-                transparency_rows.c.facility_number,
-            )
-            .limit(result_limit)
-        ).mappings().all()
         records = tuple(
             _lookup_record_from_transparency_suggestion_row(dict(row)) for row in rows
         )
@@ -670,6 +653,70 @@ def _transparency_search_token_filter(token: str) -> Any:
     )
 
     return transparency_rows.c.autocomplete_search_text.like(f"%{token}%")
+
+
+def _transparency_search_phrase_filter(normalized_query_phrase: str) -> Any:
+    from ccld_complaints.connectors.ccld_transparency_api.lifecycle import (
+        transparency_rows,
+    )
+
+    return transparency_rows.c.autocomplete_search_text.like(f"%{normalized_query_phrase}%")
+
+
+def _supports_bounded_transparency_token_fallback(query_tokens: tuple[str, ...]) -> bool:
+    """Keep fallback predicates compatible with the existing trigram index."""
+    return len(query_tokens) > 1 and all(len(token) >= 3 for token in query_tokens)
+
+
+def _load_ranked_active_transparency_suggestions(
+    connection: Connection,
+    *,
+    snapshot_conditions: tuple[Any, ...],
+    suggestion_columns: tuple[Any, ...],
+    search_conditions: tuple[Any, ...],
+    result_limit: int,
+) -> Sequence[RowMapping]:
+    from ccld_complaints.connectors.ccld_transparency_api.lifecycle import (
+        transparency_rows,
+    )
+
+    candidate_rows = _ranked_transparency_suggestions(
+        *snapshot_conditions,
+        *search_conditions,
+    )
+    if connection.dialect.name == "postgresql":
+        candidate_rows = candidate_rows.prefix_with("MATERIALIZED", dialect="postgresql")
+    selected_rows = (
+        select(
+            candidate_rows.c.snapshot_id,
+            candidate_rows.c.export_id,
+            candidate_rows.c.row_ordinal,
+        )
+        .where(candidate_rows.c._facility_rank == 1)
+        .cte("selected_active_transparency_suggestions")
+    )
+    name_expression = _transparency_value_expression("facility_name")
+    return connection.execute(
+        select(
+            *suggestion_columns,
+            func.count().over().label("_total_match_count"),
+        )
+        .select_from(
+            transparency_rows.join(
+                selected_rows,
+                and_(
+                    transparency_rows.c.snapshot_id == selected_rows.c.snapshot_id,
+                    transparency_rows.c.export_id == selected_rows.c.export_id,
+                    transparency_rows.c.row_ordinal == selected_rows.c.row_ordinal,
+                ),
+            )
+        )
+        .order_by(
+            func.lower(func.coalesce(name_expression, "")),
+            transparency_rows.c.facility_number,
+        )
+        .limit(result_limit)
+    ).mappings().all()
 
 
 def _transparency_suggestion_columns() -> tuple[Any, ...]:
@@ -1301,8 +1348,12 @@ def _optional_row_str(row: Mapping[str, Any], key: str) -> str | None:
 
 
 def _normalized_query_tokens(query: str) -> tuple[str, ...]:
-    normalized = re.sub(r"\s+", " ", query.casefold()).strip()
+    normalized = _normalized_query_phrase(query)
     return tuple(token for token in normalized.split(" ") if token)
+
+
+def _normalized_query_phrase(query: str) -> str:
+    return re.sub(r"\s+", " ", query.casefold()).strip()
 
 
 def _search_token_filter(token: str) -> Any:

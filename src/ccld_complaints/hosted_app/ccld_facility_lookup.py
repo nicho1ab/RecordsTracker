@@ -127,6 +127,10 @@ _FACILITY_COMBOBOX_JS = r"""(function(){
   if(!si||!sl||!de)return;
   var facs=[];
   var requestSeq=0;
+  var pendingSuggestionTimer=null;
+  var activeSuggestionController=null;
+  // A short delay coalesces ordinary typing without making facility lookup feel delayed.
+  var SUGGESTION_DEBOUNCE_MS=250;
   try{facs=JSON.parse(de.textContent||'[]');}catch(e){return;}
   // Show JS combobox, hide no-JS fallback
   var co=document.getElementById('facility-combobox-outer');
@@ -190,18 +194,55 @@ _FACILITY_COMBOBOX_JS = r"""(function(){
     sl.removeAttribute('hidden');
     si.setAttribute('aria-expanded','true');
   }
+  function hasUsefulSuggestionQuery(q){
+    // Two letters/digits preserve short city, county, ZIP, and Facility ID searches;
+    // punctuation does not turn a one-character broad query into a useful request.
+    return norm(q).replace(/[^a-z0-9]/g,'').length>=2;
+  }
+  function cancelPendingSuggestions(){
+    if(pendingSuggestionTimer!==null){
+      clearTimeout(pendingSuggestionTimer);
+      pendingSuggestionTimer=null;
+    }
+    if(activeSuggestionController&&typeof activeSuggestionController.abort==='function'){
+      activeSuggestionController.abort();
+    }
+    activeSuggestionController=null;
+  }
+  function isAbortError(error){
+    return Boolean(error&&error.name==='AbortError');
+  }
   function showSugs(q){
     var toks=norm(q).split(' ').filter(Boolean);
-    if(!toks.length){hideSugs();return;}
+    cancelPendingSuggestions();
+    var seq=++requestSeq;
+    sl.setAttribute('hidden','');
+    si.setAttribute('aria-expanded','false');
+    if(!toks.length||!hasUsefulSuggestionQuery(q)){hideSugs();return;}
     if(suggestUrl&&typeof fetch==='function'){
-      var seq=++requestSeq;
-      sl.innerHTML='<li><span class="suggestion-empty">Searching...</span></li>';
-      sl.removeAttribute('hidden');
-      si.setAttribute('aria-expanded','true');
-      fetch(suggestUrl+'?q='+encodeURIComponent(q),{headers:{'Accept':'application/json'}})
-        .then(function(resp){if(!resp.ok)throw new Error('lookup');return resp.json();})
-        .then(function(data){if(seq!==requestSeq)return;renderMatches(data.records||[]);})
-        .catch(function(){if(seq!==requestSeq)return;renderMatches([]);});
+      pendingSuggestionTimer=setTimeout(function(){
+        if(seq!==requestSeq)return;
+        pendingSuggestionTimer=null;
+        var controller=(typeof AbortController==='function')?new AbortController():null;
+        activeSuggestionController=controller;
+        sl.innerHTML='<li><span class="suggestion-empty">Searching...</span></li>';
+        sl.removeAttribute('hidden');
+        si.setAttribute('aria-expanded','true');
+        var options={headers:{'Accept':'application/json'}};
+        if(controller)options.signal=controller.signal;
+        fetch(suggestUrl+'?q='+encodeURIComponent(q),options)
+          .then(function(resp){if(!resp.ok)throw new Error('lookup');return resp.json();})
+          .then(function(data){if(seq!==requestSeq)return;renderMatches(data.records||[]);})
+          .catch(function(error){
+            if(seq!==requestSeq||isAbortError(error))return;
+            renderMatches([]);
+          })
+          .finally(function(){
+            if(seq===requestSeq&&activeSuggestionController===controller){
+              activeSuggestionController=null;
+            }
+          });
+      },SUGGESTION_DEBOUNCE_MS);
       return;
     }
     var ms=[];
@@ -209,6 +250,8 @@ _FACILITY_COMBOBOX_JS = r"""(function(){
     renderMatches(ms);
   }
   function hideSugs(){
+    cancelPendingSuggestions();
+    requestSeq++;
     sl.setAttribute('hidden','');
     si.setAttribute('aria-expanded','false');
   }

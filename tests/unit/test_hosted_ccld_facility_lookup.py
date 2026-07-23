@@ -463,6 +463,21 @@ def test_server_and_javascript_use_the_same_projected_status_text() -> None:
     assert_no_secret_html(html)
 
 
+def test_facility_combobox_bounds_and_cancels_server_suggestions() -> None:
+    script = facility_lookup._FACILITY_COMBOBOX_JS
+
+    assert "SUGGESTION_DEBOUNCE_MS=250" in script
+    assert "setTimeout" in script
+    assert "hasUsefulSuggestionQuery" in script
+    assert "replace(/[^a-z0-9]/g,'').length>=2" in script
+    assert "AbortController" in script
+    assert "activeSuggestionController.abort()" in script
+    assert "isAbortError(error)" in script
+    assert "if(seq!==requestSeq||isAbortError(error))return;" in script
+    assert "if(e.key==='Escape'){hideSugs();return;}" in script
+    assert "else if(e.key==='Enter'){e.preventDefault();if(bs[idx])selFac(bs[idx]);}" in script
+
+
 def test_postgres_mode_without_database_shows_setup_required_state() -> None:
     status, content_type, body = route_response(
         CCLD_FACILITY_LOOKUP_PATH,

@@ -542,6 +542,13 @@ def test_active_transparency_autocomplete_uses_bounded_direct_snapshot_queries(
             snapshot_id=snapshot_id,
             rows=(
                 _transparency_search_row(
+                    "157806098",
+                    "A. MIRIAM JAMISON CHILDREN'S CENTER",
+                    city="Jamison City",
+                    county="Jamison County",
+                    zip_code="95814",
+                ),
+                _transparency_search_row(
                     "001234567",
                     "Exact Facility",
                     city="Direct City",
@@ -605,6 +612,8 @@ def test_active_transparency_autocomplete_uses_bounded_direct_snapshot_queries(
                 "Direct City",
                 "Direct County",
                 "95814",
+                "a. mi",
+                "JAMISON",
                 "Wide Result",
                 "Duplicate Facility",
                 "Inactive Snapshot Only",
@@ -619,7 +628,7 @@ def test_active_transparency_autocomplete_uses_bounded_direct_snapshot_queries(
         finally:
             event.remove(connection, "before_cursor_execute", record_statement)
         exact_statement, exact_parameters = statements_by_query["001234567"][0]
-        partial_statement, _ = statements_by_query["single result"][0]
+        phrase_statement, phrase_parameters = statements_by_query["a. mi"][0]
         connection.exec_driver_sql("ANALYZE")
         exact_query_plan = connection.exec_driver_sql(
             f"EXPLAIN QUERY PLAN {exact_statement}",
@@ -631,6 +640,8 @@ def test_active_transparency_autocomplete_uses_bounded_direct_snapshot_queries(
     city, city_statement_count = results["Direct City"]
     county, county_statement_count = results["Direct County"]
     zip_code, zip_statement_count = results["95814"]
+    phrase, phrase_statement_count = results["a. mi"]
+    jamison, jamison_statement_count = results["JAMISON"]
     many, many_statement_count = results["Wide Result"]
     duplicate, duplicate_statement_count = results["Duplicate Facility"]
     inactive, inactive_statement_count = results["Inactive Snapshot Only"]
@@ -641,16 +652,21 @@ def test_active_transparency_autocomplete_uses_bounded_direct_snapshot_queries(
     assert city_statement_count == 1
     assert county_statement_count == 1
     assert zip_statement_count == 1
+    assert phrase_statement_count == 1
+    assert jamison_statement_count == 1
     assert many_statement_count == 1
     assert duplicate_statement_count == 1
-    assert inactive_statement_count == 1
-    assert legacy_statement_count == 1
+    assert inactive_statement_count == 2
+    assert legacy_statement_count == 2
     assert exact.returned_records[0].facility_number == "001234567"
     assert partial_name.total_match_count == 1
     assert partial_name.returned_records[0].facility_name == "Single Result Facility"
     assert city.returned_records[0].city == "Direct City"
     assert county.returned_records[0].county == "Direct County"
     assert zip_code.returned_records[0].zip_code == "95814"
+    assert phrase.returned_records[0].facility_number == "157806098"
+    assert phrase.returned_records[0].facility_name == "A. MIRIAM JAMISON CHILDREN'S CENTER"
+    assert jamison.returned_records[0].facility_number == "157806098"
     assert many.total_match_count == 30
     assert len(many.returned_records) == 25
     assert duplicate.total_match_count == 1
@@ -663,7 +679,8 @@ def test_active_transparency_autocomplete_uses_bounded_direct_snapshot_queries(
         "ix_transparencyapi_rows_snapshot_facility_number" in str(plan)
         for plan in exact_query_plan
     ), exact_query_plan
-    assert "autocomplete_search_text LIKE" in partial_statement
+    assert "autocomplete_search_text LIKE" in phrase_statement
+    assert "%a. mi%" in phrase_parameters
 
 
 def test_active_transparency_suggestions_bypass_full_identity_projection(
