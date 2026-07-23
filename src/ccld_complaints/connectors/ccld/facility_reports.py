@@ -522,7 +522,13 @@ class CcldFacilityReportsConnector:
                     if field_name == "facility_contact"
                     else field_name
                 )
-                complaint[normalized_field_name] = evidence.source_value
+                source_value = evidence.source_value
+                if field_name == "facility_contact":
+                    source_value = _historical_contact_value(source_value)
+                else:
+                    source_value = _historical_observation_value(source_value)
+                if source_value is not None or field_name == "facility_contact":
+                    complaint[normalized_field_name] = source_value
         deficiency_texts = cast(list[str], extracted.get("deficiency_texts", []))
         if deficiency_texts:
             complaint["deficiency_texts"] = deficiency_texts
@@ -1591,6 +1597,25 @@ def _required_str(extracted: dict[str, object], field_name: str) -> str:
 def _optional_str(extracted: dict[str, object], field_name: str) -> str | None:
     value = extracted.get(field_name)
     return value if isinstance(value, str) else None
+
+
+def _historical_contact_value(value: str | None) -> str | None:
+    normalized_value = _historical_observation_value(value)
+    if normalized_value is None:
+        return None
+    normalized = " ".join(normalized_value.split()).casefold().rstrip(".")
+    if normalized == "see faqs":
+        return None
+    return normalized_value
+
+
+def _historical_observation_value(value: str | None) -> str | None:
+    if value is None:
+        return None
+    normalized = " ".join(value.split()).casefold().rstrip(".")
+    if normalized in {"n/a", "na", "not available", "unavailable"}:
+        return None
+    return value
 
 
 def _required_mapping_str(values: dict[str, object], field_name: str) -> str:

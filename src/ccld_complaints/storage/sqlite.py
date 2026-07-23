@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import sqlite3
 from collections.abc import Iterable, Mapping
 from pathlib import Path
@@ -47,6 +48,10 @@ CREATE TABLE IF NOT EXISTS complaints (
     report_date TEXT,
     date_signed TEXT,
     finding TEXT,
+    agency_name TEXT,
+    deficiency_texts TEXT,
+    investigation_findings_narrative TEXT,
+    complaint_report_contact TEXT,
     days_received_to_first_activity INTEGER,
     days_received_to_visit INTEGER,
     days_received_to_report INTEGER,
@@ -694,6 +699,10 @@ TABLE_COLUMNS = {
         "report_date",
         "date_signed",
         "finding",
+        "agency_name",
+        "deficiency_texts",
+        "investigation_findings_narrative",
+        "complaint_report_contact",
         "days_received_to_first_activity",
         "days_received_to_visit",
         "days_received_to_report",
@@ -760,10 +769,22 @@ NULL_PRESERVING_UPSERT_COLUMNS = {
             "capacity",
             "regional_office",
         }
-    )
+    ),
+    "complaints": frozenset(
+        {
+            "agency_name",
+            "deficiency_texts",
+            "investigation_findings_narrative",
+            "complaint_report_contact",
+        }
+    ),
 }
 
 COMPLAINT_COLUMN_DEFINITIONS = {
+    "agency_name": "TEXT",
+    "deficiency_texts": "TEXT",
+    "investigation_findings_narrative": "TEXT",
+    "complaint_report_contact": "TEXT",
     "days_received_to_visit": "INTEGER",
     "days_report_to_signed": "INTEGER",
     "review_delay_over_30_days": "INTEGER NOT NULL DEFAULT 0",
@@ -851,7 +872,10 @@ def _upsert(
         for column in columns
         if column != primary_key
     )
-    values = [_sqlite_value(record.get(column)) for column in columns]
+    values = [
+        _sqlite_column_value(table_name, column, record.get(column))
+        for column in columns
+    ]
 
     conn.execute(
         f"""
@@ -866,6 +890,25 @@ def _upsert(
 def _sqlite_value(value: object) -> SqliteValue:
     if isinstance(value, bool):
         return int(value)
+    if isinstance(value, list):
+        if not value:
+            return None
+        return json.dumps(value, ensure_ascii=True, separators=(",", ":"))
     if value is None or isinstance(value, str | int | float):
         return value
     raise TypeError(f"Unsupported SQLite value type: {type(value).__name__}")
+
+
+def _sqlite_column_value(
+    table_name: str,
+    column_name: str,
+    value: object,
+) -> SqliteValue:
+    if (
+        column_name
+        in NULL_PRESERVING_UPSERT_COLUMNS.get(table_name, frozenset())
+        and isinstance(value, str)
+        and not value.strip()
+    ):
+        return None
+    return _sqlite_value(value)

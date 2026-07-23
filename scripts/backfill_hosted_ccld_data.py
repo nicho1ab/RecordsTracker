@@ -28,8 +28,9 @@ from ccld_complaints.hosted_app.persistence import (  # noqa: E402
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
-            "Dry-run or apply the governed hosted CCLD facility-reference and preserved-"
-            "artifact refresh without making live public-source requests."
+            "Dry-run or apply the governed hosted CCLD facility-reference, preserved-"
+            "artifact, or historical complaint-observation refresh without making "
+            "live public-source requests."
         )
     )
     selection = parser.add_mutually_exclusive_group(required=True)
@@ -38,7 +39,12 @@ def build_parser() -> argparse.ArgumentParser:
     selection.add_argument("--all-existing", action="store_true")
     parser.add_argument(
         "--operation",
-        choices=("all", "facility-reference", "preserved-artifacts"),
+        choices=(
+            "all",
+            "facility-reference",
+            "preserved-artifacts",
+            "canonical-complaint-observations",
+        ),
         default="all",
     )
     parser.add_argument("--batch-size", type=int, default=100)
@@ -131,6 +137,7 @@ def _safe_error(error: Exception) -> str:
         "max_facilities",
         "explicit max_facilities",
         "approved facility-reference canonical allocation",
+        "historical complaint-observation canonical allocation",
         "Facility numbers",
         "At least one facility number",
         "checkpoint",

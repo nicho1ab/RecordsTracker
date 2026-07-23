@@ -115,6 +115,60 @@ def test_cli_apply_commits_and_failure_exit_is_nonzero(
     assert "failed=1" in capsys.readouterr().out
 
 
+def test_cli_exposes_bounded_historical_complaint_observation_operation(
+    monkeypatch: Any,
+    capsys: Any,
+) -> None:
+    cli = _load_cli_module()
+    connection = _Connection()
+    captured_request: list[Any] = []
+    monkeypatch.setattr(
+        cli,
+        "open_configured_facility_reference_connection",
+        lambda: nullcontext(connection),
+    )
+
+    def fake_run(_connection: Any, request: Any) -> CcldHostedBackfillResult:
+        captured_request.append(request)
+        return CcldHostedBackfillResult(
+            apply_changes=True,
+            candidates=1,
+            examined=1,
+            eligible=1,
+            intended_updates=1,
+            updated=1,
+            unchanged=0,
+            skipped=0,
+            conflicted=0,
+            warnings=0,
+            failed=0,
+        )
+
+    monkeypatch.setattr(cli, "run_ccld_hosted_backfill", fake_run)
+
+    assert cli.main(
+        [
+            "--facility-number",
+            "900000001",
+            "--operation",
+            "canonical-complaint-observations",
+            "--apply",
+            "--checkpoint-file",
+            "checkpoint.json",
+            "--max-facilities",
+            "1",
+        ]
+    ) == 0
+    request = captured_request[0]
+    assert request.operation == "canonical-complaint-observations"
+    assert request.apply_changes is True
+    assert request.max_facilities == 1
+    assert request.checkpoint_file == Path("checkpoint.json")
+    assert connection.commits == 1
+    assert connection.rollbacks == 0
+    assert "intended_updates=1" in capsys.readouterr().out
+
+
 def test_powershell_wrapper_exposes_bounded_restartable_interface() -> None:
     wrapper = (
         Path(__file__).resolve().parents[2]
@@ -138,6 +192,7 @@ def test_powershell_wrapper_exposes_bounded_restartable_interface() -> None:
     ):
         assert token in wrapper
     assert "Omit both for dry-run" in wrapper
+    assert "canonical-complaint-observations" in wrapper
 
 
 def _load_cli_module() -> ModuleType:

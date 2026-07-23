@@ -486,6 +486,10 @@ def _engine_without_source_identity_constraint() -> Engine:
                 connector_name TEXT NOT NULL,
                 connector_version TEXT NOT NULL,
                 retrieved_at VARCHAR(40) NOT NULL,
+                agency_name TEXT,
+                deficiency_texts JSON,
+                investigation_findings_narrative TEXT,
+                complaint_report_contact TEXT,
                 original_values JSON NOT NULL,
                 source_traceability JSON NOT NULL
             )

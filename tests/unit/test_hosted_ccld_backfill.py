@@ -51,6 +51,9 @@ from ccld_complaints.hosted_app.seeded_import import (
 from ccld_complaints.utils.hash import sha256_bytes
 
 RAW_FIXTURE = Path("tests/fixtures/ccld/raw/425802141_inx1_governed_refresh.html")
+STRUCTURED_RAW_FIXTURE = Path(
+    "tests/fixtures/ccld/raw/900000001_inx1_issue574_structured_fields.html"
+)
 SOURCE_URL = (
     "https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports"
     "?facNum=425802141&inx=1"
@@ -299,6 +302,115 @@ def test_backfill_checkpoint_resume_and_failed_item_isolation(
     assert checkpoint_payload["version"] == 2
     assert checkpoint_payload["completed_facility_numbers"] == ["425802141"]
     assert checkpoint_payload["failed_attempts"] == {"999999999": 2}
+
+
+def test_complaint_observation_backfill_is_bounded_idempotent_and_preserves_state(
+    tmp_path: Path,
+) -> None:
+    content = STRUCTURED_RAW_FIXTURE.read_bytes()
+    connector = CcldFacilityReportsConnector()
+    record = connector.normalize(
+        connector.extract(
+            SourceDocument(
+                source_url=(
+                    "https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports"
+                    "?facNum=900000001&inx=1"
+                ),
+                raw_path=STRUCTURED_RAW_FIXTURE,
+                raw_sha256=sha256_bytes(content),
+                retrieved_at="2026-07-23T00:00:00+00:00",
+                content_type="text/html",
+            )
+        )
+    )
+    expected_complaint = cast(dict[str, Any], record["complaint"])
+    initial_record = copy.deepcopy(record)
+    initial_complaint = cast(dict[str, Any], initial_record["complaint"])
+    for field_name in (
+        "agency_name",
+        "deficiency_texts",
+        "investigation_findings_narrative",
+        "complaint_report_contact",
+    ):
+        initial_complaint.pop(field_name, None)
+
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    hosted_seeded_import_metadata.create_all(engine)
+    hosted_facility_reference_metadata.create_all(engine)
+    checkpoint = tmp_path / "complaint-observations.json"
+    request = CcldHostedBackfillRequest(
+        facility_numbers=("900000001",),
+        operation="canonical-complaint-observations",
+        batch_size=1,
+        apply_changes=True,
+        checkpoint_file=checkpoint,
+        max_facilities=1,
+    )
+    with engine.connect() as connection:
+        import_seeded_corpus_artifact(
+            connection,
+            _artifact("complaint-observations-initial", initial_record),
+        )
+        complaint_key = connection.execute(
+            select(hosted_source_derived_records.c.source_record_key).where(
+                hosted_source_derived_records.c.entity_type == "complaint"
+            )
+        ).scalar_one()
+        _insert_reviewer_state_and_audit(connection, complaint_key)
+        connection.commit()
+        initial_state = _reviewer_snapshot(connection)
+        before_dry_run = _entity_values(connection, "complaint")
+
+        dry_run = run_ccld_hosted_backfill(
+            connection,
+            replace(
+                request,
+                apply_changes=False,
+                checkpoint_file=None,
+                max_facilities=None,
+            ),
+        )
+        assert _entity_values(connection, "complaint") == before_dry_run
+
+        first = run_ccld_hosted_backfill(connection, request)
+        connection.commit()
+        complaint_row = (
+            connection.execute(
+                select(hosted_source_derived_records).where(
+                    hosted_source_derived_records.c.entity_type == "complaint"
+                )
+            )
+            .mappings()
+            .one()
+        )
+        repeat = run_ccld_hosted_backfill(
+            connection,
+            replace(request, restart=True),
+        )
+        connection.commit()
+        final_state = _reviewer_snapshot(connection)
+
+    assert dry_run.candidates == dry_run.examined == dry_run.eligible == 1
+    assert dry_run.intended_updates == 1
+    assert dry_run.updated == 1
+    assert dry_run.apply_changes is False
+    assert first.candidates == first.examined == first.eligible == 1
+    assert first.updated == 1
+    assert first.failed == 0
+    assert complaint_row["agency_name"] == expected_complaint["agency_name"]
+    assert complaint_row["deficiency_texts"] == expected_complaint["deficiency_texts"]
+    assert complaint_row["investigation_findings_narrative"] == (
+        expected_complaint["investigation_findings_narrative"]
+    )
+    assert complaint_row["complaint_report_contact"] == (
+        expected_complaint["complaint_report_contact"]
+    )
+    assert repeat.updated == 0
+    assert repeat.unchanged == 1
+    assert repeat.failed == 0
+    assert final_state == initial_state
+    checkpoint_payload = json.loads(checkpoint.read_text(encoding="utf-8"))
+    assert checkpoint_payload["completed_facility_numbers"] == ["900000001"]
 
 
 def test_bounded_checkpoint_resume_finishes_frozen_selection_idempotently(

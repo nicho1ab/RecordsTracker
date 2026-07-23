@@ -523,7 +523,7 @@ also stages and promotes a complete fictional TransparencyAPI family when its
 two explicit nonproduction environment flags are present. Migration tests cover
 upgrade, downgrade, retained-history refusal, and the single Alembic head.
 
-Issue #447 canonical-allocation evidence tests must cover the exact 12-field
+Issue #447 canonical-allocation evidence tests must cover the exact 16-field
 registry, canonical importer population, null versus verified zero, date-list
 ordering/deduplication, raw composite provenance, additive migration behavior,
 idempotent initialization/reimport, no synthetic production fallback, and
@@ -531,6 +531,13 @@ separate runtime capability versus population reporting. Evidence is aggregate-
 safe and writes only `manifest.json`, `allocation-results.csv`,
 `import-results.csv`, `null-semantics-results.csv`, `migration-results.csv`,
 `gap-status.csv`, and `summary.md` under an ignored output directory.
+The four historical complaint observations additionally require ordered
+deficiency-array round trips, nonblank refresh with fingerprint-only conflict
+evidence, blank/placeholder non-erasure, bounded dry-run/apply and durable
+checkpoint behavior, repeated-run idempotence, migration downgrade/re-upgrade,
+and representative isolated PostgreSQL reviewer-state preservation. Complaint-
+report address and city remain `present_blank` test observations owned by Issue
+#576 and must not appear as Issue #447 storage columns or reviewer presentation.
 
 Issue #448 store-parity evidence tests must compare equivalent governed
 canonical inputs through actual temporary SQLite execution and the hosted

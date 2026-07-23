@@ -433,6 +433,18 @@ def _record_from_row(table_name: str, row: sqlite3.Row) -> dict[str, Any]:
     if table_name == "complaints":
         for field_name in COMPLAINT_BOOLEAN_FIELDS:
             record[field_name] = bool(record[field_name])
+        deficiency_texts = record.get("deficiency_texts")
+        if deficiency_texts is None:
+            record.pop("deficiency_texts", None)
+        elif isinstance(deficiency_texts, str):
+            loaded = json.loads(deficiency_texts)
+            if not isinstance(loaded, list) or any(
+                not isinstance(value, str) for value in loaded
+            ):
+                raise ValueError(
+                    "SQLite complaint deficiency_texts must be a JSON array of strings."
+                )
+            record["deficiency_texts"] = loaded
     return record
 
 

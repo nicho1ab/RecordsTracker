@@ -477,6 +477,10 @@ Required fields:
 
 Optional fields:
 
+- agency_name
+- deficiency_texts
+- investigation_findings_narrative
+- complaint_report_contact
 - complaint_control_number
 - complaint_received_date
 - first_investigation_activity_date
@@ -558,6 +562,10 @@ conflict traceability; no other reference fields merge implicitly.
 
 | Governed field | Authoritative source representation | Destination and type | Null/blank behavior | Normalization, order, and deduplication | Traceability | Import or initialization owner; existing-data action |
 | --- | --- | --- | --- | --- | --- | --- |
+| `complaint.agency_name` | Direct complaint-report `AGENCY` value from the report heading. | Existing canonical `complaint` entity; nullable text in SQLite `complaints.agency_name` and complaint rows in `hosted_source_derived_records.agency_name`. | Missing, blank, whitespace-only, or unavailable remains null. A later blank or omitted observation does not erase a populated value. | Trim only the deterministic extractor's surrounding whitespace. Keep distinct from regional office, licensing office, facility name, signatory, and report author. | Complaint and hosted source-derived row link to the source document; the `agency_name` extraction audit retains source section, method, extractor version, confidence, and warning. | CCLD normalization, SQLite writer, hosted artifact builder, and hosted seeded import. Existing data requires bounded preserved-artifact replay or validated artifact re-import. |
+| `complaint.deficiency_texts` | Ordered explicit complaint-report `DEFICIENCIES` entries. | Existing canonical `complaint` entity; nullable JSON text array in SQLite `complaints.deficiency_texts` and nullable JSON array in complaint rows at `hosted_source_derived_records.deficiency_texts`. | Missing or an empty extraction remains null and cannot erase a populated array. Empty strings are not retained as entries. | Preserve extractor order exactly. Do not sort or deduplicate, and do not merge allegations, generic findings, regulation citations, dispositions, or Plan of Correction text. | The complaint row links to the source document; one ordered `deficiency_text` extraction-audit row per entry retains source order, section, method, extractor version, confidence, and warning. | CCLD normalization, SQLite JSON serialization, hosted artifact builder, and hosted seeded import. Existing data requires bounded preserved-artifact replay or validated artifact re-import. |
+| `complaint.investigation_findings_narrative` | Bounded complaint-report `INVESTIGATION FINDINGS` narrative selected by the deterministic extractor. | Existing canonical `complaint` entity; nullable text in SQLite `complaints.investigation_findings_narrative` and complaint rows in `hosted_source_derived_records.investigation_findings_narrative`. | Missing, blank, whitespace-only, or unavailable remains null. A later blank or omitted observation does not erase a populated value. | Preserve the normalized bounded narrative. Keep distinct from allegations, structured finding, disposition, deficiencies, and Plan of Correction text. | Complaint and hosted source-derived row link to the source document; the field extraction audit retains source section, method, extractor version, confidence, and warning. | CCLD normalization, SQLite writer, hosted artifact builder, and hosted seeded import. Existing data requires bounded preserved-artifact replay or validated artifact re-import. |
+| `complaint.complaint_report_contact` | Direct complaint-report `TELEPHONE` value from facility details. | Existing canonical `complaint` entity; nullable text in SQLite `complaints.complaint_report_contact` and complaint rows in `hosted_source_derived_records.complaint_report_contact`. | Missing, blank, whitespace-only, placeholder, unavailable, or omitted observations remain null and do not erase a populated value. | Preserve the deterministic normalized source text. It is a historical complaint-report observation and never populates accepted current-reference facility telephone. | Complaint and hosted source-derived row link to the source document; the `facility_contact` extraction audit retains source section, method, extractor version, confidence, and warning. | CCLD normalization, SQLite writer, hosted artifact builder, and hosted seeded import. Existing data requires bounded preserved-artifact replay or validated artifact re-import. |
 | `complaint.days_received_to_first_activity` | Derived only from the governed `COMPLAINT RECEIVED` date and the deterministically extracted earliest investigation-activity date. | Existing canonical `complaint.days_received_to_first_activity`; nullable integer day interval. | SQL/JSON null unless both dates are valid. Missing, blank, or malformed prerequisites never become zero. Zero is valid for a verified same-day interval. | Parse both dates, subtract received date from first activity date, and do not substitute visit or report date. Ordering and deduplication do not apply. | Canonical complaint links to its source document; both source dates retain field-level extraction audit evidence where emitted. | CCLD connector normalization, then SQLite write or validated artifact plus hosted import. Regenerate and reimport existing derived rows. |
 | `facility.capacity` | Complaint-report facility-capacity field when present; official facility reference `Facility Capacity` or `CAPACITY` for the corresponding reference resource. | Existing canonical `facility.capacity`; nullable integer. Facility-reference preload also holds a typed projection. | Missing, blank, malformed, or unavailable is null. Zero is preserved only when explicitly parsed from source. A later null for the same stable facility does not erase an earlier non-null value. | Trim separators and parse a base-10 integer; no fabricated default. Ordering and deduplication do not apply. | Complaint-report values link to source document and field audit; reference values link to resource metadata and `original_row_json`. | CCLD connector for canonical report data; facility-reference preload for the typed reference projection; SQLite and hosted artifact import preserve canonical values. Regenerate/reimport canonical rows and rerun preload for existing reference rows. |
 | `facility.county` | Official approved facility reference `County Name` or `COUNTY`, or the same governed value in a validated canonical facility artifact. | Existing canonical `facility.county`; nullable string. Facility-reference preload holds the typed projection. | Missing, blank, whitespace-only, or unavailable is null; never an empty default. A later null does not erase an earlier non-null canonical value. | Trim surrounding whitespace; preserve the source label rather than inventing a county taxonomy. The newest approved reference snapshot owns a nonblank hosted canonical value. | Canonical artifacts retain source-document traceability; bridged values retain resource ID, dataset slug, snapshot/access time, source field, and conflict details without raw row disclosure. | Validated artifact/SQLite import for canonical data; facility-reference preload plus the hosted CCLD refresh bridge for hosted canonical data. Rerun the governed refresh for existing hosted rows. |
@@ -587,9 +595,24 @@ reimport. Other facility-reference fields remain source-reference-only: their
 parser, additive migration, and preload do not create a canonical bridge into
 SQLite or hosted canonical facility entities.
 
+Issue #447 allocates only the four historical complaint observations above.
 Complaint-report facility address and city retain the present-but-blank audit
-semantics established in issue #446; issue #447 does not allocate them to new
-canonical fields.
+semantics established in issue #446. They have no normalized field or canonical
+storage under issue #447; architectural decision issue #576 owns that separate
+question. Neither field may overwrite accepted current-reference address or city.
+
+For the four issue #447 complaint observations, one stable complaint record is
+the temporal owner because it is already linked to exactly one retained source
+document. A first import populates nonblank values. Repeating an identical
+import is unchanged. A changed nonblank deterministic extraction refreshes the
+stable complaint row and appends field-level conflict fingerprints to hosted
+source traceability without duplicating narrative content there. Missing,
+blank, or empty incoming observations preserve an existing populated value.
+The bounded `canonical-complaint-observations` preserved-artifact operation
+reprocesses only selected existing Facility IDs, requires the existing apply
+bound and durable checkpoint protections, and uses the normal idempotent import
+path. It does not read or write accepted current-reference snapshot rows,
+reviewer-created state, address/city storage, or production configuration.
 
 ## Finding values
 

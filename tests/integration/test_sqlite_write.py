@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import sqlite3
 from pathlib import Path
 from typing import cast
@@ -16,6 +17,9 @@ FIXTURE_URL = (
     "https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports?facNum=157806098&inx=3"
 )
 RAW_FIXTURE = Path("tests/fixtures/ccld/raw/157806098_inx3.html")
+STRUCTURED_RAW_FIXTURE = Path(
+    "tests/fixtures/ccld/raw/900000001_inx1_issue574_structured_fields.html"
+)
 FACILITY_REFERENCE_FIXTURE = Path(
     "tests/fixtures/public_source_facilities/ccld_program_facilities_tiny.csv"
 )
@@ -413,6 +417,80 @@ def test_written_complaint_and_allegations_link_to_parent_rows(tmp_path: Path) -
     assert allegation_links == [(complaint[0],)]
 
 
+def test_complaint_observations_are_ordered_idempotent_and_null_preserving(
+    tmp_path: Path,
+) -> None:
+    db_path = tmp_path / "ccld.sqlite"
+    normalized = _normalized_structured_fixture()
+    complaint = cast(dict[str, object], normalized["complaint"])
+
+    write_normalized_records(db_path, [normalized])
+    write_normalized_records(db_path, [normalized])
+
+    with sqlite3.connect(db_path) as conn:
+        first_row = conn.execute(
+            """
+            SELECT agency_name, deficiency_texts,
+                   investigation_findings_narrative,
+                   complaint_report_contact
+            FROM complaints
+            """
+        ).fetchone()
+    assert first_row is not None
+    assert first_row[0] == complaint["agency_name"]
+    assert json.loads(first_row[1]) == complaint["deficiency_texts"]
+    assert first_row[2] == complaint["investigation_findings_narrative"]
+    assert first_row[3] == complaint["complaint_report_contact"]
+
+    changed_complaint = {
+        **complaint,
+        "agency_name": "Changed governed agency",
+        "deficiency_texts": ["Changed first", "Changed second"],
+        "investigation_findings_narrative": "Changed governed narrative.",
+        "complaint_report_contact": "(555) 010-2222",
+    }
+    write_normalized_records(
+        db_path,
+        [{**normalized, "complaint": changed_complaint}],
+    )
+    write_normalized_records(
+        db_path,
+        [
+            {
+                **normalized,
+                "complaint": {
+                    **complaint,
+                    "agency_name": None,
+                    "deficiency_texts": [],
+                    "investigation_findings_narrative": "",
+                    "complaint_report_contact": None,
+                },
+            }
+        ],
+    )
+
+    with sqlite3.connect(db_path) as conn:
+        final_row = conn.execute(
+            """
+            SELECT agency_name, deficiency_texts,
+                   investigation_findings_narrative,
+                   complaint_report_contact
+            FROM complaints
+            """
+        ).fetchone()
+        complaint_columns = {
+            row[1] for row in conn.execute("PRAGMA table_info(complaints)")
+        }
+    assert final_row == (
+        "Changed governed agency",
+        '["Changed first","Changed second"]',
+        "Changed governed narrative.",
+        "(555) 010-2222",
+    )
+    assert "facility_address" not in complaint_columns
+    assert "facility_city" not in complaint_columns
+
+
 def test_extraction_audit_rows_are_stored_if_emitted(tmp_path: Path) -> None:
     db_path = tmp_path / "ccld.sqlite"
     normalized = _normalized_fixture()
@@ -444,6 +522,22 @@ def _normalized_fixture() -> dict[str, object]:
     document = SourceDocument(
         source_url=FIXTURE_URL,
         raw_path=RAW_FIXTURE,
+        raw_sha256=sha256_bytes(raw_content),
+        retrieved_at=RETRIEVED_AT,
+        content_type="text/html",
+    )
+    return connector.normalize(connector.extract(document))
+
+
+def _normalized_structured_fixture() -> dict[str, object]:
+    connector = CcldFacilityReportsConnector()
+    raw_content = STRUCTURED_RAW_FIXTURE.read_bytes()
+    document = SourceDocument(
+        source_url=(
+            "https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports"
+            "?facNum=900000001&inx=1"
+        ),
+        raw_path=STRUCTURED_RAW_FIXTURE,
         raw_sha256=sha256_bytes(raw_content),
         retrieved_at=RETRIEVED_AT,
         content_type="text/html",

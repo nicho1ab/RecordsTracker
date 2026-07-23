@@ -132,6 +132,15 @@ values, private paths, hosts, credentials, cookies, tokens, authentication
 claims, or reviewer-created state. Zero-count statuses remain explicit in the
 summary matrix and are not fabricated as field observations.
 
+## Issue #447 canonical complaint observations
+
+The governed inventory allocates only historical complaint-report agency,
+ordered deficiency texts, bounded investigation narrative, and complaint-report
+contact. Aggregate audit output may inspect their dedicated hosted columns but
+must not emit their values. Address and city remain `present_blank`, unallocated,
+and assigned to Issue #576. Rendering remains a separately classified
+`UI_DISPLAY_OMISSION`; Issue #447 adds no reviewer-facing presentation.
+
 ## Missing-value rules
 
 - Numeric zero is counted only when the stored scalar is a verified numeric zero.

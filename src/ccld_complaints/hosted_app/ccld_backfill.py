@@ -25,7 +25,12 @@ from ccld_complaints.hosted_app.seeded_import import (
 )
 from ccld_complaints.utils.hash import sha256_bytes
 
-BackfillOperation = Literal["all", "facility-reference", "preserved-artifacts"]
+BackfillOperation = Literal[
+    "all",
+    "facility-reference",
+    "preserved-artifacts",
+    "canonical-complaint-observations",
+]
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
@@ -357,15 +362,27 @@ def _preserve_stable_identities(
             if index < len(prior):
                 item[id_field] = prior[index]["stable_source_id"]
             item["complaint_id"] = complaint_id
-    prior_audits = {
-        str(cast(Mapping[str, Any], row["original_values"]).get("field_name")): row
-        for row in existing
-        if row["entity_type"] == "extraction_audit"
-    }
+    prior_audits: dict[str, list[Mapping[str, Any]]] = {}
+    for row in sorted(
+        (row for row in existing if row["entity_type"] == "extraction_audit"),
+        key=lambda row: str(row["stable_source_id"]),
+    ):
+        field_name = str(
+            cast(Mapping[str, Any], row["original_values"]).get("field_name")
+        )
+        prior_audits.setdefault(field_name, []).append(row)
+    audit_indexes: dict[str, int] = {}
     for audit in cast(list[dict[str, Any]], normalized.get("extraction_audit", [])):
         audit["document_id"] = document_id
         field_name = str(audit.get("field_name") or "")
-        prior_audit = prior_audits.get(field_name)
+        field_index = audit_indexes.get(field_name, 0)
+        prior_for_field = prior_audits.get(field_name, [])
+        prior_audit = (
+            prior_for_field[field_index]
+            if field_index < len(prior_for_field)
+            else None
+        )
+        audit_indexes[field_name] = field_index + 1
         if prior_audit is not None:
             audit["audit_id"] = prior_audit["stable_source_id"]
         elif str(audit.get("audit_id", "")).startswith(old_document_id):
@@ -535,7 +552,12 @@ def _record_counts(records: Sequence[Mapping[str, Any]]) -> Mapping[str, int]:
 def _validate_request(connection: Connection, request: CcldHostedBackfillRequest) -> None:
     if not inspect(connection).has_table(hosted_source_derived_records.name):
         raise ValueError("Hosted source-derived tables are not initialized.")
-    if request.operation not in {"all", "facility-reference", "preserved-artifacts"}:
+    if request.operation not in {
+        "all",
+        "facility-reference",
+        "preserved-artifacts",
+        "canonical-complaint-observations",
+    }:
         raise ValueError("Unsupported CCLD hosted backfill operation.")
     if request.batch_size < 1 or request.batch_size > 1000:
         raise ValueError("batch_size must be between 1 and 1000.")
@@ -551,9 +573,13 @@ def _validate_request(connection: Connection, request: CcldHostedBackfillRequest
         raise ValueError("apply requires a durable checkpoint file.")
     if request.apply_changes and request.max_facilities is None:
         raise ValueError("apply requires an explicit max_facilities bound.")
-    if request.apply_changes and request.operation != "facility-reference":
+    if request.apply_changes and request.operation not in {
+        "facility-reference",
+        "canonical-complaint-observations",
+    }:
         raise ValueError(
-            "apply supports only the approved facility-reference canonical allocation."
+            "apply supports only the approved facility-reference or historical "
+            "complaint-observation canonical allocation."
         )
 
 
@@ -657,7 +683,11 @@ def _uses_facility_reference(operation: BackfillOperation) -> bool:
 
 
 def _uses_preserved_artifacts(operation: BackfillOperation) -> bool:
-    return operation in {"all", "preserved-artifacts"}
+    return operation in {
+        "all",
+        "preserved-artifacts",
+        "canonical-complaint-observations",
+    }
 
 
 def _required_text(value: object, field_name: str) -> str:

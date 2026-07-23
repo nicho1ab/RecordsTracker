@@ -5,7 +5,8 @@ seeded corpus import tables, the first narrow reviewer-created state persistence
 scaffold table, the first narrow audit event scaffold table, and the first
 narrow reset/reload operational planning metadata scaffold table. Later
 revisions add controlled CCLD retrieval jobs, a separate facility-reference
-preload table, and nullable issue #447 source-reference allocation columns.
+preload table, nullable source-reference allocation columns, and four nullable
+historical complaint-observation columns.
 
 Add future revisions here only in focused schema branches that create tested
 PostgreSQL table groups for approved hosted tester MVP layers while preserving
@@ -31,6 +32,12 @@ constraints for `governed_live_query`/`live_query` candidates. It adds no table,
 canonical bridge, reviewer write, production command, scheduler, or deployment
 behavior. Downgrade refuses to discard the live-scope contract while retained
 live-query snapshot history exists.
+Revision `20260723_0013` additively allocates only complaint-report agency,
+ordered deficiency texts, bounded investigation narrative, and historical
+complaint-report contact to existing source-derived complaint rows. Existing
+rows remain null until bounded preserved-artifact replay or validated reimport.
+The revision does not allocate complaint-report address or city, overwrite
+current facility-reference values, or change reviewer-created state.
 These revisions do not implement full review workflows, annotations,
 corrections, full audit policy coverage, audit UI, audit export, export state,
 feedback, retention automation, destructive reset, reload execution, archive
