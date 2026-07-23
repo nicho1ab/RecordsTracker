@@ -24,15 +24,20 @@ from ccld_complaints.connectors.ccld.facility_reports import (
     _table_label_evidence,
 )
 from ccld_complaints.extraction_gap_evidence import (
+    ISSUE_574_OUTPUT_FILES,
     OUTPUT_FILES,
     EvidenceExecutionError,
     run_evidence,
+    run_issue_574_evidence,
     unavailable_artifact_status,
 )
 from ccld_complaints.utils.hash import sha256_bytes
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 RAW_FIXTURE = REPO_ROOT / "tests/fixtures/ccld/raw/157806098_inx3.html"
+STRUCTURED_FIELDS_FIXTURE = (
+    REPO_ROOT / "tests/fixtures/ccld/raw/900000001_inx1_issue574_structured_fields.html"
+)
 SOURCE_URL = (
     "https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports"
     "?facNum=157806098&inx=3"
@@ -66,6 +71,77 @@ def test_governed_fixture_extracts_target_complaint_event_and_facility_fields() 
     assert field_evidence["facility_city"].status == FIELD_STATUS_BLANK
     assert field_evidence["facility_capacity"].status == FIELD_STATUS_EXTRACTED
     assert field_evidence["regional_office"].status == FIELD_STATUS_EXTRACTED
+
+
+def test_structured_complaint_report_fields_preserve_historical_observations() -> None:
+    extracted, normalized = _extract_structured_fields_fixture()
+    field_evidence = cast(dict[str, FieldEvidence], extracted["_field_evidence"])
+    complaint = cast(dict[str, object], normalized["complaint"])
+    facility = cast(dict[str, object], normalized["facility"])
+    audits = cast(list[dict[str, object]], normalized["extraction_audit"])
+
+    assert complaint["agency_name"] == "Synthetic Community Care Agency"
+    assert complaint["investigation_findings_narrative"] == (
+        "The synthetic investigation narrative is preserved as a historical "
+        "complaint-report observation."
+    )
+    assert complaint["deficiency_texts"] == [
+        "First synthetic deficiency text.",
+        "Second synthetic deficiency text.",
+    ]
+    assert complaint["complaint_report_contact"] == "(555) 010-1111"
+    assert "telephone" not in facility
+    assert field_evidence["agency_name"].status == FIELD_STATUS_EXTRACTED
+    assert field_evidence["facility_contact"].status == FIELD_STATUS_EXTRACTED
+    assert [row["extracted_value"] for row in audits if row["field_name"] == "deficiency_text"] == [
+        "First synthetic deficiency text.",
+        "Second synthetic deficiency text.",
+    ]
+    assert all(
+        "Synthetic corrective-action" not in str(row["extracted_value"])
+        for row in audits
+        if row["field_name"] == "deficiency_text"
+    )
+
+
+def test_investigation_narrative_excludes_report_boilerplate() -> None:
+    extracted, normalized = _extract_fixture()
+    complaint = cast(dict[str, object], normalized["complaint"])
+    narrative = cast(str, complaint["investigation_findings_narrative"])
+
+    assert narrative
+    assert "LIC9099" not in narrative
+    assert "This report must be available" not in narrative
+    assert "(CONTINUED)" not in narrative
+    assert extracted["finding"] == "Unsubstantiated"
+
+
+def test_issue_574_local_evidence_is_deterministic_and_aggregate_safe(tmp_path: Path) -> None:
+    first_output = tmp_path / "first"
+    second_output = tmp_path / "second"
+
+    first_manifest = run_issue_574_evidence(
+        output_dir=first_output, repo_root=REPO_ROOT
+    )
+    second_manifest = run_issue_574_evidence(
+        output_dir=second_output, repo_root=REPO_ROOT
+    )
+
+    assert all(cast(dict[str, bool], first_manifest["assertions"]).values())
+    assert first_manifest == second_manifest
+    assert set(path.name for path in first_output.iterdir()) == set(ISSUE_574_OUTPUT_FILES)
+    for file_name in ISSUE_574_OUTPUT_FILES:
+        assert (first_output / file_name).read_bytes() == (
+            second_output / file_name
+        ).read_bytes()
+    combined_output = "\n".join(
+        (first_output / file_name).read_text(encoding="utf-8")
+        for file_name in ISSUE_574_OUTPUT_FILES
+    )
+    assert str(REPO_ROOT) not in combined_output
+    assert "Synthetic Community Care Agency" not in combined_output
+    assert "First synthetic deficiency text." not in combined_output
+    assert "(555) 010-1111" not in combined_output
 
 
 def test_target_extraction_audits_preserve_section_text_and_document_link() -> None:
@@ -308,6 +384,25 @@ def _extract_fixture() -> tuple[dict[str, object], dict[str, object]]:
         raw_path=RAW_FIXTURE,
         raw_sha256=sha256_bytes(content),
         retrieved_at="2026-06-10T00:00:00+00:00",
+        content_type="text/html",
+    )
+    connector = CcldFacilityReportsConnector()
+    extracted = connector.extract(document)
+    normalized = connector.normalize(extracted)
+    connector.validate(normalized)
+    return extracted, normalized
+
+
+def _extract_structured_fields_fixture() -> tuple[dict[str, object], dict[str, object]]:
+    content = STRUCTURED_FIELDS_FIXTURE.read_bytes()
+    document = SourceDocument(
+        source_url=(
+            "https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports"
+            "?facNum=900000001&inx=1"
+        ),
+        raw_path=STRUCTURED_FIELDS_FIXTURE,
+        raw_sha256=sha256_bytes(content),
+        retrieved_at="2026-07-23T00:00:00+00:00",
         content_type="text/html",
     )
     connector = CcldFacilityReportsConnector()

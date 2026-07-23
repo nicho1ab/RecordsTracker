@@ -57,6 +57,30 @@
         "null"
       ]
     },
+    "agency_name": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "deficiency_texts": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "investigation_findings_narrative": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "complaint_report_contact": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
     "days_received_to_first_activity": {
       "type": [
         "integer",

@@ -992,7 +992,7 @@ def test_ccld_facility_ingestion_can_emit_records_to_sqlite(tmp_path: Path) -> N
         "complaints": 1,
         "allegations": 2,
         "events": 1,
-        "extraction_audit": 29,
+            "extraction_audit": 33,
     }
     assert complaint_delay_fields == (7, 139, 139, 2, 0, 0, 0, 0, 0, 0)
 

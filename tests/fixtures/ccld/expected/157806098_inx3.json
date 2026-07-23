@@ -47,7 +47,9 @@
     "review_delay_over_120_days": false,
     "missing_first_activity_date": false,
     "report_date_used_as_proxy": false,
-    "extraction_confidence": 1.0
+    "extraction_confidence": 1.0,
+    "investigation_findings_narrative": "1 2 3 4 5 6 7 8 9 10 11 12 13 On August 24, 2022 10:00 AM, Licensing Program Analyst (LPA) Joshua Rarela conducted a follow-up complaint inspection to deliver the findings of a complaint investigation concerning the allegations above. LPA Rarela met and discussed the findings with the facility representative named above. During the course of the investigation, LPA interviewed facility clients on 4/14/22, 5/12/22, 6/15/22, 6/24/22, and facility staff on 4/14/22, 6/15/22, 6/24/22 (see Confidential Names Form dated August 23, 2022). LPA also reviewed documents including the placing agency service logs and reports, incident reports, and facility personnel records. It was alleged that facility clients are being mistreated while in care, and that staff do not provide adequate supervision to the facility clients. : Gustavo Garcia : Joshua Rarela LICENSING EVALUATOR SIGNATURE : DATE: 08/24/2022 explained and received. FACILITY REPRESENTATIVE SIGNATURE: DATE: 08/24/2022 (FAS) - (06/04) Page: 1 of 2 32-CR-20220407124448 COMPLAINT INVESTIGATION REPORT (Cont) CALIFORNIA DEPARTMENT OF SOCIAL SERVICES COMMUNITY CARE LICENSING DIVISION CCLD Regional Office , 1000 CORPORATE CNTR DR. #200A MONTEREY PARK , CA 91754",
+    "complaint_report_contact": null
   },
   "allegations": [
     {

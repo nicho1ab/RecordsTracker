@@ -77,10 +77,133 @@ OUTPUT_FILES = (
     "traceability-results.csv",
     "summary.md",
 )
+ISSUE_574_OUTPUT_FILES = (
+    "manifest.json",
+    "field-results.csv",
+    "summary.md",
+)
+ISSUE_574_FIXTURE = Path(
+    "tests/fixtures/ccld/raw/900000001_inx1_issue574_structured_fields.html"
+)
+ISSUE_574_FIELDS = (
+    (
+        "data.complaint.raw_complaint_report.agency_name",
+        "AGENCY",
+        "report heading",
+        "agency_name",
+    ),
+    (
+        "data.complaint.raw_complaint_report.deficiency_text",
+        "DEFICIENCIES",
+        "deficiencies",
+        "deficiency_texts",
+    ),
+    (
+        "data.complaint.raw_complaint_report.investigation_findings_narrative",
+        "INVESTIGATION FINDINGS",
+        "investigation findings",
+        "investigation_findings_narrative",
+    ),
+    (
+        "data.facility.raw_complaint_report.facility_contact",
+        "TELEPHONE",
+        "facility details",
+        "complaint_report_contact",
+    ),
+)
 
 
 class EvidenceExecutionError(RuntimeError):
     pass
+
+
+def run_issue_574_evidence(
+    *, output_dir: Path, repo_root: Path | None = None
+) -> Mapping[str, Any]:
+    """Write deterministic aggregate-safe local evidence for Issue #574 only."""
+
+    root = (repo_root or Path(__file__).resolve().parents[2]).resolve()
+    raw_path = root / ISSUE_574_FIXTURE
+    content = raw_path.read_bytes()
+    document = SourceDocument(
+        source_url=(
+            "https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports"
+            "?facNum=900000001&inx=1"
+        ),
+        raw_path=raw_path,
+        raw_sha256=sha256_bytes(content),
+        retrieved_at="2026-07-23T00:00:00+00:00",
+        content_type="text/html",
+    )
+    connector = CcldFacilityReportsConnector()
+    extracted = connector.extract(document)
+    normalized = connector.normalize(extracted)
+    connector.validate(normalized)
+    field_evidence = cast(dict[str, FieldEvidence], extracted["_field_evidence"])
+    complaint = cast(dict[str, object], normalized["complaint"])
+    audits = cast(list[dict[str, object]], normalized["extraction_audit"])
+
+    evidence_keys = {
+        "data.complaint.raw_complaint_report.agency_name": "agency_name",
+        "data.complaint.raw_complaint_report.deficiency_text": "deficiency_text",
+        "data.complaint.raw_complaint_report.investigation_findings_narrative": (
+            "investigation_findings_narrative"
+        ),
+        "data.facility.raw_complaint_report.facility_contact": "facility_contact",
+    }
+    rows: list[dict[str, object]] = []
+    assertions: dict[str, bool] = {}
+    for field_id, source_label, source_section, normalized_field in ISSUE_574_FIELDS:
+        evidence_key = evidence_keys[field_id]
+        evidence = field_evidence[evidence_key]
+        audit_field_name = "deficiency_text" if evidence_key == "deficiency_text" else evidence_key
+        audit_count = sum(
+            1 for audit in audits if audit["field_name"] == audit_field_name
+        )
+        assertions[field_id] = (
+            evidence.status == FIELD_STATUS_EXTRACTED
+            and normalized_field in complaint
+            and audit_count > 0
+        )
+        rows.append(
+            {
+                "field_id": field_id,
+                "source_label": source_label,
+                "source_section": source_section,
+                "extraction_status": evidence.status,
+                "normalized_field": normalized_field,
+                "audit_entry_count": audit_count,
+            }
+        )
+    assertions["historical_observations_do_not_change_facility_current_reference"] = (
+        "telephone" not in cast(dict[str, object], normalized["facility"])
+    )
+    assertions["deficiencies_preserve_source_order"] = (
+        sum(1 for audit in audits if audit["field_name"] == "deficiency_text") == 2
+    )
+    manifest: dict[str, Any] = {
+        "schema_version": 1,
+        "evidence_scope": "issue-574-local-extraction-only",
+        "fixture_class": "governed_synthetic_source_shape",
+        "fixture_sha256": sha256_bytes(content),
+        "field_count": len(rows),
+        "assertions": assertions,
+        "generated_files": list(ISSUE_574_OUTPUT_FILES),
+    }
+    output_dir.mkdir(parents=True, exist_ok=True)
+    (output_dir / "manifest.json").write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    _write_csv(output_dir / "field-results.csv", rows)
+    (output_dir / "summary.md").write_text(
+        "# Issue #574 local extraction evidence\n\n"
+        "Aggregate-safe structural evidence only; source values and raw report "
+        "content are excluded.\n\n"
+        f"- Fields evaluated: {len(rows)}\n"
+        f"- Assertions passed: {sum(assertions.values())} of {len(assertions)}\n",
+        encoding="utf-8",
+    )
+    return manifest
 
 
 def run_evidence(

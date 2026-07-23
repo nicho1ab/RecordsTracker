@@ -47,7 +47,8 @@
         "review_delay_over_120_days": false,
         "missing_first_activity_date": false,
         "report_date_used_as_proxy": false,
-        "extraction_confidence": 1.0
+        "extraction_confidence": 1.0,
+        "investigation_findings_narrative": "The allegations above were reviewed using available records."
     },
     "allegations": [
         {

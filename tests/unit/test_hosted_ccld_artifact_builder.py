@@ -64,7 +64,7 @@ def test_ccld_hosted_artifact_builder_converts_fixture_sqlite_to_validated_seede
         "complaint": 1,
         "allegation": 2,
         "event": 1,
-        "extraction_audit": 29,
+        "extraction_audit": 33,
     }
     assert artifact.import_batch_id == LOCAL_REVIEWER_UI_SCOPE.scope_id
     assert artifact.validation_status == "validated"
@@ -168,8 +168,8 @@ def test_ccld_hosted_artifact_builder_output_imports_into_hosted_source_derived_
     complaint_row = next(row for row in rows if row["entity_type"] == "complaint")
 
     assert import_result.import_batch_id == LOCAL_REVIEWER_UI_SCOPE.scope_id
-    assert import_result.imported_record_count == 35
-    assert len(rows) == 35
+    assert import_result.imported_record_count == 39
+    assert len(rows) == 39
     assert complaint_row["source_url"].startswith("https://www.ccld.dss.ca.gov/")
     assert complaint_row["raw_sha256"] == sha256_bytes(RAW_FIXTURE.read_bytes())
     assert complaint_row["raw_path"] == RAW_FIXTURE.as_posix()
@@ -214,8 +214,8 @@ def test_ccld_hosted_artifact_builder_output_is_compatible_with_import_reload(
 
     assert result.import_executed is True
     assert result.available_before_count == 0
-    assert result.available_after_count == 35
-    assert result.imported_source_record_count == 35
+    assert result.available_after_count == 39
+    assert result.imported_source_record_count == 39
     assert result.refreshed_source_record_count == 0
     assert result.skipped_non_matching_source_record_count == 0
     assert result.source_artifact_identities == ("fixture-ccld-sqlite-output",)
