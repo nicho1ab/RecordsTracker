@@ -40,7 +40,25 @@ The generated audit under `data/processed/source-to-screen-audit/` is the author
 | `data.complaint.event.event_type` | complaint | investigation narrative event cue | `events.event_type` | /reviewer/records/detail source timeline | `NOT_APPLICABLE` | P2 |
 | `data.complaint.event.extracted_from_section` | complaint | event normalizer: extracted_from_section | `events.extracted_from_section` | not displayed | `INTENTIONALLY_INTERNAL` | P2 |
 | `data.complaint.event.extraction_confidence` | complaint | event normalizer: extraction_confidence | `events.extraction_confidence` | not displayed | `INTENTIONALLY_INTERNAL` | P2 |
+| `data.complaint.raw_complaint_report.agency_name` | complaint | Agency | `not allocated` | not displayed | `RAW_PRESENT_EXTRACTION_MISSING` | P1 |
+| `data.complaint.raw_complaint_report.complainant_contact` | complaint | Complainant contact | `not allocated` | not displayed | `SOURCE_NOT_PROVIDED` | P2 |
+| `data.complaint.raw_complaint_report.complainant_identity` | complaint | Complainant | `not allocated` | not displayed | `RAW_PRESENT_EXTRACTION_MISSING` | P2 |
+| `data.complaint.raw_complaint_report.correction_action` | complaint | Correction action | `not allocated` | not displayed | `SOURCE_NOT_PROVIDED` | P2 |
+| `data.complaint.raw_complaint_report.correction_due_date` | complaint | Correction due date | `not allocated` | not displayed | `SOURCE_NOT_PROVIDED` | P2 |
+| `data.complaint.raw_complaint_report.deficiency_text` | complaint | Deficiency | `not allocated` | not displayed | `RAW_PRESENT_EXTRACTION_MISSING` | P1 |
+| `data.complaint.raw_complaint_report.disposition` | complaint | Disposition | `not allocated` | not displayed | `SOURCE_NOT_PROVIDED` | P2 |
 | `data.complaint.raw_complaint_report.investigation_findings_narrative` | complaint | allowlisted raw label pattern: investigation_findings_narrative | `not allocated` | /reviewer/records/detail | `EXTRACTED_CANONICAL_MAPPING_MISSING` | P2 |
+| `data.complaint.raw_complaint_report.office_name` | complaint | Office | `not allocated` | not displayed | `SOURCE_NOT_PROVIDED` | P2 |
+| `data.complaint.raw_complaint_report.participant_identity` | complaint | Interviewed participant | `not allocated` | not displayed | `RAW_PRESENT_EXTRACTION_MISSING` | P2 |
+| `data.complaint.raw_complaint_report.plan_of_correction` | complaint | PLAN OF CORRECTION | `not allocated` | not displayed | `SOURCE_NOT_PROVIDED` | P2 |
+| `data.complaint.raw_complaint_report.regulation_citation` | complaint | Regulation citation | `not allocated` | not displayed | `SOURCE_NOT_PROVIDED` | P2 |
+| `data.complaint.raw_complaint_report.report_type` | complaint | COMPLAINT INVESTIGATION REPORT | `source_documents.document_type` | not displayed | `STORED_QUERY_OMISSION` | P2 |
+| `data.complaint.raw_complaint_report.signatory_role` | complaint | Signatory role | `not allocated` | not displayed | `SOURCE_NOT_PROVIDED` | P2 |
+| `data.complaint.raw_complaint_report.signature_name` | complaint | Signature | `not allocated` | not displayed | `RAW_PRESENT_EXTRACTION_MISSING` | P2 |
+| `data.complaint.raw_complaint_report.type_a_indicator` | complaint | Type A | `not allocated` | not displayed | `SOURCE_NOT_PROVIDED` | P2 |
+| `data.complaint.raw_complaint_report.type_b_indicator` | complaint | Type B | `not allocated` | not displayed | `SOURCE_NOT_PROVIDED` | P2 |
+| `data.complaint.source_artifact.layout_classification` | complaint | Layout classification | `not allocated` | not displayed | `AGGREGATE_DATA_INSUFFICIENT` | P2 |
+| `data.complaint.source_artifact.report_availability` | complaint | Artifact availability | `not allocated` | not displayed | `SOURCE_NOT_PROVIDED` | P2 |
 | `data.facility.facility.capacity` | facility | FACILITY CAPACITY / Facility Capacity / CAPACITY | `facilities.capacity` | /ccld/facilities/detail | `NOT_APPLICABLE` | P2 |
 | `data.facility.facility.county` | facility | County Name / COUNTY | `facilities.county` | /ccld/facilities/detail | `NOT_APPLICABLE` | P2 |
 | `data.facility.facility.external_facility_number` | facility | FACILITY NUMBER / Facility Number / FAC_NBR | `facilities.external_facility_number` | /ccld/facilities; /ccld/facilities/detail; /reviewer/records/detail | `NOT_APPLICABLE` | P2 |
@@ -109,6 +127,9 @@ The generated audit under `data/processed/source-to-screen-audit/` is the author
 | `data.facility.raw_complaint_report.facility_address` | facility | allowlisted raw label pattern: facility_address | `not allocated` | not displayed | `EXTRACTED_CANONICAL_MAPPING_MISSING` | P1 |
 | `data.facility.raw_complaint_report.facility_capacity` | facility | allowlisted raw label pattern: facility_capacity | `facilities.capacity` | not displayed | `NOT_APPLICABLE` | P2 |
 | `data.facility.raw_complaint_report.facility_city` | facility | allowlisted raw label pattern: facility_city | `not allocated` | not displayed | `EXTRACTED_CANONICAL_MAPPING_MISSING` | P1 |
+| `data.facility.raw_complaint_report.facility_contact` | facility | TELEPHONE | `not allocated` | not displayed | `RAW_PRESENT_EXTRACTION_MISSING` | P1 |
+| `data.facility.raw_complaint_report.facility_license_status` | facility | LICENSE STATUS | `not allocated` | not displayed | `SOURCE_NOT_PROVIDED` | P2 |
+| `data.facility.raw_complaint_report.facility_type` | facility | FACILITY TYPE | `facilities.facility_type` | /reviewer/records/detail; /ccld/facilities/detail | `NOT_APPLICABLE` | P2 |
 | `data.facility.raw_complaint_report.regional_office` | facility | allowlisted raw label pattern: regional_office | `facilities.regional_office` | not displayed | `NOT_APPLICABLE` | P2 |
 | `data.shared.extraction_audit.audit_id` | shared | extraction_audit normalizer: audit_id | `extraction_audit.audit_id` | not displayed | `INTENTIONALLY_INTERNAL` | P2 |
 | `data.shared.extraction_audit.confidence` | shared | extraction_audit normalizer: confidence | `extraction_audit.confidence` | not displayed | `INTENTIONALLY_INTERNAL` | P2 |
@@ -120,6 +141,7 @@ The generated audit under `data/processed/source-to-screen-audit/` is the author
 | `data.shared.extraction_audit.source_section` | shared | extraction_audit normalizer: source_section | `extraction_audit.source_section` | not displayed | `INTENTIONALLY_INTERNAL` | P2 |
 | `data.shared.extraction_audit.source_text` | shared | extraction_audit normalizer: source_text | `extraction_audit.source_text` | not displayed | `INTENTIONALLY_INTERNAL` | P2 |
 | `data.shared.extraction_audit.warning` | shared | extraction_audit normalizer: warning | `extraction_audit.warning` | not displayed | `INTENTIONALLY_INTERNAL` | P2 |
+| `data.shared.presentation.reviewer_operator_tier` | shared | Presentation tier | `not allocated` | not displayed | `INTENTIONALLY_INTERNAL` | P2 |
 | `data.shared.source_document.connector_name` | shared | source_document normalizer: connector_name | `source_documents.connector_name` | not displayed | `INTENTIONALLY_INTERNAL` | P2 |
 | `data.shared.source_document.connector_version` | shared | source_document normalizer: connector_version | `source_documents.connector_version` | not displayed | `INTENTIONALLY_INTERNAL` | P2 |
 | `data.shared.source_document.content_type` | shared | source_document normalizer: content_type | `source_documents.content_type` | not displayed | `INTENTIONALLY_INTERNAL` | P2 |
@@ -138,12 +160,19 @@ The generated audit under `data/processed/source-to-screen-audit/` is the author
 
 `NOT_APPLICABLE` means the audit found no action represented by the selected primary classification. `INTENTIONALLY_INTERNAL` records a deliberate attorney-tier boundary; it is not permission to expose technical metadata in the primary reviewer workflow.
 
+## Authoritative complaint-report inventory
+
+`docs/data/complaint-report-field-inventory.csv` is the governed Issue #481 structural input at schema `1.0.0`. It reuses source-to-screen coverage contract `1.1.0`, the stable `data.<ownership>.<entity>.<field>` identity format, and the existing terminal status vocabulary.
+
+The tracked CSV records source section and label identity, extraction and normalization fields, canonical allocation, PostgreSQL and read-model state, complaint and Facility Overview rendering state, presentation tier, required action, and safe rationale. It never records source values.
+
+Rows assigned to `issue_447_canonical_allocation` are the controlled handoff to Issue #447. Rows assigned to `issue_450_missing_state_presentation` remain presentation work for Issue #450 after allocation. Issue #481 does not perform either downstream change.
+
 ## Contract coverage projection
 
-Contract `1.0.0` uses every `data_element_id` in this table as its field
-inventory. Non-canonical report schemas, including the Issue #490 technical
-profile and the Issues #453/#477 package schema, are not field catalogs and do
-not add data elements.
+Contract `1.1.0` uses every `data_element_id` in this table as its field
+inventory. Non-canonical report schemas remain report contracts rather than
+field catalogs and do not add data elements independently.
 
 For every field, the producer emits rows for `source_presence`, `extraction`,
 `normalization`, `canonical_allocation`, `postgresql_population`,
@@ -152,9 +181,9 @@ For every field, the producer emits rows for `source_presence`, `extraction`,
 blank, absent, unavailable, unsupported, conflict, failure, and skipped counts.
 A surface that is not applicable to a field remains a zero-eligible stage; it is
 not reported as missing. A governed aggregate adapter may contribute more than
-one observation to a catalog field/stage. Terminal categories therefore expose
-a separate eligible count, and reconciliation requires both stage and terminal
-count distributions to balance exactly.
+one observation to a catalog field and stage. Terminal categories therefore
+expose a separate eligible count, and reconciliation requires both stage and
+terminal count distributions to balance exactly.
 
 The terminal contract categories are `present_and_populated`,
 `present_but_not_extracted`, `extracted_but_not_allocated`,

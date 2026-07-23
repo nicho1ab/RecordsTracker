@@ -14,7 +14,7 @@ import json
 import re
 import unicodedata
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, cast
 
@@ -42,6 +42,109 @@ GAP_CLASSIFICATIONS: tuple[str, ...] = (
     "FIXTURE_RUNTIME_DIVERGENCE",
     "INTENTIONALLY_INTERNAL",
     "NOT_APPLICABLE",
+)
+
+COVERAGE_TERMINAL_CLASSIFICATIONS: tuple[str, ...] = (
+    "present_and_populated",
+    "present_but_not_extracted",
+    "extracted_but_not_allocated",
+    "allocated_but_not_imported",
+    "stored_but_not_read",
+    "read_but_not_rendered",
+    "rendered_incorrectly",
+    "present_blank",
+    "source_label_absent",
+    "source_artifact_unavailable",
+    "unsupported_layout",
+    "conflicting_sources",
+    "intentionally_internal",
+    "not_applicable",
+)
+
+COMPLAINT_REPORT_INVENTORY_VERSION = "1.0.0"
+COMPLAINT_REPORT_INVENTORY_PATH = Path(
+    "docs/data/complaint-report-field-inventory.csv"
+)
+COMPLAINT_REPORT_INVENTORY_FIELDNAMES: tuple[str, ...] = (
+    "schema_version",
+    "field_id",
+    "domain",
+    "user_facing_concept",
+    "source_artifact_type",
+    "source_section",
+    "source_label",
+    "source_presence_state",
+    "extractor_field",
+    "normalized_field",
+    "canonical_table",
+    "canonical_column",
+    "source_precedence",
+    "conflict_behavior",
+    "postgresql_population_state",
+    "read_model_field",
+    "complaint_page_rendering_state",
+    "facility_hub_rendering_state",
+    "presentation_tier",
+    "authoritative_status",
+    "required_action",
+    "related_issue",
+    "safe_notes",
+)
+COMPLAINT_REPORT_REQUIRED_DOMAINS: tuple[str, ...] = (
+    "allegation_categories",
+    "allegations",
+    "canonical_provenance",
+    "complainants_participants",
+    "complaint_dates",
+    "complaint_identity",
+    "confidence_warning_metadata",
+    "correction_actions",
+    "correction_due_dates",
+    "deficiencies",
+    "dispositions",
+    "document_identity",
+    "extraction_metadata",
+    "facility_address_contact",
+    "facility_identity",
+    "facility_type_license_status",
+    "findings",
+    "import_metadata",
+    "investigation_timing",
+    "normalization_metadata",
+    "office_agency_regional_office",
+    "plans_of_correction",
+    "regulation_citations",
+    "reviewer_operator_presentation",
+    "signatures_signatory_roles",
+    "source_report_identity",
+    "source_traceability",
+    "substantiation_state",
+    "type_a_type_b_indicators",
+    "visits_investigation_activities",
+)
+COMPLAINT_REPORT_SOURCE_PRESENCE_STATES: tuple[str, ...] = (
+    "artifact_unavailable",
+    "derived",
+    "label_absent",
+    "not_applicable",
+    "observed_blank",
+    "observed_populated",
+    "unsupported_layout",
+)
+COMPLAINT_REPORT_PRESENTATION_TIERS: tuple[str, ...] = (
+    "internal",
+    "operator",
+    "reviewer",
+    "reviewer_and_operator",
+)
+COMPLAINT_REPORT_REQUIRED_ACTIONS: tuple[str, ...] = (
+    "blocked_source_unavailable",
+    "blocked_unsupported_layout",
+    "fully_covered",
+    "intentionally_internal",
+    "issue_447_canonical_allocation",
+    "issue_450_missing_state_presentation",
+    "no_action_not_applicable",
 )
 
 
@@ -81,6 +184,36 @@ class ElementSpec:
     complaint_detail_relevant: bool
     dependencies: str
     validation_requirement: str
+    authoritative_status: str | None = None
+
+
+@dataclass(frozen=True)
+class ComplaintReportFieldSpec:
+    """One value-free Issue #481 complaint-report inventory row."""
+
+    schema_version: str
+    field_id: str
+    domain: str
+    user_facing_concept: str
+    source_artifact_type: str
+    source_section: str
+    source_label: str
+    source_presence_state: str
+    extractor_field: str
+    normalized_field: str
+    canonical_table: str
+    canonical_column: str
+    source_precedence: str
+    conflict_behavior: str
+    postgresql_population_state: str
+    read_model_field: str
+    complaint_page_rendering_state: str
+    facility_hub_rendering_state: str
+    presentation_tier: str
+    authoritative_status: str
+    required_action: str
+    related_issue: str
+    safe_notes: str
 
 
 @dataclass(frozen=True)
@@ -723,6 +856,198 @@ _RAW_ONLY_FIELDS: tuple[tuple[str, str, str, str | None, str, str], ...] = (
 )
 
 
+def load_complaint_report_field_inventory(
+    repo_root: Path,
+) -> tuple[ComplaintReportFieldSpec, ...]:
+    """Load and validate the governed, value-free Issue #481 field inventory."""
+
+    path = repo_root / COMPLAINT_REPORT_INVENTORY_PATH
+    try:
+        with path.open("r", encoding="utf-8-sig", newline="") as csv_file:
+            reader = csv.DictReader(csv_file)
+            if tuple(reader.fieldnames or ()) != COMPLAINT_REPORT_INVENTORY_FIELDNAMES:
+                raise ValueError(
+                    "The complaint-report field inventory header does not match "
+                    "the governed schema."
+                )
+            raw_rows = tuple(dict(row) for row in reader)
+    except (OSError, UnicodeDecodeError, csv.Error) as exc:
+        raise ValueError(
+            "The governed complaint-report field inventory could not be read."
+        ) from exc
+    if not raw_rows:
+        raise ValueError("The governed complaint-report field inventory is empty.")
+
+    rows: list[ComplaintReportFieldSpec] = []
+    field_ids: list[str] = []
+    for raw_row in raw_rows:
+        if set(raw_row) != set(COMPLAINT_REPORT_INVENTORY_FIELDNAMES):
+            raise ValueError("A complaint-report field inventory row has unknown columns.")
+        row = ComplaintReportFieldSpec(
+            **{
+                name: " ".join(str(raw_row.get(name, "")).split())
+                for name in COMPLAINT_REPORT_INVENTORY_FIELDNAMES
+            }
+        )
+        if row.schema_version != COMPLAINT_REPORT_INVENTORY_VERSION:
+            raise ValueError("The complaint-report field inventory version is unsupported.")
+        if not re.fullmatch(
+            r"data\.[a-z0-9_]+\.[a-z0-9_]+\.[a-z0-9_]+", row.field_id
+        ):
+            raise ValueError("A complaint-report field identifier is invalid.")
+        if row.domain not in COMPLAINT_REPORT_REQUIRED_DOMAINS:
+            raise ValueError("A complaint-report field domain is not governed.")
+        if row.source_presence_state not in COMPLAINT_REPORT_SOURCE_PRESENCE_STATES:
+            raise ValueError("A complaint-report source-presence state is not governed.")
+        if row.presentation_tier not in COMPLAINT_REPORT_PRESENTATION_TIERS:
+            raise ValueError("A complaint-report presentation tier is not governed.")
+        if row.authoritative_status not in COVERAGE_TERMINAL_CLASSIFICATIONS:
+            raise ValueError("A complaint-report authoritative status is not governed.")
+        if row.required_action not in COMPLAINT_REPORT_REQUIRED_ACTIONS:
+            raise ValueError("A complaint-report required action is not governed.")
+        if bool(row.canonical_table) != bool(row.canonical_column):
+            raise ValueError(
+                "Complaint-report canonical table and column must be allocated together."
+            )
+        required_text = (
+            row.user_facing_concept,
+            row.source_artifact_type,
+            row.source_section,
+            row.source_precedence,
+            row.conflict_behavior,
+            row.postgresql_population_state,
+            row.complaint_page_rendering_state,
+            row.facility_hub_rendering_state,
+            row.related_issue,
+            row.safe_notes,
+        )
+        if any(not value for value in required_text):
+            raise ValueError("A complaint-report inventory row is missing required text.")
+        combined = " ".join(str(getattr(row, name)) for name in row.__dataclass_fields__)
+        if re.search(r"(?i)\bhttps?://|[a-z]:[\\/]|\\\\[a-z0-9_.-]+\\", combined):
+            raise ValueError(
+                "Complaint-report inventory rows may not contain URLs or private paths."
+            )
+        rows.append(row)
+        field_ids.append(row.field_id)
+
+    if field_ids != sorted(field_ids):
+        raise ValueError("Complaint-report inventory rows must use deterministic ID order.")
+    if len(field_ids) != len(set(field_ids)):
+        raise ValueError("Complaint-report inventory field identifiers must be unique.")
+    domains = {row.domain for row in rows}
+    if domains != set(COMPLAINT_REPORT_REQUIRED_DOMAINS):
+        raise ValueError("Complaint-report inventory domain coverage is incomplete.")
+    return tuple(rows)
+
+
+def _complaint_report_gap_classification(authoritative_status: str) -> str:
+    return {
+        "present_and_populated": "NOT_APPLICABLE",
+        "present_but_not_extracted": "RAW_PRESENT_EXTRACTION_MISSING",
+        "extracted_but_not_allocated": "EXTRACTED_CANONICAL_MAPPING_MISSING",
+        "allocated_but_not_imported": "CANONICAL_IMPORT_NOT_POPULATED",
+        "stored_but_not_read": "STORED_QUERY_OMISSION",
+        "read_but_not_rendered": "UI_DISPLAY_OMISSION",
+        "rendered_incorrectly": "UI_DISPLAY_OMISSION",
+        "present_blank": "UNEXPLAINED_BLANK",
+        "source_label_absent": "SOURCE_NOT_PROVIDED",
+        "source_artifact_unavailable": "SOURCE_NOT_PROVIDED",
+        "unsupported_layout": "AGGREGATE_DATA_INSUFFICIENT",
+        "conflicting_sources": "AGGREGATE_DATA_INSUFFICIENT",
+        "intentionally_internal": "INTENTIONALLY_INTERNAL",
+        "not_applicable": "NOT_APPLICABLE",
+    }[authoritative_status]
+
+
+def _complaint_report_element_spec(row: ComplaintReportFieldSpec) -> ElementSpec:
+    ownership = row.field_id.split(".")[1]
+    entity_by_table = {table: entity for entity, table in _TABLE_BY_ENTITY.items()}
+    canonical_entity = entity_by_table.get(row.canonical_table)
+    current_homes: list[str] = []
+    if row.complaint_page_rendering_state == "rendered":
+        current_homes.append("/reviewer/records/detail")
+    if row.facility_hub_rendering_state == "rendered":
+        current_homes.append("/ccld/facilities/detail")
+    reviewer_relevant = row.presentation_tier in {"reviewer", "reviewer_and_operator"}
+    observation_field: str | None = (
+        row.extractor_field or _source_field_id(row.source_label)
+    )
+    if observation_field is not None:
+        observation_field = {
+            "interviewed_participant": "participant_identity",
+            "telephone": "facility_contact",
+        }.get(observation_field, observation_field)
+    if row.source_presence_state in {
+        "artifact_unavailable",
+        "derived",
+        "label_absent",
+        "not_applicable",
+        "unsupported_layout",
+    }:
+        observation_field = None
+    return ElementSpec(
+        data_element_id=row.field_id,
+        reviewer_facing_name=row.user_facing_concept,
+        ownership=ownership,
+        source_artifact_type=row.source_artifact_type,
+        source_field_or_extractor_reference=(
+            row.source_label or row.extractor_field or "structural inventory state"
+        ),
+        source_availability_status=row.source_presence_state,
+        extraction_status=(
+            "deterministically extracted"
+            if row.extractor_field
+            else "not extracted by the current complaint-report connector"
+        ),
+        canonical_entity=canonical_entity,
+        canonical_column=row.canonical_column or None,
+        data_type="source string",
+        null_meaning="source value unavailable, absent, or not allocated",
+        blank_meaning="present blank is distinct from an absent source label",
+        zero_meaning="not applicable unless the source explicitly supplies numeric zero",
+        query_service_consumer=row.read_model_field or "none",
+        current_display_route_or_export="; ".join(current_homes),
+        recommended_display_location=(
+            "internal operator evidence"
+            if row.presentation_tier in {"internal", "operator"}
+            else "complaint detail or Facility Overview according to the governed field"
+        ),
+        recommended_display_method=(
+            "governed labeled fact or explicit missing-state presentation"
+        ),
+        traceability_availability=(
+            "stable source section and label identity; aggregate evidence excludes values"
+        ),
+        validation_coverage=(
+            "Issue #481 governed fixture-layout and deterministic inventory tests"
+        ),
+        gap_classification=_complaint_report_gap_classification(
+            row.authoritative_status
+        ),
+        disposition=row.required_action,
+        priority="P1" if row.required_action.startswith("issue_") else "P2",
+        evidence_reference_location=(
+            f"{COMPLAINT_REPORT_INVENTORY_PATH.as_posix()}#{row.field_id}"
+        ),
+        source_observation_field=observation_field,
+        source_observation_sources=_COMPLAINT_SOURCE_IDS if observation_field else (),
+        runtime_table=None,
+        runtime_column=None,
+        reviewer_relevant=reviewer_relevant,
+        facility_hub_relevant=row.facility_hub_rendering_state != "not_applicable",
+        complaint_detail_relevant=(
+            row.complaint_page_rendering_state != "not_applicable"
+        ),
+        dependencies=row.related_issue,
+        validation_requirement=(
+            "Preserve the authoritative status, missing-state distinction, and "
+            "value-free evidence boundary."
+        ),
+        authoritative_status=row.authoritative_status,
+    )
+
+
 def discover_element_specs(
     repo_root: Path,
     *,
@@ -813,6 +1138,23 @@ def discover_element_specs(
 
     specs.extend(_raw_only_specs())
     specs.extend(_curated_structural_specs())
+    inventory_path = repo_root / COMPLAINT_REPORT_INVENTORY_PATH
+    if inventory_path.is_file():
+        complaint_report_rows = load_complaint_report_field_inventory(repo_root)
+        by_id = {spec.data_element_id: spec for spec in specs}
+        for row in complaint_report_rows:
+            existing = by_id.get(row.field_id)
+            if existing is None:
+                created = _complaint_report_element_spec(row)
+                specs.append(created)
+                by_id[row.field_id] = created
+            else:
+                updated = replace(
+                    existing,
+                    authoritative_status=row.authoritative_status,
+                )
+                specs[specs.index(existing)] = updated
+                by_id[row.field_id] = updated
     ordered = tuple(sorted(specs, key=lambda item: item.data_element_id))
     _assert_unique_ids(ordered)
     return ordered
@@ -1397,13 +1739,23 @@ def _traceability(entity: str, column: str) -> str:
 
 __all__ = [
     "AGGREGATE_FEATURES",
+    "COMPLAINT_REPORT_INVENTORY_FIELDNAMES",
+    "COMPLAINT_REPORT_INVENTORY_PATH",
+    "COMPLAINT_REPORT_INVENTORY_VERSION",
+    "COMPLAINT_REPORT_PRESENTATION_TIERS",
+    "COMPLAINT_REPORT_REQUIRED_ACTIONS",
+    "COMPLAINT_REPORT_REQUIRED_DOMAINS",
+    "COMPLAINT_REPORT_SOURCE_PRESENCE_STATES",
+    "COVERAGE_TERMINAL_CLASSIFICATIONS",
     "GAP_CLASSIFICATIONS",
     "QUERY_COVERAGE_GAPS",
     "AggregateFeatureSpec",
+    "ComplaintReportFieldSpec",
     "ElementSpec",
     "QueryCoverageGap",
     "classify_gap",
     "discover_element_specs",
+    "load_complaint_report_field_inventory",
     "safe_facility_source_header",
     "stable_data_element_id",
 ]

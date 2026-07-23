@@ -13,6 +13,7 @@ import sys
 from collections import Counter
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
+from dataclasses import field as dataclass_field
 from datetime import UTC, datetime
 from html.parser import HTMLParser
 from pathlib import Path
@@ -43,11 +44,23 @@ from ccld_complaints.hosted_app.persistence import (
 )
 from ccld_complaints.source_to_screen_catalog import (
     AGGREGATE_FEATURES,
+    COMPLAINT_REPORT_INVENTORY_FIELDNAMES,
+    COMPLAINT_REPORT_INVENTORY_PATH,
+    COMPLAINT_REPORT_INVENTORY_VERSION,
+    COMPLAINT_REPORT_PRESENTATION_TIERS,
+    COMPLAINT_REPORT_REQUIRED_ACTIONS,
+    COMPLAINT_REPORT_REQUIRED_DOMAINS,
+    COMPLAINT_REPORT_SOURCE_PRESENCE_STATES,
     GAP_CLASSIFICATIONS,
     QUERY_COVERAGE_GAPS,
+    ComplaintReportFieldSpec,
     ElementSpec,
     discover_element_specs,
+    load_complaint_report_field_inventory,
     safe_facility_source_header,
+)
+from ccld_complaints.source_to_screen_catalog import (
+    COVERAGE_TERMINAL_CLASSIFICATIONS as CATALOG_COVERAGE_TERMINAL_CLASSIFICATIONS,
 )
 from ccld_complaints.source_to_screen_facility_coverage import (
     build_runtime_facility_coverage,
@@ -58,9 +71,10 @@ from ccld_complaints.source_to_screen_facility_coverage import (
 
 AuditMode = Literal["local", "runtime"]
 
-AUDIT_SCHEMA_VERSION = 1
+AUDIT_SCHEMA_VERSION = 2
 COVERAGE_CONTRACT_VERSION = "1.1.0"
 COVERAGE_MINIMUM_CONSUMER_VERSION = "1.1.0"
+COVERAGE_TERMINAL_CLASSIFICATIONS = CATALOG_COVERAGE_TERMINAL_CLASSIFICATIONS
 COVERAGE_PRODUCER_SCHEMA_ID = "issues-453-477-coverage-report-v1"
 COVERAGE_PRODUCER_VERSION = "source-to-screen-audit-v1"
 COVERAGE_SCHEMA_PATH = Path("schemas/issues-453-477-coverage-report-v1.schema.json")
@@ -83,22 +97,6 @@ COVERAGE_STAGE_STATES = (
     "conflict",
     "failure",
     "skipped",
-)
-COVERAGE_TERMINAL_CLASSIFICATIONS = (
-    "present_and_populated",
-    "present_but_not_extracted",
-    "extracted_but_not_allocated",
-    "allocated_but_not_imported",
-    "stored_but_not_read",
-    "read_but_not_rendered",
-    "rendered_incorrectly",
-    "present_blank",
-    "source_label_absent",
-    "source_artifact_unavailable",
-    "unsupported_layout",
-    "conflicting_sources",
-    "intentionally_internal",
-    "not_applicable",
 )
 COVERAGE_REFRESH_STATES = (
     "not_started",
@@ -367,6 +365,9 @@ GAP_FIELDNAMES = (
 
 MANDATORY_OUTPUTS = (
     "manifest.json",
+    "complaint-report-field-inventory.csv",
+    "complaint-report-field-inventory.md",
+    "complaint-report-field-summary.json",
     "data-element-inventory.csv",
     "data-element-inventory.json",
     "population-summary.csv",
@@ -478,6 +479,8 @@ class AuditResult:
     aggregate_feature_readiness: tuple[Mapping[str, Any], ...]
     gap_register: tuple[Mapping[str, Any], ...]
     recommended_issues: tuple[Mapping[str, Any], ...]
+    complaint_report_inventory: tuple[Mapping[str, Any], ...] = ()
+    complaint_report_summary: Mapping[str, Any] = dataclass_field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -593,11 +596,17 @@ def _source_field_id(text_value: str) -> str:
 
 
 _RAW_FIELD_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
+    ("agency", re.compile(r"\bagency\b", re.I)),
+    ("complainant", re.compile(r"\bcomplainant\b", re.I)),
+    ("deficiency", re.compile(r"\bdeficien(?:cy|cies)\b", re.I)),
     ("facility_number", re.compile(r"\bfacility\s+(?:number|id)\b", re.I)),
     ("facility_name", re.compile(r"\bfacility\s+name\b", re.I)),
+    ("facility_type", re.compile(r"\bfacility\s+type\b", re.I)),
     ("facility_address", re.compile(r"\b(?:facility\s+)?address\b", re.I)),
     ("facility_city", re.compile(r"\b(?:facility\s+)?city\b", re.I)),
     ("facility_capacity", re.compile(r"\b(?:facility\s+)?capacity\b", re.I)),
+    ("facility_contact", re.compile(r"\b(?:telephone|phone|contact)\b", re.I)),
+    ("participant_identity", re.compile(r"\b(?:participant|interviewed)\b", re.I)),
     ("regional_office", re.compile(r"\bregional\s+office\b", re.I)),
     ("complaint_control_number", re.compile(r"\bcomplaint\s+control\s+number\b", re.I)),
     ("complaint_received_date", re.compile(r"\bcomplaint\s+(?:was\s+)?received\b", re.I)),
@@ -611,6 +620,8 @@ _RAW_FIELD_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
         "investigation_findings_narrative",
         re.compile(r"\binvestigation\s+findings?\b", re.I),
     ),
+    ("signatory_role", re.compile(r"\bsignatory\s+role\b", re.I)),
+    ("signature", re.compile(r"\bsignature\b", re.I)),
 )
 
 
@@ -2174,6 +2185,252 @@ def _recommended_issues(
     return deduplicate_recommended_issues(issue_specs)
 
 
+def _complaint_report_inventory_rows(
+    specs: Sequence[ComplaintReportFieldSpec],
+) -> tuple[Mapping[str, Any], ...]:
+    return tuple(
+        {
+            name: getattr(spec, name)
+            for name in COMPLAINT_REPORT_INVENTORY_FIELDNAMES
+        }
+        for spec in specs
+    )
+
+
+def _count_inventory_values(
+    rows: Sequence[Mapping[str, Any]],
+    *,
+    field: str,
+    required_values: Sequence[str],
+) -> Mapping[str, int]:
+    counts = Counter(str(row[field]) for row in rows)
+    unknown = set(counts) - set(required_values)
+    if unknown:
+        raise ValueError(f"Unknown complaint-report inventory {field} value.")
+    return {
+        value: counts.get(value, 0)
+        for value in required_values
+    }
+
+
+def _complaint_report_summary(
+    rows: Sequence[Mapping[str, Any]],
+) -> Mapping[str, Any]:
+    total_fields = len(rows)
+    domain_counts = _count_inventory_values(
+        rows,
+        field="domain",
+        required_values=COMPLAINT_REPORT_REQUIRED_DOMAINS,
+    )
+    status_counts = _count_inventory_values(
+        rows,
+        field="authoritative_status",
+        required_values=COVERAGE_TERMINAL_CLASSIFICATIONS,
+    )
+    source_stage_counts = _count_inventory_values(
+        rows,
+        field="source_presence_state",
+        required_values=COMPLAINT_REPORT_SOURCE_PRESENCE_STATES,
+    )
+    presentation_tier_counts = _count_inventory_values(
+        rows,
+        field="presentation_tier",
+        required_values=COMPLAINT_REPORT_PRESENTATION_TIERS,
+    )
+    required_action_counts = _count_inventory_values(
+        rows,
+        field="required_action",
+        required_values=COMPLAINT_REPORT_REQUIRED_ACTIONS,
+    )
+    reconciliations = {
+        "domain_total_balances": sum(domain_counts.values()) == total_fields,
+        "status_total_balances": sum(status_counts.values()) == total_fields,
+        "source_stage_total_balances": (
+            sum(source_stage_counts.values()) == total_fields
+        ),
+        "presentation_tier_total_balances": (
+            sum(presentation_tier_counts.values()) == total_fields
+        ),
+        "required_action_total_balances": (
+            sum(required_action_counts.values()) == total_fields
+        ),
+    }
+    if not all(reconciliations.values()):
+        raise ValueError("Complaint-report inventory aggregate reconciliation failed.")
+    return {
+        "schema_version": COMPLAINT_REPORT_INVENTORY_VERSION,
+        "coverage_contract_version": COVERAGE_CONTRACT_VERSION,
+        "total_fields": total_fields,
+        "domain_counts": domain_counts,
+        "authoritative_status_counts": status_counts,
+        "source_stage_counts": source_stage_counts,
+        "presentation_tier_counts": presentation_tier_counts,
+        "required_action_counts": required_action_counts,
+        "reconciliation": {
+            "status": "passed",
+            "invariants": reconciliations,
+        },
+    }
+
+
+def _complaint_report_csv_bytes(
+    rows: Sequence[Mapping[str, Any]],
+) -> bytes:
+    stream = io.StringIO(newline="")
+    writer = csv.DictWriter(
+        stream,
+        fieldnames=COMPLAINT_REPORT_INVENTORY_FIELDNAMES,
+        lineterminator="\n",
+    )
+    writer.writeheader()
+    for row in rows:
+        safe_row = cast(Mapping[str, Any], sanitize_payload(row))
+        writer.writerow(
+            {
+                name: _csv_value(safe_row.get(name))
+                for name in COMPLAINT_REPORT_INVENTORY_FIELDNAMES
+            }
+        )
+    return stream.getvalue().encode("utf-8")
+
+
+def _complaint_report_markdown(
+    rows: Sequence[Mapping[str, Any]],
+    summary: Mapping[str, Any],
+) -> str:
+    lines = [
+        "# Authoritative complaint-report field inventory",
+        "",
+        f"- Inventory schema: `{COMPLAINT_REPORT_INVENTORY_VERSION}`",
+        f"- Source-to-screen coverage contract: `{COVERAGE_CONTRACT_VERSION}`",
+        f"- Total structural fields: {summary['total_fields']}",
+        "- Record values and source bodies emitted: no",
+        "",
+        "## Required-action summary",
+        "",
+        "| Required action | Field count |",
+        "| --- | ---: |",
+    ]
+    for action, count in cast(
+        Mapping[str, int], summary["required_action_counts"]
+    ).items():
+        lines.append(f"| `{_markdown_cell(action)}` | {count} |")
+    lines.extend(
+        [
+            "",
+            "## Authoritative-status summary",
+            "",
+            "| Status | Field count |",
+            "| --- | ---: |",
+        ]
+    )
+    for status, count in cast(
+        Mapping[str, int], summary["authoritative_status_counts"]
+    ).items():
+        lines.append(f"| `{_markdown_cell(status)}` | {count} |")
+    for domain in COMPLAINT_REPORT_REQUIRED_DOMAINS:
+        domain_rows = [row for row in rows if row["domain"] == domain]
+        lines.extend(
+            [
+                "",
+                f"## {_markdown_cell(domain).replace('_', ' ').title()}",
+                "",
+                (
+                    "| Field | Concept | Source section and label | Extractor / normalized "
+                    "| Canonical allocation | Source precedence / conflict | PostgreSQL "
+                    "| Read model | Complaint / Facility | Tier | Status | Action | Issue |"
+                ),
+                (
+                    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | "
+                    "--- | --- | --- |"
+                ),
+            ]
+        )
+        for row in domain_rows:
+            canonical = (
+                f"{row['canonical_table']}.{row['canonical_column']}"
+                if row["canonical_table"]
+                else "not allocated"
+            )
+            source_identity = (
+                f"{row['source_section']} / {row['source_label'] or 'no label'}"
+            )
+            extraction = (
+                f"{row['extractor_field'] or 'none'} / "
+                f"{row['normalized_field'] or 'none'}"
+            )
+            precedence = (
+                f"{row['source_precedence']} / {row['conflict_behavior']}"
+            )
+            surfaces = (
+                f"{row['complaint_page_rendering_state']} / "
+                f"{row['facility_hub_rendering_state']}"
+            )
+            lines.append(
+                "| `"
+                + _markdown_cell(row["field_id"])
+                + "` | "
+                + _markdown_cell(row["user_facing_concept"])
+                + " | "
+                + _markdown_cell(source_identity)
+                + " | "
+                + _markdown_cell(extraction)
+                + " | `"
+                + _markdown_cell(canonical)
+                + "` | "
+                + _markdown_cell(precedence)
+                + " | "
+                + _markdown_cell(row["postgresql_population_state"])
+                + " | "
+                + _markdown_cell(row["read_model_field"] or "none")
+                + " | "
+                + _markdown_cell(surfaces)
+                + " | "
+                + _markdown_cell(row["presentation_tier"])
+                + " | `"
+                + _markdown_cell(row["authoritative_status"])
+                + "` | `"
+                + _markdown_cell(row["required_action"])
+                + "` | "
+                + _markdown_cell(row["related_issue"])
+                + " |"
+            )
+    lines.extend(
+        [
+            "",
+            "## Safety and interpretation",
+            "",
+            "This report is structural and aggregate-only. It contains no source record "
+            "values, complaint narratives, facility contact values, credentials, private "
+            "hosts, or machine-specific paths. Zero-count statuses are retained in the "
+            "summary vocabulary and are not manufactured as field observations.",
+            "",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def _complaint_report_artifact_bytes(
+    rows: Sequence[Mapping[str, Any]],
+    summary: Mapping[str, Any],
+) -> Mapping[str, bytes]:
+    return {
+        "complaint-report-field-inventory.csv": _complaint_report_csv_bytes(rows),
+        "complaint-report-field-inventory.md": (
+            sanitize_payload(_complaint_report_markdown(rows, summary)).encode("utf-8")
+        ),
+        "complaint-report-field-summary.json": (
+            json.dumps(
+                sanitize_payload(summary),
+                indent=2,
+                sort_keys=True,
+                ensure_ascii=False,
+            )
+            + "\n"
+        ).encode("utf-8"),
+    }
+
+
 def _manifest(
     *,
     mode: AuditMode,
@@ -2184,12 +2441,21 @@ def _manifest(
     inventory: Sequence[Mapping[str, Any]],
     gaps: Sequence[Mapping[str, Any]],
     parity_written: bool,
+    complaint_report_artifacts: Mapping[str, bytes],
+    repository_branch: str | None,
+    repository_head: str | None,
 ) -> Mapping[str, Any]:
     output_files = list(MANDATORY_OUTPUTS)
     if parity_written:
         output_files.append(PARITY_OUTPUT)
     return {
         "audit_schema_version": AUDIT_SCHEMA_VERSION,
+        "coverage_contract_version": COVERAGE_CONTRACT_VERSION,
+        "complaint_report_inventory_version": COMPLAINT_REPORT_INVENTORY_VERSION,
+        "repository_revision": {
+            "branch": repository_branch or "not_recorded",
+            "head": repository_head,
+        },
         "mode": mode,
         "generated_at_utc": generated_at.astimezone(UTC).isoformat().replace("+00:00", "Z"),
         "guardrails": {
@@ -2225,6 +2491,23 @@ def _manifest(
         "inventory_count": len(inventory),
         "gap_count": len(gaps),
         "gap_classifications": list(GAP_CLASSIFICATIONS),
+        "artifacts": [
+            {
+                "name": name,
+                "availability": "available",
+                "reason_category": "none",
+                "byte_count": len(content),
+                "sha256": hashlib.sha256(content).hexdigest(),
+                "media_type": (
+                    "text/csv"
+                    if name.endswith(".csv")
+                    else "text/markdown"
+                    if name.endswith(".md")
+                    else "application/json"
+                ),
+            }
+            for name, content in sorted(complaint_report_artifacts.items())
+        ],
         "output_files": sorted(output_files),
     }
 
@@ -2338,6 +2621,12 @@ def _write_outputs(output_dir: Path, result: AuditResult) -> None:
         if output_path.exists() and output_path.is_file():
             output_path.unlink()
     _write_json(output_dir / "manifest.json", result.manifest)
+    complaint_report_artifacts = _complaint_report_artifact_bytes(
+        result.complaint_report_inventory,
+        result.complaint_report_summary,
+    )
+    for name, content in sorted(complaint_report_artifacts.items()):
+        (output_dir / name).write_bytes(content)
     _write_csv(
         output_dir / "data-element-inventory.csv",
         result.inventory,
@@ -2437,6 +2726,45 @@ def _tracked_inventory_markdown(result: AuditResult) -> str:
             "primary classification. `INTENTIONALLY_INTERNAL` records a deliberate "
             "attorney-tier boundary; it is not permission to expose technical metadata in "
             "the primary reviewer workflow.",
+            "",
+            "## Authoritative complaint-report inventory",
+            "",
+            (
+                f"`{COMPLAINT_REPORT_INVENTORY_PATH.as_posix()}` is the governed "
+                f"Issue #481 structural input at schema `{COMPLAINT_REPORT_INVENTORY_VERSION}`. "
+                f"It reuses source-to-screen coverage contract `{COVERAGE_CONTRACT_VERSION}`, "
+                "the stable `data.<ownership>.<entity>.<field>` identity format, and the "
+                "existing terminal status vocabulary."
+            ),
+            "",
+            "The tracked CSV records source section and label identity, extraction and "
+            "normalization fields, canonical allocation, PostgreSQL and read-model state, "
+            "complaint and Facility Overview rendering state, presentation tier, required "
+            "action, and safe rationale. It never records source values.",
+            "",
+            "Rows assigned to `issue_447_canonical_allocation` are the controlled handoff "
+            "to Issue #447. Rows assigned to `issue_450_missing_state_presentation` remain "
+            "presentation work for Issue #450 after allocation. Issue #481 does not perform "
+            "either downstream change.",
+            "",
+            "## Contract coverage projection",
+            "",
+            (
+                f"Contract `{COVERAGE_CONTRACT_VERSION}` uses every `data_element_id` "
+                "in this table as its field inventory. Non-canonical report schemas "
+                "remain report contracts rather than field catalogs."
+            ),
+            "",
+            "For every field, the producer emits source presence, extraction, "
+            "normalization, canonical allocation, PostgreSQL population, read-model "
+            "exposure, complaint-page rendering, and facility-hub rendering stages. "
+            "Each eligible distribution balances across successful, blank, absent, "
+            "unavailable, unsupported, conflict, failure, and skipped counts.",
+            "",
+            "The terminal categories are: "
+            + ", ".join(f"`{value}`" for value in COVERAGE_TERMINAL_CLASSIFICATIONS)
+            + ". Zero-count categories remain explicit and are not manufactured as "
+            "source observations.",
             "",
         ]
     )
@@ -2573,6 +2901,18 @@ directory and must not be committed.
 `sqlite-postgres-parity.csv` is emitted only when both stores are available in the same
 audit invocation. All other files are emitted on every successful run.
 
+The complaint-report inventory outputs reuse the governed field IDs and terminal
+classifications from coverage contract `{COVERAGE_CONTRACT_VERSION}`. The authoritative
+tracked structural input is
+`{COMPLAINT_REPORT_INVENTORY_PATH.as_posix()}` at inventory schema
+`{COMPLAINT_REPORT_INVENTORY_VERSION}`. Generated CSV, Markdown, and aggregate JSON
+artifacts are hashed in `manifest.json`. A fixed revision may be recorded with the safe
+repository branch and full commit SHA options; private paths are never recorded.
+
+Every required domain, terminal status, presentation tier, source-presence state, and
+required-action category is emitted in deterministic order. Zero-count terminal statuses
+remain present in the aggregate matrix and are not manufactured as source observations.
+
 ## Missing-value rules
 
 - Numeric zero is counted only when the stored scalar is a verified numeric zero.
@@ -2662,6 +3002,8 @@ def run_audit(
     generated_at: datetime | None = None,
     environ: Mapping[str, str] | None = None,
     runtime_connection: Connection | None = None,
+    repository_branch: str | None = None,
+    repository_head: str | None = None,
 ) -> AuditResult:
     """Run a local or aggregate-only runtime audit and write deterministic artifacts."""
 
@@ -2669,8 +3011,31 @@ def run_audit(
         raise ValueError("Audit mode must be local or runtime.")
     if mode == "runtime" and write_tracked_baseline:
         raise AuditExecutionError("Tracked baseline generation is local-only.")
+    if (repository_branch is None) != (repository_head is None):
+        raise AuditExecutionError(
+            "Repository branch and HEAD evidence must be supplied together."
+        )
+    if repository_branch is not None and not re.fullmatch(
+        r"[a-z0-9][a-z0-9._/-]*", repository_branch
+    ):
+        raise AuditExecutionError("Repository branch evidence is invalid.")
+    if repository_head is not None and not re.fullmatch(
+        r"[0-9a-f]{40}", repository_head
+    ):
+        raise AuditExecutionError("Repository HEAD evidence is invalid.")
     root = (repo_root or Path(__file__).resolve().parents[2]).resolve()
     environment = environ if environ is not None else os.environ
+    complaint_report_specs = load_complaint_report_field_inventory(root)
+    complaint_report_inventory = _complaint_report_inventory_rows(
+        complaint_report_specs
+    )
+    complaint_report_summary = _complaint_report_summary(
+        complaint_report_inventory
+    )
+    complaint_report_artifacts = _complaint_report_artifact_bytes(
+        complaint_report_inventory,
+        complaint_report_summary,
+    )
     specs = (
         discover_element_specs(root)
         if mode == "local"
@@ -2764,6 +3129,9 @@ def run_audit(
         inventory=inventory,
         gaps=gaps,
         parity_written=sqlite_snapshot.available and runtime_snapshot.available,
+        complaint_report_artifacts=complaint_report_artifacts,
+        repository_branch=repository_branch,
+        repository_head=repository_head,
     )
     result = AuditResult(
         manifest=manifest,
@@ -2776,6 +3144,8 @@ def run_audit(
         aggregate_feature_readiness=aggregate_rows,
         gap_register=gaps,
         recommended_issues=issues,
+        complaint_report_inventory=complaint_report_inventory,
+        complaint_report_summary=complaint_report_summary,
     )
     effective_output_dir = output_dir
     if not effective_output_dir.is_absolute():
@@ -3127,7 +3497,8 @@ def _coverage_rows_from_inventory(
         terminal = _coverage_enum(
             terminal_overrides.get(
                 spec.data_element_id,
-                _terminal_from_catalog_gap(spec.gap_classification),
+                spec.authoritative_status
+                or _terminal_from_catalog_gap(spec.gap_classification),
             ),
             COVERAGE_TERMINAL_CLASSIFICATIONS,
             context="terminal classification",
@@ -5881,6 +6252,14 @@ def build_parser() -> argparse.ArgumentParser:
         "--generated-at",
         help="optional fixed UTC Z timestamp for deterministic fixture validation",
     )
+    parser.add_argument(
+        "--repository-branch",
+        help="optional safe branch recorded with local evidence; requires --repository-head",
+    )
+    parser.add_argument(
+        "--repository-head",
+        help="optional full lowercase commit SHA recorded with local evidence",
+    )
     return parser
 
 
@@ -5895,6 +6274,10 @@ def main(argv: Sequence[str] | None = None) -> int:
             if args.mode != "local" or args.write_tracked_baseline:
                 raise CoverageContractError(
                     "Governed fixture package generation is local and does not write baselines."
+                )
+            if args.repository_branch is not None or args.repository_head is not None:
+                raise CoverageContractError(
+                    "Repository revision evidence belongs to the aggregate audit package."
                 )
             fixed_time: datetime | None = None
             if args.generated_at is not None:
@@ -5946,6 +6329,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                         output_dir=output_dir,
                         write_tracked_baseline=False,
                         runtime_connection=connection,
+                        repository_branch=args.repository_branch,
+                        repository_head=args.repository_head,
                     )
                     package = publish_runtime_coverage_package(
                         connection,
@@ -5963,6 +6348,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                 mode=cast(AuditMode, args.mode),
                 output_dir=output_dir,
                 write_tracked_baseline=bool(args.write_tracked_baseline),
+                repository_branch=args.repository_branch,
+                repository_head=args.repository_head,
             )
     except (
         AuditExecutionError,

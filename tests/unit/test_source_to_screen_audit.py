@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import csv
+import hashlib
 import json
 import re
 import sqlite3
@@ -37,10 +39,16 @@ from ccld_complaints.source_to_screen_audit import (
     validate_coverage_package,
 )
 from ccld_complaints.source_to_screen_catalog import (
+    COMPLAINT_REPORT_INVENTORY_FIELDNAMES,
+    COMPLAINT_REPORT_INVENTORY_PATH,
+    COMPLAINT_REPORT_INVENTORY_VERSION,
+    COMPLAINT_REPORT_REQUIRED_ACTIONS,
+    COMPLAINT_REPORT_REQUIRED_DOMAINS,
     GAP_CLASSIFICATIONS,
     ElementSpec,
     classify_gap,
     discover_element_specs,
+    load_complaint_report_field_inventory,
     stable_data_element_id,
 )
 
@@ -193,6 +201,93 @@ def test_discovery_identifiers_and_canonical_mappings_are_stable() -> None:
     )
 
 
+def test_issue_481_inventory_is_complete_stable_and_shared_with_coverage_catalog() -> None:
+    rows = load_complaint_report_field_inventory(REPO_ROOT)
+    field_ids = [row.field_id for row in rows]
+    coverage_ids = {spec.data_element_id for spec in discover_element_specs(REPO_ROOT)}
+
+    assert rows
+    assert {row.schema_version for row in rows} == {
+        COMPLAINT_REPORT_INVENTORY_VERSION
+    }
+    assert field_ids == sorted(field_ids)
+    assert len(field_ids) == len(set(field_ids))
+    assert set(field_ids) <= coverage_ids
+    assert {row.domain for row in rows} == set(COMPLAINT_REPORT_REQUIRED_DOMAINS)
+    assert {row.required_action for row in rows} <= set(
+        COMPLAINT_REPORT_REQUIRED_ACTIONS
+    )
+    assert {
+        row.authoritative_status for row in rows
+    } <= set(COVERAGE_TERMINAL_CLASSIFICATIONS)
+    assert COVERAGE_CONTRACT_VERSION == "1.1.0"
+
+
+@pytest.mark.parametrize(
+    ("mutation", "message"),
+    (
+        ("duplicate", "identifiers must be unique"),
+        ("unknown_status", "authoritative status is not governed"),
+    ),
+)
+def test_issue_481_inventory_rejects_duplicate_ids_and_unknown_status(
+    tmp_path: Path,
+    mutation: str,
+    message: str,
+) -> None:
+    target = tmp_path / COMPLAINT_REPORT_INVENTORY_PATH
+    target.parent.mkdir(parents=True)
+    with (REPO_ROOT / COMPLAINT_REPORT_INVENTORY_PATH).open(
+        "r", encoding="utf-8", newline=""
+    ) as source:
+        rows = list(csv.DictReader(source))
+    if mutation == "duplicate":
+        rows.insert(1, dict(rows[0]))
+    else:
+        rows[0]["authoritative_status"] = "unknown_status"
+    with target.open("w", encoding="utf-8", newline="") as output:
+        writer = csv.DictWriter(
+            output,
+            fieldnames=COMPLAINT_REPORT_INVENTORY_FIELDNAMES,
+            lineterminator="\n",
+        )
+        writer.writeheader()
+        writer.writerows(rows)
+
+    with pytest.raises(ValueError, match=message):
+        load_complaint_report_field_inventory(tmp_path)
+
+
+def test_issue_481_representative_layout_states_are_structural_and_value_free() -> None:
+    observation = inspect_raw_artifacts(
+        (REPO_ROOT / "tests/fixtures/ccld/raw").glob("*_inx*.html"),
+        source_id="governed_complaint_fixtures",
+    )
+    rows = load_complaint_report_field_inventory(REPO_ROOT)
+    by_id = {row.field_id: row for row in rows}
+
+    assert observation.usable_artifact_count > 0
+    assert observation.field_counts["allegation_text"] > 0
+    assert observation.field_counts["finding"] > 0
+    assert observation.field_counts["deficiency"] > 0
+    assert observation.field_counts["signature"] > 0
+    assert by_id[
+        "data.facility.raw_complaint_report.facility_address"
+    ].authoritative_status == "present_blank"
+    assert by_id[
+        "data.complaint.source_artifact.report_availability"
+    ].authoritative_status == "source_artifact_unavailable"
+    assert by_id[
+        "data.complaint.source_artifact.layout_classification"
+    ].authoritative_status == "unsupported_layout"
+    assert all(
+        "http://" not in row.safe_notes
+        and "https://" not in row.safe_notes
+        and "C:\\" not in row.safe_notes
+        for row in rows
+    )
+
+
 def test_issue_447_source_reference_allocations_are_not_canonical_gaps() -> None:
     specs = discover_element_specs(REPO_ROOT)
     by_id = {spec.data_element_id: spec for spec in specs}
@@ -234,6 +329,11 @@ def test_discovery_uses_an_explicit_reviewer_surface_inventory(tmp_path: Path) -
     schema_dir.mkdir(parents=True)
     for source in sorted((REPO_ROOT / "schemas").glob("*.schema.json")):
         (schema_dir / source.name).write_bytes(source.read_bytes())
+    inventory_target = repo / COMPLAINT_REPORT_INVENTORY_PATH
+    inventory_target.parent.mkdir(parents=True, exist_ok=True)
+    inventory_target.write_bytes(
+        (REPO_ROOT / COMPLAINT_REPORT_INVENTORY_PATH).read_bytes()
+    )
 
     specs = discover_element_specs(repo)
     displayed = [spec for spec in specs if spec.current_display_route_or_export]
@@ -260,6 +360,11 @@ def test_unknown_retained_csv_headers_cannot_enter_catalog_or_baseline(
     schema_dir.mkdir(parents=True)
     for source in sorted((REPO_ROOT / "schemas").glob("*.schema.json")):
         (schema_dir / source.name).write_bytes(source.read_bytes())
+    inventory_target = repo / COMPLAINT_REPORT_INVENTORY_PATH
+    inventory_target.parent.mkdir(parents=True, exist_ok=True)
+    inventory_target.write_bytes(
+        (REPO_ROOT / COMPLAINT_REPORT_INVENTORY_PATH).read_bytes()
+    )
     retained_dir = repo / "data" / "raw" / "source-profiling"
     retained_dir.mkdir(parents=True)
     (retained_dir / "configured.csv").write_text(
@@ -490,6 +595,11 @@ def test_parity_report_is_written_only_when_both_stores_are_inspected(
 ) -> None:
     repo = tmp_path / "parity-repo"
     repo.mkdir()
+    inventory_target = repo / COMPLAINT_REPORT_INVENTORY_PATH
+    inventory_target.parent.mkdir(parents=True, exist_ok=True)
+    inventory_target.write_bytes(
+        (REPO_ROOT / COMPLAINT_REPORT_INVENTORY_PATH).read_bytes()
+    )
     database_path = repo / "local.sqlite"
     with sqlite3.connect(database_path) as connection:
         connection.execute("CREATE TABLE complaints (audit_field TEXT)")
@@ -609,6 +719,11 @@ def test_audit_output_and_tracked_baseline_are_deterministic_and_value_free(
     repo = tmp_path / "synthetic-repo"
     raw_dir = repo / "tests" / "fixtures" / "ccld" / "raw"
     raw_dir.mkdir(parents=True)
+    inventory_target = repo / COMPLAINT_REPORT_INVENTORY_PATH
+    inventory_target.parent.mkdir(parents=True, exist_ok=True)
+    inventory_target.write_bytes(
+        (REPO_ROOT / COMPLAINT_REPORT_INVENTORY_PATH).read_bytes()
+    )
     (raw_dir / "synthetic_inx1.html").write_text(
         "<html><body><p>Facility Number: synthetic-id</p>"
         "<p>Facility Name: synthetic-name</p>"
@@ -642,6 +757,8 @@ def test_audit_output_and_tracked_baseline_are_deterministic_and_value_free(
         repo_root=repo,
         generated_at=fixed_time,
         environ={},
+        repository_branch="issue-481-complaint-report-field-inventory",
+        repository_head="13826246280b3e2b2fd94555cc4c8cda387a5c4c",
     )
     second = run_audit(
         mode="local",
@@ -650,6 +767,8 @@ def test_audit_output_and_tracked_baseline_are_deterministic_and_value_free(
         repo_root=repo,
         generated_at=fixed_time,
         environ={},
+        repository_branch="issue-481-complaint-report-field-inventory",
+        repository_head="13826246280b3e2b2fd94555cc4c8cda387a5c4c",
     )
 
     assert first == second
@@ -657,6 +776,10 @@ def test_audit_output_and_tracked_baseline_are_deterministic_and_value_free(
     second_files = {path.name: path.read_bytes() for path in sorted(second_output.iterdir())}
     assert first_files == second_files
     assert set(first_files) == set(MANDATORY_OUTPUTS)
+    assert first.manifest["repository_revision"] == {
+        "branch": "issue-481-complaint-report-field-inventory",
+        "head": "13826246280b3e2b2fd94555cc4c8cda387a5c4c",
+    }
 
     baseline_dir = repo / "docs" / "data"
     baseline_files = sorted(baseline_dir.glob("source-to-screen-*.md"))
@@ -673,6 +796,28 @@ def test_audit_output_and_tracked_baseline_are_deterministic_and_value_free(
     assert b"private.invalid" not in emitted_text
     assert b"C:\\Users\\" not in emitted_text
     assert b"C:/Users/" not in emitted_text
+
+    summary = first.complaint_report_summary
+    assert summary["total_fields"] == sum(summary["domain_counts"].values())
+    assert summary["total_fields"] == sum(
+        summary["authoritative_status_counts"].values()
+    )
+    assert set(summary["authoritative_status_counts"]) == set(
+        COVERAGE_TERMINAL_CLASSIFICATIONS
+    )
+    assert set(summary["required_action_counts"]) == set(
+        COMPLAINT_REPORT_REQUIRED_ACTIONS
+    )
+    artifacts = {row["name"]: row for row in first.manifest["artifacts"]}
+    assert set(artifacts) == {
+        "complaint-report-field-inventory.csv",
+        "complaint-report-field-inventory.md",
+        "complaint-report-field-summary.json",
+    }
+    for name, artifact in artifacts.items():
+        content = first_files[name]
+        assert artifact["byte_count"] == len(content)
+        assert artifact["sha256"] == hashlib.sha256(content).hexdigest()
 
 
 def test_audit_result_shape_cannot_hold_source_bodies_by_default() -> None:
