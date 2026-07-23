@@ -133,7 +133,7 @@ def test_apply_calls_controlled_retrieval_import_path(tmp_path: Path) -> None:
     assert summary.succeeded_count == 1
     assert counts["retrieval_jobs"] == 1
     assert counts["import_batches"] == 1
-    assert counts["source_records"] == 38
+    assert counts["source_records"] == 42
     assert client.facility_detail_calls == ["157806098"]
     assert len(client.report_calls) == 1
     assert job["job_state"] == "completed"
@@ -218,7 +218,7 @@ def test_force_reruns_already_loaded_window(tmp_path: Path) -> None:
 
     assert summary.succeeded_count == 1
     assert counts["retrieval_jobs"] == 2
-    assert counts["source_records"] == 38
+    assert counts["source_records"] == 42
     assert client.facility_detail_calls == ["157806098"]
 
 

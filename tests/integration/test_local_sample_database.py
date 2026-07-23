@@ -39,7 +39,7 @@ def test_populate_sample_database_initializes_and_writes_fixture_data(tmp_path: 
     assert _row_count(db_path, "complaints") == 1
     assert _row_count(db_path, "allegations") == 2
     assert _row_count(db_path, "events") == 1
-    assert _row_count(db_path, "extraction_audit") == 29
+    assert _row_count(db_path, "extraction_audit") == 33
     assert _source_document(db_path) == {
         "source_url": "https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports?facNum=157806098&inx=3",
         "raw_sha256": sha256_bytes(RAW_FIXTURE.read_bytes()),
@@ -60,7 +60,7 @@ def test_populate_sample_database_is_idempotent(tmp_path: Path) -> None:
     assert _row_count(db_path, "complaints") == 1
     assert _row_count(db_path, "allegations") == 2
     assert _row_count(db_path, "events") == 1
-    assert _row_count(db_path, "extraction_audit") == 29
+    assert _row_count(db_path, "extraction_audit") == 33
 
 
 def test_populate_multi_facility_sample_database_exercises_fixture_corpus(
