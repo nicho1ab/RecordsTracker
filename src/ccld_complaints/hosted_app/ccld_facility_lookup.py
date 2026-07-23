@@ -1680,12 +1680,16 @@ def _render_lookup_results(result: CcldFacilityLookupResult) -> str:
 
 def _render_result_card(record: CcldFacilityLookupRecord, *, index: int) -> str:
         request_href = _facility_request_href(record)
-        hub_href = _facility_hub_href(record.facility_number)
-        heading_id = f"facility-{_escape(record.facility_number)}-{index}-heading"
         facility_name = _facility_record_field(
             record,
             FacilityProjectionField.FACILITY_NAME,
         )
+        overview_action = ""
+        if record.facility_number.strip():
+            hub_href = _facility_hub_href(record.facility_number)
+            overview_action = f'''\n                        <a class="button button-secondary" href="{_escape(hub_href)}"
+                           aria-label="View Facility Overview for {_escape(record.facility_number)} ({_escape(facility_name)})">View Facility Overview</a>'''
+        heading_id = f"facility-{_escape(record.facility_number)}-{index}-heading"
         return f"""        <article class="result-card" aria-labelledby="{heading_id}">
                     <div>
                         <h3 id="{heading_id}">{_escape(facility_name)}</h3>
@@ -1706,10 +1710,7 @@ def _render_result_card(record: CcldFacilityLookupRecord, *, index: int) -> str:
                     </div>
                     <div class="form-actions action-group" aria-label="Actions for facility {_escape(record.facility_number)}">
                         <a class="button" href="{_escape(request_href)}" aria-label="Use facility {_escape(record.facility_number)} ({_escape(facility_name)}) in Request Records">Continue to Request Records</a>
-                        <details class="secondary-actions">
-                            <summary>More actions</summary>
-                            <p><a href="{_escape(hub_href)}" aria-label="Open Facility Overview for {_escape(record.facility_number)} ({_escape(facility_name)})">Open Facility Overview when loaded context is available</a></p>
-                        </details>
+{overview_action}
                     </div>
                 </article>"""
 

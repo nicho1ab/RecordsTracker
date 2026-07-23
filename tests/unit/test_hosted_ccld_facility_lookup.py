@@ -1093,7 +1093,9 @@ def test_ccld_facility_lookup_page_renders_results_and_use_link() -> None:
     assert "Continue to Request Records" in html
     assert "Showing 1 of 1 matching facility." in normalized_html
     assert "Continue to Request Records" in html
-    assert "Open Facility Overview when loaded context is available" in html
+    assert "View Facility Overview" in html
+    assert "More actions" not in html
+    assert "Open Facility Overview when loaded context is available" not in html
     assert f"{CCLD_FACILITY_REVIEW_HUB_PATH}?facility_number=900000001" in html
     assert "Find a facility" in html
     assert request_href in html
@@ -1123,6 +1125,60 @@ def test_ccld_facility_lookup_page_renders_results_and_use_link() -> None:
     assert "Example Licensee" not in html
     assert "555-0101" not in html
     assert "100 Example Way" not in html
+    assert_no_secret_html(html)
+
+
+def test_facility_result_card_shows_available_overview_after_primary_action() -> None:
+    record = CcldFacilityLookupRecord(
+        facility_number="001234567",
+        facility_name="A Facility With A Deliberately Long Name For Reflow Coverage",
+        city="Sample City",
+        state="CA",
+        county="Sample County",
+        zip_code="90001",
+        facility_type="A Deliberately Long Facility Type Label For Reflow Coverage",
+        program_type="",
+        capacity="",
+        status="Licensed",
+        closed_date="",
+    )
+
+    html = facility_lookup._render_result_card(record, index=1)
+
+    request_index = html.index("Continue to Request Records")
+    overview_index = html.index("View Facility Overview")
+    assert request_index < overview_index
+    assert 'class="button button-secondary"' in html
+    assert f"{CCLD_FACILITY_REVIEW_HUB_PATH}?facility_number=001234567" in html
+    assert "More actions" not in html
+    assert "Open Facility Overview when loaded context is available" not in html
+    assert "<details class=\"secondary-actions\">" not in html
+    assert '<a class="button"' in html
+    assert_no_secret_html(html)
+
+
+def test_facility_result_card_omits_overview_when_no_facility_id_is_available() -> None:
+    record = CcldFacilityLookupRecord(
+        facility_number="",
+        facility_name="Facility name unavailable",
+        city="",
+        state="",
+        county="",
+        zip_code="",
+        facility_type="",
+        program_type="",
+        capacity="",
+        status="",
+        closed_date="",
+    )
+
+    html = facility_lookup._render_result_card(record, index=1)
+
+    assert "Continue to Request Records" in html
+    assert "View Facility Overview" not in html
+    assert "More actions" not in html
+    assert "Open Facility Overview when loaded context is available" not in html
+    assert 'aria-label="Actions for facility "' in html
     assert_no_secret_html(html)
 
 
