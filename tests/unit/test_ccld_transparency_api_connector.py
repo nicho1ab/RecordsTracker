@@ -188,6 +188,45 @@ def test_detail_sentinel_contact_administrator_status_and_unknown_type_are_disti
     assert valid_zero_instance_type.quarantine_categories == ()
 
 
+def test_nested_detail_address_phone_and_current_reference_fields_remain_distinct() -> None:
+    detail = parse_detail_response(
+        json.dumps(
+            {
+                "FacilityDetail": {
+                    "FACILITYNUMBER": "015650058",
+                    "FACILITYNAME": "Synthetic governed facility",
+                    "STREETADDRESS": "100 Synthetic Way",
+                    "CITY": "Fixture City",
+                    "STATE": "CA",
+                    "ZIPCODE": "90000",
+                    "TELEPHONE": "555-0100",
+                    "CONTACT": "Synthetic Contact",
+                    "LICENSEENAME": "Synthetic Licensee",
+                    "STATUS": "LICENSED",
+                    "DATECLOSED": "",
+                    "FACILITYTYPE": "777",
+                },
+                "TSO": {"FacilityNumber": "015650058"},
+            }
+        ).encode(),
+        facility_number="015650058",
+        known_type_codes=frozenset({"777"}),
+    )
+
+    assert detail.raw_record["FacilityDetail"]["STREETADDRESS"] == "100 Synthetic Way"
+    assert detail.facility_address == "100 Synthetic Way"
+    assert detail.facility_city == "Fixture City"
+    assert detail.facility_state == "CA"
+    assert detail.facility_zip == "90000"
+    assert detail.facility_telephone_number == "555-0100"
+    assert detail.contact == "Synthetic Contact"
+    assert detail.licensee == "Synthetic Licensee"
+    assert detail.detail_status == "LICENSED"
+    assert detail.closed_date == ""
+    assert detail.facility_type_code == "777"
+    assert detail.quarantine_categories == ()
+
+
 def test_report_list_rejects_raw_reportpage_and_bounds_helper_index() -> None:
     items = parse_report_list(
         (FIXTURE_ROOT / "facility-reports-list.json").read_bytes(),
