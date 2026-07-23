@@ -474,6 +474,10 @@ def test_active_transparency_snapshot_is_the_searchable_primary_reference() -> N
                 raw_record={"Facility Number": facility_id},
                 normalized_record=observations,
                 resolved_current_reference=observations,
+                autocomplete_search_text=(
+                    "001234567 transparency only center sacramento sacramento 95814 ca "
+                    "child care center licensed"
+                ),
                 complaint_blocks=[],
                 row_fingerprint="7" * 64,
                 is_quarantined=False,
@@ -494,6 +498,7 @@ def test_active_transparency_snapshot_is_the_searchable_primary_reference() -> N
                 resolved_current_reference={
                     "facility_name": _transparency_observation("Quarantined Center")
                 },
+                autocomplete_search_text="009999999 quarantined center",
                 complaint_blocks=[],
                 row_fingerprint="9" * 64,
                 is_quarantined=True,
@@ -544,6 +549,8 @@ def test_active_transparency_autocomplete_uses_bounded_direct_snapshot_queries(
                     zip_code="95814",
                 ),
                 _transparency_search_row("002345678", "Single Result Facility"),
+                _transparency_search_row("003456789", "Duplicate Facility First"),
+                _transparency_search_row("003456789", "Duplicate Facility Later"),
                 *(
                     _transparency_search_row(
                         f"7000000{ordinal:02d}",
@@ -594,11 +601,12 @@ def test_active_transparency_autocomplete_uses_bounded_direct_snapshot_queries(
             results: dict[str, tuple[CcldFacilityLookupResult, int]] = {}
             for query in (
                 "001234567",
-                "Single Result",
+                "single result",
                 "Direct City",
                 "Direct County",
                 "95814",
                 "Wide Result",
+                "Duplicate Facility",
                 "Inactive Snapshot Only",
                 "Legacy Fixture Only",
             ):
@@ -611,6 +619,7 @@ def test_active_transparency_autocomplete_uses_bounded_direct_snapshot_queries(
         finally:
             event.remove(connection, "before_cursor_execute", record_statement)
         exact_statement, exact_parameters = statements_by_query["001234567"][0]
+        partial_statement, _ = statements_by_query["single result"][0]
         connection.exec_driver_sql("ANALYZE")
         exact_query_plan = connection.exec_driver_sql(
             f"EXPLAIN QUERY PLAN {exact_statement}",
@@ -618,11 +627,12 @@ def test_active_transparency_autocomplete_uses_bounded_direct_snapshot_queries(
         ).all()
 
     exact, exact_statement_count = results["001234567"]
-    partial_name, partial_name_statement_count = results["Single Result"]
+    partial_name, partial_name_statement_count = results["single result"]
     city, city_statement_count = results["Direct City"]
     county, county_statement_count = results["Direct County"]
     zip_code, zip_statement_count = results["95814"]
     many, many_statement_count = results["Wide Result"]
+    duplicate, duplicate_statement_count = results["Duplicate Facility"]
     inactive, inactive_statement_count = results["Inactive Snapshot Only"]
     legacy, legacy_statement_count = results["Legacy Fixture Only"]
 
@@ -632,6 +642,7 @@ def test_active_transparency_autocomplete_uses_bounded_direct_snapshot_queries(
     assert county_statement_count == 1
     assert zip_statement_count == 1
     assert many_statement_count == 1
+    assert duplicate_statement_count == 1
     assert inactive_statement_count == 1
     assert legacy_statement_count == 1
     assert exact.returned_records[0].facility_number == "001234567"
@@ -642,6 +653,8 @@ def test_active_transparency_autocomplete_uses_bounded_direct_snapshot_queries(
     assert zip_code.returned_records[0].zip_code == "95814"
     assert many.total_match_count == 30
     assert len(many.returned_records) == 25
+    assert duplicate.total_match_count == 1
+    assert duplicate.returned_records[0].facility_name == "Duplicate Facility First"
     assert inactive.total_match_count == 0
     assert inactive.returned_records == ()
     assert legacy.total_match_count == 0
@@ -650,6 +663,7 @@ def test_active_transparency_autocomplete_uses_bounded_direct_snapshot_queries(
         "ix_transparencyapi_rows_snapshot_facility_number" in str(plan)
         for plan in exact_query_plan
     ), exact_query_plan
+    assert "autocomplete_search_text LIKE" in partial_statement
 
 
 def test_active_transparency_suggestions_bypass_full_identity_projection(
@@ -1085,17 +1099,31 @@ def _transparency_search_row(
     county: str = "Search County",
     zip_code: str = "90000",
 ) -> dict[str, object]:
+    resolved_current_reference = {
+        "facility_name": _transparency_observation(facility_name),
+        "facility_type": _transparency_observation("Child Care Center"),
+        "bulk_status": _transparency_observation("Licensed"),
+        "facility_city": _transparency_observation(city),
+        "facility_state": _transparency_observation("CA"),
+        "facility_zip": _transparency_observation(zip_code),
+        "county_name": _transparency_observation(county),
+    }
     return {
         "facility_number": facility_number,
-        "resolved_current_reference": {
-            "facility_name": _transparency_observation(facility_name),
-            "facility_type": _transparency_observation("Child Care Center"),
-            "bulk_status": _transparency_observation("Licensed"),
-            "facility_city": _transparency_observation(city),
-            "facility_state": _transparency_observation("CA"),
-            "facility_zip": _transparency_observation(zip_code),
-            "county_name": _transparency_observation(county),
-        },
+        "resolved_current_reference": resolved_current_reference,
+        "autocomplete_search_text": " ".join(
+            value.casefold()
+            for value in (
+                facility_number,
+                facility_name,
+                city,
+                county,
+                zip_code,
+                "CA",
+                "Child Care Center",
+                "Licensed",
+            )
+        ),
     }
 
 
@@ -1166,6 +1194,7 @@ def _seed_transparency_snapshot(
                 "raw_record": {"Facility Number": row["facility_number"]},
                 "normalized_record": row["resolved_current_reference"],
                 "resolved_current_reference": row["resolved_current_reference"],
+                "autocomplete_search_text": row["autocomplete_search_text"],
                 "complaint_blocks": [],
                 "row_fingerprint": f"{ordinal + 100:064x}",
                 "is_quarantined": False,

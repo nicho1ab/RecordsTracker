@@ -91,14 +91,22 @@ def test_complete_candidate_is_idempotent_and_promotes_and_rolls_back_atomically
 
         second_inspection = stage_transparencyapi_snapshot(connection, second)
         preserved = connection.execute(
-            sa.select(transparency_rows.c.resolved_current_reference).where(
+            sa.select(
+                transparency_rows.c.resolved_current_reference,
+                transparency_rows.c.autocomplete_search_text,
+            ).where(
                 transparency_rows.c.snapshot_id == second_inspection.snapshot_id,
                 transparency_rows.c.facility_number == "900000001",
             )
-        ).scalar_one()
-        assert preserved["facility_address"]["value"] == "100 Synthetic Way"
-        assert preserved["facility_address"]["preserved_from_prior"] is True
-        assert preserved["facility_telephone_number"]["value"] == "555-0100"
+        ).mappings().one()
+        resolved = preserved["resolved_current_reference"]
+        assert resolved["facility_address"]["value"] == "100 Synthetic Way"
+        assert resolved["facility_address"]["preserved_from_prior"] is True
+        assert resolved["facility_telephone_number"]["value"] == "555-0100"
+        assert preserved["autocomplete_search_text"] == (
+            "900000001 synthetic facility fixture city fixture county 90000 ca "
+            "synthetic type licensed"
+        )
         assert (
             validate_transparencyapi_snapshot(
                 connection,

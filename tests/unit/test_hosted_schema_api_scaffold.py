@@ -252,4 +252,5 @@ def test_alembic_scaffold_has_expected_domain_migrations() -> None:
             "20260720_0009_live_arcgis_query_scope.py",
             "20260721_0010_transparencyapi_source_snapshot.py",
             "20260722_0011_transparencyapi_autocomplete_index.py",
+            "20260722_0012_transparencyapi_autocomplete_search.py",
         ]

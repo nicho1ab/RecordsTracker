@@ -530,12 +530,10 @@ def _search_active_transparency_reference_records(
             result_limit=result_limit,
             reference_source=source,
         )
-    filters = tuple(_transparency_search_token_filter(token) for token in query_tokens)
-    base_conditions = (
+    snapshot_conditions = (
         transparency_rows.c.snapshot_id == active_snapshot_id,
         transparency_rows.c.is_quarantined.is_(False),
         transparency_rows.c.facility_number.is_not(None),
-        *filters,
     )
     suggestion_columns = _transparency_suggestion_columns()
     normalized_query = query.strip()
@@ -543,7 +541,7 @@ def _search_active_transparency_reference_records(
         rows = connection.execute(
             select(*suggestion_columns)
             .where(
-                *base_conditions,
+                *snapshot_conditions,
                 transparency_rows.c.facility_number == normalized_query,
             )
             .order_by(
@@ -557,20 +555,40 @@ def _search_active_transparency_reference_records(
         )
         total_match_count = len(records)
     else:
-        ranked_matches = _ranked_transparency_suggestions(
-            *base_conditions,
-            suggestion_columns=suggestion_columns,
+        candidate_rows = _ranked_transparency_suggestions(
+            *snapshot_conditions,
+            *(_transparency_search_token_filter(token) for token in query_tokens),
         )
-        name_expression = ranked_matches.c.facility_name
+        if connection.dialect.name == "postgresql":
+            candidate_rows = candidate_rows.prefix_with("MATERIALIZED", dialect="postgresql")
+        selected_rows = (
+            select(
+                candidate_rows.c.snapshot_id,
+                candidate_rows.c.export_id,
+                candidate_rows.c.row_ordinal,
+            )
+            .where(candidate_rows.c._facility_rank == 1)
+            .cte("selected_active_transparency_suggestions")
+        )
+        name_expression = _transparency_value_expression("facility_name")
         rows = connection.execute(
             select(
-                *(ranked_matches.c[column.key] for column in suggestion_columns),
+                *suggestion_columns,
                 func.count().over().label("_total_match_count"),
             )
-            .where(ranked_matches.c._facility_rank == 1)
+            .select_from(
+                transparency_rows.join(
+                    selected_rows,
+                    and_(
+                        transparency_rows.c.snapshot_id == selected_rows.c.snapshot_id,
+                        transparency_rows.c.export_id == selected_rows.c.export_id,
+                        transparency_rows.c.row_ordinal == selected_rows.c.row_ordinal,
+                    ),
+                )
+            )
             .order_by(
                 func.lower(func.coalesce(name_expression, "")),
-                ranked_matches.c.facility_number,
+                transparency_rows.c.facility_number,
             )
             .limit(result_limit)
         ).mappings().all()
@@ -651,28 +669,7 @@ def _transparency_search_token_filter(token: str) -> Any:
         transparency_rows,
     )
 
-    pattern = f"%{token}%"
-    searchable_values = (
-        transparency_rows.c.facility_number,
-        *(
-            _transparency_value_expression(field_name)
-            for field_name in (
-                "facility_name",
-                "facility_city",
-                "facility_state",
-                "facility_zip",
-                "county_name",
-                "facility_type",
-                "bulk_status",
-            )
-        ),
-    )
-    return or_(
-        *(
-            func.lower(func.coalesce(sql_cast(value, String), "")).like(pattern)
-            for value in searchable_values
-        )
-    )
+    return transparency_rows.c.autocomplete_search_text.like(f"%{token}%")
 
 
 def _transparency_suggestion_columns() -> tuple[Any, ...]:
@@ -706,7 +703,6 @@ def _transparency_suggestion_columns() -> tuple[Any, ...]:
 
 def _ranked_transparency_suggestions(
     *conditions: Any,
-    suggestion_columns: tuple[Any, ...],
 ) -> Any:
     from ccld_complaints.connectors.ccld_transparency_api.lifecycle import (
         transparency_rows,
@@ -714,7 +710,10 @@ def _ranked_transparency_suggestions(
 
     return (
         select(
-            *suggestion_columns,
+            transparency_rows.c.snapshot_id,
+            transparency_rows.c.export_id,
+            transparency_rows.c.row_ordinal,
+            transparency_rows.c.facility_number,
             func.row_number()
             .over(
                 partition_by=transparency_rows.c.facility_number,

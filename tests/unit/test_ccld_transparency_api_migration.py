@@ -23,6 +23,7 @@ def test_transparencyapi_migration_upgrades_and_downgrades_without_history() -> 
     live_scope = _load("20260720_0009_live_arcgis_query_scope.py")
     migration = _load("20260721_0010_transparencyapi_source_snapshot.py")
     autocomplete_index = _load("20260722_0011_transparencyapi_autocomplete_index.py")
+    autocomplete_search = _load("20260722_0012_transparencyapi_autocomplete_search.py")
     engine = sa.create_engine("sqlite+pysqlite:///:memory:")
     with engine.begin() as connection:
         operations = Operations(MigrationContext.configure(connection))
@@ -30,10 +31,12 @@ def test_transparencyapi_migration_upgrades_and_downgrades_without_history() -> 
         live_scope.op = operations
         migration.op = operations
         autocomplete_index.op = operations
+        autocomplete_search.op = operations
         lifecycle.upgrade()
         live_scope.upgrade()
         migration.upgrade()
         autocomplete_index.upgrade()
+        autocomplete_search.upgrade()
         inspector = sa.inspect(connection)
         assert NEW_TABLES <= set(inspector.get_table_names())
         assert inspector.get_pk_constraint("hosted_transparencyapi_snapshot_rows")[
@@ -42,6 +45,17 @@ def test_transparencyapi_migration_upgrades_and_downgrades_without_history() -> 
         assert "ix_transparencyapi_rows_snapshot_facility_number" in {
             index["name"]
             for index in inspector.get_indexes("hosted_transparencyapi_snapshot_rows")
+        }
+        assert "autocomplete_search_text" in {
+            column["name"]
+            for column in inspector.get_columns("hosted_transparencyapi_snapshot_rows")
+        }
+        autocomplete_search.downgrade()
+        assert "autocomplete_search_text" not in {
+            column["name"]
+            for column in sa.inspect(connection).get_columns(
+                "hosted_transparencyapi_snapshot_rows"
+            )
         }
         autocomplete_index.downgrade()
         assert "ix_transparencyapi_rows_snapshot_facility_number" not in {
@@ -110,6 +124,13 @@ def test_transparencyapi_autocomplete_index_migration_extends_single_head() -> N
 
     assert migration.revision == "20260722_0011"
     assert migration.down_revision == "20260721_0010"
+
+
+def test_transparencyapi_autocomplete_search_migration_extends_single_head() -> None:
+    migration = _load("20260722_0012_transparencyapi_autocomplete_search.py")
+
+    assert migration.revision == "20260722_0012"
+    assert migration.down_revision == "20260722_0011"
 
 
 def _snapshot_values() -> dict[str, Any]:
