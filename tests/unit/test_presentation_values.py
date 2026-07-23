@@ -8,6 +8,7 @@ from ccld_complaints.presentation_values import (
     presentation_value,
     presentation_value_for_field,
     presentation_values_for_mapping,
+    presentation_values_for_repeated_field,
 )
 
 
@@ -16,13 +17,13 @@ from ccld_complaints.presentation_values import (
     [
         (0, "number", "verified_zero", "0"),
         (12, "number", "present", "12"),
-        (None, "number", "null", "Not provided"),
-        ("", "number", "present_blank", "Not provided"),
+        (None, "number", "null", "No value recorded"),
+        ("", "number", "present_blank", "Blank in source"),
         ("not-a-number", "number", "invalid", "Invalid source value"),
-        ("unavailable", "number", "source_unavailable", "Not available from source"),
+        ("unavailable", "number", "source_artifact_unavailable", "Source unavailable"),
         ("N/A", "number", "not_applicable", "Not applicable"),
         ("2026-07-13", "date", "present", "07/13/2026"),
-        ("undated", "date", "undated", "Date not available"),
+        ("undated", "date", "undated", "Date not listed"),
         ("not-a-date", "date", "invalid", "Invalid source value"),
     ],
 )
@@ -45,12 +46,12 @@ def test_absent_unsupported_and_governed_not_applicable_are_not_inferred_as_zero
     unsupported = presentation_value(0, kind="number", supported=False)
     governed_not_applicable = presentation_value(None, applicable=False)
 
-    assert absent.state == "absent"
-    assert absent.display_text == "Not collected"
+    assert absent.state == "source_label_absent"
+    assert absent.display_text == "Not listed in source"
     assert absent.raw_value is None
     assert absent.stored is False
-    assert unsupported.state == "unsupported"
-    assert unsupported.display_text == "Not collected"
+    assert unsupported.state == "unsupported_layout"
+    assert unsupported.display_text == "Source format not supported"
     assert governed_not_applicable.state == "not_applicable"
     assert governed_not_applicable.display_text == "Not applicable"
     assert presentation_value(None).state == "null"
@@ -100,9 +101,34 @@ def test_sqlite_and_postgresql_style_mappings_preserve_the_same_states() -> None
         "regional_office": "present_blank",
         "closed_date": "invalid",
         "license_first_date": "undated",
-        "client_served": "source_unavailable",
+        "client_served": "source_artifact_unavailable",
         "days_received_to_first_activity": "present",
         "days_received_to_visit": "verified_zero",
         "days_received_to_report": "null",
-        "days_report_to_signed": "source_unavailable",
+        "days_report_to_signed": "source_artifact_unavailable",
     }
+
+
+def test_presentation_state_hints_distinguish_pipeline_and_source_conditions() -> None:
+    pipeline = presentation_value(state_hint="stored_but_not_read")
+    conflict = presentation_value("ignored", state_hint="conflicting_sources")
+    internal = presentation_value("private", state_hint="intentionally_internal")
+
+    assert pipeline.state == "stored_but_not_read"
+    assert pipeline.display_text == "Data processing incomplete"
+    assert "may contain" in pipeline.explanation
+    assert conflict.display_text == "Sources differ"
+    assert internal.hidden is True
+    assert internal.display_text == ""
+
+
+def test_repeated_presentations_preserve_order_and_blank_state() -> None:
+    populated = presentation_values_for_repeated_field(
+        {"deficiency_texts": ["First", "Second"]}, "deficiency_texts"
+    )
+    blank = presentation_values_for_repeated_field(
+        {"deficiency_texts": []}, "deficiency_texts"
+    )
+
+    assert [value.display_text for value in populated] == ["First", "Second"]
+    assert [value.display_text for value in blank] == ["Blank in source"]

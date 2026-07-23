@@ -326,7 +326,8 @@ def _bundle_manifest(files: list[ReviewBundleFile]) -> dict[str, object]:
         "record_universe": "governed local SQLite review views",
         "presentation_value_contract": (
             "Stored values remain unchanged; CSV labels distinguish verified zero, "
-            "not provided, date not provided, unavailable, not applicable, and invalid states."
+            "blank in source, not listed in source, source unavailable, date not listed, "
+            "not applicable, and invalid states."
         ),
         "facility_identity_contract": (
             "Public Facility ID and facility presentation use the shared governed projection; "
@@ -426,8 +427,8 @@ def _bundle_readme() -> str:
             "dates\" when discussing flagged records."
         ),
         (
-            "- Missing database values use field-aware labels such as \"Not provided\" "
-            "or \"Date not provided\"; verified numeric zero remains \"0\"."
+            "- Missing values use field-aware labels such as \"Blank in source\", "
+            "\"Not listed in source\", or \"Date not listed\"; verified numeric zero remains \"0\"."
         ),
         "- Keep source URL and raw SHA-256 hash columns when sharing or citing review outputs.",
         (

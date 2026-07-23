@@ -756,14 +756,14 @@ def test_active_transparency_suggestions_bypass_full_identity_projection(
     assert payload["total_match_count"] == 1
     assert payload["records"] == [
         {
-            "address": "Not provided",
-            "cap": "Not provided",
+                "address": "Blank in source",
+                "cap": "Blank in source",
             "city": "Direct City",
             "co": "Direct County",
             "n": "Direct Endpoint Facility",
             "num": "001234567",
             "p": "",
-            "regional_office": "Not provided",
+                "regional_office": "Blank in source",
             "s": "Licensed",
             "sc": False,
             "ss": "populated",

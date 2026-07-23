@@ -1520,7 +1520,7 @@ def test_reviewer_ui_substantiated_triage_uses_safe_fallbacks() -> None:
     assert "157806098" in html
     assert "Blank in source" in html
     assert "Substantiated" in html
-    assert "Date not provided" in html
+    assert "Blank in source" in html
     assert_no_secret_html(html)
 
 
@@ -2433,8 +2433,8 @@ def test_reviewer_ui_landing_uses_plain_missing_values_and_source_cues() -> None
 
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
-    assert "Not provided" in record_html
-    assert record_html.count("Date not provided") == 3
+    assert "No value recorded" in record_html
+    assert record_html.count("Date not listed") == 3
     assert "Source not available" in record_html
     assert ">unknown<" not in record_html
     assert "raw_path" not in record_html
@@ -2898,10 +2898,10 @@ def test_complaint_reviewer_field_inventory_dispositions_are_explicit() -> None:
     ("stored_value", "expected_markup"),
     (
         (0, "<dd>0</dd>"),
-        (None, "Not provided"),
-        ("", "Not provided"),
+        (None, "No value recorded"),
+        ("", "Blank in source"),
         ("not-a-number", "Invalid source value"),
-        ("unavailable", "Not available from source"),
+        ("unavailable", "Source unavailable"),
     ),
 )
 def test_reviewer_ui_detail_duration_uses_governed_presentation_states(
@@ -2954,7 +2954,7 @@ def test_reviewer_ui_detail_preserves_duration_when_milestone_date_is_missing() 
     timing_html = html[timing_start:timing_end]
 
     assert status == 200
-    assert "Date not provided" in timing_html
+    assert "Date not listed" in timing_html
     assert "Complaint received to report" in timing_html
     assert ">139</dd>" in timing_html
     assert "Timing mismatch" not in timing_html
@@ -4432,7 +4432,7 @@ def test_reviewer_ui_detail_source_confidence_proxy_cues_are_non_mutating() -> N
     assert "Source-derived value checks" not in html
     assert "Review flags and source checks" not in html
     assert "Visit" in html
-    assert "Date not provided" in html
+    assert "Date not listed" in html
     assert "Check source" not in html
     assert "Missing source date" in html
     assert "Date mismatch" in html
@@ -4471,19 +4471,20 @@ def test_reviewer_value_states_render_explicit_accessible_labels() -> None:
     )
 
     assert "07/13/2026" in html
-    assert "Date not provided" in html
+    assert "Blank in source" in html
+    assert html.count("Date not listed") == 1
     assert "Invalid source value" in html
-    assert "Date not available" in html
+    assert "Date not listed" in html
     assert "not-a-date" not in html
     assert 'class="inline-glossary-term"' in html
     assert 'tabindex="0"' in html
     assert 'aria-description="' in html
     assert zero_markup == "0"
-    assert "Not provided" in null_markup
-    assert "Not available from source" in unavailable_markup
+    assert "No value recorded" in null_markup
+    assert "Source unavailable" in unavailable_markup
     for internal_state in (
         "present_blank",
-        "source_unavailable",
+        "source_artifact_unavailable",
         "not_applicable",
         "verified_zero",
     ):
@@ -4491,6 +4492,40 @@ def test_reviewer_value_states_render_explicit_accessible_labels() -> None:
         assert internal_state not in null_markup
         assert internal_state not in unavailable_markup
     assert "database null" not in (html + null_markup).casefold()
+
+
+def test_reviewer_detail_renders_historical_report_observations_with_safe_states() -> None:
+    with _seeded_connection() as connection:
+        _set_complaint_original_values(
+            connection,
+            COMPLAINT_KEY,
+            {
+                "agency_name": "Synthetic report agency",
+                "complaint_report_contact": "Synthetic historical contact",
+                "investigation_findings_narrative": "Synthetic finding one. " * 40,
+                "deficiency_texts": ["First synthetic deficiency", "Second synthetic deficiency"],
+            },
+        )
+        status, content_type, body = route_response(
+            f"{REVIEWER_UI_DETAIL_PATH}?source_record_key={quote(COMPLAINT_KEY)}",
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert "Historical complaint-report information" in html
+    assert "Report agency" in html
+    assert "Historical complaint-report contact" in html
+    assert "Synthetic report agency" in html
+    assert "Synthetic historical contact" in html
+    assert html.index("First synthetic deficiency") < html.index("Second synthetic deficiency")
+    assert '<ol class="historical-complaint-report__deficiencies">' in html
+    assert "Show complete investigation findings narrative" in html
+    assert "current facility contact information" in html
+    assert "Facility telephone" not in html
+    assert_no_secret_html(html)
 
 
 def test_reviewer_matrix_export_preserves_blank_null_undated_and_malformed_states() -> None:
@@ -4530,17 +4565,17 @@ def test_reviewer_matrix_export_preserves_blank_null_undated_and_malformed_state
 
     assert detail_status == 200
     assert detail_content_type == "text/html; charset=utf-8"
-    assert "Date not provided" in detail_html
+    assert "Blank in source" in detail_html
     assert "Invalid source value" in detail_html
-    assert "Date not available" in detail_html
+    assert "Date not listed" in detail_html
     assert "not-a-date" not in detail_html
     assert 'class="inline-glossary-term"' in detail_html
     assert status == 200
     assert content_type == "text/csv; charset=utf-8"
-    assert row["first_investigation_activity_date"] == "Date not provided"
-    assert row["visit_date"] == "Date not provided"
+    assert row["first_investigation_activity_date"] == "Blank in source"
+    assert row["visit_date"] == "Date not listed"
     assert row["report_date"] == "Invalid source value"
-    assert row["date_signed"] == "Date not available"
+    assert row["date_signed"] == "Date not listed"
     assert "not-a-date" not in body.decode("utf-8-sig")
     assert "\r\n,," not in body.decode("utf-8-sig")
 

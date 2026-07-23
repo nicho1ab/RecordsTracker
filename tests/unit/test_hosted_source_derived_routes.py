@@ -96,7 +96,10 @@ def test_source_derived_api_lists_authorized_staged_records() -> None:
     )
     assert facility["original_values"]["capacity"] == 48
     assert facility["original_value_presentations"]["capacity"]["state"] == "present"
-    assert facility["original_value_presentations"]["closed_date"]["state"] == "absent"
+    assert (
+        facility["original_value_presentations"]["closed_date"]["state"]
+        == "source_label_absent"
+    )
     assert complaint["source_traceability"]["source_artifact_identity"] == FIXTURE.as_posix()
     assert complaint["import_batch"]["import_batch_id"] == TEST_SCOPE.scope_id
     assert "review_status" not in complaint["original_values"]

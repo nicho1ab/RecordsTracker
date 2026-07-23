@@ -1853,17 +1853,19 @@ def _display_facility_address(record: CcldFacilityLookupRecord) -> str:
 
     state_priority = (
         "invalid",
-        "source_unavailable",
+        "source_artifact_unavailable",
+        "unsupported_layout",
+        "conflicting_sources",
         "not_applicable",
         "null",
         "present_blank",
-        "absent",
+        "source_label_absent",
     )
     for state in state_priority:
         for value in presentations:
             if value.state == state:
                 return value.display_text
-    return presentation_value().display_text
+    return presentation_value(state_hint="source_label_absent").display_text
 
 
 def _render_copyable_value(accessible_label: str, value: str) -> str:
@@ -2124,7 +2126,7 @@ def _render_facility_activity_timeline(
     if not dated:
         return """      <section class="overview-timeline" aria-labelledby="facility-activity-range-heading">
         <h3 id="facility-activity-range-heading">Relevant complaint date range</h3>
-        <p>Date not available for the selected date field.</p>
+        <p>Date not listed for the selected date field.</p>
       </section>"""
     milestones = [("Earliest", review_context.start_date)]
     if review_context.end_date != review_context.start_date:
@@ -2178,7 +2180,7 @@ def _render_governed_review_next(
         else item.stable_complaint_id
     )
     flags = _render_facility_complaint_flags(item)
-    date_text = _display_date(item.activity_date) if item.activity_date != "unknown" else "Date not available"
+    date_text = _display_date(item.activity_date) if item.activity_date != "unknown" else "Date not listed"
     return f"""    <section class="summary-card" aria-labelledby="review-next-heading">
       <h2 id="review-next-heading">Review next</h2>
       <p><strong>{_render_copyable_value("Copy recommended complaint or control number", label)}</strong></p>
@@ -2362,7 +2364,7 @@ def _render_facility_contributor_item(
     date_text = (
         _display_date(item.activity_date)
         if item.activity_date != "unknown"
-        else "Date not available"
+        else "Date not listed"
     )
     source_markup = (
         f'<a href="{_escape(item.source_url_href)}">Open original CCLD report for {_escape(label)}</a> '
