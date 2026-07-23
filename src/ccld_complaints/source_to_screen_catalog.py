@@ -144,7 +144,27 @@ COMPLAINT_REPORT_REQUIRED_ACTIONS: tuple[str, ...] = (
     "intentionally_internal",
     "issue_447_canonical_allocation",
     "issue_450_missing_state_presentation",
+    "issue_576_architectural_decision",
     "no_action_not_applicable",
+)
+
+ISSUE_447_COMPLAINT_OBSERVATION_COLUMNS: Mapping[str, str] = {
+    "data.complaint.raw_complaint_report.agency_name": "agency_name",
+    "data.complaint.raw_complaint_report.deficiency_text": "deficiency_texts",
+    (
+        "data.complaint.raw_complaint_report."
+        "investigation_findings_narrative"
+    ): "investigation_findings_narrative",
+    "data.facility.raw_complaint_report.facility_contact": (
+        "complaint_report_contact"
+    ),
+}
+ISSUE_447_SCOPE_CORRECTION_FIELD_IDS = frozenset(
+    {
+        *ISSUE_447_COMPLAINT_OBSERVATION_COLUMNS,
+        "data.facility.raw_complaint_report.facility_address",
+        "data.facility.raw_complaint_report.facility_city",
+    }
 )
 
 
@@ -986,6 +1006,7 @@ def _complaint_report_element_spec(row: ComplaintReportFieldSpec) -> ElementSpec
         "unsupported_layout",
     }:
         observation_field = None
+    runtime_column = ISSUE_447_COMPLAINT_OBSERVATION_COLUMNS.get(row.field_id)
     return ElementSpec(
         data_element_id=row.field_id,
         reviewer_facing_name=row.user_facing_concept,
@@ -1032,8 +1053,12 @@ def _complaint_report_element_spec(row: ComplaintReportFieldSpec) -> ElementSpec
         ),
         source_observation_field=observation_field,
         source_observation_sources=_COMPLAINT_SOURCE_IDS if observation_field else (),
-        runtime_table=None,
-        runtime_column=None,
+        runtime_table=(
+            "hosted_source_derived_records"
+            if runtime_column is not None
+            else None
+        ),
+        runtime_column=runtime_column,
         reviewer_relevant=reviewer_relevant,
         facility_hub_relevant=row.facility_hub_rendering_state != "not_applicable",
         complaint_detail_relevant=(
@@ -1149,9 +1174,13 @@ def discover_element_specs(
                 specs.append(created)
                 by_id[row.field_id] = created
             else:
-                updated = replace(
-                    existing,
-                    authoritative_status=row.authoritative_status,
+                updated = (
+                    _complaint_report_element_spec(row)
+                    if row.field_id in ISSUE_447_SCOPE_CORRECTION_FIELD_IDS
+                    else replace(
+                        existing,
+                        authoritative_status=row.authoritative_status,
+                    )
                 )
                 specs[specs.index(existing)] = updated
                 by_id[row.field_id] = updated

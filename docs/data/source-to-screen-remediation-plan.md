@@ -21,7 +21,6 @@ Validation:
 
 Related stable gaps:
 
-- `gap.data.complaint.raw_complaint_report.investigation_findings_narrative.extracted_canonical_mapping_missing`
 - `gap.data.facility.facility_fixture_ccld_program_facilities_tiny.citation_numbers.extracted_canonical_mapping_missing`
 - `gap.data.facility.facility_fixture_ccld_program_facilities_tiny.complaint_visits.extracted_canonical_mapping_missing`
 - `gap.data.facility.facility_fixture_ccld_program_facilities_tiny.facility_city.extracted_canonical_mapping_missing`
@@ -41,8 +40,6 @@ Related stable gaps:
 - `gap.data.facility.facility_fixture_chhs_facility_master_tiny.res_city.extracted_canonical_mapping_missing`
 - `gap.data.facility.facility_fixture_chhs_facility_master_tiny.res_state.extracted_canonical_mapping_missing`
 - `gap.data.facility.facility_fixture_chhs_facility_master_tiny.res_zip_code.extracted_canonical_mapping_missing`
-- `gap.data.facility.raw_complaint_report.facility_address.extracted_canonical_mapping_missing`
-- `gap.data.facility.raw_complaint_report.facility_city.extracted_canonical_mapping_missing`
 
 ## P0: Close governed raw-artifact and extraction gaps
 
@@ -141,6 +138,8 @@ Validation:
 Related stable gaps:
 
 - `gap.data.facility.facility_signal.blank_to_zero_risk.unexplained_blank`
+- `gap.data.facility.raw_complaint_report.facility_address.unexplained_blank`
+- `gap.data.facility.raw_complaint_report.facility_city.unexplained_blank`
 
 ## P1: Complete reviewer-relevant complaint detail coverage
 
@@ -164,6 +163,9 @@ Related stable gaps:
 - `gap.data.complaint.complaint.days_received_to_report.ui_display_omission`
 - `gap.data.complaint.complaint.days_received_to_visit.ui_display_omission`
 - `gap.data.complaint.complaint.days_report_to_signed.ui_display_omission`
+- `gap.data.complaint.raw_complaint_report.agency_name.ui_display_omission`
+- `gap.data.complaint.raw_complaint_report.deficiency_text.ui_display_omission`
+- `gap.data.complaint.raw_complaint_report.investigation_findings_narrative.ui_display_omission`
 - `gap.query.first-activity-date-range-omission`
 - `gap.query.source-derived-default-100-row-cap`
 
@@ -189,6 +191,7 @@ Related stable gaps:
 - `gap.data.facility.facility_fixture_ccld_program_facilities_tiny.facility_address.stored_query_omission`
 - `gap.data.facility.facility_fixture_chhs_facility_master_tiny.fac_do_desc.stored_query_omission`
 - `gap.data.facility.facility_fixture_chhs_facility_master_tiny.res_street_addr.stored_query_omission`
+- `gap.data.facility.raw_complaint_report.facility_contact.ui_display_omission`
 - `gap.query.source-derived-default-100-row-cap`
 
 ## P2 implementation available: automate source-to-screen coverage reporting
@@ -248,7 +251,9 @@ Related stable gaps:
 - `gap.data.complaint.event.event_id.intentionally_internal`
 - `gap.data.complaint.event.extracted_from_section.intentionally_internal`
 - `gap.data.complaint.event.extraction_confidence.intentionally_internal`
-- `gap.data.complaint.raw_complaint_report.investigation_findings_narrative.extracted_canonical_mapping_missing`
+- `gap.data.complaint.raw_complaint_report.agency_name.ui_display_omission`
+- `gap.data.complaint.raw_complaint_report.deficiency_text.ui_display_omission`
+- `gap.data.complaint.raw_complaint_report.investigation_findings_narrative.ui_display_omission`
 - `gap.data.facility.facility.facility_id.intentionally_internal`
 - `gap.data.facility.facility.licensee_name.intentionally_internal`
 - `gap.data.facility.facility.source_id.intentionally_internal`
@@ -292,8 +297,9 @@ Related stable gaps:
 - `gap.data.facility.facility_fixture_chhs_facility_master_tiny.x.intentionally_internal`
 - `gap.data.facility.facility_fixture_chhs_facility_master_tiny.y.intentionally_internal`
 - `gap.data.facility.facility_signal.blank_to_zero_risk.unexplained_blank`
-- `gap.data.facility.raw_complaint_report.facility_address.extracted_canonical_mapping_missing`
-- `gap.data.facility.raw_complaint_report.facility_city.extracted_canonical_mapping_missing`
+- `gap.data.facility.raw_complaint_report.facility_address.unexplained_blank`
+- `gap.data.facility.raw_complaint_report.facility_city.unexplained_blank`
+- `gap.data.facility.raw_complaint_report.facility_contact.ui_display_omission`
 - `gap.data.shared.extraction_audit.audit_id.intentionally_internal`
 - `gap.data.shared.extraction_audit.confidence.intentionally_internal`
 - `gap.data.shared.extraction_audit.document_id.intentionally_internal`

@@ -7,6 +7,8 @@ from typing import Any, cast
 import pytest
 from sqlalchemy import create_engine, select
 
+from ccld_complaints.connectors.base import SourceDocument
+from ccld_complaints.connectors.ccld import CcldFacilityReportsConnector
 from ccld_complaints.hosted_app.ccld_hosted_artifact_builder import (
     build_ccld_hosted_seeded_corpus_artifact,
     write_ccld_hosted_seeded_corpus_artifact,
@@ -29,9 +31,13 @@ from ccld_complaints.local_sample import (
     populate_multi_facility_sample_database,
     populate_sample_database,
 )
+from ccld_complaints.storage.sqlite import write_normalized_records
 from ccld_complaints.utils.hash import sha256_bytes
 
 RAW_FIXTURE = Path("tests/fixtures/ccld/raw/157806098_inx3.html")
+STRUCTURED_RAW_FIXTURE = Path(
+    "tests/fixtures/ccld/raw/900000001_inx1_issue574_structured_fields.html"
+)
 
 
 def test_ccld_hosted_artifact_builder_converts_fixture_sqlite_to_validated_seeded_json(
@@ -137,6 +143,49 @@ def test_ccld_hosted_artifact_builder_writes_deterministic_no_secret_output(
     assert "provider_subject" not in lowered_json
     assert "token" not in lowered_json
     assert str(tmp_path).casefold() not in lowered_json
+
+
+def test_ccld_hosted_artifact_builder_preserves_ordered_complaint_observations(
+    tmp_path: Path,
+) -> None:
+    db_path = tmp_path / "structured.sqlite3"
+    content = STRUCTURED_RAW_FIXTURE.read_bytes()
+    connector = CcldFacilityReportsConnector()
+    normalized = connector.normalize(
+        connector.extract(
+            SourceDocument(
+                source_url=(
+                    "https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports"
+                    "?facNum=900000001&inx=1"
+                ),
+                raw_path=STRUCTURED_RAW_FIXTURE,
+                raw_sha256=sha256_bytes(content),
+                retrieved_at="2026-06-10T00:00:00+00:00",
+                content_type="text/html",
+            )
+        )
+    )
+    write_normalized_records(db_path, [normalized])
+
+    result = build_ccld_hosted_seeded_corpus_artifact(
+        db_path,
+        facility_number="900000001",
+        import_batch_id="issue-447-structured-local",
+        imported_at="2026-06-14T00:00:00+00:00",
+        source_artifact_identity="issue-447-structured-fixture",
+    )
+    complaint = cast(dict[str, Any], result.artifact["records"][0]["complaint"])
+
+    assert complaint["agency_name"] == "Synthetic Community Care Agency"
+    assert complaint["deficiency_texts"] == [
+        "First synthetic deficiency text.",
+        "Second synthetic deficiency text.",
+    ]
+    assert complaint["investigation_findings_narrative"] == (
+        "The synthetic investigation narrative is preserved as a historical "
+        "complaint-report observation."
+    )
+    assert complaint["complaint_report_contact"] == "(555) 010-1111"
 
 
 def test_ccld_hosted_artifact_builder_output_imports_into_hosted_source_derived_rows(

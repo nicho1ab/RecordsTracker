@@ -9,6 +9,8 @@ from ccld_complaints.connectors.base import SourceDocument, SourceDocumentCandid
 from ccld_complaints.connectors.ccld import CcldFacilityReportsConnector
 from ccld_complaints.connectors.ccld.facility_reports import (
     _allegation_text,
+    _historical_contact_value,
+    _historical_observation_value,
     ingest_facility_reports_for_facility,
 )
 from ccld_complaints.utils.hash import sha256_bytes
@@ -398,6 +400,14 @@ VISIT_DATE_SEMICOLON_RETRIEVED_AT = "2026-06-12T00:00:00+00:00"
 COMPLAINT_CONTROL_SEMICOLON_RETRIEVED_AT = "2026-06-12T00:00:00+00:00"
 FACILITY_NAME_SEMICOLON_RETRIEVED_AT = "2026-06-12T00:00:00+00:00"
 FACILITY_NUMBER_SEMICOLON_RETRIEVED_AT = "2026-06-12T00:00:00+00:00"
+
+
+def test_historical_contact_placeholders_are_not_canonically_allocated() -> None:
+    for value in ("Unavailable", "not available.", "See FAQs", "N/A", "NA"):
+        assert _historical_contact_value(value) is None
+    assert _historical_contact_value("(555) 010-1111") == "(555) 010-1111"
+    assert _historical_observation_value("Unavailable") is None
+    assert _historical_observation_value("Governed agency") == "Governed agency"
 
 
 def test_ccld_facility_detail_discovers_report_candidates_from_fixture() -> None:

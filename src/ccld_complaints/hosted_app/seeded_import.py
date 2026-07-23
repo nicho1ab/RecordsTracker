@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 from collections.abc import Mapping, Sequence
@@ -66,6 +67,10 @@ FACILITY_CANONICAL_FIELDS = frozenset(
 
 COMPLAINT_REFRESH_FIELDS = frozenset(
     {
+        "agency_name",
+        "deficiency_texts",
+        "investigation_findings_narrative",
+        "complaint_report_contact",
         "complaint_control_number",
         "complaint_received_date",
         "first_investigation_activity_date",
@@ -83,6 +88,14 @@ COMPLAINT_REFRESH_FIELDS = frozenset(
         "review_delay_over_120_days",
         "missing_first_activity_date",
         "report_date_used_as_proxy",
+    }
+)
+FINGERPRINTED_COMPLAINT_REFRESH_FIELDS = frozenset(
+    {
+        "agency_name",
+        "deficiency_texts",
+        "investigation_findings_narrative",
+        "complaint_report_contact",
     }
 )
 
@@ -127,6 +140,10 @@ hosted_source_derived_records = Table(
     Column("connector_name", Text, nullable=False),
     Column("connector_version", Text, nullable=False),
     Column("retrieved_at", String(40), nullable=False),
+    Column("agency_name", Text, nullable=True),
+    Column("deficiency_texts", JSON, nullable=True),
+    Column("investigation_findings_narrative", Text, nullable=True),
+    Column("complaint_report_contact", Text, nullable=True),
     Column("original_values", JSON, nullable=False),
     Column("source_traceability", JSON, nullable=False),
     UniqueConstraint(
@@ -459,7 +476,7 @@ def _upsert_source_record(
     *,
     preserve_existing_import_batch: bool = False,
 ) -> tuple[str, int]:
-    values = {
+    values: dict[str, Any] = {
         "source_record_key": record.source_record_key,
         "entity_type": record.entity_type,
         "stable_source_id": record.stable_source_id,
@@ -481,6 +498,12 @@ def _upsert_source_record(
         )
     ).mappings().first()
     if existing is None:
+        values.update(
+            _canonical_complaint_observation_columns(
+                record.entity_type,
+                record.original_values,
+            )
+        )
         if preserve_existing_import_batch:
             values["import_batch_id"] = _existing_document_import_batch_id(
                 connection,
@@ -498,6 +521,12 @@ def _upsert_source_record(
             record.original_values,
         )
         values["original_values"] = merged_original_values
+        values.update(
+            _canonical_complaint_observation_columns(
+                record.entity_type,
+                merged_original_values,
+            )
+        )
         values["source_traceability"] = _merge_source_traceability(
             existing.get("source_traceability"),
             record.source_traceability,
@@ -549,27 +578,96 @@ def _merge_source_original_values(
     )
     conflicts: list[dict[str, Any]] = []
     for key, value in incoming.items():
-        if _is_blank_refresh_value(value) and key in merged and not _is_blank_refresh_value(
-            merged[key]
+        if (
+            _is_blank_refresh_field_value(key, value)
+            and key in merged
+            and not _is_blank_refresh_field_value(key, merged[key])
         ):
             continue
         if (
             key in conflict_fields
             and key in merged
-            and not _is_blank_refresh_value(merged[key])
-            and not _is_blank_refresh_value(value)
+            and not _is_blank_refresh_field_value(key, merged[key])
+            and not _is_blank_refresh_field_value(key, value)
             and merged[key] != value
         ):
-            conflicts.append(
-                {
-                    "field_name": key,
-                    "previous_value": merged[key],
-                    "incoming_value": value,
-                    "resolution": "incoming_governed_source_precedence",
-                }
-            )
+            conflicts.append(_refresh_conflict(key, merged[key], value))
         merged[key] = value
     return merged, tuple(conflicts)
+
+
+def _canonical_complaint_observation_columns(
+    entity_type: SourceDerivedEntityType,
+    values: Mapping[str, Any],
+) -> dict[str, object]:
+    if entity_type != "complaint":
+        return {}
+    deficiency_texts = values.get("deficiency_texts")
+    normalized_deficiencies: list[str] | None = None
+    if isinstance(deficiency_texts, Sequence) and not isinstance(
+        deficiency_texts, str | bytes
+    ):
+        normalized_deficiencies = [
+            value for value in deficiency_texts if isinstance(value, str) and value.strip()
+        ]
+        if not normalized_deficiencies:
+            normalized_deficiencies = None
+    return {
+        "agency_name": _canonical_historical_text(values.get("agency_name")),
+        "deficiency_texts": normalized_deficiencies,
+        "investigation_findings_narrative": _canonical_historical_text(
+            values.get("investigation_findings_narrative")
+        ),
+        "complaint_report_contact": _canonical_historical_text(
+            values.get("complaint_report_contact"),
+            contact=True,
+        ),
+    }
+
+
+def _canonical_historical_text(
+    value: object,
+    *,
+    contact: bool = False,
+) -> str | None:
+    if not isinstance(value, str):
+        return None
+    normalized = " ".join(value.split()).casefold().rstrip(".")
+    placeholders = {"n/a", "na", "not available", "unavailable"}
+    if contact:
+        placeholders.add("see faqs")
+    return value if normalized and normalized not in placeholders else None
+
+
+def _refresh_conflict(
+    field_name: str,
+    previous_value: object,
+    incoming_value: object,
+) -> dict[str, Any]:
+    conflict: dict[str, Any] = {
+        "field_name": field_name,
+        "resolution": "incoming_governed_source_precedence",
+    }
+    if field_name not in FINGERPRINTED_COMPLAINT_REFRESH_FIELDS:
+        conflict["previous_value"] = previous_value
+        conflict["incoming_value"] = incoming_value
+        return conflict
+    conflict["previous_value_sha256"] = _value_fingerprint(previous_value)
+    conflict["incoming_value_sha256"] = _value_fingerprint(incoming_value)
+    if isinstance(previous_value, Sequence) and not isinstance(
+        previous_value, str | bytes
+    ):
+        conflict["previous_value_count"] = len(previous_value)
+    if isinstance(incoming_value, Sequence) and not isinstance(
+        incoming_value, str | bytes
+    ):
+        conflict["incoming_value_count"] = len(incoming_value)
+    return conflict
+
+
+def _value_fingerprint(value: object) -> str:
+    canonical = json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
 def _merge_source_traceability(
@@ -593,7 +691,37 @@ def _merge_source_traceability(
 
 
 def _is_blank_refresh_value(value: object) -> bool:
-    return value is None or (isinstance(value, str) and not value.strip())
+    return (
+        value is None
+        or (isinstance(value, str) and not value.strip())
+        or (
+            isinstance(value, Sequence)
+            and not isinstance(value, str | bytes)
+            and len(value) == 0
+        )
+    )
+
+
+def _is_blank_refresh_field_value(field_name: str, value: object) -> bool:
+    if field_name == "deficiency_texts":
+        return not (
+            isinstance(value, Sequence)
+            and not isinstance(value, str | bytes)
+            and any(
+                isinstance(item, str) and item.strip()
+                for item in value
+            )
+        )
+    if field_name in {
+        "agency_name",
+        "investigation_findings_narrative",
+        "complaint_report_contact",
+    }:
+        return _canonical_historical_text(
+            value,
+            contact=field_name == "complaint_report_contact",
+        ) is None
+    return _is_blank_refresh_value(value)
 
 
 def _required_mapping(data: Mapping[str, Any], field_name: str) -> Mapping[str, Any]:

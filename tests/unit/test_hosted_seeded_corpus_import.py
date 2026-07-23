@@ -177,6 +177,95 @@ def test_hosted_facility_refresh_does_not_erase_governed_values_with_nulls() -> 
     assert facility_values["regional_office"] == "CCLD Regional Office"
 
 
+def test_hosted_complaint_observations_refresh_without_narrative_conflict_copies() -> None:
+    populated_data = _fixture_data()
+    populated_complaint = cast(
+        dict[str, Any],
+        cast(list[dict[str, Any]], populated_data["records"])[0]["complaint"],
+    )
+    populated_complaint.update(
+        {
+            "agency_name": "Synthetic agency one",
+            "deficiency_texts": ["Synthetic deficiency one", "Synthetic deficiency two"],
+            "investigation_findings_narrative": "Synthetic narrative one.",
+            "complaint_report_contact": "(555) 010-1111",
+        }
+    )
+    populated = parse_seeded_corpus_artifact(populated_data)
+
+    changed_data = copy.deepcopy(populated_data)
+    changed_complaint = cast(
+        dict[str, Any],
+        cast(list[dict[str, Any]], changed_data["records"])[0]["complaint"],
+    )
+    changed_complaint.update(
+        {
+            "agency_name": "Synthetic agency two",
+            "deficiency_texts": ["Changed first", "Changed second"],
+            "investigation_findings_narrative": "Synthetic narrative two.",
+            "complaint_report_contact": "(555) 010-2222",
+        }
+    )
+    changed = parse_seeded_corpus_artifact(changed_data)
+
+    blank_data = copy.deepcopy(changed_data)
+    blank_complaint = cast(
+        dict[str, Any],
+        cast(list[dict[str, Any]], blank_data["records"])[0]["complaint"],
+    )
+    blank_complaint.update(
+        {
+            "agency_name": "Unavailable",
+            "deficiency_texts": [" ", ""],
+            "investigation_findings_narrative": "N/A",
+            "complaint_report_contact": "See FAQs",
+        }
+    )
+    blank = parse_seeded_corpus_artifact(blank_data)
+
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    hosted_seeded_import_metadata.create_all(engine)
+    with engine.begin() as connection:
+        first = import_seeded_corpus_artifact(connection, populated)
+        repeated = import_seeded_corpus_artifact(connection, populated)
+        changed_result = import_seeded_corpus_artifact(connection, changed)
+        blank_result = import_seeded_corpus_artifact(connection, blank)
+        row = (
+            connection.execute(
+                select(hosted_source_derived_records).where(
+                    hosted_source_derived_records.c.entity_type == "complaint"
+                )
+            )
+            .mappings()
+            .one()
+        )
+
+    assert first.inserted_record_count > 0
+    assert repeated.conflicted_field_count == 0
+    assert changed_result.conflicted_field_count == 4
+    assert blank_result.conflicted_field_count == 0
+    assert row["agency_name"] == "Synthetic agency two"
+    assert row["deficiency_texts"] == ["Changed first", "Changed second"]
+    assert row["investigation_findings_narrative"] == "Synthetic narrative two."
+    assert row["complaint_report_contact"] == "(555) 010-2222"
+    assert row["original_values"]["agency_name"] == "Synthetic agency two"
+    assert row["original_values"]["deficiency_texts"] == [
+        "Changed first",
+        "Changed second",
+    ]
+    conflicts = row["source_traceability"]["refresh_conflicts"]
+    assert {conflict["field_name"] for conflict in conflicts} == {
+        "agency_name",
+        "deficiency_texts",
+        "investigation_findings_narrative",
+        "complaint_report_contact",
+    }
+    assert all("previous_value" not in conflict for conflict in conflicts)
+    assert all("incoming_value" not in conflict for conflict in conflicts)
+    assert all(len(conflict["previous_value_sha256"]) == 64 for conflict in conflicts)
+    assert all(len(conflict["incoming_value_sha256"]) == 64 for conflict in conflicts)
+
+
 def test_seeded_corpus_artifact_rejects_unvalidated_input() -> None:
     data = _fixture_data()
     data["validation_status"] = "draft"

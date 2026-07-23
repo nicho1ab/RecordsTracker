@@ -21,6 +21,10 @@ from ccld_complaints.canonical_allocation_evidence import (
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 EXPECTED_FIELDS = (
+    "complaint.agency_name",
+    "complaint.deficiency_texts",
+    "complaint.investigation_findings_narrative",
+    "complaint.complaint_report_contact",
     "complaint.days_received_to_first_activity",
     "facility.capacity",
     "facility.county",
@@ -40,7 +44,7 @@ def test_registry_has_exact_issue_447_fields_and_deliberate_allocations() -> Non
     assert FIELD_IDS == EXPECTED_FIELDS
     assert tuple(spec.field_id for spec in ALLOCATION_SPECS) == EXPECTED_FIELDS
     assert Counter(spec.allocation_decision for spec in ALLOCATION_SPECS) == {
-        "existing_canonical": 6,
+        "existing_canonical": 10,
         "typed_source_reference": 5,
         "retained_raw_only": 1,
     }
@@ -135,6 +139,15 @@ def test_local_evidence_is_deterministic_complete_and_aggregate_safe(
     assert alembic_row["existing_row_count_after"] == "1"
     assert alembic_row["existing_rows_readable"] == "true"
     assert "executed Alembic revision 20260714_0007" in alembic_row["evidence_reference"]
+    complaint_alembic_row = migration_by_check[
+        "complaint_observations_alembic_20260723_0013"
+    ]
+    assert complaint_alembic_row["existing_row_count_before"] == "1"
+    assert complaint_alembic_row["existing_row_count_after"] == "1"
+    assert complaint_alembic_row["existing_rows_readable"] == "true"
+    assert "upgrade, downgrade, and re-upgrade" in complaint_alembic_row[
+        "evidence_reference"
+    ]
     capability = cast(dict[str, object], first_manifest["implementation_capability"])
     assert capability["facility_fixture_temporary_hosted_import"] == (
         "exercised with exact canonical-value comparison"

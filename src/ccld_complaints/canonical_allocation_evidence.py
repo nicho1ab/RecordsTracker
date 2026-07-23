@@ -63,6 +63,9 @@ EvidenceMode = Literal["local", "runtime"]
 
 SCHEMA_VERSION = 1
 GOVERNED_COMPLAINT_FIXTURE = Path("tests/fixtures/ccld/raw/157806098_inx3.html")
+GOVERNED_STRUCTURED_COMPLAINT_FIXTURE = Path(
+    "tests/fixtures/ccld/raw/900000001_inx1_issue574_structured_fields.html"
+)
 GOVERNED_FACILITY_FIXTURES = (
     Path("tests/fixtures/public_source_facilities/ccld_program_facilities_tiny.csv"),
     Path("tests/fixtures/public_source_facilities/chhs_facility_master_tiny.csv"),
@@ -184,6 +187,72 @@ class FieldMetric:
 
 
 ALLOCATION_SPECS = (
+    AllocationSpec(
+        field_id="complaint.agency_name",
+        source_element="complaint-report AGENCY heading value",
+        allocation_decision="existing_canonical",
+        canonical_destination="complaint.agency_name",
+        canonical_type="string or null",
+        null_blank_behavior="blank, unavailable, and omitted input remain null",
+        normalization_rule="preserve deterministic extractor normalization",
+        order_dedup_rule="not applicable",
+        traceability_relationship="complaint links to source_document and field extraction audit",
+        import_initialization_owner=(
+            "CCLD report normalization, SQLite writer, hosted artifact builder, "
+            "and hosted seeded-corpus importer"
+        ),
+        existing_data_refresh="bounded preserved-artifact replay or validated reimport",
+    ),
+    AllocationSpec(
+        field_id="complaint.deficiency_texts",
+        source_element="ordered explicit complaint-report DEFICIENCIES entries",
+        allocation_decision="existing_canonical",
+        canonical_destination="complaint.deficiency_texts",
+        canonical_type="ordered JSON string array or null",
+        null_blank_behavior="missing or empty input remains null",
+        normalization_rule="preserve deterministic extractor text",
+        order_dedup_rule="preserve source order without sorting or deduplication",
+        traceability_relationship=(
+            "complaint links to source_document and ordered deficiency extraction audits"
+        ),
+        import_initialization_owner=(
+            "CCLD report normalization, SQLite writer, hosted artifact builder, "
+            "and hosted seeded-corpus importer"
+        ),
+        existing_data_refresh="bounded preserved-artifact replay or validated reimport",
+    ),
+    AllocationSpec(
+        field_id="complaint.investigation_findings_narrative",
+        source_element="bounded complaint-report INVESTIGATION FINDINGS narrative",
+        allocation_decision="existing_canonical",
+        canonical_destination="complaint.investigation_findings_narrative",
+        canonical_type="string or null",
+        null_blank_behavior="blank, unavailable, and omitted input remain null",
+        normalization_rule="preserve deterministic bounded narrative",
+        order_dedup_rule="not applicable",
+        traceability_relationship="complaint links to source_document and field extraction audit",
+        import_initialization_owner=(
+            "CCLD report normalization, SQLite writer, hosted artifact builder, "
+            "and hosted seeded-corpus importer"
+        ),
+        existing_data_refresh="bounded preserved-artifact replay or validated reimport",
+    ),
+    AllocationSpec(
+        field_id="complaint.complaint_report_contact",
+        source_element="historical complaint-report TELEPHONE value",
+        allocation_decision="existing_canonical",
+        canonical_destination="complaint.complaint_report_contact",
+        canonical_type="string or null",
+        null_blank_behavior="blank, placeholder, unavailable, and omitted input remain null",
+        normalization_rule="preserve deterministic non-placeholder source text",
+        order_dedup_rule="not applicable",
+        traceability_relationship="complaint links to source_document and field extraction audit",
+        import_initialization_owner=(
+            "CCLD report normalization, SQLite writer, hosted artifact builder, "
+            "and hosted seeded-corpus importer"
+        ),
+        existing_data_refresh="bounded preserved-artifact replay or validated reimport",
+    ),
     AllocationSpec(
         field_id="complaint.days_received_to_first_activity",
         source_element=(
@@ -404,6 +473,19 @@ CANONICAL_ALLOCATION_MIGRATION_COLUMNS = (
     "other_visit_dates",
     "client_served",
 )
+COMPLAINT_OBSERVATION_MIGRATION_REVISION = "20260723_0013"
+COMPLAINT_OBSERVATION_MIGRATION_COLUMNS = (
+    "agency_name",
+    "deficiency_texts",
+    "investigation_findings_narrative",
+    "complaint_report_contact",
+)
+COMPLAINT_OBSERVATION_FIELD_KEYS: Mapping[str, str] = {
+    "complaint.agency_name": "agency_name",
+    "complaint.deficiency_texts": "deficiency_texts",
+    "complaint.investigation_findings_narrative": "investigation_findings_narrative",
+    "complaint.complaint_report_contact": "complaint_report_contact",
+}
 
 _FACILITY_FIELD_CONFIG: Mapping[str, tuple[str | None, tuple[str, ...]]] = {
     "facility.capacity": ("capacity", ("Facility Capacity", "CAPACITY")),
@@ -444,6 +526,18 @@ _FACILITY_FIELD_CONFIG: Mapping[str, tuple[str | None, tuple[str, ...]]] = {
 }
 
 _RUNTIME_SOURCE_FIELDS = (
+    ("complaint.agency_name", "complaint", "agency_name"),
+    ("complaint.deficiency_texts", "complaint", "deficiency_texts"),
+    (
+        "complaint.investigation_findings_narrative",
+        "complaint",
+        "investigation_findings_narrative",
+    ),
+    (
+        "complaint.complaint_report_contact",
+        "complaint",
+        "complaint_report_contact",
+    ),
     ("complaint.days_received_to_first_activity", "complaint", "days_received_to_first_activity"),
     ("facility.capacity", "facility", "capacity"),
     ("facility.county", "facility", "county"),
@@ -640,6 +734,7 @@ def run_evidence(
 def _local_capability(repo_root: Path) -> dict[str, object]:
     contract_path = repo_root / "DATA_CONTRACT.md"
     complaint_fixture = repo_root / GOVERNED_COMPLAINT_FIXTURE
+    structured_complaint_fixture = repo_root / GOVERNED_STRUCTURED_COMPLAINT_FIXTURE
     facility_fixtures = tuple(
         repo_root / relative_path for relative_path in GOVERNED_FACILITY_FIXTURES
     )
@@ -647,6 +742,8 @@ def _local_capability(repo_root: Path) -> dict[str, object]:
         raise EvidenceExecutionError("The governed data contract is unavailable.")
     if not complaint_fixture.is_file():
         raise EvidenceExecutionError("The governed complaint fixture is unavailable.")
+    if not structured_complaint_fixture.is_file():
+        raise EvidenceExecutionError("The governed structured complaint fixture is unavailable.")
     if not all(path.is_file() for path in facility_fixtures):
         raise EvidenceExecutionError("A governed facility-reference fixture is unavailable.")
 
@@ -677,16 +774,29 @@ def _local_capability(repo_root: Path) -> dict[str, object]:
         facility_fixtures[0],
     )
     migration_exercise = _exercise_canonical_allocation_migration(repo_root)
+    complaint_migration_exercise = _exercise_complaint_observation_migration(
+        repo_root
+    )
 
     with tempfile.TemporaryDirectory(prefix="canonical-allocation-evidence-") as scratch:
         db_path = Path(scratch) / "canonical-allocation.sqlite3"
         normalized, connector_source_values = _normalized_complaint_record(
             repo_root,
             complaint_fixture,
+            relative_path=GOVERNED_COMPLAINT_FIXTURE,
+            facility_number=FIXTURE_FACILITY_NUMBER,
+            report_index=FIXTURE_REPORT_INDEX,
         )
-        write_normalized_records(db_path, [normalized])
+        structured_normalized, structured_source_values = _normalized_complaint_record(
+            repo_root,
+            structured_complaint_fixture,
+            relative_path=GOVERNED_STRUCTURED_COMPLAINT_FIXTURE,
+            facility_number=SYNTHETIC_FACILITY_IDS[0],
+            report_index=1,
+        )
+        write_normalized_records(db_path, [normalized, structured_normalized])
         sqlite_counts_before = _sqlite_record_counts(db_path)
-        write_normalized_records(db_path, [normalized])
+        write_normalized_records(db_path, [normalized, structured_normalized])
         initialize_database(db_path)
         sqlite_counts_after = _sqlite_record_counts(db_path)
         reconciliation_ok = _sqlite_delay_reconciles(db_path)
@@ -700,11 +810,25 @@ def _local_capability(repo_root: Path) -> dict[str, object]:
             schema_dir=repo_root / "schemas",
         )
         artifact = parse_seeded_corpus_artifact(build_result.artifact)
+        structured_build_result = build_ccld_hosted_seeded_corpus_artifact(
+            db_path,
+            facility_number=SYNTHETIC_FACILITY_IDS[0],
+            import_batch_id="canonical-allocation-structured-local",
+            imported_at=FIXTURE_RETRIEVED_AT,
+            source_artifact_identity="governed-structured-local-capability",
+            schema_dir=repo_root / "schemas",
+        )
+        structured_artifact = parse_seeded_corpus_artifact(
+            structured_build_result.artifact
+        )
         hosted_engine = create_engine("sqlite+pysqlite:///:memory:")
         try:
             hosted_seeded_import_metadata.create_all(hosted_engine)
             with hosted_engine.begin() as connection:
                 first_import = import_seeded_corpus_artifact(connection, artifact)
+                first_structured_import = import_seeded_corpus_artifact(
+                    connection, structured_artifact
+                )
                 first_canonical_fixture_import = import_seeded_corpus_artifact(
                     connection,
                     canonical_fixture_artifact,
@@ -713,6 +837,9 @@ def _local_capability(repo_root: Path) -> dict[str, object]:
                     select(func.count()).select_from(hosted_source_derived_records)
                 ).scalar_one()
                 second_import = import_seeded_corpus_artifact(connection, artifact)
+                second_structured_import = import_seeded_corpus_artifact(
+                    connection, structured_artifact
+                )
                 second_canonical_fixture_import = import_seeded_corpus_artifact(
                     connection,
                     canonical_fixture_artifact,
@@ -729,6 +856,9 @@ def _local_capability(repo_root: Path) -> dict[str, object]:
                         cast(Mapping[str, object], normalized["complaint"])[
                             "days_received_to_first_activity"
                         ],
+                    ),
+                    structured_complaint=cast(
+                        Mapping[str, object], structured_normalized["complaint"]
                     ),
                 )
         finally:
@@ -776,7 +906,21 @@ def _local_capability(repo_root: Path) -> dict[str, object]:
         unavailable_count=0,
         verified_zero_count=int(complaint_delay == 0),
     )
+    structured_complaint = cast(
+        Mapping[str, object], structured_normalized["complaint"]
+    )
+    structured_metrics = {
+        field_id: FieldMetric(
+            eligible_count=1,
+            populated_count=int(structured_complaint.get(field_key) is not None),
+            null_count=int(structured_complaint.get(field_key) is None),
+            blank_count=0,
+            unavailable_count=0,
+        )
+        for field_id, field_key in COMPLAINT_OBSERVATION_FIELD_KEYS.items()
+    }
     metrics = {
+        **structured_metrics,
         "complaint.days_received_to_first_activity": complaint_metric,
         **facility_metrics,
     }
@@ -785,6 +929,8 @@ def _local_capability(repo_root: Path) -> dict[str, object]:
     hosted_idempotent = (
         hosted_count_before == hosted_count_after
         and first_import.imported_record_count == second_import.imported_record_count
+        and first_structured_import.imported_record_count
+        == second_structured_import.imported_record_count
         and first_canonical_fixture_import.imported_record_count
         == second_canonical_fixture_import.imported_record_count
     )
@@ -810,6 +956,7 @@ def _local_capability(repo_root: Path) -> dict[str, object]:
         hosted_count_before=hosted_count_before,
         hosted_count_after=hosted_count_after,
         migration_exercise=migration_exercise,
+        complaint_migration_exercise=complaint_migration_exercise,
     )
     documented = all(row["contract_status"] == "DOCUMENTED" for row in allocation_rows)
     import_by_field = {str(row["field_id"]): row for row in import_rows}
@@ -845,7 +992,11 @@ def _local_capability(repo_root: Path) -> dict[str, object]:
         "existing_data_refresh_requirement_stated": True,
         "safe_aggregate_output": False,
     }
-    source_values = connector_source_values + _long_facility_source_values(records)
+    source_values = (
+        connector_source_values
+        + structured_source_values
+        + _long_facility_source_values(records)
+    )
     return {
         "allocation_rows": allocation_rows,
         "import_rows": import_rows,
@@ -881,9 +1032,13 @@ def _allocation_row(
 def _normalized_complaint_record(
     repo_root: Path,
     fixture_path: Path,
+    *,
+    relative_path: Path,
+    facility_number: str,
+    report_index: int,
 ) -> tuple[dict[str, object], tuple[str, ...]]:
     content = fixture_path.read_bytes()
-    source_url = f"{BASE_URL}?facNum={FIXTURE_FACILITY_NUMBER}&inx={FIXTURE_REPORT_INDEX}"
+    source_url = f"{BASE_URL}?facNum={facility_number}&inx={report_index}"
     document = SourceDocument(
         source_url=source_url,
         raw_path=fixture_path,
@@ -895,7 +1050,7 @@ def _normalized_complaint_record(
     extracted = connector.extract(document)
     normalized = dict(connector.normalize(extracted))
     source_document = dict(cast(Mapping[str, object], normalized["source_document"]))
-    source_document["raw_path"] = GOVERNED_COMPLAINT_FIXTURE.as_posix()
+    source_document["raw_path"] = relative_path.as_posix()
     normalized["source_document"] = source_document
     connector.validate(normalized)
     audits = cast(Sequence[Mapping[str, object]], normalized["extraction_audit"])
@@ -993,6 +1148,7 @@ def _canonical_hosted_import_matches(
     *,
     canonical_fixture_record: FacilityReferenceRecord,
     complaint_delay: int | None,
+    structured_complaint: Mapping[str, object],
 ) -> dict[str, bool]:
     facility_values = connection.execute(
         select(hosted_source_derived_records.c.original_values).where(
@@ -1019,12 +1175,15 @@ def _canonical_hosted_import_matches(
         for field_id, key in FACILITY_CANONICAL_FIELD_KEYS.items()
     }
 
-    complaint_values = connection.execute(
-        select(hosted_source_derived_records.c.original_values).where(
-            hosted_source_derived_records.c.entity_type == "complaint",
-            hosted_source_derived_records.c.connector_name == "ccld_facility_reports",
-        )
-    ).scalars()
+    complaint_values = tuple(
+        connection.execute(
+            select(hosted_source_derived_records.c.original_values).where(
+                hosted_source_derived_records.c.entity_type == "complaint",
+                hosted_source_derived_records.c.connector_name
+                == "ccld_facility_reports",
+            )
+        ).scalars()
+    )
     matches["complaint.days_received_to_first_activity"] = any(
         isinstance(value, Mapping)
         and _same_canonical_value(
@@ -1033,6 +1192,13 @@ def _canonical_hosted_import_matches(
         )
         for value in complaint_values
     )
+    for field_id, field_key in COMPLAINT_OBSERVATION_FIELD_KEYS.items():
+        expected_value = structured_complaint.get(field_key)
+        matches[field_id] = any(
+            isinstance(value, Mapping)
+            and _same_canonical_value(value.get(field_key), expected_value)
+            for value in complaint_values
+        )
     return matches
 
 
@@ -1102,7 +1268,7 @@ def _facility_metrics(
     records: Sequence[FacilityReferenceRecord],
 ) -> dict[str, FieldMetric]:
     metrics: dict[str, FieldMetric] = {}
-    for field_id in FIELD_IDS[1:]:
+    for field_id in _FACILITY_FIELD_CONFIG:
         attribute, headers = _FACILITY_FIELD_CONFIG[field_id]
         states = tuple(_source_state(record, headers) for record in records)
         values: tuple[object | None, ...]
@@ -1276,7 +1442,9 @@ def _implementation_import_rows(
 
 
 def _implementation_adapter(field_id: str) -> str:
-    if field_id == "complaint.days_received_to_first_activity":
+    if field_id == "complaint.days_received_to_first_activity" or field_id in (
+        COMPLAINT_OBSERVATION_FIELD_KEYS
+    ):
         return "connector -> SQLite -> artifact builder -> hosted import"
     if field_id in FACILITY_CANONICAL_FIELD_KEYS:
         return (
@@ -1287,7 +1455,9 @@ def _implementation_adapter(field_id: str) -> str:
 
 
 def _implementation_evidence_reference(field_id: str) -> str:
-    if field_id == "complaint.days_received_to_first_activity":
+    if field_id == "complaint.days_received_to_first_activity" or field_id in (
+        COMPLAINT_OBSERVATION_FIELD_KEYS
+    ):
         return (
             "governed complaint fixture; SQLite complaint; hosted source-derived "
             "complaint aggregate"
@@ -1459,6 +1629,149 @@ def _exercise_canonical_allocation_migration(
     }
 
 
+def _exercise_complaint_observation_migration(
+    repo_root: Path,
+) -> dict[str, object]:
+    migration_path = (
+        repo_root
+        / "migrations"
+        / "versions"
+        / "20260723_0013_complaint_report_canonical_observations.py"
+    )
+    if not migration_path.is_file():
+        raise EvidenceExecutionError(
+            "The governed complaint-observation migration is unavailable."
+        )
+    spec = importlib.util.spec_from_file_location(
+        "complaint_observation_evidence_migration",
+        migration_path,
+    )
+    if spec is None or spec.loader is None:
+        raise EvidenceExecutionError(
+            "The governed complaint-observation migration could not be loaded."
+        )
+    migration = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(migration)
+    upgrade = getattr(migration, "upgrade", None)
+    downgrade = getattr(migration, "downgrade", None)
+    revision_ok = (
+        getattr(migration, "revision", None)
+        == COMPLAINT_OBSERVATION_MIGRATION_REVISION
+        and callable(upgrade)
+        and callable(downgrade)
+    )
+    if not revision_ok:
+        raise EvidenceExecutionError(
+            "The governed complaint-observation migration revision is invalid."
+        )
+
+    table_name = hosted_source_derived_records.name
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    try:
+        with engine.begin() as connection:
+            connection.execute(
+                text(
+                    f"""
+                    CREATE TABLE {table_name} (
+                        stable_identity VARCHAR(255) PRIMARY KEY,
+                        entity_type VARCHAR(32) NOT NULL,
+                        original_values JSON NOT NULL
+                    )
+                    """
+                )
+            )
+            connection.execute(
+                text(
+                    f"""
+                    INSERT INTO {table_name} (
+                        stable_identity,
+                        entity_type,
+                        original_values
+                    ) VALUES (
+                        'existing-complaint',
+                        'complaint',
+                        '{{}}'
+                    )
+                    """
+                )
+            )
+            before_count = _table_count(connection, table_name)
+            columns_before = {
+                str(column["name"])
+                for column in sa_inspect(connection).get_columns(table_name)
+            }
+            migration_runtime = cast(Any, migration)
+            migration_runtime.op = Operations(MigrationContext.configure(connection))
+            cast(Any, upgrade)()
+            columns_after_detail = {
+                str(column["name"]): column
+                for column in sa_inspect(connection).get_columns(table_name)
+            }
+            after_count = _table_count(connection, table_name)
+            row = connection.execute(
+                text(
+                    f"""
+                    SELECT stable_identity, agency_name, deficiency_texts,
+                           investigation_findings_narrative,
+                           complaint_report_contact
+                    FROM {table_name}
+                    """
+                )
+            ).mappings().one()
+            cast(Any, downgrade)()
+            columns_after_downgrade = {
+                str(column["name"])
+                for column in sa_inspect(connection).get_columns(table_name)
+            }
+            downgraded_count = _table_count(connection, table_name)
+            cast(Any, upgrade)()
+            columns_after_reupgrade = {
+                str(column["name"])
+                for column in sa_inspect(connection).get_columns(table_name)
+            }
+            reupgraded_count = _table_count(connection, table_name)
+    finally:
+        engine.dispose()
+
+    columns_added = all(
+        column not in columns_before and column in columns_after_detail
+        for column in COMPLAINT_OBSERVATION_MIGRATION_COLUMNS
+    )
+    columns_nullable = all(
+        column in columns_after_detail
+        and bool(columns_after_detail[column]["nullable"])
+        for column in COMPLAINT_OBSERVATION_MIGRATION_COLUMNS
+    )
+    new_values_are_null = all(
+        row[column] is None for column in COMPLAINT_OBSERVATION_MIGRATION_COLUMNS
+    )
+    existing_rows_readable = (
+        before_count
+        == after_count
+        == downgraded_count
+        == reupgraded_count
+        == 1
+        and row["stable_identity"] == "existing-complaint"
+    )
+    return {
+        "revision_ok": revision_ok,
+        "columns_added": columns_added,
+        "columns_nullable": columns_nullable,
+        "existing_row_count_before": before_count,
+        "existing_row_count_after": after_count,
+        "existing_rows_readable": existing_rows_readable,
+        "new_values_are_null": new_values_are_null,
+        "downgrade_removed_columns": all(
+            column not in columns_after_downgrade
+            for column in COMPLAINT_OBSERVATION_MIGRATION_COLUMNS
+        ),
+        "reupgrade_restored_columns": all(
+            column in columns_after_reupgrade
+            for column in COMPLAINT_OBSERVATION_MIGRATION_COLUMNS
+        ),
+    }
+
+
 def _migration_rows(
     *,
     sqlite_counts_before: Mapping[str, int],
@@ -1466,6 +1779,7 @@ def _migration_rows(
     hosted_count_before: int,
     hosted_count_after: int,
     migration_exercise: Mapping[str, object],
+    complaint_migration_exercise: Mapping[str, object],
 ) -> list[dict[str, object]]:
     sqlite_safe = (
         dict(sqlite_counts_before) == dict(sqlite_counts_after)
@@ -1480,6 +1794,18 @@ def _migration_rows(
             "columns_nullable",
             "existing_rows_readable",
             "new_values_are_null",
+        )
+    )
+    complaint_observation_safe = all(
+        bool(complaint_migration_exercise[key])
+        for key in (
+            "revision_ok",
+            "columns_added",
+            "columns_nullable",
+            "existing_rows_readable",
+            "new_values_are_null",
+            "downgrade_removed_columns",
+            "reupgrade_restored_columns",
         )
     )
     return [
@@ -1526,6 +1852,33 @@ def _migration_rows(
             "evidence_reference": (
                 "executed Alembic revision 20260714_0007 against an existing-row "
                 "pre-migration SQLite schema"
+            ),
+        },
+        {
+            "check_id": "complaint_observations_alembic_20260723_0013",
+            "layer": "hosted source-derived canonical complaint observations",
+            "change_kind": "additive nullable columns",
+            "expected_behavior": (
+                "upgrade, downgrade, and re-upgrade preserve existing rows"
+            ),
+            "existing_row_count_before": complaint_migration_exercise[
+                "existing_row_count_before"
+            ],
+            "existing_row_count_after": complaint_migration_exercise[
+                "existing_row_count_after"
+            ],
+            "existing_rows_readable": (
+                "true" if complaint_observation_safe else "false"
+            ),
+            "nullable_or_default_status": (
+                "Alembic 20260723_0013 adds four nullable columns; existing-row "
+                "values read as SQL null"
+            ),
+            "destructive_rewrite_performed": "false",
+            "assertion_status": "PASS" if complaint_observation_safe else "FAIL",
+            "evidence_reference": (
+                "executed Alembic revision 20260723_0013 upgrade, downgrade, "
+                "and re-upgrade against an existing-row SQLite schema"
             ),
         },
     ]

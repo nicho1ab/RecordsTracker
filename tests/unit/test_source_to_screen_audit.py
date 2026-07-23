@@ -223,6 +223,51 @@ def test_issue_481_inventory_is_complete_stable_and_shared_with_coverage_catalog
     assert COVERAGE_CONTRACT_VERSION == "1.1.0"
 
 
+def test_issue_447_allocates_only_the_four_approved_complaint_observations() -> None:
+    rows = {
+        row.field_id: row
+        for row in load_complaint_report_field_inventory(REPO_ROOT)
+    }
+    specs = {spec.data_element_id: spec for spec in discover_element_specs(REPO_ROOT)}
+    approved_columns = {
+        "data.complaint.raw_complaint_report.agency_name": "agency_name",
+        "data.complaint.raw_complaint_report.deficiency_text": "deficiency_texts",
+        "data.complaint.raw_complaint_report.investigation_findings_narrative": (
+            "investigation_findings_narrative"
+        ),
+        "data.facility.raw_complaint_report.facility_contact": (
+            "complaint_report_contact"
+        ),
+    }
+
+    for field_id, column_name in approved_columns.items():
+        row = rows[field_id]
+        spec = specs[field_id]
+        assert row.canonical_table == "complaints"
+        assert row.canonical_column == column_name
+        assert row.postgresql_population_state == (
+            "populated after validated import or bounded replay"
+        )
+        assert row.authoritative_status == "read_but_not_rendered"
+        assert row.required_action == "issue_450_missing_state_presentation"
+        assert spec.runtime_table == "hosted_source_derived_records"
+        assert spec.runtime_column == column_name
+
+    for field_id in (
+        "data.facility.raw_complaint_report.facility_address",
+        "data.facility.raw_complaint_report.facility_city",
+    ):
+        row = rows[field_id]
+        spec = specs[field_id]
+        assert row.authoritative_status == "present_blank"
+        assert row.canonical_table.strip() == ""
+        assert row.canonical_column.strip() == ""
+        assert row.required_action == "issue_576_architectural_decision"
+        assert row.related_issue == "#576"
+        assert spec.runtime_table is None
+        assert spec.runtime_column is None
+
+
 @pytest.mark.parametrize(
     ("mutation", "message"),
     (

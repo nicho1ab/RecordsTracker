@@ -14,7 +14,7 @@ from ccld_complaints.hosted_app.facility_reference_preload import (
 
 
 def test_canonical_allocation_migration_is_additive_and_preserves_existing_rows() -> None:
-    migration = _load_migration()
+    migration = _load_migration("20260714_0007_canonical_allocation.py")
     engine = sa.create_engine("sqlite+pysqlite:///:memory:")
     metadata = sa.MetaData()
     old_table = sa.Table(
@@ -74,12 +74,94 @@ def test_canonical_allocation_migration_is_additive_and_preserves_existing_rows(
     }
 
 
-def _load_migration() -> Any:
+def test_complaint_observation_migration_round_trip_preserves_existing_rows() -> None:
+    migration = _load_migration(
+        "20260723_0013_complaint_report_canonical_observations.py"
+    )
+    engine = sa.create_engine("sqlite+pysqlite:///:memory:")
+    with engine.begin() as connection:
+        connection.execute(
+            sa.text(
+                """
+                CREATE TABLE hosted_source_derived_records (
+                    stable_identity VARCHAR(255) PRIMARY KEY,
+                    entity_type VARCHAR(32) NOT NULL,
+                    original_values JSON NOT NULL
+                )
+                """
+            )
+        )
+        connection.execute(
+            sa.text(
+                """
+                INSERT INTO hosted_source_derived_records (
+                    stable_identity, entity_type, original_values
+                ) VALUES ('existing-complaint', 'complaint', '{}')
+                """
+            )
+        )
+        migration.op = Operations(MigrationContext.configure(connection))
+        migration.upgrade()
+
+        added_columns = {
+            column["name"]: column
+            for column in sa.inspect(connection).get_columns(
+                "hosted_source_derived_records"
+            )
+        }
+        existing = connection.execute(
+            sa.text(
+                """
+                SELECT stable_identity, agency_name, deficiency_texts,
+                       investigation_findings_narrative,
+                       complaint_report_contact
+                FROM hosted_source_derived_records
+                """
+            )
+        ).mappings().one()
+
+        migration.downgrade()
+        downgraded_columns = {
+            column["name"]
+            for column in sa.inspect(connection).get_columns(
+                "hosted_source_derived_records"
+            )
+        }
+        downgraded_count = connection.execute(
+            sa.text("SELECT COUNT(*) FROM hosted_source_derived_records")
+        ).scalar_one()
+
+        migration.upgrade()
+        reupgraded_columns = {
+            column["name"]
+            for column in sa.inspect(connection).get_columns(
+                "hosted_source_derived_records"
+            )
+        }
+        reupgraded_count = connection.execute(
+            sa.text("SELECT COUNT(*) FROM hosted_source_derived_records")
+        ).scalar_one()
+
+    for column_name in (
+        "agency_name",
+        "deficiency_texts",
+        "investigation_findings_narrative",
+        "complaint_report_contact",
+    ):
+        assert added_columns[column_name]["nullable"] is True
+        assert existing[column_name] is None
+        assert column_name not in downgraded_columns
+        assert column_name in reupgraded_columns
+    assert existing["stable_identity"] == "existing-complaint"
+    assert downgraded_count == reupgraded_count == 1
+
+
+def _load_migration(file_name: str) -> Any:
     migration_path = (
         Path(__file__).resolve().parents[2]
         / "migrations"
         / "versions"
-        / "20260714_0007_canonical_allocation.py"
+        / file_name
     )
     spec = importlib.util.spec_from_file_location(
         "canonical_allocation_migration",
