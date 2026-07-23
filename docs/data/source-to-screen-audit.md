@@ -18,7 +18,7 @@ artifacts, governed fixtures, and the configured SQLite file when it exists. It 
 silently substitutes tiny fixtures for unavailable configured data and does not require
 network access.
 
-## Contract `1.0.0` coverage package
+## Contract `1.1.0` coverage package
 
 The Issues #453/#477 producer uses the same module entry point and the governed
 field IDs in `source-to-screen-inventory.md`. A fixture-only local package can be
@@ -68,7 +68,7 @@ python -m ccld_complaints.source_to_screen_audit --mode runtime --output-dir /ap
 ```
 
 Runtime mode requires the configured PostgreSQL database. Its adapter issues
-aggregate `SELECT` queries only and publishes contract `1.0.0` field/stage
+aggregate `SELECT` queries only and publishes contract `1.1.0` field/stage
 coverage from the governed catalog plus a safe Facility ID index when the
 deployed source-derived-record read boundary is available. It does not retrieve
 sources, import rows, create or update jobs, update checkpoints, change reviewer
@@ -93,6 +93,9 @@ The following files are the pre-contract structural audit outputs. They remain
 available for the existing local/runtime audit mode:
 
 - `manifest.json`
+- `complaint-report-field-inventory.csv`
+- `complaint-report-field-inventory.md`
+- `complaint-report-field-summary.json`
 - `data-element-inventory.csv`
 - `data-element-inventory.json`
 - `population-summary.csv`
@@ -107,6 +110,27 @@ available for the existing local/runtime audit mode:
 
 `sqlite-postgres-parity.csv` is emitted only when both stores are available in the same
 audit invocation. All other files are emitted on every successful run.
+
+## Issue #481 complaint-report inventory
+
+`complaint-report-field-inventory.csv` is generated from the governed structural
+input at `docs/data/complaint-report-field-inventory.csv`. Both use inventory
+schema `1.0.0`; the field IDs, terminal statuses, stage model, ordering, and
+redaction rules remain those of coverage contract `1.1.0`.
+
+The generated CSV supplies the machine-readable field inventory. The generated
+Markdown supplies the human-readable domain and downstream-action report.
+`complaint-report-field-summary.json` supplies balanced counts by domain,
+authoritative status, source-presence stage, presentation tier, and required
+action. `manifest.json` records each of those artifacts with its byte count,
+media type, and lowercase SHA-256. Optional revision evidence accepts only a
+safe branch name paired with a full lowercase commit SHA.
+
+The inventory is structural and aggregate-only. It contains source labels and
+section identities but no source values, complaint narratives, facility contact
+values, private paths, hosts, credentials, cookies, tokens, authentication
+claims, or reviewer-created state. Zero-count statuses remain explicit in the
+summary matrix and are not fabricated as field observations.
 
 ## Missing-value rules
 
@@ -132,7 +156,7 @@ audit invocation. All other files are emitted on every successful run.
 - `INTENTIONALLY_INTERNAL`
 - `NOT_APPLICABLE`
 
-Contract `1.0.0` maps those structural inventory dispositions into these closed
+Contract `1.1.0` maps those structural inventory dispositions into these closed
 terminal categories without collapsing failure to generic missing:
 
 - `present_and_populated`
