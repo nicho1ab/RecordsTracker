@@ -135,6 +135,7 @@ from ccld_complaints.presentation_values import (
     PresentationValueKind,
     presentation_value,
     presentation_value_for_field,
+    presentation_values_for_repeated_field,
 )
 
 REVIEWER_UI_PREFIX = "/reviewer"
@@ -6591,7 +6592,7 @@ def _matrix_allegation_categories(related_records: list[Mapping[str, Any]]) -> s
             category = _display_value(values.get("allegation_category"))
             if category and category != "unknown":
                 categories.append(category)
-    return "; ".join(dict.fromkeys(categories)) or "Not collected"
+    return "; ".join(dict.fromkeys(categories)) or "Not listed in source"
 
 
 def _matrix_source_label(source_document: Mapping[str, Any]) -> str:
@@ -10536,6 +10537,7 @@ def _render_detail(
             {_render_detail_context_row(source_record, related_records, return_context)}
             {_render_detail_heading_context(original_values)}
             {_render_complaint_overview_card(source_record_key, source_record, detail, related_records, return_context)}
+            {_render_historical_complaint_report_section(source_record)}
             {_render_allegations_findings_section(source_record, related_records)}
             {_render_citation_poc_section(source_record, related_records)}
             {_render_reviewer_state_section(detail)}
@@ -10593,6 +10595,76 @@ def _render_complaint_overview_card(
         </div>
       </div>
     </section>"""
+
+
+def _render_historical_complaint_report_section(
+    source_record: Mapping[str, Any],
+) -> str:
+    """Render allocated historical report observations only in complaint detail."""
+
+    values = _mapping(source_record, "original_values")
+    agency = presentation_value_for_field(values, "agency_name")
+    contact = presentation_value_for_field(values, "complaint_report_contact")
+    narrative = presentation_value_for_field(values, "investigation_findings_narrative")
+    deficiency_values = presentation_values_for_repeated_field(values, "deficiency_texts")
+    deficiency_markup = _render_historical_deficiencies(deficiency_values)
+    narrative_markup = _render_historical_narrative(narrative)
+    return f"""<section class="detail-card historical-complaint-report" aria-labelledby="historical-complaint-report-heading">
+      <p class="launch-kicker">Historical complaint report</p>
+      <h2 id="historical-complaint-report-heading">Historical complaint-report information</h2>
+      <dl class="fact-grid historical-complaint-report__facts">
+        {_render_historical_report_fact("Report agency", agency, "historical-agency")}
+        {_render_historical_report_fact("Historical complaint-report contact", contact, "historical-contact")}
+      </dl>
+      <section aria-labelledby="historical-findings-heading">
+        <h3 id="historical-findings-heading">Investigation findings narrative</h3>
+        {narrative_markup}
+      </section>
+      <section aria-labelledby="historical-deficiencies-heading">
+        <h3 id="historical-deficiencies-heading">Deficiencies listed in the report</h3>
+        {deficiency_markup}
+      </section>
+      <p class="helper-text">These are historical complaint-report observations. They do not replace current facility contact information, regional office information, citations, findings, or Plan of Correction records.</p>
+    </section>"""
+
+
+def _render_historical_report_fact(
+    label: str,
+    value: PresentationValue,
+    term_id: str,
+) -> str:
+    return f"""        <div class="fact-card">
+          <dt>{_escape(label)}</dt>
+          <dd>{_presentation_markup(value, term_id)}</dd>
+        </div>"""
+
+
+def _render_historical_narrative(value: PresentationValue) -> str:
+    if value.state not in {"present", "verified_zero"}:
+        return f"<p>{_presentation_markup(value, 'historical-investigation-findings')}</p>"
+    excerpt, has_more = _excerpt_text(value.display_text, 360)
+    disclosure = (
+        f"""      <details>
+          <summary>Show complete investigation findings narrative</summary>
+          <p>{_escape(value.display_text)}</p>
+        </details>"""
+        if has_more
+        else ""
+    )
+    return f"""<p>{_escape(excerpt)}</p>
+{disclosure}"""
+
+
+def _render_historical_deficiencies(values: tuple[PresentationValue, ...]) -> str:
+    if len(values) == 1 and values[0].state not in {"present", "verified_zero"}:
+        return f"<p>{_presentation_markup(values[0], 'historical-deficiencies')}</p>"
+    items = "\n".join(
+        f"        <li>{_presentation_markup(value, f'historical-deficiency-{index}')}</li>"
+        for index, value in enumerate(values, start=1)
+    )
+    return f"""<ol class="historical-complaint-report__deficiencies">
+{items}
+      </ol>"""
 
 
 def _source_availability_chip(source_document: Mapping[str, Any]) -> str:

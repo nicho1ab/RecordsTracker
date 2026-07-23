@@ -1367,6 +1367,30 @@ context only and must be replaced by the resolved projected name before display
 or repeated feedback context. Server-rendered and JavaScript-enhanced facility
 status/type text must come from the same projected presentation values.
 
+The shared presentation state uses inline text with an accessible text
+explanation, never color or hover alone. `Blank in source`, `Not listed in
+source`, `Source unavailable`, `Source format not supported`, `Data processing
+incomplete`, `Sources differ`, `Not applicable`, and date-specific `Date not
+listed` remain short enough for tables, narrow viewports, copy/paste, and print.
+Static state text is not a live region. When an available public source link
+exists, it remains separately keyboard reachable. `Data processing incomplete`
+explains that RecordsTracker cannot yet present the information reliably; it
+does not expose extraction names, stack traces, paths, table names, or raw
+warnings. Internal-only fields are omitted rather than rendered with a technical
+label.
+
+Historical report agency, historical complaint-report contact, investigation
+findings narrative, and ordered deficiencies belong only on complaint detail.
+They do not make queue rows or facility results dense, do not replace current
+facility telephone or regional-office facts, and do not merge narrative,
+structured finding, allegation, citation, or Plan of Correction content.
+Long historical findings may use an existing semantic disclosure after the
+bounded visible excerpt; the complete text remains keyboard reachable. Ordered
+deficiencies remain visible as a list and are not collapsed. Complaint-report
+address and city remain out of reviewer presentation until #576; current
+reference address and city display their own state without being copied into the
+historical report.
+
 ### Source-to-screen completion rule
 
 A source field is not implemented merely because it is extracted. Completion requires verified extraction, normalization, canonical allocation, persistence, import and backfill behavior, read-model exposure, required UI rendering, missing-state semantics, and production-style evidence.

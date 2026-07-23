@@ -126,10 +126,10 @@ def test_source_derived_facility_lookup_preserves_integer_capacity() -> None:
     [
         ("0", True, "2026-07-13", True, ("0", "07/13/2026")),
         ("many", True, "not-a-date", True, ("Invalid source value", "Invalid source value")),
-        ("", True, "", True, ("Not provided", "Date not provided")),
-        (cast(str, None), True, cast(str, None), True, ("Not provided", "Date not provided")),
-        ("Unavailable", True, "Undated", True, ("Not available from source", "Date not available")),
-        ("", False, "", False, ("Not collected", "Not collected")),
+        ("", True, "", True, ("Blank in source", "Blank in source")),
+        (cast(str, None), True, cast(str, None), True, ("No value recorded", "Date not listed")),
+        ("Unavailable", True, "Undated", True, ("Source unavailable", "Date not listed")),
+        ("", False, "", False, ("Not listed in source", "Date not listed")),
     ],
 )
 def test_facility_directory_values_use_governed_value_states(
@@ -175,8 +175,8 @@ def test_facility_directory_values_use_governed_value_states(
     (
         ("40 JOHN STREET", None, "TOMALES", "CA", "94971", "40 JOHN STREET, TOMALES, CA 94971"),
         ("", "10 SOURCE WAY", "SACRAMENTO", "CA", "95814", "10 SOURCE WAY, SACRAMENTO, CA 95814"),
-        ("Unavailable", None, "", "", "", "Not available from source"),
-        ("", None, "", "", "", "Not provided"),
+            ("Unavailable", None, "", "", "", "Source unavailable"),
+            ("", None, "", "", "", "Blank in source"),
     ),
 )
 def test_facility_address_uses_one_readable_governed_presentation(

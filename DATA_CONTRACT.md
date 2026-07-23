@@ -25,17 +25,30 @@ verified zero is reserved for complete eligible coverage with an explicit cause.
 An explicit limit reports eligible and returned counts and truncation. An
 omitted limit means all eligible records.
 
-Reviewer presentation and governed CSV output use a shared value-state
+Reviewer presentation and governed CSV output use a shared typed value-state
 contract without changing the stored canonical value. The contract distinguishes
-present values, verified numeric zero, a present-but-blank source field, null,
-an absent field, an explicitly unavailable source, an explicitly not-applicable
-field, an explicitly undated value, an invalid value for the governed field
-type, and a field that is not collected for that record type. Reviewer text uses
-plain labels such as `Not provided`, `Not collected`, `Not available from
-source`, `Not applicable`, `Date not provided`, `Date not available`, and
-`Invalid source value`; internal state identifiers are not reviewer-facing.
-Valid dates remain ISO `YYYY-MM-DD` in storage and governed CSVs and display as
-`MM/DD/YYYY` in reviewer HTML. No missing or invalid state is converted to zero.
+`present_and_populated`, `present_blank`, `source_label_absent`,
+`source_artifact_unavailable`, `unsupported_layout`,
+`present_but_not_extracted`, `extracted_but_not_allocated`,
+`allocated_but_not_imported`, `stored_but_not_read`, `read_but_not_rendered`,
+`rendered_incorrectly`, `conflicting_sources`, `intentionally_internal`, and
+`not_applicable`, plus domain states for null, undated, verified zero, malformed,
+unavailable, source-pending, and reviewer-created state not yet set. Reviewer
+labels are semantic rather than generic: `Blank in source`, `Not listed in
+source`, `Source unavailable`, `Source format not supported`, `Data processing
+incomplete`, `Sources differ`, `Not applicable`, `Date not listed`, and `Invalid
+source value`. A database null is `No value recorded`; it is not silently
+attributed to the public source.
+
+Source-state absence must remain distinct from application or pipeline
+incompleteness. A pipeline state uses `Data processing incomplete` with a safe
+explanation that the source or stored record may contain the information but
+RecordsTracker cannot present it reliably; it does not blame the source or expose
+technical diagnostics. An intentionally internal value is hidden rather than
+labeled. A verified numeric zero displays as `0` and is never replaced by a
+missing label. Valid dates remain ISO `YYYY-MM-DD` in storage and governed CSVs
+and display as `MM/DD/YYYY` in reviewer HTML. No missing, malformed, or invalid
+state is converted to zero.
 
 Facility reference query projections preserve `Facility Address`,
 `FAC_DO_DESC`, and `RES_STREET_ADDR` source presence separately from normalized
@@ -600,6 +613,19 @@ Complaint-report facility address and city retain the present-but-blank audit
 semantics established in issue #446. They have no normalized field or canonical
 storage under issue #447; architectural decision issue #576 owns that separate
 question. Neither field may overwrite accepted current-reference address or city.
+
+Issue #450 presents the four allocated observations only in complaint-detail
+historical complaint-report information: agency name identifies the report
+authority without substituting regional office; complaint-report contact remains
+historical and separate from current-reference telephone; investigation findings
+narrative is a bounded excerpt with keyboard-accessible complete text; and
+deficiencies are an ordered list without sorting, deduplication, or substitution
+with allegations, citations, findings, dispositions, or Plan of Correction text.
+These presentation facts do not add an export, current-reference, Facility
+Overview, queue, or reviewer-created-state field. Historical complaint-report
+address and city remain unallocated `present_blank` observations under #576;
+current-reference address and city use their own governed availability state and
+are never copied into historical observations.
 
 For the four issue #447 complaint observations, one stable complaint record is
 the temporal owner because it is already linked to exactly one retained source

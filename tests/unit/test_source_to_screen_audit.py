@@ -248,8 +248,10 @@ def test_issue_447_allocates_only_the_four_approved_complaint_observations() -> 
         assert row.postgresql_population_state == (
             "populated after validated import or bounded replay"
         )
-        assert row.authoritative_status == "read_but_not_rendered"
-        assert row.required_action == "issue_450_missing_state_presentation"
+        assert row.complaint_page_rendering_state == "rendered"
+        assert row.authoritative_status == "present_and_populated"
+        assert row.required_action == "no_action_not_applicable"
+        assert row.related_issue == "#450"
         assert spec.runtime_table == "hosted_source_derived_records"
         assert spec.runtime_column == column_name
 

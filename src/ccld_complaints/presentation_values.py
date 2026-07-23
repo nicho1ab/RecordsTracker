@@ -11,22 +11,50 @@ PresentationValueState = Literal[
     "verified_zero",
     "present_blank",
     "null",
-    "absent",
-    "source_unavailable",
+    "source_label_absent",
+    "source_artifact_unavailable",
     "not_applicable",
     "undated",
     "invalid",
-    "unsupported",
+    "unsupported_layout",
     "explicit_unknown",
+    "present_but_not_extracted",
+    "extracted_but_not_allocated",
+    "allocated_but_not_imported",
+    "stored_but_not_read",
+    "read_but_not_rendered",
+    "rendered_incorrectly",
+    "conflicting_sources",
+    "intentionally_internal",
+    "source_pending",
+]
+PresentationStateHint = Literal[
+    "source_label_absent",
+    "source_artifact_unavailable",
+    "unsupported_layout",
+    "present_but_not_extracted",
+    "extracted_but_not_allocated",
+    "allocated_but_not_imported",
+    "stored_but_not_read",
+    "read_but_not_rendered",
+    "rendered_incorrectly",
+    "conflicting_sources",
+    "intentionally_internal",
+    "not_applicable",
+    "source_pending",
 ]
 
-NOT_PROVIDED = "Not provided"
-DATE_NOT_PROVIDED = "Date not provided"
-SOURCE_UNAVAILABLE = "Not available from source"
+NOT_LISTED_IN_SOURCE = "Not listed in source"
+BLANK_IN_SOURCE = "Blank in source"
+DATE_NOT_LISTED = "Date not listed"
+SOURCE_UNAVAILABLE = "Source unavailable"
+SOURCE_FORMAT_NOT_SUPPORTED = "Source format not supported"
+DATA_PROCESSING_INCOMPLETE = "Data processing incomplete"
+SOURCES_DIFFER = "Sources differ"
+SOURCE_PENDING = "Source pending"
+NO_VALUE_RECORDED = "No value recorded"
 NOT_APPLICABLE = "Not applicable"
-DATE_NOT_AVAILABLE = "Date not available"
 INVALID_SOURCE_VALUE = "Invalid source value"
-NOT_COLLECTED = "Not collected"
 
 DATE_FIELDS = frozenset(
     {
@@ -109,6 +137,8 @@ class PresentationValue:
     display_text: str
     export_text: str
     explanation: str
+    technical_details_allowed: bool = False
+    hidden: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -128,18 +158,21 @@ def presentation_value(
     source_available: bool = True,
     applicable: bool = True,
     supported: bool = True,
+    state_hint: PresentationStateHint | None = None,
 ) -> PresentationValue:
     """Keep the stored scalar separate from its governed reviewer presentation."""
 
     stored = value is not _MISSING
     raw_value = value if stored else None
+    if state_hint is not None:
+        return _hinted_state_value(raw_value, stored, state_hint)
     if not supported:
         return _state_value(
             raw_value,
             stored,
-            "unsupported",
-            NOT_COLLECTED,
-            "This field is not collected for this record type.",
+            "unsupported_layout",
+            SOURCE_FORMAT_NOT_SUPPORTED,
+            "The source record is available, but this layout cannot yet be interpreted reliably.",
         )
     if not applicable:
         return _state_value(
@@ -153,21 +186,21 @@ def presentation_value(
         return _state_value(
             raw_value,
             stored,
-            "source_unavailable",
+            "source_artifact_unavailable",
             SOURCE_UNAVAILABLE,
             "The governed source needed for this value is unavailable.",
         )
     if not stored:
-        label = DATE_NOT_PROVIDED if kind == "date" else NOT_COLLECTED
+        label = DATE_NOT_LISTED if kind == "date" else NOT_LISTED_IN_SOURCE
         return _state_value(
             raw_value,
             False,
-            "absent",
+            "source_label_absent",
             label,
             "No stored value is available for this field.",
         )
     if value is None:
-        label = DATE_NOT_PROVIDED if kind == "date" else NOT_PROVIDED
+        label = DATE_NOT_LISTED if kind == "date" else NO_VALUE_RECORDED
         return _state_value(
             None,
             True,
@@ -179,19 +212,18 @@ def presentation_value(
         stripped = value.strip()
         normalized = " ".join(stripped.casefold().split())
         if not stripped:
-            label = DATE_NOT_PROVIDED if kind == "date" else NOT_PROVIDED
             return _state_value(
                 value,
                 True,
                 "present_blank",
-                label,
+                BLANK_IN_SOURCE,
                 "The source field is present but blank.",
             )
         if normalized in _UNAVAILABLE_LITERALS:
             return _state_value(
                 value,
                 True,
-                "source_unavailable",
+                "source_artifact_unavailable",
                 SOURCE_UNAVAILABLE,
                 "The source explicitly marks this value as unavailable.",
             )
@@ -208,11 +240,11 @@ def presentation_value(
                 value,
                 True,
                 "undated",
-                DATE_NOT_AVAILABLE,
+                DATE_NOT_LISTED,
                 "The source explicitly indicates that this record is undated.",
             )
         if normalized in _UNKNOWN_LITERALS:
-            label = DATE_NOT_PROVIDED if kind == "date" else NOT_PROVIDED
+            label = DATE_NOT_LISTED if kind == "date" else NOT_LISTED_IN_SOURCE
             return _state_value(
                 value,
                 True,
@@ -298,6 +330,7 @@ def presentation_value_for_field(
     source_available: bool = True,
     applicable: bool = True,
     supported: bool = True,
+    state_hint: PresentationStateHint | None = None,
 ) -> PresentationValue:
     value = values[field_name] if field_name in values else _MISSING
     return presentation_value(
@@ -306,6 +339,7 @@ def presentation_value_for_field(
         source_available=source_available,
         applicable=applicable,
         supported=supported,
+        state_hint=state_hint,
     )
 
 
@@ -329,6 +363,37 @@ def presentation_values_for_record(
         values,
         include_fields=REVIEWER_FIELDS_BY_ENTITY.get(entity_type, ()),
     )
+
+
+def presentation_values_for_repeated_field(
+    values: Mapping[str, Any],
+    field_name: str,
+    *,
+    source_available: bool = True,
+    applicable: bool = True,
+    supported: bool = True,
+    state_hint: PresentationStateHint | None = None,
+) -> tuple[PresentationValue, ...]:
+    """Present repeated values in source order without replacing raw values."""
+
+    if state_hint is not None or field_name not in values:
+        return (
+            presentation_value_for_field(
+                values,
+                field_name,
+                source_available=source_available,
+                applicable=applicable,
+                supported=supported,
+                state_hint=state_hint,
+            ),
+        )
+    raw_values = values[field_name]
+    if isinstance(raw_values, Iterable) and not isinstance(raw_values, str | bytes | Mapping):
+        presented = tuple(presentation_value(value) for value in raw_values)
+        if presented:
+            return presented
+        return (presentation_value(""),)
+    return (presentation_value(raw_values),)
 
 
 def presentation_kind_for_field(field_name: str) -> PresentationValueKind:
@@ -411,6 +476,61 @@ def _invalid(raw_value: object) -> PresentationValue:
     )
 
 
+def _hinted_state_value(
+    raw_value: object,
+    stored: bool,
+    state_hint: PresentationStateHint,
+) -> PresentationValue:
+    if state_hint == "source_label_absent":
+        return _state_value(
+            raw_value, stored, state_hint, NOT_LISTED_IN_SOURCE,
+            "This field does not appear in the available source record.",
+        )
+    if state_hint == "source_artifact_unavailable":
+        return _state_value(
+            raw_value, stored, state_hint, SOURCE_UNAVAILABLE,
+            "The underlying public record was not available for verification.",
+        )
+    if state_hint == "unsupported_layout":
+        return _state_value(
+            raw_value, stored, state_hint, SOURCE_FORMAT_NOT_SUPPORTED,
+            "The record is available, but this layout cannot yet be interpreted reliably.",
+        )
+    if state_hint in {
+        "present_but_not_extracted",
+        "extracted_but_not_allocated",
+        "allocated_but_not_imported",
+        "stored_but_not_read",
+        "read_but_not_rendered",
+        "rendered_incorrectly",
+    }:
+        return _state_value(
+            raw_value, stored, state_hint, DATA_PROCESSING_INCOMPLETE,
+            "The source or stored record may contain this information, but "
+            "RecordsTracker cannot yet present it reliably.",
+        )
+    if state_hint == "conflicting_sources":
+        return _state_value(
+            raw_value, stored, state_hint, SOURCES_DIFFER,
+            "Available public records contain different values; no single value "
+            "is presented as authoritative.",
+        )
+    if state_hint == "intentionally_internal":
+        return _state_value(
+            raw_value, stored, state_hint, "",
+            "This internal field is not displayed on this surface.", hidden=True,
+        )
+    if state_hint == "source_pending":
+        return _state_value(
+            raw_value, stored, state_hint, SOURCE_PENDING,
+            "The source record has not yet been made available for this value.",
+        )
+    return _state_value(
+        raw_value, stored, "not_applicable", NOT_APPLICABLE,
+        "This field does not apply in this context.",
+    )
+
+
 def _state_value(
     raw_value: object,
     stored: bool,
@@ -419,6 +539,8 @@ def _state_value(
     explanation: str,
     *,
     export_text: str | None = None,
+    technical_details_allowed: bool = False,
+    hidden: bool = False,
 ) -> PresentationValue:
     return PresentationValue(
         raw_value=raw_value,
@@ -427,4 +549,6 @@ def _state_value(
         display_text=display_text,
         export_text=display_text if export_text is None else export_text,
         explanation=explanation,
+        technical_details_allowed=technical_details_allowed,
+        hidden=hidden,
     )

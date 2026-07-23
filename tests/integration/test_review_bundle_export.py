@@ -142,7 +142,7 @@ def test_export_review_bundle_writes_accessible_review_notes(tmp_path: Path) -> 
     assert "screening aids" in readme_text
     assert "not conclusions" in readme_text
     assert "flagged for review based on available extracted dates" in readme_text
-    assert "Missing database values use field-aware labels" in readme_text
+    assert "Missing values use field-aware labels" in readme_text
     assert "verified numeric zero remains \"0\"" in readme_text
     assert "raw SHA-256 hash" in readme_text
     assert "complaint_timeline_with_source_traceability.csv" in readme_text
@@ -200,10 +200,10 @@ def test_review_bundle_export_values_do_not_fabricate_zero() -> None:
         == "0"
     )
     assert _export_value(None, column_name="days_received_to_first_activity") == (
-        "Not provided"
+        "No value recorded"
     )
     assert _export_value("", column_name="days_received_to_first_activity") == (
-        "Not provided"
+        "Blank in source"
     )
     assert _export_value("bad", column_name="days_received_to_first_activity") == (
         "Invalid source value"
@@ -212,7 +212,7 @@ def test_review_bundle_export_values_do_not_fabricate_zero() -> None:
         "bad",
         column_name="Days from Complaint Received to Report",
     ) == "Invalid source value"
-    assert _export_value(None, column_name="report_date") == "Date not provided"
+    assert _export_value(None, column_name="report_date") == "Date not listed"
     assert _export_value("bad", column_name="report_date") == "Invalid source value"
 
 

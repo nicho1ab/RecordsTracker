@@ -701,6 +701,30 @@ _PRESENTATION_REGISTRY: Mapping[tuple[str, str], _Presentation] = {
         "/reviewer/records/detail source timeline",
         "complaint detail source timeline", "date with unavailable state",
     ),
+    ("complaint", "agency_name"): _Presentation(
+        "complaint detail",
+        "/reviewer/records/detail",
+        "historical complaint-report information",
+        "labeled historical report agency fact",
+    ),
+    ("complaint", "complaint_report_contact"): _Presentation(
+        "complaint detail",
+        "/reviewer/records/detail",
+        "historical complaint-report information",
+        "labeled historical contact fact distinct from current facility telephone",
+    ),
+    ("complaint", "investigation_findings_narrative"): _Presentation(
+        "complaint detail",
+        "/reviewer/records/detail",
+        "historical complaint-report information",
+        "bounded excerpt with keyboard-accessible complete narrative disclosure",
+    ),
+    ("complaint", "deficiency_texts"): _Presentation(
+        "complaint detail",
+        "/reviewer/records/detail",
+        "historical complaint-report information",
+        "ordered list preserving source order",
+    ),
     ("complaint", "first_investigation_activity_date"): _Presentation(
         "complaint detail", "/reviewer/records/detail source timeline",
         "complaint detail source timeline", "date with extraction-coverage qualifier",

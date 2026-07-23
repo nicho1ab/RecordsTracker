@@ -260,7 +260,7 @@ def test_missing_first_activity_date_has_no_evidence_controls() -> None:
         [_event(event_text="Investigation activity occurred.")],
     )
 
-    assert "Date not provided" in html
+    assert "Blank in source" in html
     assert "Copy date" not in html
     assert "View source evidence" not in html
     assert "first-investigation-evidence" not in html

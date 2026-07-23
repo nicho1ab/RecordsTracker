@@ -12,23 +12,23 @@ The generated audit under `data/processed/source-to-screen-audit/` is the author
 | `data.complaint.allegation.complaint_id` | complaint | allegation normalizer: complaint_id | `allegations.complaint_id` | not displayed | `INTENTIONALLY_INTERNAL` | P2 |
 | `data.complaint.allegation.extraction_confidence` | complaint | allegation normalizer: extraction_confidence | `allegations.extraction_confidence` | not displayed | `INTENTIONALLY_INTERNAL` | P2 |
 | `data.complaint.allegation.finding` | complaint | allegation normalizer: finding | `allegations.finding` | /reviewer/records/detail | `NOT_APPLICABLE` | P2 |
-| `data.complaint.complaint.agency_name` | complaint | complaint normalizer: agency_name | `complaints.agency_name` | not displayed | `NOT_APPLICABLE` | P2 |
+| `data.complaint.complaint.agency_name` | complaint | complaint normalizer: agency_name | `complaints.agency_name` | /reviewer/records/detail | `NOT_APPLICABLE` | P2 |
 | `data.complaint.complaint.complaint_control_number` | complaint | COMPLAINT CONTROL NUMBER | `complaints.complaint_control_number` | /reviewer/records; /reviewer/records/detail | `NOT_APPLICABLE` | P2 |
 | `data.complaint.complaint.complaint_id` | complaint | complaint normalizer: complaint_id | `complaints.complaint_id` | not displayed | `INTENTIONALLY_INTERNAL` | P2 |
 | `data.complaint.complaint.complaint_received_date` | complaint | COMPLAINT RECEIVED | `complaints.complaint_received_date` | /reviewer/records/detail source timeline | `NOT_APPLICABLE` | P2 |
-| `data.complaint.complaint.complaint_report_contact` | complaint | complaint normalizer: complaint_report_contact | `complaints.complaint_report_contact` | not displayed | `NOT_APPLICABLE` | P2 |
+| `data.complaint.complaint.complaint_report_contact` | complaint | complaint normalizer: complaint_report_contact | `complaints.complaint_report_contact` | /reviewer/records/detail | `NOT_APPLICABLE` | P2 |
 | `data.complaint.complaint.date_signed` | complaint | Date Signed | `complaints.date_signed` | /reviewer/records/detail source timeline | `NOT_APPLICABLE` | P2 |
 | `data.complaint.complaint.days_received_to_first_activity` | complaint | derived from COMPLAINT RECEIVED and governed investigation activity date | `complaints.days_received_to_first_activity` | not displayed | `NOT_APPLICABLE` | P2 |
 | `data.complaint.complaint.days_received_to_report` | complaint | complaint normalizer: days_received_to_report | `complaints.days_received_to_report` | not displayed | `UI_DISPLAY_OMISSION` | P1 |
 | `data.complaint.complaint.days_received_to_visit` | complaint | complaint normalizer: days_received_to_visit | `complaints.days_received_to_visit` | not displayed | `UI_DISPLAY_OMISSION` | P1 |
 | `data.complaint.complaint.days_report_to_signed` | complaint | complaint normalizer: days_report_to_signed | `complaints.days_report_to_signed` | not displayed | `UI_DISPLAY_OMISSION` | P1 |
-| `data.complaint.complaint.deficiency_texts` | complaint | complaint normalizer: deficiency_texts | `complaints.deficiency_texts` | not displayed | `NOT_APPLICABLE` | P2 |
+| `data.complaint.complaint.deficiency_texts` | complaint | complaint normalizer: deficiency_texts | `complaints.deficiency_texts` | /reviewer/records/detail | `NOT_APPLICABLE` | P2 |
 | `data.complaint.complaint.document_id` | complaint | complaint normalizer: document_id | `complaints.document_id` | not displayed | `INTENTIONALLY_INTERNAL` | P2 |
 | `data.complaint.complaint.extraction_confidence` | complaint | complaint normalizer: extraction_confidence | `complaints.extraction_confidence` | not displayed | `INTENTIONALLY_INTERNAL` | P2 |
 | `data.complaint.complaint.facility_id` | complaint | complaint normalizer: facility_id | `complaints.facility_id` | not displayed | `INTENTIONALLY_INTERNAL` | P2 |
 | `data.complaint.complaint.finding` | complaint | Finding / INVESTIGATION FINDING(S) | `complaints.finding` | /reviewer/records/detail | `NOT_APPLICABLE` | P2 |
 | `data.complaint.complaint.first_investigation_activity_date` | complaint | investigation narrative | `complaints.first_investigation_activity_date` | /reviewer/records/detail source timeline | `NOT_APPLICABLE` | P2 |
-| `data.complaint.complaint.investigation_findings_narrative` | complaint | complaint normalizer: investigation_findings_narrative | `complaints.investigation_findings_narrative` | not displayed | `NOT_APPLICABLE` | P2 |
+| `data.complaint.complaint.investigation_findings_narrative` | complaint | complaint normalizer: investigation_findings_narrative | `complaints.investigation_findings_narrative` | /reviewer/records/detail | `NOT_APPLICABLE` | P2 |
 | `data.complaint.complaint.missing_first_activity_date` | complaint | complaint normalizer: missing_first_activity_date | `complaints.missing_first_activity_date` | not displayed | `INTENTIONALLY_INTERNAL` | P2 |
 | `data.complaint.complaint.report_date` | complaint | Report Date | `complaints.report_date` | /reviewer/records/detail source timeline | `NOT_APPLICABLE` | P2 |
 | `data.complaint.complaint.report_date_used_as_proxy` | complaint | complaint normalizer: report_date_used_as_proxy | `complaints.report_date_used_as_proxy` | not displayed | `INTENTIONALLY_INTERNAL` | P2 |
@@ -44,14 +44,14 @@ The generated audit under `data/processed/source-to-screen-audit/` is the author
 | `data.complaint.event.event_type` | complaint | investigation narrative event cue | `events.event_type` | /reviewer/records/detail source timeline | `NOT_APPLICABLE` | P2 |
 | `data.complaint.event.extracted_from_section` | complaint | event normalizer: extracted_from_section | `events.extracted_from_section` | not displayed | `INTENTIONALLY_INTERNAL` | P2 |
 | `data.complaint.event.extraction_confidence` | complaint | event normalizer: extraction_confidence | `events.extraction_confidence` | not displayed | `INTENTIONALLY_INTERNAL` | P2 |
-| `data.complaint.raw_complaint_report.agency_name` | complaint | AGENCY | `complaints.agency_name` | not displayed | `UI_DISPLAY_OMISSION` | P1 |
+| `data.complaint.raw_complaint_report.agency_name` | complaint | AGENCY | `complaints.agency_name` | /reviewer/records/detail historical complaint-report information | `NOT_APPLICABLE` | P2 |
 | `data.complaint.raw_complaint_report.complainant_contact` | complaint | Complainant contact | `not allocated` | not displayed | `SOURCE_NOT_PROVIDED` | P2 |
 | `data.complaint.raw_complaint_report.complainant_identity` | complaint | Complainant | `not allocated` | not displayed | `RAW_PRESENT_EXTRACTION_MISSING` | P2 |
 | `data.complaint.raw_complaint_report.correction_action` | complaint | Correction action | `not allocated` | not displayed | `SOURCE_NOT_PROVIDED` | P2 |
 | `data.complaint.raw_complaint_report.correction_due_date` | complaint | Correction due date | `not allocated` | not displayed | `SOURCE_NOT_PROVIDED` | P2 |
-| `data.complaint.raw_complaint_report.deficiency_text` | complaint | DEFICIENCIES | `complaints.deficiency_texts` | not displayed | `UI_DISPLAY_OMISSION` | P1 |
+| `data.complaint.raw_complaint_report.deficiency_text` | complaint | DEFICIENCIES | `complaints.deficiency_texts` | /reviewer/records/detail historical complaint-report information | `NOT_APPLICABLE` | P2 |
 | `data.complaint.raw_complaint_report.disposition` | complaint | Disposition | `not allocated` | not displayed | `SOURCE_NOT_PROVIDED` | P2 |
-| `data.complaint.raw_complaint_report.investigation_findings_narrative` | complaint | INVESTIGATION FINDINGS | `complaints.investigation_findings_narrative` | not displayed | `UI_DISPLAY_OMISSION` | P1 |
+| `data.complaint.raw_complaint_report.investigation_findings_narrative` | complaint | INVESTIGATION FINDINGS | `complaints.investigation_findings_narrative` | /reviewer/records/detail historical complaint-report information | `NOT_APPLICABLE` | P2 |
 | `data.complaint.raw_complaint_report.office_name` | complaint | Office | `not allocated` | not displayed | `SOURCE_NOT_PROVIDED` | P2 |
 | `data.complaint.raw_complaint_report.participant_identity` | complaint | Interviewed participant | `not allocated` | not displayed | `RAW_PRESENT_EXTRACTION_MISSING` | P2 |
 | `data.complaint.raw_complaint_report.plan_of_correction` | complaint | PLAN OF CORRECTION | `not allocated` | not displayed | `SOURCE_NOT_PROVIDED` | P2 |
@@ -131,7 +131,7 @@ The generated audit under `data/processed/source-to-screen-audit/` is the author
 | `data.facility.raw_complaint_report.facility_address` | facility | ADDRESS | `not allocated` | not displayed | `UNEXPLAINED_BLANK` | P1 |
 | `data.facility.raw_complaint_report.facility_capacity` | facility | allowlisted raw label pattern: facility_capacity | `facilities.capacity` | not displayed | `NOT_APPLICABLE` | P2 |
 | `data.facility.raw_complaint_report.facility_city` | facility | CITY | `not allocated` | not displayed | `UNEXPLAINED_BLANK` | P1 |
-| `data.facility.raw_complaint_report.facility_contact` | facility | TELEPHONE | `complaints.complaint_report_contact` | not displayed | `UI_DISPLAY_OMISSION` | P1 |
+| `data.facility.raw_complaint_report.facility_contact` | facility | TELEPHONE | `complaints.complaint_report_contact` | /reviewer/records/detail historical complaint-report information | `NOT_APPLICABLE` | P2 |
 | `data.facility.raw_complaint_report.facility_license_status` | facility | LICENSE STATUS | `not allocated` | not displayed | `SOURCE_NOT_PROVIDED` | P2 |
 | `data.facility.raw_complaint_report.facility_type` | facility | FACILITY TYPE | `facilities.facility_type` | /reviewer/records/detail; /ccld/facilities/detail | `NOT_APPLICABLE` | P2 |
 | `data.facility.raw_complaint_report.regional_office` | facility | allowlisted raw label pattern: regional_office | `facilities.regional_office` | not displayed | `NOT_APPLICABLE` | P2 |
@@ -170,7 +170,7 @@ The generated audit under `data/processed/source-to-screen-audit/` is the author
 
 The tracked CSV records source section and label identity, extraction and normalization fields, canonical allocation, PostgreSQL and read-model state, complaint and Facility Overview rendering state, presentation tier, required action, and safe rationale. It never records source values.
 
-The four Issue #447 historical complaint observations are canonically allocated and remain read-but-not-rendered. Rows assigned to `issue_450_missing_state_presentation` remain presentation work for Issue #450. Complaint-report address and city remain `present_blank` and unallocated under Issue #576.
+Issue #450 renders the four Issue #447 canonically allocated historical complaint observations on complaint detail only: agency name, ordered deficiencies, bounded investigation findings narrative, and historical complaint-report contact. Their CSV rows are `rendered` and `present_and_populated`; no queue, Facility Overview, current-reference, or reviewer-created-state field is added. Complaint-report address and city remain `present_blank` and unallocated under Issue #576.
 
 ## Contract coverage projection
 
