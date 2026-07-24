@@ -405,6 +405,10 @@ def test_facility_case_brief_pluralizes_record_count_labels() -> None:
 
     assert "<strong>2</strong><span>Records</span>" in html
     assert "<strong>2</strong><span>Record</span>" not in html
+    assert 'aria-label="Copy facility name"' not in html
+    assert 'aria-label="Copy Facility ID"' in html
+    assert 'data-copy-status hidden aria-live="polite" aria-atomic="true"' in html
+    assert "data-copy-control-bound" in html
 
 
 def test_reviewer_ui_request_records_selected_facility_uses_facility_id_contract() -> None:
@@ -4599,6 +4603,12 @@ def test_reviewer_ui_detail_render_is_non_mutating() -> None:
     assert "Field evidence incomplete." in html
     assert 'aria-label="Copy First investigation activity date"' in html
     assert 'aria-label="View source evidence for First investigation activity date"' in html
+    assert "function setFirstActivityEvidenceExpanded" in html
+    detail_function_index = html.index("function setFirstActivityEvidenceExpanded")
+    detail_script_start = html.rfind("<script>", 0, detail_function_index)
+    detail_script_end = html.index("</script>", detail_function_index)
+    assert detail_script_start >= 0
+    assert detail_script_start < detail_function_index < detail_script_end
     assert "A supporting source event sentence is not available for this date." in html
     assert "investigation findings" in html
     assert "Complaint/report 32-CR-20220407124448" in html
