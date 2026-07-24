@@ -42,6 +42,37 @@ The capture command performs GET-only requests against an already-running local 
 
 The packet never submits forms, triggers controlled retrieval, loads or imports data, mutates reviewer-created state, runs reset/reload, calls GitHub, performs production authentication, captures cookies, prints response headers, or records environment variable values.
 
+## Evidence suitability, native interaction, and package integrity
+
+Before a full evidence matrix, verify that the selected route loads, the
+governed component is present, the smallest-scope fixture contains the required
+term, control, state, or record, and fixture identity is recorded. No-data or
+irrelevant states are not evidence for the intended component. Changing fixture
+semantics or adding synthetic production-like data needs separate authorization.
+
+Native interaction evidence requires actual browser input: pointer movement for
+hover; keyboard navigation for focus; the Escape key for dismissal; and actual
+navigation or movement to another legitimate control for focus loss. Mobile or
+edge-placement evidence must use the intended viewport and route with the
+governed component rendered. Forced CSS states, direct style changes, injected
+classes, synthetic visibility toggles, and DOM-only manipulation may supplement
+inspection but are not native interaction evidence.
+
+Do not use a reduced viewport as a standing substitute for actual 200% browser
+zoom. Issue #573 used a bounded human-approved reflow exception; future
+exceptions require explicit human acceptance.
+
+The capture tool creates the sibling ZIP when authorized. Before preservation or
+cleanup, verify the ignored destination, manifest and file index, file list,
+count and sizes, applicable zero-length and unexpected-file checks, ZIP
+membership and integrity, and SHA-256. A technically complete package is not
+human visual acceptance, and generated evidence remains ignored and untracked
+unless a separate contract expressly requires otherwise.
+
+`file-index.json` deterministically lists the packet files that precede it; the
+subsequent ZIP validation includes the index itself, avoiding recursive index
+or hash content.
+
 ## Issue #479 reviewer-facing visual acceptance contract
 
 The following gate applies to every later reviewer-facing visual or interaction

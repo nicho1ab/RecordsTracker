@@ -185,6 +185,43 @@ the current task explicitly authorizes continuous execution and identifies the
 exact phase sequence. No session may continue into another issue or roadmap
 task.
 
+### Conditional queued phase transitions
+
+A prompt may conditionally authorize a later phase in the same execution only
+when it explicitly states the ordered phase sequence, prerequisite pass
+conditions, fail and stop conditions, mutations permitted in each phase,
+post-correction validation, and continuous-execution authorization. The later
+phase becomes authorized only through that original explicit conditional grant.
+
+Treat a prerequisite as failed and stop when it is failed, unavailable,
+ambiguous, stale, contradictory, outside scope, dependent on unperformed human
+inspection, or dependent on a new product, design, legal, security, privacy,
+data, deployment, or governance decision. "Ready," "recommended," "review
+passed," and "no defects found" are not authorization by themselves. A
+correction that expands file, behavior, or governance scope also stops the
+transition.
+
+Conditional execution cannot cross from one issue into another issue or start
+a roadmap successor. RL-MERGE remains separately and explicitly authorized;
+merge-to-deployment and issue closure remain separate when their evidence or
+human judgment is pending.
+
+### Fresh authoritative state after lifecycle mutations
+
+After a state-changing GitHub operation, query the authoritative service again
+before any dependent execution. This includes issue close or reopen, PR
+draft/ready transitions, merge, branch deletion, PR-body corrections when
+checks depend on event payload, and label or dependency mutations used as later
+prerequisites. Do not rely on pre-mutation variables, cached JSON, prior search
+results, stale issue lists, pasted success output, or local repository state as
+a substitute for the service state.
+
+Where state is a prerequisite, record or verify the repository, hostname,
+authenticated identity, issue or PR number, exact state and reason, relevant
+timestamp, and current head/base SHA when applicable. Contradictory fresh
+results stop execution. This policy requires fresh authoritative state, not one
+specific CLI implementation.
+
 ## Interface and role split
 
 - ChatGPT/project architect: scope review, prompt review, risk gate, final review.
@@ -230,6 +267,41 @@ evidence packets, or private configuration into agent worktrees.
 II works only in the already assigned branch/worktree. RL-PREPARE is required
 to create an assigned branch/worktree or perform later repository lifecycle
 steps.
+
+### Persistent coordination branches after squash merge
+
+Disposable implementation branches may be removed after verified merge and
+normal cleanup. A narrowly authorized exact local force deletion is permitted
+only after merge verification when squash history prevents normal deletion.
+
+Persistent coordination branches must be preserved and are not assumed to be
+fast-forwardable after a squash merge. Before any reset or remote update, verify
+the clean worktree, expected old local and remote SHAs, exact squash SHA, and
+tree equivalence or other proof that no unique unmerged content exists. Resetting
+only that exact persistent branch and updating only its matching remote with
+`--force-with-lease` against the known old SHA each require separate narrowly
+scoped authorization. Broad force-push authority is prohibited, and no reset or
+rewrite is allowed when unique branch content exists.
+
+## Acceptance-evidence lifecycle
+
+Before removing a disposable worktree that contains the only acceptance-evidence
+copy, preserve it in the established ignored durable destination. Verify source
+and destination existence, expected manifest and file index, file list and
+count, file sizes, applicable zero-length and unexpected-file checks, ZIP
+integrity, SHA-256, and ignored unstaged status. Do not create tracked evidence
+artifacts unless a separate contract expressly requires them.
+
+Stop cleanup when evidence lacks a durable verified copy, the destination
+conflicts with unrelated content, integrity verification fails, or preservation
+would require an unauthorized mutation. The handoff must state the durable
+directory and ZIP, file count, integrity hash, preservation result, and cleanup
+result.
+
+When authorized safe local capture tooling can package evidence, the capturing
+agent creates and verifies the ZIP, computes and reports its SHA-256, and does
+not ask a user to package it manually. Successful capture, technical package
+completion, human acceptance, and final issue completion are distinct states.
 
 ## Browser boundaries
 

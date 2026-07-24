@@ -25,6 +25,11 @@ report after each phase. Continuous execution must be explicitly authorized
 with the exact sequence. RL-MERGE always requires separate current-task user
 authorization. No session may continue into another issue or roadmap task.
 
+For conditional queued phases and acceptance evidence, follow the detailed
+fail-closed transition and evidence-lifecycle policy in
+`docs/developer/codex-workflow.md`. A successful earlier phase does not grant a
+later phase; deployment and issue closure remain separate explicit decisions.
+
 ## Task-relevant context
 
 Treat the current complete GitHub issue as the durable task specification.

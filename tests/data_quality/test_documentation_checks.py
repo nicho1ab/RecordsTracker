@@ -123,6 +123,31 @@ def test_codex_workflow_contract_requires_bounded_prerequisite_resolution(
     )
 
 
+@pytest.mark.parametrize(
+    "marker",
+    (
+        "### Conditional queued phase transitions",
+        "### Fresh authoritative state after lifecycle mutations",
+        "### Persistent coordination branches after squash merge",
+        "## Acceptance-evidence lifecycle",
+    ),
+)
+def test_codex_workflow_contract_requires_governed_lifecycle_boundaries(
+    tmp_path: Path, marker: str
+) -> None:
+    check_docs = _load_check_docs_module()
+    source = Path("docs/developer/codex-workflow.md")
+    target = tmp_path / source
+    target.parent.mkdir(parents=True, exist_ok=True)
+    content = source.read_text(encoding="utf-8")
+    target.write_text(content.replace(marker, "", 1), encoding="utf-8")
+
+    assert (
+        "docs/developer/codex-workflow.md: missing Codex workflow marker: " + marker
+        in check_docs.find_codex_workflow_contract_violations(tmp_path)
+    )
+
+
 def test_reviewer_ui_governance_contract_is_complete() -> None:
     check_docs = _load_check_docs_module()
 

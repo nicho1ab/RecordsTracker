@@ -22,6 +22,13 @@ The required checks remain `validate`, `docs-check`, `fixtures`, and `security`.
 Independent verification is advisory to human approval and fails closed when
 objective PR evidence is missing.
 
+## Issue #587 provenance
+
+Pilot Run 1's stale pull-request-event correction and Pilot Run 2's fixture,
+native-interaction, zoom-exception, package-preservation, and squash-cleanup
+lessons produced Issue #587. That issue hardens the controlling workflow and
+evidence policy; it does not reopen, revise, or replace either completed run.
+
 Each run records its model, effort, timestamps, iterations, interventions,
 failures, checks, scope findings, usage/cost availability, and suitability.
 Dependent work does not begin before prerequisite gates are complete.

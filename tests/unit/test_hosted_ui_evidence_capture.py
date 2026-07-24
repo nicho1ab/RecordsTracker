@@ -172,6 +172,7 @@ def test_capture_script_declares_parameters_routes_and_outputs() -> None:
         "Issue419",
         "Issue498",
         "manifest.json",
+        "file-index.json",
         "route-status.csv",
         "route-assertions.csv",
         "issue-415-count-summaries.csv",
@@ -187,7 +188,12 @@ def test_capture_script_declares_parameters_routes_and_outputs() -> None:
         "diagnostics",
         "EVIDENCE_PACKET_PATH=",
         "EVIDENCE_ZIP_PATH=",
+        "EVIDENCE_ZIP_SHA256=",
         "Compress-Archive",
+        "Get-FileHash",
+        "Test-EvidencePacketFiles",
+        "Test-EvidenceZipIntegrity",
+        "Evidence ZIP membership and sizes do not match the packet file index.",
         "Invoke-NativeCaptureCommand",
         "Test-HtmlScreenshotCandidate",
         "SkipHttpErrorCheck",
@@ -411,6 +417,67 @@ def test_capture_script_declares_parameters_routes_and_outputs() -> None:
         "ccld-complaint-32-CR-20240120111111-rt-src-002-source-unavailable-fixture",
     ):
         assert fixture_key in script
+
+
+def test_capture_script_verifies_zip_membership_sizes_and_hash(tmp_path: Path) -> None:
+    stop_capture_fail = powershell_function("Stop-CaptureFail", "Test-AllowedBaseUrl")
+    relative_path = powershell_function("ConvertTo-RelativeEvidencePath", "Redact-EvidenceText")
+    file_index = powershell_function("Get-EvidenceFileIndex", "Test-EvidencePacketFiles")
+    packet_files = powershell_function("Test-EvidencePacketFiles", "Test-EvidenceZipIntegrity")
+    zip_integrity = powershell_function("Test-EvidenceZipIntegrity", "Add-AssertionResult")
+    packet = tmp_path / "packet"
+    zip_path = tmp_path / "packet.zip"
+    packet_literal = str(packet).replace("'", "''")
+    zip_literal = str(zip_path).replace("'", "''")
+    ps_script = (
+        stop_capture_fail
+        + "\n"
+        + relative_path
+        + "\n"
+        + file_index
+        + "\n"
+        + packet_files
+        + "\n"
+        + zip_integrity
+        + "\n$packet = '"
+        + packet_literal
+        + "'\n$zip = '"
+        + zip_literal
+        + "'\n"
+        + "New-Item -ItemType Directory -Path $packet | Out-Null\n"
+        + "Set-Content -LiteralPath (Join-Path $packet 'manifest.json') -Value '{}' -NoNewline\n"
+        + "Set-Content -LiteralPath (Join-Path $packet 'route-status.csv') "
+        + "-Value 'route,status' -NoNewline\n"
+        + "Set-Content -LiteralPath (Join-Path $packet 'route-assertions.csv') "
+        + "-Value 'route,assertion' -NoNewline\n"
+        + "Set-Content -LiteralPath (Join-Path $packet 'route-text-markers.txt') "
+        + "-Value 'marker' -NoNewline\n"
+        + "Set-Content -LiteralPath (Join-Path $packet 'README.txt') "
+        + "-Value 'evidence' -NoNewline\n"
+        + "Compress-Archive -LiteralPath $packet -DestinationPath $zip\n"
+        + "$files = @(Test-EvidencePacketFiles -PacketDirectory $packet)\n"
+        + "$hash = Test-EvidenceZipIntegrity -PacketDirectory $packet "
+        + "-ZipPath $zip -ExpectedFiles $files\n"
+        + "$length = (Get-Item -LiteralPath $zip).Length\n"
+        + "Set-Content -LiteralPath (Join-Path $packet 'README.txt') -Value '' -NoNewline\n"
+        + "try { Test-EvidencePacketFiles -PacketDirectory $packet | Out-Null; "
+        + "$zero = 'not rejected' } "
+        + "catch { $zero = $_.Exception.Message }\n"
+        + "[ordered]@{ Hash = $hash; Length = $length; ZeroLength = $zero } | ConvertTo-Json\n"
+    )
+    result = subprocess.run(
+        [powershell(), "-NoProfile", "-Command", ps_script],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, plain_output(result)
+    verified = json.loads(result.stdout)
+    assert re.fullmatch(r"[A-F0-9]{64}", verified["Hash"])
+    assert verified["Length"] > 0
+    assert "zero-length files" in verified["ZeroLength"]
 
 
 def test_capture_script_issue_498_defines_interaction_aware_standard_artifacts() -> None:

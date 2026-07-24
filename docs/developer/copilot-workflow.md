@@ -105,6 +105,15 @@ source traceability, raw source preservation, deterministic extraction
 expectations, fixture-backed regression expectations, accessibility,
 security/privacy, public-source caution language, or schema/connector governance.
 
+### Conditional phases and evidence lifecycle
+
+Use `docs/developer/codex-workflow.md` as the controlling detailed contract for
+conditional queued phases, fresh post-mutation authoritative state, persistent
+coordination branches after squash merge, and acceptance-evidence preservation.
+Prompts must make later phases fail closed and explicit; a successful earlier
+phase, advisory review, or local state does not authorize a later phase,
+RL-MERGE, deployment, or issue closure.
+
 ### Prototype and spike tasks
 
 Use prototype or spike prompts to explore uncertain approaches before production
