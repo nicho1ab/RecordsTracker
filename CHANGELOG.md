@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+- Hardened governed workflow transitions and evidence lifecycle policy: queued
+  phases fail closed, dependent lifecycle work requires fresh authoritative
+  state, persistent coordination branches have narrow squash handling, and
+  local UI evidence packaging verifies ZIP contents and SHA-256. Native browser
+  interaction and fixture-suitability requirements remain explicit.
 - Extended the Issue #453 source-to-screen contract to `1.1.0` for the active
   accepted TransparencyAPI snapshot and ADR-0017 shared facility projection.
   The deterministic package now carries aggregate field-stage, quarantine,

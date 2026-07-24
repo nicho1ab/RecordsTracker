@@ -11,6 +11,11 @@
   testability, safe reversibility, and no prohibited blocker. Andrew retains
   final eligibility and cross-boundary authority; labels and automation cannot
   grant capabilities, override governance, clear blockers, merge, or deploy.
+- Governed workflow execution uses the fail-closed conditional-transition,
+  fresh-authoritative-state, persistent-coordination-branch, and
+  acceptance-evidence lifecycle policy in `docs/developer/codex-workflow.md`.
+  It preserves separate human authorization for merge, deployment, and closure;
+  evidence remains ignored and untracked unless a separate contract requires it.
 - Current implementation state: the Python, SQLite, and Datasette proof of
   concept has proven governed ingestion, deterministic extraction, raw source
   preservation, source traceability, local validation and review support, and

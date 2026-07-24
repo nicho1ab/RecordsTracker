@@ -1086,6 +1086,71 @@ function Get-EvidenceFileCount {
     ).Count
 }
 
+function Get-EvidenceFileIndex {
+    param([string]$PacketDirectory)
+    return @(
+        Get-ChildItem -LiteralPath $PacketDirectory -File -Recurse |
+            Sort-Object FullName |
+            ForEach-Object {
+                [ordered]@{
+                    path  = ConvertTo-RelativeEvidencePath -Path $_.FullName -Root $PacketDirectory
+                    bytes = [int64]$_.Length
+                }
+            }
+    )
+}
+
+function Test-EvidencePacketFiles {
+    param([string]$PacketDirectory)
+
+    $requiredPacketFiles = @("manifest.json", "route-status.csv", "route-assertions.csv", "route-text-markers.txt", "README.txt")
+    $missingPacketFiles = @($requiredPacketFiles | Where-Object { -not (Test-Path -LiteralPath (Join-Path $PacketDirectory $_)) })
+    if ($missingPacketFiles.Count -gt 0) {
+        Stop-CaptureFail "Evidence packet is missing required files: $($missingPacketFiles -join ', ')"
+    }
+    $indexedPacketFiles = @(Get-EvidenceFileIndex -PacketDirectory $PacketDirectory)
+    $zeroLengthFiles = @($indexedPacketFiles | Where-Object { $_.bytes -le 0 })
+    if ($zeroLengthFiles.Count -gt 0) {
+        Stop-CaptureFail "Evidence packet contains zero-length files: $($zeroLengthFiles.path -join ', ')"
+    }
+    return $indexedPacketFiles
+}
+
+function Test-EvidenceZipIntegrity {
+    param([string]$PacketDirectory, [string]$ZipPath, [object[]]$ExpectedFiles)
+
+    try { [System.IO.Compression.ZipFile] | Out-Null }
+    catch { Add-Type -AssemblyName System.IO.Compression.FileSystem }
+
+    $packetName = Split-Path -Leaf $PacketDirectory
+    $expectedByPath = @{}
+    foreach ($file in $ExpectedFiles) { $expectedByPath[[string]$file.path] = [int64]$file.bytes }
+    $archive = [System.IO.Compression.ZipFile]::OpenRead($ZipPath)
+    try {
+        $actualByPath = @{}
+        foreach ($entry in @($archive.Entries | Where-Object { -not $_.FullName.EndsWith("/") })) {
+            $entryPath = [string]$entry.FullName
+            $prefix = "$packetName/"
+            if (-not $entryPath.StartsWith($prefix, [System.StringComparison]::Ordinal)) {
+                Stop-CaptureFail "Evidence ZIP contains an unexpected root entry: $entryPath"
+            }
+            $actualByPath[$entryPath.Substring($prefix.Length)] = [int64]$entry.Length
+        }
+        $missing = @($expectedByPath.Keys | Where-Object { -not $actualByPath.ContainsKey($_) })
+        $unexpected = @($actualByPath.Keys | Where-Object { -not $expectedByPath.ContainsKey($_) })
+        $sizeMismatch = @($expectedByPath.Keys | Where-Object {
+            $actualByPath.ContainsKey($_) -and $actualByPath[$_] -ne $expectedByPath[$_]
+        })
+        if ($missing.Count -gt 0 -or $unexpected.Count -gt 0 -or $sizeMismatch.Count -gt 0) {
+            Stop-CaptureFail "Evidence ZIP membership and sizes do not match the packet file index."
+        }
+    }
+    finally {
+        $archive.Dispose()
+    }
+    return (Get-FileHash -LiteralPath $ZipPath -Algorithm SHA256).Hash
+}
+
 function Add-AssertionResult {
     param([System.Collections.ArrayList]$Target, [string]$RouteName, [string]$Check, [string]$Status, [string]$Message)
     [void]$Target.Add([pscustomobject]@{ route = $RouteName; check = $Check; status = $Status; message = $Message })
@@ -2353,11 +2418,17 @@ explicitly says to do so.
         issue419               = [ordered]@{ enabled = [bool]$Issue419; routeCount = @($routesToCapture).Count; scenarios = @($routesToCapture | ForEach-Object { $_.Name }); controlledVarianceAuthority = "Issue #501 repository-readable controlled variance"; visualAcceptance = "READY FOR EXPLICIT OWNER REVIEW"; uiGates = @($issue419GateResults); zoomLimitation = "The 720-pixel viewport scenario approximates 200-percent reflow; no visual acceptance is inferred from automation."; printArtifact = @($routeResults | Where-Object { $_.printPath } | ForEach-Object { $_.printPath }) }
         issue498               = [ordered]@{ enabled = [bool]$Issue498; routeCount = @($routesToCapture).Count; scenarios = @($routesToCapture | ForEach-Object { $_.Name }); zoomLimitation = "The 720-pixel viewport scenario approximates 200-percent reflow only; exact true browser zoom remains manual visual evidence."; printArtifact = @($routeResults | Where-Object { $_.printPath } | ForEach-Object { $_.printPath }) }
         git                    = [ordered]@{ branch = $gitBranch; commit = $gitCommit; workingTreeClean = [bool]$workingTreeClean; notice = if ($workingTreeClean) { "" } else { "Working tree was not clean when evidence was captured." } }
-        output                 = [ordered]@{ packetDirectory = ConvertTo-RelativeEvidencePath -Path $packetDir -Root $PWD; zipPacket = ConvertTo-RelativeEvidencePath -Path $zipPath -Root $PWD; manifest = "manifest.json"; routeStatusCsv = "route-status.csv"; routeAssertionsCsv = "route-assertions.csv"; textMarkers = "route-text-markers.txt"; counts = $outputCounts }
+        output                 = [ordered]@{ packetDirectory = ConvertTo-RelativeEvidencePath -Path $packetDir -Root $PWD; zipPacket = ConvertTo-RelativeEvidencePath -Path $zipPath -Root $PWD; manifest = "manifest.json"; fileIndex = "file-index.json"; routeStatusCsv = "route-status.csv"; routeAssertionsCsv = "route-assertions.csv"; textMarkers = "route-text-markers.txt"; counts = $outputCounts }
         evidencePurpose        = $evidencePurpose
         safety                 = [ordered]@{ getOnly = $true; formsSubmitted = $false; retrievalSubmitted = $false; reviewerStateMutated = $false; importsOrReloadsRun = $false; productionAuthRequired = $false; responseHeadersCaptured = $false; cookiesCaptured = $false; environmentValuesCaptured = $false }
     }
     Set-Content -LiteralPath (Join-Path $packetDir "manifest.json") -Value ($manifest | ConvertTo-Json -Depth 8) -Encoding UTF8
+
+    $indexedPacketFiles = @(Test-EvidencePacketFiles -PacketDirectory $packetDir)
+    $fileIndex = [ordered]@{
+        files = $indexedPacketFiles
+    }
+    Set-Content -LiteralPath (Join-Path $packetDir "file-index.json") -Value ($fileIndex | ConvertTo-Json -Depth 5) -Encoding UTF8
 
     if (($routeFailures.Count -gt 0 -or $assertionFailures.Count -gt 0 -or $screenshotFailures.Count -gt 0) -and -not $AllowUnavailable) {
         Write-Host "Evidence packet path: $packetDir"
@@ -2367,13 +2438,18 @@ explicitly says to do so.
 
     if (Test-Path -LiteralPath $zipPath) { Remove-Item -LiteralPath $zipPath -Force }
     Compress-Archive -LiteralPath $packetDir -DestinationPath $zipPath -Force
+    $packagedFiles = @(Get-EvidenceFileIndex -PacketDirectory $packetDir)
+    $zipSha256 = Test-EvidenceZipIntegrity -PacketDirectory $packetDir -ZipPath $zipPath -ExpectedFiles $packagedFiles
 
     Write-Host "Evidence packet path: $packetDir"
     Write-Host "EVIDENCE_PACKET_PATH=$packetDir"
     Write-Host "Evidence zip path: $zipPath"
     Write-Host "EVIDENCE_ZIP_PATH=$zipPath"
+    Write-Host "Evidence ZIP SHA-256: $zipSha256"
+    Write-Host "EVIDENCE_ZIP_SHA256=$zipSha256"
     Write-Host "Output counts: screenshots=$($outputCounts.screenshots); html=$($outputCounts.html); text=$($outputCounts.text); diagnostics=$($outputCounts.diagnostics); accessibility=$($outputCounts.accessibility)"
     Write-Host "manifest.json: $(Join-Path $packetDir 'manifest.json')"
+    Write-Host "file-index.json: $(Join-Path $packetDir 'file-index.json')"
     Write-Host "route-status.csv: $(Join-Path $packetDir 'route-status.csv')"
     Write-Host "Generated evidence and ZIP packets are local review/upload artifacts; do not commit them unless a specific repository workflow explicitly says to do so."
     if ($resolvedScreenshotTool) { Write-Host "Screenshot support: $($screenshotToolResolution.Resolved) (interaction-aware: $([bool]$screenshotToolResolution.SupportsInteractionAwareCapture))" }

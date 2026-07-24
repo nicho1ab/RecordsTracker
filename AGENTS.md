@@ -98,6 +98,11 @@ A session with multiple capabilities must stop between phases unless the
 current task explicitly authorizes continuous execution and names the exact
 phase sequence. No session may continue into another issue or roadmap task.
 
+For conditional queued phases and acceptance evidence, follow the detailed
+fail-closed transition and evidence-lifecycle contract in
+`docs/developer/codex-workflow.md`. A successful earlier phase never grants a
+later phase; RL-MERGE, deployment, and issue closure need explicit authority.
+
 ## Product direction
 
 - Keep work moving toward a user-facing hosted tester/pilot build of RecordsTracker.
