@@ -358,6 +358,9 @@ for runtime-mode and refresh-readiness boundaries.
   [docs/developer/hosted-scaffold.md](docs/developer/hosted-scaffold.md), and
   [docs/developer/copilot-workflow.md](docs/developer/copilot-workflow.md)
   before making code changes.
+- Review [docs/developer/development-loop-pilot-evidence.md](docs/developer/development-loop-pilot-evidence.md)
+  for the durable evidence and incomplete acceptance gates of the governed
+  development-loop pilot.
 - Use [docs/developer/ui-evidence-review.md](docs/developer/ui-evidence-review.md)
   to generate repeatable hosted UI evidence packets for future UI review.
 - Review [DOCUMENTATION_STRATEGY.md](DOCUMENTATION_STRATEGY.md),
