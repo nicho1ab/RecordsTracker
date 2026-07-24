@@ -28,7 +28,10 @@ from ccld_complaints.hosted_app.operator_coverage_dashboard import (
     local_fixture_operator_coverage_context,
 )
 from ccld_complaints.hosted_app.smoke import run_scaffold_smoke_check
-from ccld_complaints.hosted_app.ui_shell import render_page_shell
+from ccld_complaints.hosted_app.ui_shell import (
+    render_inline_glossary_term,
+    render_page_shell,
+)
 
 ROOT = Path(__file__).resolve().parents[2]
 HOSTED_RUNTIME_ENV_KEYS = (
@@ -1333,6 +1336,36 @@ def test_active_nav_route_prefixes_require_a_path_segment_boundary() -> None:
     primary_nav = primary_navigation_markup(html)
     assert 'aria-current="page" href="/ccld/facilities">Facilities' not in primary_nav
     assert primary_nav.count('aria-current="page"') == 0
+
+
+def test_shared_inline_glossary_renderer_and_shell_behavior_are_collision_safe() -> None:
+    glossary_markup = render_inline_glossary_term(
+        "Finding",
+        "The outcome or status shown in a public complaint record.",
+        "test-finding",
+    )
+    html = render_page_shell(
+        title="Glossary test",
+        heading="Glossary test",
+        main=f"<p>{glossary_markup}</p>",
+        skip_label="Skip glossary test",
+    )
+
+    assert '<dfn class="inline-glossary-term" tabindex="0" role="term"' in html
+    assert 'data-term-id="test-finding">Finding</dfn>' in html
+    assert "function createDefinitions()" in html
+    assert "document.body.appendChild(definition)" in html
+    assert "term.setAttribute('aria-describedby', definition.id)" in html
+    assert "assignUniqueDefinitionIds" in html
+    assert "term.setAttribute('aria-describedby', uniqueId)" in html
+    assert "border-bottom: 1px dotted currentColor" in html
+    assert "pointerenter" in html
+    assert "focusin" in html
+    assert "focusout" in html
+    assert "event.key === 'Escape'" in html
+    assert "position: fixed" in html
+    assert "overflow-y: auto" in html
+    assert "window.addEventListener('resize'" in html
 
 
 def test_shared_shell_runtime_mode_disclosure_uses_runtime_environment(

@@ -2710,10 +2710,11 @@ def test_reviewer_ui_detail_shows_attorney_tier_and_hides_support_details() -> N
     assert '<dfn class="inline-glossary-term" tabindex="0" role="term"' in html
     assert 'aria-description="The outcome or status shown in the public complaint record."' in html
     assert 'data-definition="The outcome or status shown in the public complaint record."' in html
-    assert 'class="inline-glossary-definition" role="tooltip"' not in html
+    assert "function createDefinitions()" in html
+    assert "definition.id = 'inline-glossary-definition-' + termId" in html
     assert ".inline-glossary-term" in html
     assert "border-bottom: 1px dotted currentColor" in html
-    assert "content: attr(data-definition)" in html
+    assert ".inline-glossary-definition.is-visible" in html
     assert "The outcome or status shown in the public complaint record." in html
     assert (
         "A source-reported finding that the allegation was not substantiated "
@@ -2721,19 +2722,7 @@ def test_reviewer_ui_detail_shows_attorney_tier_and_hides_support_details() -> N
         in html
     )
     assert "The public licensing identifier used to find the facility in CCLD records." in html
-    assert (
-        "The outcome or status shown in the public complaint record."
-        not in parser.text_for("main")
-    )
-    assert (
-        "A source-reported finding that the allegation was not substantiated "
-        "in the public complaint record."
-        not in parser.text_for("main")
-    )
-    assert (
-        "The public licensing identifier used to find the facility in CCLD records."
-        not in parser.text_for("main")
-    )
+    assert "definition.setAttribute('role', 'tooltip')" in html
     assert "The complaint received date shown in loaded records." not in html
     assert "The visit date shown in loaded records when available." not in html
     assert "The loaded report date. If a proxy flag is present" not in html

@@ -169,6 +169,7 @@ def render_page_shell(
     </div>
   </main>
 {footer_markup}
+{INLINE_GLOSSARY_SCRIPT}
 </body>
 </html>
 """
@@ -182,6 +183,19 @@ def render_document_head(*, title: str, styles: str | None = None) -> str:
   <link rel="icon" href="{FAVICON_PATH}" sizes="any" type="image/x-icon">
   <title>{html.escape(title)}</title>{style_markup}
 </head>"""
+
+
+def render_inline_glossary_term(term: str, definition: str, term_id: str) -> str:
+    """Render the governed inline glossary pattern with its accessible tooltip."""
+    escaped_term = html.escape(term)
+    escaped_definition = html.escape(definition, quote=True)
+    escaped_term_id = html.escape(term_id, quote=True)
+    return (
+        f'<dfn class="inline-glossary-term" tabindex="0" role="term" '
+        f'aria-description="{escaped_definition}" '
+        f'title="{escaped_definition}" data-definition="{escaped_definition}" '
+        f'data-term-id="{escaped_term_id}">{escaped_term}</dfn>'
+    )
 
 
 def _civic_ledger_header(links: str, runtime_mode: str, badge_class: str) -> str:
@@ -387,6 +401,125 @@ def _runtime_mode_label() -> str:
   if retrieval_enabled == "enabled" and raw_dir:
     return "Live public CCLD"
   return "Review aids only"
+
+
+INLINE_GLOSSARY_SCRIPT = """<script>
+(function () {
+  'use strict';
+  var viewportPadding = 8;
+  var triggerGap = 8;
+
+  function definitionFor(term) {
+    var sibling = term.nextElementSibling;
+    if (sibling && sibling.classList.contains('inline-glossary-definition')) {
+      return sibling;
+    }
+    var definitionId = term.getAttribute('aria-describedby');
+    return definitionId ? document.getElementById(definitionId) : null;
+  }
+
+  function createDefinitions() {
+    document.querySelectorAll('.inline-glossary-term').forEach(function (term) {
+      var definitionText = term.getAttribute('data-definition');
+      var termId = term.getAttribute('data-term-id');
+      if (!definitionText || !termId || definitionFor(term)) return;
+      var definition = document.createElement('span');
+      definition.className = 'inline-glossary-definition';
+      definition.id = 'inline-glossary-definition-' + termId;
+      definition.setAttribute('role', 'tooltip');
+      definition.textContent = definitionText;
+      document.body.appendChild(definition);
+      term.setAttribute('aria-describedby', definition.id);
+    });
+  }
+
+  function assignUniqueDefinitionIds() {
+    var definitionCounts = {};
+    document.querySelectorAll('.inline-glossary-term').forEach(function (term) {
+      var definition = definitionFor(term);
+      if (!definition || !definition.id) return;
+      var baseId = definition.id;
+      var count = definitionCounts[baseId] || 0;
+      definitionCounts[baseId] = count + 1;
+      if (count > 0) {
+        var uniqueId = baseId + '-' + count;
+        definition.id = uniqueId;
+        term.setAttribute('aria-describedby', uniqueId);
+      }
+    });
+  }
+
+  function hide(term) {
+    var definition = definitionFor(term);
+    term.classList.remove('is-glossary-definition-visible');
+    if (definition) {
+      definition.classList.remove('is-visible');
+      definition.style.left = '';
+      definition.style.maxHeight = '';
+      definition.style.top = '';
+    }
+  }
+
+  function position(term, definition) {
+    var trigger = term.getBoundingClientRect();
+    var popup = definition.getBoundingClientRect();
+    var availableBelow = window.innerHeight - trigger.bottom - triggerGap - viewportPadding;
+    var availableAbove = trigger.top - triggerGap - viewportPadding;
+    var showBelow = availableBelow >= availableAbove;
+    var availableHeight = Math.max(0, showBelow ? availableBelow : availableAbove);
+    definition.style.maxHeight = availableHeight + 'px';
+    popup = definition.getBoundingClientRect();
+    var left = Math.min(
+      Math.max(trigger.left, viewportPadding),
+      Math.max(viewportPadding, window.innerWidth - popup.width - viewportPadding)
+    );
+    definition.style.left = left + 'px';
+    definition.style.top = (showBelow ? trigger.bottom + triggerGap : trigger.top - popup.height - triggerGap) + 'px';
+  }
+
+  function show(term) {
+    var definition = definitionFor(term);
+    if (!definition) return;
+    document.querySelectorAll('.inline-glossary-term.is-glossary-definition-visible').forEach(function (other) {
+      if (other !== term) hide(other);
+    });
+    term.removeAttribute('data-glossary-dismissed');
+    term.classList.add('is-glossary-definition-visible');
+    definition.classList.add('is-visible');
+    position(term, definition);
+  }
+
+  createDefinitions();
+  assignUniqueDefinitionIds();
+  document.querySelectorAll('.inline-glossary-term').forEach(function (term) {
+    term.addEventListener('pointerenter', function () { show(term); });
+    term.addEventListener('pointerleave', function () {
+      if (document.activeElement !== term) hide(term);
+    });
+    term.addEventListener('focusin', function () { show(term); });
+    term.addEventListener('focusout', function () { hide(term); });
+    term.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape') {
+        term.setAttribute('data-glossary-dismissed', 'true');
+        hide(term);
+      }
+    });
+  });
+
+  window.addEventListener('resize', function () {
+    document.querySelectorAll('.inline-glossary-term.is-glossary-definition-visible').forEach(function (term) {
+      var definition = definitionFor(term);
+      if (definition) position(term, definition);
+    });
+  });
+  window.addEventListener('scroll', function () {
+    document.querySelectorAll('.inline-glossary-term.is-glossary-definition-visible').forEach(function (term) {
+      var definition = definitionFor(term);
+      if (definition) position(term, definition);
+    });
+  }, true);
+}());
+</script>"""
 
 
 SHARED_CSS = r"""
@@ -1992,7 +2125,6 @@ SHARED_CSS = r"""
       font-family: inherit;
       font-size: inherit;
       font-weight: inherit;
-      position: relative;
       text-decoration: none;
       text-underline-offset: 0.18em;
     }
@@ -2001,28 +2133,31 @@ SHARED_CSS = r"""
       outline: 2px solid var(--focus);
       outline-offset: 3px;
     }
-    .inline-glossary-definition {
-      display: none;
+    .inline-glossary-anchor {
+      display: inline;
     }
-    .inline-glossary-term:hover::after,
-    .inline-glossary-term:focus::after {
+    .inline-glossary-definition {
       background: #ffffff;
       border: 1px solid var(--line);
       border-radius: 6px;
       box-shadow: var(--shadow-strong);
       color: var(--ink);
-      content: attr(data-definition);
+      display: block;
       font-size: 0.86rem;
       font-weight: 600;
-      left: 0;
       line-height: 1.35;
-      max-width: min(22rem, 80vw);
+      max-width: min(22rem, calc(100vw - 1rem));
+      overflow-y: auto;
       padding: 0.55rem 0.65rem;
-      position: absolute;
+      pointer-events: none;
+      position: fixed;
       text-transform: none;
-      top: 1.5em;
+      visibility: hidden;
       width: max-content;
-      z-index: 20;
+      z-index: 2;
+    }
+    .inline-glossary-definition.is-visible {
+      visibility: visible;
     }
     .why-flagged-panel {
       background: #fffaf0;
