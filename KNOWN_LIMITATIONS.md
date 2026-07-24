@@ -118,9 +118,10 @@
   investigation-findings wording with deterministic activity cues and parseable
   numeric dates. Unsupported or malformed wording remains null with explicit
   extraction audit status.
-- Complaint-report facility address and city elements can be present but blank;
-  the extractor preserves that distinction in audit evidence, but canonical
-  storage allocation remains deferred.
+- Complaint-report facility address and city elements can be present but blank.
+  ADR-0018 retains those observations as source-document-linked extraction-audit
+  evidence only; they have no normalized or canonical storage destination and
+  cannot alter current-reference facility identity.
 - Existing hosted PostgreSQL source-derived rows do not change when extractor
   or allocation code changes. Regeneration and reimport are required. The
   controlled importer is idempotent and preserves source traceability and

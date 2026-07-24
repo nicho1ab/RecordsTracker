@@ -128,9 +128,9 @@ The generated audit under `data/processed/source-to-screen-audit/` is the author
 | `data.facility.facility_fixture_chhs_facility_master_tiny.y` | facility | CSV header: y | `not allocated` | not displayed | `INTENTIONALLY_INTERNAL` | P2 |
 | `data.facility.facility_reference.closed_date_allocation_gap` | facility | Closed Date / closed_date | `not allocated` | /ccld/facilities/detail | `NOT_APPLICABLE` | P2 |
 | `data.facility.facility_signal.blank_to_zero_risk` | facility | _safe_int and _count_list_values | `not allocated` | /ccld/facilities/detail | `UNEXPLAINED_BLANK` | P0 |
-| `data.facility.raw_complaint_report.facility_address` | facility | ADDRESS | `not allocated` | not displayed | `UNEXPLAINED_BLANK` | P1 |
+| `data.facility.raw_complaint_report.facility_address` | facility | ADDRESS | `not allocated` | not displayed | `NOT_APPLICABLE` | P2 |
 | `data.facility.raw_complaint_report.facility_capacity` | facility | allowlisted raw label pattern: facility_capacity | `facilities.capacity` | not displayed | `NOT_APPLICABLE` | P2 |
-| `data.facility.raw_complaint_report.facility_city` | facility | CITY | `not allocated` | not displayed | `UNEXPLAINED_BLANK` | P1 |
+| `data.facility.raw_complaint_report.facility_city` | facility | CITY | `not allocated` | not displayed | `NOT_APPLICABLE` | P2 |
 | `data.facility.raw_complaint_report.facility_contact` | facility | TELEPHONE | `complaints.complaint_report_contact` | /reviewer/records/detail historical complaint-report information | `NOT_APPLICABLE` | P2 |
 | `data.facility.raw_complaint_report.facility_license_status` | facility | LICENSE STATUS | `not allocated` | not displayed | `SOURCE_NOT_PROVIDED` | P2 |
 | `data.facility.raw_complaint_report.facility_type` | facility | FACILITY TYPE | `facilities.facility_type` | /reviewer/records/detail; /ccld/facilities/detail | `NOT_APPLICABLE` | P2 |
@@ -170,7 +170,7 @@ The generated audit under `data/processed/source-to-screen-audit/` is the author
 
 The tracked CSV records source section and label identity, extraction and normalization fields, canonical allocation, PostgreSQL and read-model state, complaint and Facility Overview rendering state, presentation tier, required action, and safe rationale. It never records source values.
 
-Issue #450 renders the four Issue #447 canonically allocated historical complaint observations on complaint detail only: agency name, ordered deficiencies, bounded investigation findings narrative, and historical complaint-report contact. Their CSV rows are `rendered` and `present_and_populated`; no queue, Facility Overview, current-reference, or reviewer-created-state field is added. Complaint-report address and city remain `present_blank` and unallocated under Issue #576.
+Issue #450 renders the four Issue #447 canonically allocated historical complaint observations on complaint detail only: agency name, ordered deficiencies, bounded investigation findings narrative, and historical complaint-report contact. Their CSV rows are `rendered` and `present_and_populated`; no queue, Facility Overview, current-reference, or reviewer-created-state field is added. Under ADR-0018, complaint-report address and city retain `observed_blank` source-state evidence but are an accepted audit-only, unallocated, and unrendered disposition.
 
 ## Contract coverage projection
 

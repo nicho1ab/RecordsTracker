@@ -609,10 +609,14 @@ parser, additive migration, and preload do not create a canonical bridge into
 SQLite or hosted canonical facility entities.
 
 Issue #447 allocates only the four historical complaint observations above.
-Complaint-report facility address and city retain the present-but-blank audit
-semantics established in issue #446. They have no normalized field or canonical
-storage under issue #447; architectural decision issue #576 owns that separate
-question. Neither field may overwrite accepted current-reference address or city.
+ADR-0018 records the accepted Issue #576 decision for complaint-report facility
+address and city: they remain source-document-linked extraction-audit evidence
+only, with no normalized complaint field, canonical facility field, or
+historical-observation entity. Their populated, blank, absent, unavailable,
+unsupported, and extraction-failed states remain distinct where governed audit
+evidence establishes them. Neither field participates in current-reference
+selection or may overwrite, supplement, or silently replace accepted
+current-reference address or city.
 
 Issue #450 presents the four allocated observations only in complaint-detail
 historical complaint-report information: agency name identifies the report
@@ -623,9 +627,14 @@ deficiencies are an ordered list without sorting, deduplication, or substitution
 with allegations, citations, findings, dispositions, or Plan of Correction text.
 These presentation facts do not add an export, current-reference, Facility
 Overview, queue, or reviewer-created-state field. Historical complaint-report
-address and city remain unallocated `present_blank` observations under #576;
+address and city remain unallocated audit-only observations under ADR-0018;
 current-reference address and city use their own governed availability state and
-are never copied into historical observations.
+are never copied into historical observations. Future canonical storage requires
+populated governed evidence, approved reviewer comparison value, testable
+temporal and multiplicity semantics, deterministic import identity,
+null-preserving blank protection, conflict retention, preserved-artifact replay,
+SQLite/PostgreSQL parity, a source-to-screen contract, and privacy/retention
+review.
 
 For the four issue #447 complaint observations, one stable complaint record is
 the temporal owner because it is already linked to exactly one retained source

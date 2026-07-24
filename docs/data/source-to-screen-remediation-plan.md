@@ -138,8 +138,6 @@ Validation:
 Related stable gaps:
 
 - `gap.data.facility.facility_signal.blank_to_zero_risk.unexplained_blank`
-- `gap.data.facility.raw_complaint_report.facility_address.unexplained_blank`
-- `gap.data.facility.raw_complaint_report.facility_city.unexplained_blank`
 
 ## P1: Complete reviewer-relevant complaint detail coverage
 
@@ -297,8 +295,6 @@ Related stable gaps:
 - `gap.data.facility.facility_fixture_chhs_facility_master_tiny.x.intentionally_internal`
 - `gap.data.facility.facility_fixture_chhs_facility_master_tiny.y.intentionally_internal`
 - `gap.data.facility.facility_signal.blank_to_zero_risk.unexplained_blank`
-- `gap.data.facility.raw_complaint_report.facility_address.unexplained_blank`
-- `gap.data.facility.raw_complaint_report.facility_city.unexplained_blank`
 - `gap.data.facility.raw_complaint_report.facility_contact.ui_display_omission`
 - `gap.data.shared.extraction_audit.audit_id.intentionally_internal`
 - `gap.data.shared.extraction_audit.confidence.intentionally_internal`
