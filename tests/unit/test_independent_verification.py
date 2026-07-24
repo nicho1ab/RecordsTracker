@@ -90,6 +90,36 @@ def _valid_body() -> str:
 """
 
 
+def _governed_summary_body() -> str:
+    summary = (
+        "- adds objective independent verification for governing issues, PR evidence, "
+        "and governed-boundary disclosures"
+    )
+    return f"""## Summary
+{summary}
+
+## Required checks
+- validate
+- docs-check
+- fixtures
+- security
+
+## Verification behavior
+- identifies PRs without a governing issue
+- requires disclosure when governed workflow boundaries change
+
+## Boundaries
+- no branch-protection or ruleset change
+- no required-check rename or removal
+- no autonomous approval or merge
+
+## Validation
+- focused tests passed
+
+Refs #531
+"""
+
+
 def test_valid_evidence_passes_for_required_workflow_change() -> None:
     verification = _load_module()
 
@@ -106,6 +136,25 @@ def test_missing_governing_issue_fails_closed() -> None:
     )
 
     assert "missing governing issue reference" in violations
+
+
+def test_governed_summary_passes_for_required_workflow_change() -> None:
+    verification = _load_module()
+
+    assert verification.find_pr_evidence_violations(
+        _governed_summary_body(), [".github/workflows/ci.yml"]
+    ) == []
+
+
+def test_governed_summary_requires_workflow_disclosure_rule() -> None:
+    verification = _load_module()
+    body = _governed_summary_body().replace(
+        "- requires disclosure when governed workflow boundaries change\n", ""
+    )
+
+    violations = verification.find_pr_evidence_violations(body, [".github/workflows/ci.yml"])
+
+    assert "missing governed workflow-boundary disclosure rule" in violations
 
 
 def test_changed_governed_boundary_cannot_claim_no_change() -> None:

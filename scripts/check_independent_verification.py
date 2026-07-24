@@ -42,6 +42,14 @@ REQUIRED_BOUNDARIES = (
     "Tests or checks weakened to obtain passage",
 )
 
+GOVERNED_SUMMARY_SECTIONS = (
+    "Summary",
+    "Required checks",
+    "Verification behavior",
+    "Boundaries",
+    "Validation",
+)
+
 BOUNDARY_PATH_PREFIXES: dict[str, tuple[str, ...]] = {
     "Schemas and migrations": ("migrations/", "schemas/", "DATA_CONTRACT.md"),
     "Ingestion and source-connector contracts": (
@@ -134,6 +142,9 @@ def changed_governed_boundaries(changed_files: Iterable[str]) -> dict[str, list[
 
 def find_pr_evidence_violations(body: str, changed_files: Iterable[str]) -> list[str]:
     """Validate the PR evidence that is reliable to evaluate mechanically."""
+    if _is_governed_summary(body):
+        return _find_governed_summary_violations(body, changed_files)
+
     violations: list[str] = []
     governing_section = _markdown_section(body, "Governing issue and intended outcome")
     if not _field_value(governing_section, "Governing issue") or not re.search(
@@ -180,6 +191,46 @@ def find_pr_evidence_violations(body: str, changed_files: Iterable[str]) -> list
             violations.append(
                 "Required GitHub workflows and checks: changes require Concern - review required"
             )
+    return violations
+
+
+def _is_governed_summary(body: str) -> bool:
+    return all(_markdown_section(body, heading) for heading in GOVERNED_SUMMARY_SECTIONS)
+
+
+def _find_governed_summary_violations(
+    body: str, changed_files: Iterable[str]
+) -> list[str]:
+    """Validate the compact, governed draft-PR evidence format.
+
+    The format intentionally remains narrower than the full template, but it
+    still requires an issue reference, verification evidence, and explicit
+    statements about the controls that automation cannot change.
+    """
+    violations: list[str] = []
+    if not re.search(r"(?mi)^refs\s+#\d+\b", body):
+        violations.append("missing governing issue reference")
+    for heading in GOVERNED_SUMMARY_SECTIONS:
+        if not _meaningful(_markdown_section(body, heading)):
+            violations.append(f"missing governed-summary section: {heading}")
+
+    verification = _markdown_section(body, "Verification behavior")
+    if "requires disclosure when governed workflow boundaries change" not in verification:
+        violations.append("missing governed workflow-boundary disclosure rule")
+
+    boundaries = _markdown_section(body, "Boundaries")
+    for statement in (
+        "no branch-protection or ruleset change",
+        "no required-check rename or removal",
+        "no autonomous approval or merge",
+    ):
+        if statement not in boundaries:
+            violations.append(f"missing governed boundary statement: {statement}")
+
+    if ".github/workflows/" in "\n".join(changed_files) and (
+        "requires disclosure when governed workflow boundaries change" not in verification
+    ):
+        violations.append("required workflow change lacks explicit disclosure rule")
     return violations
 
 
