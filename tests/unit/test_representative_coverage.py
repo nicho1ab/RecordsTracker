@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime
 from typing import Any
 
@@ -66,6 +67,8 @@ def test_empty_database_is_not_ready_and_read_only() -> None:
 
     assert report["generated_at"] == "2026-07-11T12:00:00+00:00"
     assert report["representative_coverage_status"]["status"] == "not_ready"
+    assert report["complaint_coverage_status"]["status"] == "not_ready"
+    assert report["facility_reference_coverage_status"]["status"] == "not_ready"
     assert report["facility_reference"]["current_hosted_row_count"] == 0
     assert report["complaints"]["current_hosted_row_count"] == 0
     assert before_counts == after_counts == {
@@ -106,6 +109,13 @@ def test_fixture_only_rows_are_classified_and_not_representative() -> None:
     assert report["complaints"]["provenance_counts"]["fixture_demo_test"] == 1
     assert report["facility_reference"]["eligible_representative_row_count"] == 0
     assert report["complaints"]["eligible_representative_complaint_count"] == 0
+    assert report["complaint_coverage_status"]["warnings"] == (
+        "fixture/demo/test complaint rows are loaded but excluded from representative counts",
+    )
+    assert report["facility_reference_coverage_status"]["warnings"] == (
+        "fixture/demo/test facility-reference rows are loaded but excluded from "
+        "representative counts",
+    )
 
 
 def test_fixture_mock_retrieval_rows_are_excluded_from_representative_counts() -> None:
@@ -153,6 +163,10 @@ def test_unknown_provenance_is_not_candidate_even_with_real_facilities() -> None
     assert report["representative_coverage_status"]["status"] == "partial"
     assert report["complaints"]["provenance_counts"]["unknown"] == 1
     assert report["complaints"]["eligible_representative_complaint_count"] == 0
+    assert report["complaint_coverage_status"]["status"] == "not_ready"
+    assert "some loaded complaint rows have unknown provenance" in report[
+        "complaint_coverage_status"
+    ]["blockers"]
     assert "some loaded rows have unknown provenance" in report[
         "representative_coverage_status"
     ]["blockers"]
@@ -224,7 +238,15 @@ def test_real_public_facilities_and_traceable_complaint_are_candidate() -> None:
         report = build_representative_coverage_report(connection)
 
     assert report["representative_coverage_status"]["status"] == "candidate"
+    assert report["complaint_coverage_status"]["status"] == "candidate"
+    assert report["facility_reference_coverage_status"]["status"] == "candidate"
     assert "validated_status_rule" in report["representative_coverage_status"]
+    assert "does not mark complaint coverage as validated" in report[
+        "complaint_coverage_status"
+    ]["validated_status_rule"]
+    assert "does not mark facility-reference coverage as validated" in report[
+        "facility_reference_coverage_status"
+    ]["validated_status_rule"]
     assert report["facility_reference"]["eligible_distinct_facility_number_count"] == 2
     assert report["facility_reference"]["eligible_facility_type_count"] == 2
     assert report["complaints"]["eligible_representative_complaint_count"] == 1
@@ -232,6 +254,56 @@ def test_real_public_facilities_and_traceable_complaint_are_candidate() -> None:
     assert report["complaints"]["source_document_linkage"]["exact_match_count"] == 1
     assert report["complaints"]["source_document_linked_complaint_count"] == 1
     assert "displayable_row_count" not in report["complaints"]
+
+
+def test_complaint_candidate_is_separate_from_unknown_facility_provenance() -> None:
+    with _connection(_engine()) as connection:
+        _insert_real_facilities(connection)
+        _insert_facility_reference(
+            connection,
+            facility_number="333333333",
+            facility_type="Child Care Center",
+            source_resource_id="unverified-facility-resource",
+            source_resource_name="Unverified facility reference",
+            source_dataset_url="https://example.invalid/facilities",
+        )
+        _insert_live_batch_and_job(connection)
+        _insert_source_document(connection, facility_number="111111111", report_index="1")
+        _insert_complaint(connection, facility_number="111111111", report_index="1")
+
+        report = build_representative_coverage_report(connection)
+
+    assert report["complaint_coverage_status"]["status"] == "candidate"
+    assert report["facility_reference_coverage_status"]["status"] == "partial"
+    assert "some loaded facility-reference rows have unknown provenance" in report[
+        "facility_reference_coverage_status"
+    ]["blockers"]
+    assert report["representative_coverage_status"]["status"] == "partial"
+    assert "some loaded rows have unknown provenance" in report[
+        "representative_coverage_status"
+    ]["blockers"]
+
+
+def test_facility_threshold_gap_is_separate_from_complaint_candidate() -> None:
+    with _connection(_engine()) as connection:
+        _insert_facility_reference(
+            connection,
+            facility_number="111111111",
+            facility_type="Child Care Center",
+        )
+        _insert_live_batch_and_job(connection)
+        _insert_source_document(connection, facility_number="111111111", report_index="1")
+        _insert_complaint(connection, facility_number="111111111", report_index="1")
+
+        report = build_representative_coverage_report(connection)
+
+    assert report["complaint_coverage_status"]["status"] == "candidate"
+    assert report["facility_reference_coverage_status"]["status"] == "partial"
+    assert report["facility_reference_coverage_status"]["blockers"] == (
+        "fewer real/public-source facilities than the configured threshold",
+        "fewer real/public-source facility types than the configured threshold",
+    )
+    assert report["representative_coverage_status"]["status"] == "partial"
 
 
 def test_repair_live_retrieval_provenance_relinks_reused_fixture_batch() -> None:
@@ -304,6 +376,7 @@ def test_incomplete_complaint_traceability_keeps_real_rows_partial() -> None:
     assert report["representative_coverage_status"]["status"] == "partial"
     assert report["complaints"]["traceability_complete_complaint_count"] == 0
     assert report["complaints"]["traceability_incomplete_complaint_count"] == 1
+    assert report["complaint_coverage_status"]["status"] == "partial"
     assert "not all eligible real/public-source complaints are traceability-complete" in report[
         "representative_coverage_status"
     ]["blockers"]
@@ -321,6 +394,10 @@ def test_missing_source_document_link_blocks_candidate() -> None:
     assert report["representative_coverage_status"]["status"] == "partial"
     assert linkage["missing_link_count"] == 1
     assert linkage["linked_count"] == 0
+    assert report["complaint_coverage_status"]["status"] == "partial"
+    assert "source-document linkage is missing or conflicting" in report[
+        "complaint_coverage_status"
+    ]["blockers"]
     assert "source-document linkage is missing or conflicting" in report[
         "representative_coverage_status"
     ]["blockers"]
@@ -349,6 +426,10 @@ def test_conflicting_source_document_fields_are_reported() -> None:
         "raw_sha256": 1,
         "source_url": 1,
     }
+    assert report["complaint_coverage_status"]["status"] == "partial"
+    assert "source-document linkage is missing or conflicting" in report[
+        "complaint_coverage_status"
+    ]["blockers"]
 
 
 def test_duplicate_stable_identities_are_reported_when_database_contains_them() -> None:
@@ -376,6 +457,10 @@ def test_duplicate_stable_identities_are_reported_when_database_contains_them() 
 
     assert report["representative_coverage_status"]["status"] == "partial"
     assert report["complaints"]["duplicate_stable_identity_rows"] == 1
+    assert report["complaint_coverage_status"]["status"] == "partial"
+    assert "duplicate source-derived stable identities are present" in report[
+        "complaint_coverage_status"
+    ]["blockers"]
     assert "duplicate source-derived stable identities are present" in report[
         "representative_coverage_status"
     ]["blockers"]
@@ -449,6 +534,11 @@ def test_report_ordering_is_deterministic() -> None:
         )
 
     assert first == second
+    assert json.dumps(first, sort_keys=True) == json.dumps(second, sort_keys=True)
+    assert first["complaint_coverage_status"] == second["complaint_coverage_status"]
+    assert first["facility_reference_coverage_status"] == second[
+        "facility_reference_coverage_status"
+    ]
     assert [item["facility_type"] for item in first["facility_reference"]["facility_types"]] == [
         "Child Care Center",
         "Foster Family Agency",

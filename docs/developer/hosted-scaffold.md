@@ -920,11 +920,16 @@ documents loaded facility types, source files, source URLs, snapshot/retrieval
 dates, persisted provenance classification, traceability completeness,
 source-document linkage, duplicate source-derived identity checks, import-batch
 differences, retrieval failure/rejection/skipped/duplicate metadata, and
-not-ready/partial/candidate status. It does not run public web requests, import
-rows, mutate reviewer-created state, or treat PostgreSQL rows alone as
-validated production/QNAP coverage. Clearly identified fixture/demo/test rows
-and unknown-provenance rows are reported separately and excluded from
-representative counts.
+not-ready/partial/candidate status. `representative_coverage_status` remains
+the conservative overall result; additive complaint-specific and
+facility-reference-specific status objects provide their own deterministic
+blockers and warnings. Facility-reference provenance gaps remain visible in the
+facility-reference and overall results without alone making complaint coverage
+partial. It does not run public web requests, import rows, mutate
+reviewer-created state, or treat PostgreSQL rows alone as validated
+production/QNAP coverage. Clearly identified fixture/demo/test rows and
+unknown-provenance rows are reported separately and excluded from representative
+counts.
 
 If older retrieval rows were imported under a reused seeded/fixture import batch,
 dry-run the bounded provenance repair before re-running coverage:
@@ -1186,9 +1191,9 @@ provenance classification, repair of rows proven by persisted live retrieval
 metadata, candidate versus partial status, source-derived complaint traceability
 counts, source-document exact/missing/conflicting linkage, duplicate
 source-derived identity checks, retrieval failure/rejection/skipped/duplicate
-count separation, import-batch declared-minus-current differences,
-deterministic ordering, and read-only behavior without live CCLD or GitHub
-calls.
+count separation, separated complaint and facility-reference status
+reconciliation, import-batch declared-minus-current differences, deterministic
+ordering, and read-only behavior without live CCLD or GitHub calls.
 The reset/reload dry-run tests verify local/test authenticated planning payloads,
 seeded import batch, source-derived record, reviewer-created scaffold, and audit
 scaffold impact counts, reviewer-created state handling options, invalid mode rejection,
