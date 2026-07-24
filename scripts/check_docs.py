@@ -231,23 +231,12 @@ REQUIRED = [
 
 REQUIRED_CONTENT = {
     ".github/copilot-instructions.md": [
+        "Task-relevant context",
+        "durable task specification",
+        "actually read",
         "Required task handoff",
-        "Summary of changes",
-        "Validation results",
-        "Exact git commit and push commands",
-        "PR title",
-        "PR body",
+        "Implementation and RL-PREPARE handoffs are concise",
         "Required GitHub checks",
-        "Post-merge cleanup commands",
-        "Recommended next branch name",
-        "Next Copilot prompt",
-        "Next task selection",
-        "Do not repeatedly recommend documentation-only work",
-        "select the next product or technical milestone from `ROADMAP.md`",
-        "Handoff formatting rules",
-        "copy/paste-safe",
-        "GitHub PR title/body must be separate from PowerShell commands",
-        "Run only after squash merge is complete",
         "validate",
         "docs-check",
         "fixtures",
@@ -414,54 +403,15 @@ REQUIRED_CONTENT = {
     ],
     "docs/developer/copilot-workflow.md": [
         "Required completion handoff",
-        "Summary of changes",
-        "Validation results",
-        "Exact git commit and push commands",
-        "PR title",
-        "PR body",
-        "Required GitHub checks",
-        "Post-merge cleanup commands",
-        "Recommended next branch name",
-        "Next Copilot prompt",
-        "Next task selection",
-        "Do not repeatedly recommend documentation-only work",
-        "select the next product or technical milestone from `ROADMAP.md`",
-        "Handoff formatting rules",
-        "copy/paste-safe",
-        "GitHub PR title/body must be separate from PowerShell commands",
-        "Run only after squash merge is complete",
-        "branch protection rule or repository ruleset",
+        "Implementation and RL-PREPARE handoffs contain only",
+        "delta-only",
+        "continuation never grants additional authority implicitly",
+        "focused validation",
+        "Standard PR validation",
         "validate",
         "docs-check",
         "fixtures",
         "security",
-        "gh --version",
-        "gh auth status",
-        "Next-prompt quality standard",
-        "current project phase",
-        "latest merged PR",
-        "current roadmap priorities",
-        "accepted ADRs",
-        "deferred decisions",
-        "non-negotiable safeguards",
-        "highest-leverage next milestone",
-        "Prompt-mode guidance",
-        "`analysis-only`",
-        "`governance-change`",
-        "`architecture decision`",
-        "`implementation`",
-        "`prototype/spike`",
-        "`validation-hardening`",
-        "Task mode",
-        "Scope boundaries",
-        "Files to read",
-        "What not to do",
-        "Focused validation",
-        "Standard PR validation",
-        "Remote required checks",
-        "PR body requirements",
-        "Final handoff requirements",
-        "Copilot should not include a recommended next branch command unless the user asks for one",
     ],
     "docs/developer/release-process.md": [
         "Task completion checklist",
@@ -844,6 +794,59 @@ REQUIRED_CONTENT = {
     ],
 }
 
+CODEX_WORKFLOW_REQUIRED_MARKERS = {
+    "AGENTS.md": (
+        "Use task-relevant context by default.",
+        "durable task specification",
+        "governing files actually read",
+        "shared primary-",
+        "report only unresolved blockers",
+    ),
+    ".github/copilot-instructions.md": (
+        "Task-relevant context",
+        "Implementation and RL-PREPARE handoffs are concise",
+        "next-task suggestion never grants",
+        "shared primary-repository",
+        "Resolve documented prerequisites",
+    ),
+    "CONTRIBUTING.md": (
+        "Use focused local validation by default:",
+        "repository rule that specifically",
+        "verified primary-repository",
+        "a missing local `.venv` is not itself a blocker",
+    ),
+    "docs/developer/codex-workflow.md": (
+        "This is user guidance, not a repository-enforced model",
+        "The compact template below separates stable defaults",
+        "## Validation environment resolution",
+        "Secondary worktrees are not expected to contain their own virtual environment.",
+        "Resolve the verified Python executable from the authoritative primary repository",
+        "the working directory set to the current issue worktree",
+        "the verified primary-repository Python executable",
+        "Do not first attempt:",
+        "a worktree-local `.venv`",
+        "Report an environment blocker only after:",
+        "the exact command and error were captured.",
+        "## Known-prerequisite resolution",
+        "Resolve documented, task-relevant prerequisites",
+        "primary-repository virtual-environment use from secondary worktrees",
+        "Do not perform broad speculative prerequisite discovery.",
+        "continuation never expands authorization",
+        "Investigation and implementation may be combined",
+        "Use a separate investigation phase when root cause is unknown",
+        "repository governance specifically requires it",
+    ),
+    "docs/developer/copilot-workflow.md": (
+        "durable task specification",
+        "delta-only",
+        "continuation never grants additional authority implicitly.",
+    ),
+    "TESTING_STRATEGY.md": (
+        "when repository governance specifically requires it",
+        "when focused or CI failures require broader investigation.",
+    ),
+}
+
 FORBIDDEN_CONTENT = {
     "CHANGELOG.md": [
         "Added data contract, connector contract, testing strategy, "
@@ -934,6 +937,20 @@ def find_missing_required_content(root: Path = Path(".")) -> list[str]:
             if phrase not in content:
                 missing.append(f"{relative_path}: {phrase}")
     return missing
+
+
+def find_codex_workflow_contract_violations(root: Path = Path(".")) -> list[str]:
+    violations = []
+    for relative_path, markers in CODEX_WORKFLOW_REQUIRED_MARKERS.items():
+        path = root / relative_path
+        if not path.exists():
+            violations.append(f"missing Codex workflow document: {relative_path}")
+            continue
+        content = path.read_text(encoding="utf-8")
+        for marker in markers:
+            if marker not in content:
+                violations.append(f"{relative_path}: missing Codex workflow marker: {marker}")
+    return violations
 
 
 def find_pull_request_template_contract_violations(
@@ -1315,6 +1332,12 @@ def main() -> None:
     if missing_content:
         raise SystemExit(
             "Missing required documentation content: " + "; ".join(missing_content)
+        )
+
+    codex_workflow_violations = find_codex_workflow_contract_violations()
+    if codex_workflow_violations:
+        raise SystemExit(
+            "Invalid Codex workflow contract: " + "; ".join(codex_workflow_violations)
         )
 
     pull_request_template_violations = find_pull_request_template_contract_violations()

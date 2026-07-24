@@ -25,23 +25,19 @@ report after each phase. Continuous execution must be explicitly authorized
 with the exact sequence. RL-MERGE always requires separate current-task user
 authorization. No session may continue into another issue or roadmap task.
 
-## Required context files
+## Task-relevant context
 
-Before making changes, read and follow:
+Treat the current complete GitHub issue as the durable task specification.
+Before changing behavior, read `AGENTS.md`, this file, and the task-specific
+governing documents, implementation, and tests that materially apply. Do not
+require every ADR, design record, source contract, deployment document, or
+project-history record unless the task reaches that area. List governing files
+actually read, and report only conflicts or material findings.
 
-- `PROJECT_CHARTER.md`
-- `DECISIONS.md`
-- `DATA_CONTRACT.md`
-- `SOURCE_CONNECTOR_CONTRACT.md`
-- `TESTING_STRATEGY.md`
-- `DOCUMENTATION_STRATEGY.md`
-- `DESIGN_AND_USABILITY.md`
-- `docs/product/records-tracker-product-ux-lead-charter.md`
-- `docs/planning/records-tracker-ui-ux-data-completeness-remediation-plan.md`
-- `docs/product/records-tracker-approved-design-decisions.md`
-- `ACCESSIBILITY_REQUIREMENTS.md`
-- `SECURITY_AND_PRIVACY.md`
-- `KNOWN_LIMITATIONS.md`
+For Python validation, follow the documented shared primary-repository runtime
+convention for secondary worktrees. Resolve documented prerequisites before
+reporting a blocker; do not invent a local environment or speculative executable
+variant.
 
 ## Hard rules
 
@@ -102,36 +98,17 @@ For every code change:
 
 ## Required task handoff
 
-At the end of every completed task, provide a self-contained handoff that lets
-the user finish the GitHub workflow and start the next Copilot task without
-reconstructing context. Include all of the following:
-
-1. Summary of changes.
-2. Validation results, including commands run and whether each passed.
-3. Exact git commit and push commands when repository lifecycle preparation
-   remains for the user. For push commands, use
-	`git -c gc.auto=0 push -u origin <branch-name>` to avoid auto-gc prompts.
-4. PR title.
-5. PR body, including test results and documentation impact.
-6. Required GitHub checks to wait for before merge.
-7. Post-merge cleanup commands, clearly marked as requiring RL-MERGE or human
-   execution after merge.
-8. Recommended next branch name.
-9. Next Copilot prompt.
-
-If separately granted RL-MERGE successfully completes the squash merge and
-authorized cleanup, provide a concise completion summary instead of manual
-copy/paste commands. Include PR number, validation/check results, merge status,
-current git state, recommended next branch name, and exact next Copilot prompt.
-The recommendation does not authorize beginning that next task. Use the full
-copy/paste-safe handoff when the user still needs to complete any authorized
-GitHub or git workflow step manually.
+Implementation and RL-PREPARE handoffs are concise: outcome; root cause where
+applicable; changed files; focused validation; documentation or governance
+impact; PR number and state when applicable; blockers; and the exact stop
+point. Include a manual command only when an authorized action remains for the
+human; do not reproduce unused commit, push, or PR commands after Codex has
+already completed them. A next-task suggestion never grants that task's
+authority.
 
 Do not start an unattended loop through multiple roadmap tasks after a merge.
-Complete one small task, automate the PR lifecycle with `gh` when available,
-return to updated `main`, then provide the next branch and exact next Copilot
-prompt for the user to approve or send. Continue automatically only when the
-user explicitly requests the next task in the current conversation.
+Continue only when the user explicitly authorizes the next task in the current
+conversation.
 
 Do not include personal paths, usernames, account-specific URLs, private URLs,
 tokens, secrets, or machine-specific details in the handoff. Use placeholders
@@ -145,32 +122,6 @@ merge and tell the user to fix repository protection for `main`.
 These required checks provide broader pre-merge validation for ordinary focused
 changes. Focused local validation does not weaken or replace them, and unrun
 validation must never be presented as passed.
-
-## Handoff formatting rules
-
-All completed-task handoffs must be copy/paste-safe for PowerShell users.
-
-- Commands must be in separate fenced code blocks.
-- Prose must never appear on the same line as a command.
-- GitHub PR title/body must be separate from PowerShell commands.
-- Post-merge cleanup commands must be clearly labeled "Run only after squash merge is complete."
-- The next branch command must not be combined with cleanup commands.
-- Do not concatenate commands together without a semicolon or newline.
-- Prefer one short command block per step.
-- For push commands, use `git -c gc.auto=0 push -u origin <branch-name>` to
-	avoid auto-gc prompts.
-
-## Next task selection
-
-Do not repeatedly recommend documentation-only work in the next Copilot prompt.
-Documentation-only work is appropriate only when documentation is stale,
-validation is failing, governance files are missing, or the user explicitly asks
-for documentation work. Otherwise, select the next product or technical milestone from `ROADMAP.md`.
-
-Prefer feature work that improves ingestion, review usability, extraction
-quality, exports, accessibility validation, or release readiness. The recommended
-next branch and next Copilot prompt must move the project forward on that
-roadmap backlog unless validation failed or documentation is stale.
 
 ## Preferred stack
 

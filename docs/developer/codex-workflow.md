@@ -23,6 +23,16 @@ network_access = false
 
 This lets Codex read and edit the active workspace while keeping network activity, remote access, browser/computer-use, and external tooling out of the default path.
 
+## User guidance for model and reasoning effort
+
+This is user guidance, not a repository-enforced model, model-selector, or
+reasoning-effort capability. Use low effort for mechanical Git, branch,
+pull-request, check-monitoring, and cleanup work; medium for routine bounded
+fixes with known reproduction and scope; high for multi-file, product-sensitive,
+or moderately ambiguous work; and extra-high only for difficult architecture,
+source-authority, data-integrity, security, privacy, schema, ingestion, or
+ambiguous debugging work.
+
 ## Capability model
 
 - **RO — read and report only:** May inspect repository content, issue and PR
@@ -57,6 +67,68 @@ task or conversation.
 
 ## Required task authorization
 
+The compact template below separates stable defaults from task-specific
+authority. It does not grant any capability on its own.
+
+**Stable defaults:** repository; required checks (`validate`, `docs-check`,
+`fixtures`, `security`); no merge by default; human-only QNAP authority; no
+secrets; no browser or network authority unless explicitly granted;
+focused-validation default; and standard phase stop points.
+
+## Validation environment resolution
+
+Secondary worktrees are not expected to contain their own virtual environment.
+
+Before running Python-based validation:
+
+1. Read the repository’s documented validation convention.
+2. Resolve the verified Python executable from the authoritative primary repository or previously verified task evidence.
+3. Confirm that the executable exists and can import the required project dependencies.
+4. Run validation with:
+   - the working directory set to the current issue worktree; and
+   - the verified primary-repository Python executable.
+
+Do not first attempt:
+
+- a worktree-local `.venv`;
+- `python` or `pytest` from PATH;
+- environment creation;
+- dependency installation;
+- speculative executable variants.
+
+When the documented shared runtime is available, use it directly and continue
+without treating its absence from the secondary worktree as a blocker.
+
+Report an environment blocker only after:
+
+- the documented runtime location was inspected;
+- previously verified runtime evidence was checked;
+- the executable was found missing or unusable; and
+- the exact command and error were captured.
+
+## Known-prerequisite resolution
+
+Resolve documented, task-relevant prerequisites before beginning validation or
+implementation. Do not stop or emit an interim blocker for an expected
+condition that has an established repository convention.
+
+Examples include:
+
+- primary-repository virtual-environment use from secondary worktrees;
+- exact required GitHub checks;
+- authoritative main and worktree paths;
+- established documentation-validation commands;
+- human-only QNAP authority.
+
+Do not perform broad speculative prerequisite discovery. Report only unresolved
+prerequisites that prevent authorized work after documented resolution paths have
+been exhausted.
+
+**Task-specific authority:** governing issue; full verified base SHA; branch;
+worktree; granted capabilities; exact phase sequence; allowed and prohibited
+files or boundaries; browser and network allowlists where relevant; validation;
+evidence; final stop point; and explicit RL-MERGE state.
+
 Every task must state:
 
 - task name;
@@ -80,6 +152,23 @@ Every task must state:
 - whether RL-MERGE is granted;
 - exact final stop point; and
 - prohibited actions.
+
+## Durable issues, continuation, and investigation
+
+The current complete GitHub issue is the durable task specification. Prompts
+should point to it instead of reproducing its entire body. Within an already
+authorized task, a continuation prompt preserves authority only when its scope
+is unchanged and states only the new output, failure, correction, or evidence.
+It must restate authorization whenever authority or scope changes; a
+continuation never expands authorization implicitly.
+
+Investigation and implementation may be combined only when the defect is
+reproducible, the affected boundary is known, and the permitted correction is
+clear. Use a separate investigation phase when root cause is unknown, multiple
+systems may be responsible, product or design authority is unresolved, source
+or data-contract authority is unresolved, branch or file overlap is uncertain,
+or implementation could materially affect architecture, security, privacy,
+schemas, ingestion, deployment, or source traceability.
 
 ## Phase transitions
 
@@ -208,8 +297,9 @@ For a focused bug fix or similarly narrow implementation change, Codex should:
 - Run `git diff --check`.
 
 Do not run the complete local suite by default for a focused change. Run it only
-when explicitly requested, for broad or cross-cutting work, for release-level
-validation, or when focused or CI results require broader investigation.
+when explicitly requested, repository governance specifically requires it, for
+broad or cross-cutting work, for release-level validation, or when focused or
+CI results require broader investigation.
 
 For docs-only changes, normally run:
 
