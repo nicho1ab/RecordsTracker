@@ -101,6 +101,16 @@ def test_local_visual_fixture_records_are_absent_from_production_style_context()
         "facility"
     ]
     assert all("facility" not in record for record in visual_records)
+    canonical_facility_id = next(
+        record["facility"]["facility_id"]
+        for record in base_artifact.records
+        if "facility" in record
+    )
+    assert all(
+        record["source_document"]["facility_id"] == canonical_facility_id
+        and record["complaint"]["facility_id"] == canonical_facility_id
+        for record in visual_records
+    )
 
     engine = create_engine(
         "sqlite+pysqlite:///:memory:",

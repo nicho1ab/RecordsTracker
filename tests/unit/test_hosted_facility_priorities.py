@@ -20,6 +20,7 @@ from ccld_complaints.hosted_app.app import (
     _legacy_compare_facilities_redirect_location,
     route_response,
 )
+from ccld_complaints.hosted_app.audit_events import hosted_audit_events
 from ccld_complaints.hosted_app.auth import (
     AuthenticatedActor,
     HostedAccessScope,
@@ -46,6 +47,7 @@ from ccld_complaints.hosted_app.reviewer_created_state import (
 from ccld_complaints.hosted_app.reviewer_ui import (
     LOCAL_REVIEWER_UI_SCOPE,
     REVIEWER_UI_FACILITY_PRIORITIES_PATH,
+    REVIEWER_UI_STATUS_PATH,
     reviewer_ui_context_for_connection,
 )
 from ccld_complaints.hosted_app.seeded_import import (
@@ -455,7 +457,7 @@ def test_facility_intelligence_filters_reconciles_and_preserves_drilldown_contex
     assert "Alpha Center" in html
     assert "Beta Center" not in html
     assert "1 exact contributing complaint" in html
-    assert html.count("Open next complaint") >= 2
+    assert html.count("Review complaint") >= 2
     assert "A-2" not in html
     assert "05/01/2026" in html
     assert "/ccld/facilities/detail?facility_number=100001" in html
@@ -469,12 +471,13 @@ def test_facility_intelligence_filters_reconciles_and_preserves_drilldown_contex
     assert "end_date=2026-05-31" in html
     assert "return_context_origin=facility_intelligence" in html
     assert "Review next" in html
-    assert "Open next complaint" in html
-    assert "Open next complaint source" in html
-    assert "Copy next complaint source URL" in html
-    assert 'aria-label="Next complaint source URL for' in html
+    assert "Review complaint" in html
+    assert "Open source report" in html
+    assert "Copy source report URL" in html
+    assert 'aria-label="Open source report for complaint' in html
     assert 'class="copy-icon-button" type="button"' in html
     assert 'class="copy-text-button"' not in html
+    assert f'>{_source_url("100001", "1").replace("&", "&amp;")}</a>' not in html
     assert "120+ day gap" in html
     assert "Supervision topic" in html
     assert "Source available" in html
@@ -706,13 +709,11 @@ def test_facility_intelligence_binds_source_and_reviewer_actions_to_next_complai
                     "BIND-1",
                     "2026-05-03",
                     "Substantiated",
-                    source_url="https://example.test/source/BIND-1",
                 ),
                 _complaint(
                     "BIND-2",
                     "2026-05-01",
                     "Unsubstantiated",
-                    source_url="https://example.test/source/BIND-2",
                 ),
             ),
         )
@@ -736,13 +737,236 @@ def test_facility_intelligence_binds_source_and_reviewer_actions_to_next_complai
     html = body.decode("utf-8")
     assert status == 200
     assert after == before
-    assert "Next complaint: <strong>BIND-1</strong>" in html
-    assert 'href="https://example.test/source/BIND-1"' in html
-    assert 'data-copy-value="https://example.test/source/BIND-1"' in html
-    assert 'aria-label="Open next complaint source for BIND-1"' in html
-    assert "In review" in html
+    assert "Complaint: <strong>BIND-1</strong>" in html
+    source_url = _source_url("100001", "1").replace("&", "&amp;")
+    assert f'href="{source_url}"' in html
+    assert f'data-copy-value="{source_url}"' in html
+    assert 'aria-label="Open source report for complaint BIND-1"' in html
+    assert 'value="in_review" selected="selected">In review</option>' in html
+    assert 'action="/reviewer/records/status#facility-intelligence-status-feedback"' in html
+    assert "Save status" in html
+    assert "Review complaint" in html
     assert html.index("Source record") < html.index("Reviewer state")
-    assert "https://example.test/source/BIND-2" not in html
+    assert _source_url("100001", "2") not in html
+
+
+def test_facility_intelligence_inline_status_uses_audited_write_and_keeps_page_context() -> None:
+    with _priority_connection() as connection:
+        _insert_facility_bundle(
+            connection,
+            facility_number="100001",
+            facility_name="Status Center",
+            facility_type="Children's Center",
+            county="Kern",
+            complaints=(
+                _complaint("STATUS-1", "2026-05-03", "Substantiated"),
+            ),
+        )
+        context = reviewer_ui_context_for_connection(
+            connection,
+            actor=_actor(roles=("tester_reviewer",)),
+        )
+        before_source_rows = connection.execute(
+            select(hosted_source_derived_records).order_by(
+                hosted_source_derived_records.c.source_record_key
+            )
+        ).mappings().all()
+
+        status, content_type, body = route_response(
+            REVIEWER_UI_STATUS_PATH,
+            method="POST",
+            request_body=urlencode(
+                {
+                    "source_record_key": "complaint:ccld:complaint:STATUS-1",
+                    "reviewer_status": "needs_follow_up",
+                    "return_context_origin": "facility_intelligence",
+                    "finding": "Substantiated",
+                    "sort": "complaint_count",
+                }
+            ).encode("utf-8"),
+            reviewer_ui_context=context,
+        )
+
+        after_source_rows = connection.execute(
+            select(hosted_source_derived_records).order_by(
+                hosted_source_derived_records.c.source_record_key
+            )
+        ).mappings().all()
+        reviewer_states = connection.execute(
+            select(hosted_reviewer_created_state)
+        ).mappings().all()
+        audit_events = connection.execute(select(hosted_audit_events)).mappings().all()
+
+    html = body.decode("utf-8")
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert before_source_rows == after_source_rows
+    assert len(reviewer_states) == 1
+    assert len(audit_events) == 1
+    assert audit_events[0]["source_record_key"] == "complaint:ccld:complaint:STATUS-1"
+    assert reviewer_states[0]["state_payload"]["reviewer_status"] == "needs_follow_up"
+    assert (
+        "Status saved as Needs follow-up. Source-derived complaint records were not changed."
+        in html
+    )
+    assert 'role="status"' in html
+    assert 'value="needs_follow_up" selected="selected">Needs follow-up</option>' in html
+    assert 'name="finding" value="Substantiated"' in html
+    assert 'name="sort" value="complaint_count"' in html
+    assert "Status Center" in html
+
+
+def test_facility_intelligence_inline_status_error_keeps_page_and_does_not_write() -> None:
+    with _priority_connection() as connection:
+        _insert_facility_bundle(
+            connection,
+            facility_number="100001",
+            facility_name="Status Error Center",
+            facility_type="Children's Center",
+            county="Kern",
+            complaints=(
+                _complaint("STATUS-ERROR-1", "2026-05-03", "Substantiated"),
+            ),
+        )
+        context = reviewer_ui_context_for_connection(
+            connection,
+            actor=_actor(roles=("tester_reviewer",)),
+        )
+
+        status, content_type, body = route_response(
+            REVIEWER_UI_STATUS_PATH,
+            method="POST",
+            request_body=urlencode(
+                {
+                    "source_record_key": "complaint:ccld:complaint:STATUS-ERROR-1",
+                    "reviewer_status": "source_checked",
+                    "return_context_origin": "facility_intelligence",
+                }
+            ).encode("utf-8"),
+            reviewer_ui_context=context,
+        )
+
+        reviewer_state_count = connection.execute(
+            select(func.count()).select_from(hosted_reviewer_created_state)
+        ).scalar_one()
+        audit_event_count = connection.execute(
+            select(func.count()).select_from(hosted_audit_events)
+        ).scalar_one()
+
+    html = body.decode("utf-8")
+    assert status == 400
+    assert content_type == "text/html; charset=utf-8"
+    assert reviewer_state_count == 0
+    assert audit_event_count == 0
+    assert "Status Error Center" in html
+    assert 'role="alert"' in html
+    assert (
+        "Reviewer status was not saved. The complaint record and source-derived values "
+        "were not changed."
+    ) in html
+
+
+def test_local_compare_facilities_excludes_visual_only_records_and_opens_complaint() -> None:
+    context = reviewer_ui.build_local_test_reviewer_ui_context()
+    status, content_type, body = route_response(
+        CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH,
+        reviewer_ui_context=context,
+    )
+
+    html = body.decode("utf-8")
+    detail_match = re.search(
+        r'<a class="button button-secondary" href="([^"]+)" '
+        r'aria-label="Review complaint for [^"]+">Review complaint</a>',
+        html,
+    )
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert "rt-src-002" not in html
+    assert "inx=50" not in html
+    assert "inx=3" in html
+    assert len(context.facility_intelligence_excluded_source_record_keys) == 3
+    assert detail_match is not None
+    detail_href = unescape(detail_match.group(1))
+    assert "return_facility_number=157806098" in detail_href
+    assert "return_facility_number=ccld" not in detail_href
+
+    detail_status, detail_content_type, detail_body = route_response(
+        detail_href,
+        reviewer_ui_context=context,
+    )
+    detail_html = detail_body.decode("utf-8")
+    assert detail_status == 200
+    assert detail_content_type == "text/html; charset=utf-8"
+    assert "Complaint overview" in detail_html
+    assert "32-CR-20220407124448" in detail_html
+
+    filtered_status, _filtered_content_type, filtered_body = route_response(
+        (
+            f"{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}"
+            "?start_date=2024-06-01&end_date=2024-06-30"
+        ),
+        reviewer_ui_context=context,
+    )
+    filtered_html = filtered_body.decode("utf-8")
+    assert filtered_status == 200
+    assert "No facilities match these filters" in filtered_html
+    assert "rt-src-002" not in filtered_html
+
+
+@pytest.mark.parametrize(
+    ("mutation", "expected"),
+    (
+        ({}, True),
+        ({"source_traceability": {"report_index": 4}}, False),
+        ({"identity": {"facility_id": "ccld:facility:999999999"}}, False),
+        ({"source_document": {"source_document_id": ""}}, False),
+        (
+            {
+                "source_document": {
+                    "source_url": (
+                        "https://www.ccld.dss.ca.gov/transparencyapi/api/"
+                        "FacilityReports?facNum=157806098"
+                    )
+                }
+            },
+            False,
+        ),
+        (
+            {
+                "source_document": {
+                    "source_url": "https://example.test/FacilityReports?facNum=157806098&inx=3"
+                }
+            },
+            False,
+        ),
+    ),
+)
+def test_facility_intelligence_source_action_requires_proven_report_relationship(
+    mutation: Mapping[str, Mapping[str, Any]],
+    expected: bool,
+) -> None:
+    source_record: dict[str, Any] = {
+        "identity": {"facility_id": "ccld:facility:157806098"},
+        "original_values": {
+            "facility_id": "ccld:facility:157806098",
+            "document_id": "ccld:document:157806098:3",
+        },
+        "source_document": {
+            "source_url": _source_url("157806098", "3"),
+            "source_document_id": "ccld:document:157806098:3",
+            "connector_name": "ccld_facility_reports",
+            "retrieved_at": "2026-07-01T12:00:00+00:00",
+            "raw_sha256": "a" * 64,
+        },
+        "source_traceability": {"report_index": 3},
+    }
+    for key, values in mutation.items():
+        source_record[key] = {**source_record[key], **values}
+
+    result = reviewer_ui._facility_intelligence_source_report_url(source_record)
+    assert bool(result) is expected
+    if expected:
+        assert result == _source_url("157806098", "3")
 
 
 def test_facility_intelligence_distinguishes_verified_zero_and_unavailable_values() -> None:
@@ -1967,6 +2191,12 @@ def _source_record_values(
     original_values: Mapping[str, Any],
     source_record_key: str | None = None,
 ) -> dict[str, Any]:
+    report_index_values = parse_qs(urlsplit(source_url).query).get("inx", [])
+    report_index = (
+        int(report_index_values[0])
+        if len(report_index_values) == 1 and report_index_values[0].isdigit()
+        else None
+    )
     return {
         "source_record_key": source_record_key or f"{entity_type}:{stable_source_id}",
         "entity_type": entity_type,
@@ -1990,6 +2220,7 @@ def _source_record_values(
             "connector_version": "fixture-priority",
             "retrieved_at": "2026-07-01T12:00:00+00:00",
             "source_artifact_identity": f"fixture-artifact:{import_batch_id}",
+            **({"report_index": report_index} if report_index is not None else {}),
         },
     }
 

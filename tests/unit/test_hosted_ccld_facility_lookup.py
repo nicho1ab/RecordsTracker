@@ -2110,9 +2110,10 @@ def test_ccld_facility_review_intelligence_dashboard_filters_sorts_and_links(
     assert "Open Facility Overview" in html
     assert f"{CCLD_FACILITY_REVIEW_HUB_PATH}?facility_number=157806098" in html
     assert "Open filtered complaint queue" not in html
-    assert "Open next complaint" in html
-    assert "Open next complaint source" in html
-    assert "Copy next complaint source URL" in html
+    assert "Review complaint" in html
+    assert "Open source report" in html
+    assert "Copy source report URL" in html
+    assert "Save status" in html
     assert "return_context_origin=facility_intelligence" in html
     link_rule = re.search(r"\n    a \{(?P<rules>.*?)\n    \}", html, flags=re.DOTALL)
     assert link_rule is not None

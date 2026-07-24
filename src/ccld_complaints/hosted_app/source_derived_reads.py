@@ -510,6 +510,7 @@ def list_facility_intelligence_page(
     import_batch_ids: tuple[str, ...] | None = None,
     import_batch_query: Select[Any] | CompoundSelect[Any] | None = None,
     seek: FacilityIntelligenceSeek | None = None,
+    excluded_source_record_keys: tuple[str, ...] = (),
 ) -> FacilityIntelligencePageRead:
     """Read one bounded facility page and only its contributing source rows."""
     if sum(
@@ -540,6 +541,7 @@ def list_facility_intelligence_page(
         import_batch_ids=import_batch_ids,
         import_batch_query=import_batch_query,
         apply_active_filters=True,
+        excluded_source_record_keys=excluded_source_record_keys,
     )
     facilities = _facility_intelligence_facilities(facts, filters=filters)
     count_facts = _facility_intelligence_complaint_facts(
@@ -552,6 +554,7 @@ def list_facility_intelligence_page(
         cte_name="facility_intelligence_count_facts",
         include_priority_signals=False,
         projection="count",
+        excluded_source_record_keys=excluded_source_record_keys,
     )
     count_facilities = _facility_intelligence_count_facilities(
         count_facts,
@@ -578,6 +581,7 @@ def list_facility_intelligence_page(
         cte_name="facility_intelligence_base_identity_facts",
         include_priority_signals=False,
         projection="identity",
+        excluded_source_record_keys=excluded_source_record_keys,
     )
     matching_count = (
         select(func.count()).select_from(count_facilities).scalar_subquery()
@@ -684,6 +688,7 @@ def list_facility_intelligence_page(
         import_batch_id=import_batch_id,
         import_batch_ids=import_batch_ids,
         import_batch_query=import_batch_query,
+        excluded_source_record_keys=excluded_source_record_keys,
     )
     last_position = start_position + len(page_rows) - 1 if page_rows else 0
     previous_anchor = (
@@ -741,6 +746,7 @@ def list_facility_intelligence_page(
             import_batch_id=import_batch_id,
             import_batch_ids=import_batch_ids,
             import_batch_query=import_batch_query,
+            excluded_source_record_keys=excluded_source_record_keys,
         ),
     )
 
@@ -758,6 +764,7 @@ def _facility_intelligence_complaint_facts(
     projection: Literal["full", "count", "hydration", "identity"] = "full",
     source_facility_ids: tuple[str, ...] = (),
     source_record_keys: tuple[str, ...] = (),
+    excluded_source_record_keys: tuple[str, ...] = (),
 ) -> Any:
     complaint = hosted_source_derived_records.alias(f"{cte_name}_complaint")
     facility = hosted_source_derived_records.alias(f"{cte_name}_facility")
@@ -776,6 +783,12 @@ def _facility_intelligence_complaint_facts(
             import_batch_query=import_batch_query,
         ),
     ]
+    if excluded_source_record_keys:
+        complaint_key_clauses.append(
+            duplicate_complaint.c.source_record_key.not_in(
+                excluded_source_record_keys
+            )
+        )
     if source_facility_ids or source_record_keys:
         complaint_key_clauses.append(
             or_(
@@ -1278,6 +1291,7 @@ def _facility_intelligence_hydrated_records(
     import_batch_id: str | None,
     import_batch_ids: tuple[str, ...] | None,
     import_batch_query: Select[Any] | CompoundSelect[Any] | None,
+    excluded_source_record_keys: tuple[str, ...],
 ) -> tuple[SourceDerivedRecordRead, ...]:
     if not source_facility_ids and not fallback_source_record_keys:
         return ()
@@ -1293,6 +1307,7 @@ def _facility_intelligence_hydrated_records(
         projection="hydration",
         source_facility_ids=source_facility_ids,
         source_record_keys=fallback_source_record_keys,
+        excluded_source_record_keys=excluded_source_record_keys,
     )
     selected_complaints = connection.execute(
         select(
@@ -1350,6 +1365,7 @@ def _facility_intelligence_filter_options(
     import_batch_id: str | None,
     import_batch_ids: tuple[str, ...] | None,
     import_batch_query: Select[Any] | CompoundSelect[Any] | None,
+    excluded_source_record_keys: tuple[str, ...] = (),
 ) -> FacilityIntelligenceFilterOptions:
     def distinct_values(
         column: Any,
@@ -1387,11 +1403,25 @@ def _facility_intelligence_filter_options(
     duplicate_facility = hosted_source_derived_records.alias(
         "facility_intelligence_option_duplicate_facility"
     )
+    included_complaint_clause = (
+        complaint.c.source_record_key.not_in(excluded_source_record_keys)
+        if excluded_source_record_keys
+        else literal(True)
+    )
+    excluded_document_ids = select(
+        hosted_source_derived_records.c.source_document_id
+    ).where(
+        hosted_source_derived_records.c.source_document_id.is_not(None),
+        hosted_source_derived_records.c.source_record_key.in_(
+            excluded_source_record_keys
+        )
+    )
     complaint_facility_ids = (
         select(complaint.c.import_batch_id, complaint.c.facility_id)
         .where(
             complaint.c.entity_type == "complaint",
             complaint.c.facility_id.is_not(None),
+            included_complaint_clause,
             _facility_intelligence_import_filter(
                 complaint,
                 import_batch_id=import_batch_id,
@@ -1468,6 +1498,7 @@ def _facility_intelligence_filter_options(
     finding = func.coalesce(_json_text(complaint, "finding"), literal("unknown"))
     missing_facility_statement = select(literal(1)).select_from(complaint).where(
         complaint.c.entity_type == "complaint",
+        included_complaint_clause,
         _facility_intelligence_import_filter(
             complaint,
             import_batch_id=import_batch_id,
@@ -1496,6 +1527,7 @@ def _facility_intelligence_filter_options(
         select(_json_text(allegation, "allegation_category"))
         .where(
             allegation.c.entity_type == "allegation",
+            allegation.c.source_document_id.not_in(excluded_document_ids),
             _facility_intelligence_import_filter(
                 allegation,
                 import_batch_id=import_batch_id,
@@ -1524,6 +1556,7 @@ def _facility_intelligence_filter_options(
     )
     cue_statement = select(literal(1)).where(
             allegation.c.entity_type == "allegation",
+            allegation.c.source_document_id.not_in(excluded_document_ids),
             _facility_intelligence_import_filter(
                 allegation,
                 import_batch_id=import_batch_id,
@@ -1573,6 +1606,7 @@ def _facility_intelligence_filter_options(
             finding,
             complaint,
             complaint.c.entity_type == "complaint",
+            included_complaint_clause,
             _facility_intelligence_import_filter(
                 complaint,
                 import_batch_id=import_batch_id,
