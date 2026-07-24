@@ -3652,7 +3652,8 @@ def test_reviewer_ui_complaint_export_status_query_filters_without_mutation(
         after_counts = _table_counts(connection)
 
     csv_text = body.decode("utf-8-sig")
-    rows = list(csv.DictReader(io.StringIO(csv_text)))
+    reader = csv.DictReader(io.StringIO(csv_text))
+    rows = list(reader)
 
     assert status == 200
     assert content_type == "text/csv; charset=utf-8"
@@ -3664,9 +3665,10 @@ def test_reviewer_ui_complaint_export_status_query_filters_without_mutation(
         "audit_events": 2,
         "reset_reload_planning_metadata": 0,
     }
-    assert rows
-    [record] = rows
+    _assert_aggregate_export_fieldnames(reader.fieldnames)
     if expect_row:
+        assert len(rows) == 1
+        [record] = rows
         assert record["Facility Name"] == "A. MIRIAM JAMISON CHILDREN'S CENTER"
         assert record["Facility/License Number"] == "157806098"
         assert record["Complaint Received Date"] == "2022-04-07"
@@ -3678,10 +3680,7 @@ def test_reviewer_ui_complaint_export_status_query_filters_without_mutation(
         assert record["Reviewer-created status"] == "Reviewed"
         assert record["Reviewer-created note present"] == "yes"
     else:
-        assert record["Facility Name"] == "Not applicable"
-        assert record["Facility/License Number"] == "Not applicable"
-        assert record["Finding/Status"] == "Not applicable"
-        assert record["Complaint Control Number"] == "Not applicable"
+        assert rows == []
     assert "Status query export note" not in csv_text
     assert "raw_path" not in csv_text
     assert "C:\\" not in csv_text
@@ -3764,7 +3763,8 @@ def test_reviewer_ui_complaint_export_date_query_filters_without_mutation(
         after_counts = _table_counts(connection)
 
     csv_text = body.decode("utf-8-sig")
-    rows = list(csv.DictReader(io.StringIO(csv_text)))
+    reader = csv.DictReader(io.StringIO(csv_text))
+    rows = list(reader)
 
     assert status == 200
     assert content_type == "text/csv; charset=utf-8"
@@ -3776,9 +3776,10 @@ def test_reviewer_ui_complaint_export_date_query_filters_without_mutation(
         "audit_events": 2,
         "reset_reload_planning_metadata": 0,
     }
-    assert rows
-    [record] = rows
+    _assert_aggregate_export_fieldnames(reader.fieldnames)
     if expect_row:
+        assert len(rows) == 1
+        [record] = rows
         assert record["Facility Name"] == "A. MIRIAM JAMISON CHILDREN'S CENTER"
         assert record["Facility/License Number"] == "157806098"
         assert record["Complaint Received Date"] == "2022-04-07"
@@ -3787,10 +3788,7 @@ def test_reviewer_ui_complaint_export_date_query_filters_without_mutation(
         assert record["Reviewer-created status"] == "Reviewed"
         assert record["Reviewer-created note present"] == "yes"
     else:
-        assert record["Facility Name"] == "Not applicable"
-        assert record["Facility/License Number"] == "Not applicable"
-        assert record["Finding/Status"] == "Not applicable"
-        assert record["Complaint Control Number"] == "Not applicable"
+        assert rows == []
     assert "Date query export note" not in csv_text
     assert "raw_path" not in csv_text
     assert "C:\\" not in csv_text
@@ -4070,18 +4068,15 @@ def test_reviewer_ui_complaint_export_review_cue_query_filter_without_mutation(
         "reset_reload_planning_metadata": 0,
     }
     _assert_aggregate_export_fieldnames(reader.fieldnames)
-    assert rows
-    [record] = rows
     if expect_row:
+        assert len(rows) == 1
+        [record] = rows
         assert record["Facility Name"] == "A. MIRIAM JAMISON CHILDREN'S CENTER"
         assert record["Facility/License Number"] == "157806098"
         assert record["Complaint Received Date"] == "2022-04-07"
         assert record["Finding/Status"] == "Substantiated"
     else:
-        assert record["Facility Name"] == "Not applicable"
-        assert record["Facility/License Number"] == "Not applicable"
-        assert record["Complaint Received Date"] == "Not applicable"
-        assert record["Finding/Status"] == "Not applicable"
+        assert rows == []
     assert "Cue filter export note." not in csv_text
     assert "raw_path" not in csv_text
     assert "C:\\" not in csv_text
@@ -4099,15 +4094,26 @@ def test_reviewer_ui_matrix_export_empty_context_is_safe() -> None:
             "&request_context_origin=manual_entry",
             reviewer_ui_context=reviewer_ui_context_for_connection(connection),
         )
+        one_status, one_content_type, one_body = route_response(
+            f"{REVIEWER_UI_MATRIX_EXPORT_PATH}?"
+            "facility_number=157806098&start_date=2022-08-01&end_date=2022-08-31"
+            "&request_context_origin=manual_entry",
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
 
         after_source_rows = _source_rows(connection)
         after_counts = _table_counts(connection)
 
     csv_text = body.decode("utf-8-sig")
-    rows = list(csv.DictReader(io.StringIO(csv_text)))
+    reader = csv.DictReader(io.StringIO(csv_text))
+    rows = list(reader)
+    one_reader = csv.DictReader(io.StringIO(one_body.decode("utf-8-sig")))
+    one_rows = list(one_reader)
 
     assert status == 200
     assert content_type == "text/csv; charset=utf-8"
+    assert one_status == 200
+    assert one_content_type == "text/csv; charset=utf-8"
     assert before_source_rows == after_source_rows
     assert before_counts == after_counts == {
         "import_batches": 1,
@@ -4116,17 +4122,14 @@ def test_reviewer_ui_matrix_export_empty_context_is_safe() -> None:
         "audit_events": 0,
         "reset_reload_planning_metadata": 0,
     }
-    assert len(rows) == 1
-    row = rows[0]
-    assert row["matrix_status"] == (
-        "No loaded complaint records matched this facility/date context."
-    )
-    assert row["facility_number"] == "157806098"
-    assert row["request_start_date"] == "2026-01-01"
-    assert row["request_end_date"] == "2026-01-31"
-    assert row["loaded_local_test_record_indicator"] == "no"
-    assert "open source links and reviewer detail" in row["review_guidance"]
-    assert "no complaints found" not in csv_text.casefold()
+    assert reader.fieldnames == reviewer_ui._matrix_fieldnames()
+    assert one_reader.fieldnames == reader.fieldnames
+    assert rows == []
+    assert len(one_rows) == 1
+    assert one_rows[0]["source_record_key"] == COMPLAINT_KEY
+    assert one_rows[0]["complaint_date"] == "2022-04-07"
+    assert "Not applicable" not in csv_text
+    assert "matrix_status" in csv_text
 
 def test_reviewer_ui_detail_missing_traceability_uses_clear_non_conclusive_wording() -> None:
     with _seeded_connection() as connection:
