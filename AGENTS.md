@@ -4,7 +4,14 @@ These instructions apply to Codex, GitHub Copilot, and any other coding agent wo
 
 ## Required context before changing behavior
 
-Before making code, schema, extraction, hosted reviewer, export, QNAP, or user-facing documentation changes, read the relevant parts of:
+Use task-relevant context by default. The current complete GitHub issue is the
+durable task specification; read it with this file, `.github/copilot-instructions.md`,
+and only the governing documents that materially apply to the requested change.
+List the governing files actually read and report conflicts or material findings,
+not summaries of unchanged governance.
+
+Use the following documents as a task-area router before making code, schema,
+extraction, hosted reviewer, export, QNAP, or user-facing documentation changes:
 
 - `PROJECT_CHARTER.md`
 - `ROADMAP.md`
@@ -23,7 +30,14 @@ Before making code, schema, extraction, hosted reviewer, export, QNAP, or user-f
 - `KNOWN_LIMITATIONS.md`
 - `.github/copilot-instructions.md`
 
-Read only the context needed for the task; do not rewrite governance just because it exists.
+Do not require every document in this list unless the task materially spans its
+area. Do not rewrite governance just because it exists.
+
+For Python validation in a secondary worktree, follow the shared primary-
+repository runtime and known-prerequisite resolution rules in
+`docs/developer/codex-workflow.md`; keep the working directory in the issue
+worktree and report only unresolved blockers after that documented resolution
+path fails.
 
 ## Capability authorization
 

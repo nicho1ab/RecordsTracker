@@ -13,6 +13,10 @@ class CheckDocsModule(Protocol):
 
     def find_missing_required_content(self) -> list[str]: ...
 
+    def find_codex_workflow_contract_violations(
+        self, root: Path = Path(".")
+    ) -> list[str]: ...
+
     def find_pull_request_template_contract_violations(
         self, root: Path = Path(".")
     ) -> list[str]: ...
@@ -60,6 +64,63 @@ def test_required_public_output_guidance_is_documented() -> None:
     check_docs = _load_check_docs_module()
 
     assert check_docs.find_missing_required_content() == []
+
+
+def test_codex_workflow_contract_is_complete() -> None:
+    check_docs = _load_check_docs_module()
+
+    assert check_docs.find_codex_workflow_contract_violations() == []
+
+
+def test_codex_workflow_contract_rejects_missing_continuation_boundary(
+    tmp_path: Path,
+) -> None:
+    check_docs = _load_check_docs_module()
+    source = Path("docs/developer/codex-workflow.md")
+    target = tmp_path / source
+    target.parent.mkdir(parents=True, exist_ok=True)
+    content = source.read_text(encoding="utf-8")
+    marker = "continuation never expands authorization"
+    target.write_text(content.replace(marker, "", 1), encoding="utf-8")
+
+    assert (
+        "docs/developer/codex-workflow.md: missing Codex workflow marker: " + marker
+        in check_docs.find_codex_workflow_contract_violations(tmp_path)
+    )
+
+
+def test_codex_workflow_contract_requires_shared_runtime_resolution(
+    tmp_path: Path,
+) -> None:
+    check_docs = _load_check_docs_module()
+    source = Path("docs/developer/codex-workflow.md")
+    target = tmp_path / source
+    target.parent.mkdir(parents=True, exist_ok=True)
+    content = source.read_text(encoding="utf-8")
+    marker = "the verified primary-repository Python executable"
+    target.write_text(content.replace(marker, "", 1), encoding="utf-8")
+
+    assert (
+        "docs/developer/codex-workflow.md: missing Codex workflow marker: " + marker
+        in check_docs.find_codex_workflow_contract_violations(tmp_path)
+    )
+
+
+def test_codex_workflow_contract_requires_bounded_prerequisite_resolution(
+    tmp_path: Path,
+) -> None:
+    check_docs = _load_check_docs_module()
+    source = Path("docs/developer/codex-workflow.md")
+    target = tmp_path / source
+    target.parent.mkdir(parents=True, exist_ok=True)
+    content = source.read_text(encoding="utf-8")
+    marker = "Do not perform broad speculative prerequisite discovery."
+    target.write_text(content.replace(marker, "", 1), encoding="utf-8")
+
+    assert (
+        "docs/developer/codex-workflow.md: missing Codex workflow marker: " + marker
+        in check_docs.find_codex_workflow_contract_violations(tmp_path)
+    )
 
 
 def test_reviewer_ui_governance_contract_is_complete() -> None:

@@ -677,8 +677,8 @@ changes. Focused local validation does not weaken, replace, or bypass them.
 Run or verify the full test suite when explicitly requested; for releases,
 production-readiness milestones, schema changes, connector expansion,
 export-contract changes, production architecture transitions, or broad
-cross-cutting changes; or when focused or CI failures require broader
-investigation.
+cross-cutting changes; when repository governance specifically requires it; or
+when focused or CI failures require broader investigation.
 
 ## Commands
 

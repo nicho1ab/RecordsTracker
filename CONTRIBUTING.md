@@ -59,6 +59,20 @@ repository governance.
 
 ## Local validation
 
+Use focused local validation by default: the new regression or acceptance test,
+the smallest affected test set, targeted Ruff and mypy where applicable,
+documentation validation when documentation or governed behavior changes,
+`git diff --check`, and applicable secret or policy scans. Run the complete
+local suite only for broad or cross-cutting changes, release-level validation,
+an explicit human request, a repository rule that specifically requires it, or
+focused or CI evidence of broader regression risk.
+
+When validating from a secondary worktree, use the verified primary-repository
+Python executable with the issue worktree as the working directory. Resolve
+documented prerequisites first; a missing local `.venv` is not itself a blocker.
+
+For broad or release-level work, run:
+
 ```powershell
 .\scripts\lint.ps1
 .\scripts\test.ps1
