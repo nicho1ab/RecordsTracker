@@ -37,7 +37,7 @@ Dependent work does not begin before prerequisite gates are complete.
 
 1. [#431](https://github.com/nicho1ab/RecordsTracker/issues/431) — completed Pilot Run 1.
 2. [#573](https://github.com/nicho1ab/RecordsTracker/issues/573) — completed Pilot Run 2.
-3. [#514](https://github.com/nicho1ab/RecordsTracker/issues/514) — qualified, risk-medium, requires manual UI review, unstarted.
+3. [#514](https://github.com/nicho1ab/RecordsTracker/issues/514) — completed Pilot Run 3.
 
 [#525](https://github.com/nicho1ab/RecordsTracker/issues/525) remains blocked
 by the missing immutable approved-logo asset locator and SHA-256. Issues #465,
@@ -289,19 +289,48 @@ and evidence capture required human judgment about fixture suitability and
 acceptable reflow proof. Independent verification remained advisory. This run
 does not support autonomous approval, merge, closure, or broader autonomy.
 
+## Run 3 — Issue #514
+
+### Identity, lifecycle, and implementation
+
+- Pilot run: 3 of 5; category: reviewer-facing copy-control consistency and accessibility correction; risk: medium; manual UI review: required and completed.
+- Model: GPT-5.6 Terra; effort: High; suitability: eligible, bounded, reversible, and independently testable.
+- Implementation issue: [#514](https://github.com/nicho1ab/RecordsTracker/issues/514); PR: [#598](https://github.com/nicho1ab/RecordsTracker/pull/598); implementation branch: `issue-514-consistent-copy-control`.
+- Pre-squash head: `0057e76c94b4c100f8e756c0ad06078c1bdd2483`; squash SHA: `059c7a210c8137aa2eb3cc07699f917201e97e99`; merged UTC: 2026-07-24T16:47:41Z; Issue closed UTC: 2026-07-24T16:51:22Z.
+- Scope: one commit, nine files, 224 additions, and 148 deletions.
+- One shared idempotent copy-control behavior now provides compact native buttons, target-specific accessible names, adjacent readable values, independent copied/unavailable feedback and timers, focus retention, and exact displayed-value copying.
+- Facility-name copy controls outside RT-CP-001 were removed. First investigation activity uses `Copy First investigation activity date`, removes visible `Copy date`, and copies only the displayed `MM/DD/YYYY` date. No copy target was added.
+- Native evidence exposed visible raw JavaScript caused by an invalid shared-script composition boundary. The defect was corrected, regression-tested, and the final helper has one valid script boundary.
+
+### Validation and evidence
+
+- Pre-PR focused validation: 56 passed; merged focused regression: 236 passed; Ruff, targeted mypy, independent verification, secret scan, and diff hygiene passed.
+- Required checks `validate`, `docs-check`, `fixtures`, and `security` passed twice. The broad application suite was not run because the documented trigger was not met.
+- Accepted durable evidence: `data/processed/ui-evidence/20260724-162421Z-issue514-native-recapture` and `.zip`, SHA-256 `6e62d4b775c46166dee2a5893e785b5160e45d1cad23fb118d993c2dc234693d`; 13 files including 10 PNGs.
+- Superseded, unaccepted evidence: `data/processed/ui-evidence/20260724-issue514-native-recovery` and `.zip`, SHA-256 `2678baf9cffa17a0a2064eb5828f5b11be918bfa88baa7b114b5e434012d7f63`; it showed visible raw JavaScript.
+- Native reviewer-detail Tab focus and Enter activation passed, copying `06/12/2024`. Native facility-lookup Tab focus and Space activation passed, copying `900000001`. Focus retention, simultaneous feedback, timeout behavior, 720px narrow, 390px mobile, and raw-script absence were accepted.
+- Clipboard-unavailable visual evidence was unavailable; deterministic rejection coverage was accepted. No suitable read-only case-brief fixture existed, so focused renderer/shared-helper coverage was accepted. Actual browser 200% zoom was unavailable and not claimed. Human review accepted these limitations.
+
+### Measurements, findings, and suitability
+
+- Blocked pre-implementation attempts: 1; elapsed: 1 minute 38 seconds; root cause: defective prompt requirement for blocked-state labels/comments on Issues #525 and #533.
+- Implementation elapsed: 11 minutes 9 seconds; implementation iterations: 1; cumulative correction iterations: 7; human workflow interventions: 2; cumulative evidence attempts: 4; usage/cost: unavailable.
+- Human review removed facility-name copy targets, corrected the understated original changed-file count, used supported Playwright/Edge after the in-app browser could not establish native Tab focus, and rejected the defective evidence package before recapture.
+- Stopping conditions worked: the initial precheck failed closed, the first evidence attempt did not fabricate focus, and defective evidence was preserved as superseded and recaptured only after correction. No deployment or production mutation occurred.
+- Run 3 supports retaining strict evidence and human-acceptance gates. Native browser evidence should use the supported Playwright/Edge route when the in-app browser cannot provide genuine keyboard input. Existing Issue #587 controls are sufficient; no new governance issue or ADR is warranted, and this run does not authorize greater automation.
+
 ## Pilot-wide status
 
-- Completed runs: 2 of 5
-- Qualified unstarted runs: 1 (#514)
-- Unresolved candidate shortfall: 2
-- #525 remains blocked.
-- #533 remains blocked by incomplete pilot acceptance.
-- Pilot-wide acceptance: incomplete
+- Completed runs: 3 of 5.
+- Completed issues: #431, #573, #514.
+- Qualified unstarted candidates: 0.
+- Unresolved candidate shortfall: 2.
+- #525 remains unavailable pending an approved immutable logo asset locator and verified integrity hash.
+- #533 remains blocked by incomplete five-run pilot acceptance.
+- Pilot Run 4 is not selected or authorized.
+- Pilot-wide acceptance: incomplete.
 
-The automation decision gate in [#533](https://github.com/nicho1ab/RecordsTracker/issues/533)
-must not begin until #532 acceptance gates are complete. Pilot Run 3 is not
-authorized. No conclusion about broad autonomous suitability may be drawn from
-the completed runs.
+Issue #587 is governance provenance, not a pilot run. The automation decision gate in [#533](https://github.com/nicho1ab/RecordsTracker/issues/533) must not begin until #532 acceptance gates are complete. No conclusion about broad autonomous suitability may be drawn from the completed runs.
 
 ## Open follow-up observations
 
