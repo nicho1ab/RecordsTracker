@@ -16,6 +16,7 @@ End users need plain-language instructions for browsing, searching, filtering, u
 - `docs/developer/copilot-workflow.md`
 - `docs/developer/codex-workflow.md`
 - `docs/developer/development-loop-label-taxonomy.md`
+- `docs/developer/development-loop-pilot-evidence.md`
 - `docs/developer/architecture.md`
 - `docs/developer/adding-a-source.md`
 - `docs/developer/testing.md`
