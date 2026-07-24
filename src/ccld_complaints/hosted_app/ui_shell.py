@@ -190,18 +190,11 @@ def render_inline_glossary_term(term: str, definition: str, term_id: str) -> str
     escaped_term = html.escape(term)
     escaped_definition = html.escape(definition, quote=True)
     escaped_term_id = html.escape(term_id, quote=True)
-    definition_id = f"inline-glossary-definition-{term_id}"
-    escaped_definition_id = html.escape(definition_id, quote=True)
     return (
-        '<span class="inline-glossary-anchor">'
         f'<dfn class="inline-glossary-term" tabindex="0" role="term" '
         f'aria-description="{escaped_definition}" '
-        f'aria-describedby="{escaped_definition_id}" '
         f'title="{escaped_definition}" data-definition="{escaped_definition}" '
         f'data-term-id="{escaped_term_id}">{escaped_term}</dfn>'
-        f'<span class="inline-glossary-definition" id="{escaped_definition_id}" '
-        f'role="tooltip">{html.escape(definition)}</span>'
-        "</span>"
     )
 
 
@@ -425,6 +418,21 @@ INLINE_GLOSSARY_SCRIPT = """<script>
     return definitionId ? document.getElementById(definitionId) : null;
   }
 
+  function createDefinitions() {
+    document.querySelectorAll('.inline-glossary-term').forEach(function (term) {
+      var definitionText = term.getAttribute('data-definition');
+      var termId = term.getAttribute('data-term-id');
+      if (!definitionText || !termId || definitionFor(term)) return;
+      var definition = document.createElement('span');
+      definition.className = 'inline-glossary-definition';
+      definition.id = 'inline-glossary-definition-' + termId;
+      definition.setAttribute('role', 'tooltip');
+      definition.textContent = definitionText;
+      document.body.appendChild(definition);
+      term.setAttribute('aria-describedby', definition.id);
+    });
+  }
+
   function assignUniqueDefinitionIds() {
     var definitionCounts = {};
     document.querySelectorAll('.inline-glossary-term').forEach(function (term) {
@@ -481,6 +489,7 @@ INLINE_GLOSSARY_SCRIPT = """<script>
     position(term, definition);
   }
 
+  createDefinitions();
   assignUniqueDefinitionIds();
   document.querySelectorAll('.inline-glossary-term').forEach(function (term) {
     term.addEventListener('pointerenter', function () { show(term); });

@@ -1352,8 +1352,10 @@ def test_shared_inline_glossary_renderer_and_shell_behavior_are_collision_safe()
     )
 
     assert '<dfn class="inline-glossary-term" tabindex="0" role="term"' in html
-    assert 'aria-describedby="inline-glossary-definition-test-finding"' in html
-    assert 'id="inline-glossary-definition-test-finding" role="tooltip"' in html
+    assert 'data-term-id="test-finding">Finding</dfn>' in html
+    assert "function createDefinitions()" in html
+    assert "document.body.appendChild(definition)" in html
+    assert "term.setAttribute('aria-describedby', definition.id)" in html
     assert "assignUniqueDefinitionIds" in html
     assert "term.setAttribute('aria-describedby', uniqueId)" in html
     assert "border-bottom: 1px dotted currentColor" in html

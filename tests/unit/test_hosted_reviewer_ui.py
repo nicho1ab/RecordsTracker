@@ -2709,9 +2709,9 @@ def test_reviewer_ui_detail_shows_attorney_tier_and_hides_support_details() -> N
 
     assert '<dfn class="inline-glossary-term" tabindex="0" role="term"' in html
     assert 'aria-description="The outcome or status shown in the public complaint record."' in html
-    assert 'aria-describedby="inline-glossary-definition-detail-finding"' in html
     assert 'data-definition="The outcome or status shown in the public complaint record."' in html
-    assert 'id="inline-glossary-definition-detail-finding" role="tooltip"' in html
+    assert "function createDefinitions()" in html
+    assert "definition.id = 'inline-glossary-definition-' + termId" in html
     assert ".inline-glossary-term" in html
     assert "border-bottom: 1px dotted currentColor" in html
     assert ".inline-glossary-definition.is-visible" in html
@@ -2722,7 +2722,7 @@ def test_reviewer_ui_detail_shows_attorney_tier_and_hides_support_details() -> N
         in html
     )
     assert "The public licensing identifier used to find the facility in CCLD records." in html
-    assert html.count('role="tooltip"') >= 3
+    assert "definition.setAttribute('role', 'tooltip')" in html
     assert "The complaint received date shown in loaded records." not in html
     assert "The visit date shown in loaded records when available." not in html
     assert "The loaded report date. If a proxy flag is present" not in html

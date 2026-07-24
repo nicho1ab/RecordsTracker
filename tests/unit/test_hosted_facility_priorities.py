@@ -1495,8 +1495,8 @@ def test_facility_hub_reuses_intelligence_aggregates_state_and_tie_order() -> No
     assert 'aria-label="Copy reviewer-created status"' in html
     assert 'aria-label="Copy original CCLD report URL"' in html
     assert 'class="inline-glossary-term"' in html
-    assert 'aria-describedby="inline-glossary-definition-hub-finding"' in html
-    assert 'id="inline-glossary-definition-hub-finding" role="tooltip"' in html
+    assert 'data-term-id="hub-finding">Finding</dfn>' in html
+    assert "function createDefinitions()" in html
     assert "border-bottom: 1px dotted currentColor" in html
     assert (
         'class="is-active" aria-current="page" href="/ccld/facilities">Facilities</a>'
