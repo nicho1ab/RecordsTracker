@@ -261,10 +261,11 @@ def test_issue_447_allocates_only_the_four_approved_complaint_observations() -> 
     ):
         row = rows[field_id]
         spec = specs[field_id]
-        assert row.authoritative_status == "present_blank"
+        assert row.source_presence_state == "observed_blank"
+        assert row.authoritative_status == "not_applicable"
         assert row.canonical_table.strip() == ""
         assert row.canonical_column.strip() == ""
-        assert row.required_action == "issue_576_architectural_decision"
+        assert row.required_action == "no_action_not_applicable"
         assert row.related_issue == "#576"
         assert spec.runtime_table is None
         assert spec.runtime_column is None
@@ -320,7 +321,7 @@ def test_issue_481_representative_layout_states_are_structural_and_value_free() 
     assert observation.field_counts["signature"] > 0
     assert by_id[
         "data.facility.raw_complaint_report.facility_address"
-    ].authoritative_status == "present_blank"
+    ].authoritative_status == "not_applicable"
     assert by_id[
         "data.complaint.source_artifact.report_availability"
     ].authoritative_status == "source_artifact_unavailable"

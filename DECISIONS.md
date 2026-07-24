@@ -22,6 +22,7 @@ See detailed ADRs in `docs/decisions/`.
 | ADR-0015 | Choose hosted tester MVP database and migration tooling | Accepted |
 | ADR-0016 | Approve controlled browser-triggered CCLD retrieval jobs | Accepted |
 | ADR-0017 | Use one read-only governed facility identity projection | Accepted |
+| ADR-0018 | Retain complaint-report address and city as audit-only evidence | Accepted |
 
 See `GOVERNANCE_INVENTORY.md` for the current active phase, local-only hosted
 scaffold status, completed ADR assessment, remaining deferred decisions, and
