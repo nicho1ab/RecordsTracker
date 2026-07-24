@@ -80,6 +80,7 @@ such as "all tests passed" does not satisfy this review.
 | Production data and correction behavior |  |  |
 | Deployment and infrastructure |  |  |
 | Repository governance |  |  |
+| Required GitHub workflows and checks |  |  |
 | Tests or checks weakened to obtain passage |  |  |
 
 ## Required GitHub checks

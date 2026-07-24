@@ -557,6 +557,7 @@ def test_pull_request_template_requires_each_failure_classification(
         "| Production data and correction behavior |",
         "| Deployment and infrastructure |",
         "| Repository governance |",
+        "| Required GitHub workflows and checks |",
         "| Tests or checks weakened to obtain passage |",
         '"all tests passed" does not satisfy this review.',
     ],

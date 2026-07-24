@@ -25,3 +25,12 @@ jobs:
         run: pytest
       - name: Documentation check
         run: python scripts/check_docs.py
+      - name: Verify required workflow contract
+        run: python scripts/check_independent_verification.py
+      - name: Verify pull request evidence and governed boundaries
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api --paginate "/repos/$GITHUB_REPOSITORY/pulls/${{ github.event.pull_request.number }}/files?per_page=100" --jq '.[].filename' > .verification-changed-files.txt
+          python scripts/check_independent_verification.py --event-path "$GITHUB_EVENT_PATH" --changed-files .verification-changed-files.txt

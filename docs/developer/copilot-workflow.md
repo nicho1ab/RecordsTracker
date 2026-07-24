@@ -172,6 +172,32 @@ Before merge, verify the required GitHub checks pass:
 These checks provide broader pre-merge validation for ordinary focused changes
 and must not be weakened or bypassed.
 
+### Independent GitHub Actions verification
+
+GitHub Actions independently reruns the authoritative checks from a clean
+GitHub-hosted environment. Their purposes are: `validate` runs lint, type, test,
+and documentation validation; `docs-check` reruns documentation validation;
+`fixtures` reruns fixture regressions; and `security` checks committed secrets
+and dependency advisories. The four status-check names remain the required
+merge-gate contract.
+
+The `validate` workflow also runs `scripts/check_independent_verification.py`.
+For pull requests it verifies the governing-issue reference, completed
+machine-testable evidence fields, and truthful governed-boundary declarations.
+It fails when a changed governed boundary is marked `No change`, and workflow
+changes require `Concern - review required`. It statically rejects removed or
+renamed required jobs, missing authoritative commands, unconditional skip
+conditions, broad `continue-on-error`, and path filters that could silently
+weaken the required checks. The pull-request-only evidence step is intentionally
+environment-gated; the workflow-contract check runs for both pull requests and
+pushes.
+
+This validation produces a concise summary for human review. It does not approve
+the pull request or determine subjective product, UX, accessibility, privacy,
+security, legal, or governance acceptance. During the pilot, fresh-context review remains advisory;
+it is selected by a human and cannot approve or merge a pull
+request. A failed or unavailable advisory review is never an approval.
+
 ### Full local or release validation
 
 Run or verify the full test suite only when explicitly requested; for releases,
