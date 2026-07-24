@@ -35,6 +35,7 @@ from ccld_complaints.hosted_app.ui_shell import (
     ActionItem,
     render_action_group,
     render_compare_facilities_views,
+    render_inline_glossary_term,
     render_page_shell,
 )
 from ccld_complaints.presentation_values import (
@@ -2415,12 +2416,7 @@ def _facility_contributor_id(group: str, value: str) -> str:
 
 
 def _inline_definition(term: str, definition: str, term_id: str) -> str:
-    return (
-        f'<dfn class="inline-glossary-term" tabindex="0" role="term" '
-        f'aria-description="{_escape(definition)}" title="{_escape(definition)}" '
-        f'data-definition="{_escape(definition)}" data-term-id="{_escape(term_id)}">'
-        f'{_escape(term)}</dfn>'
-    )
+    return render_inline_glossary_term(term, definition, term_id)
 
 
 def _render_facility_hub_limitations(
