@@ -149,6 +149,14 @@ def build_representative_coverage_report(
         complaints=complaints,
         thresholds=active_thresholds,
     )
+    complaint_status = _complaint_coverage_status(
+        complaints=complaints,
+        thresholds=active_thresholds,
+    )
+    facility_reference_status = _facility_reference_coverage_status(
+        facility_reference=facility_reference,
+        thresholds=active_thresholds,
+    )
     return {
         "schema_version": REPRESENTATIVE_COVERAGE_REPORT_SCHEMA_VERSION,
         "generated_at": generated.astimezone(UTC).replace(microsecond=0).isoformat(),
@@ -159,6 +167,8 @@ def build_representative_coverage_report(
             "complaint_connector": CCLD_CONNECTOR_NAME,
         },
         "representative_coverage_status": status,
+        "complaint_coverage_status": complaint_status,
+        "facility_reference_coverage_status": facility_reference_status,
         "thresholds": {
             "min_real_facility_count": active_thresholds.min_real_facility_count,
             "min_real_facility_type_count": active_thresholds.min_real_facility_type_count,
@@ -789,6 +799,103 @@ def _representative_status(
             "This report does not mark coverage as validated from PostgreSQL rows alone. "
             "Validated status is reserved for a future workflow that records automated "
             "criteria, operator source reconciliation, and stakeholder acceptance."
+        ),
+    }
+
+
+def _complaint_coverage_status(
+    *,
+    complaints: Mapping[str, Any],
+    thresholds: CoverageThresholds,
+) -> dict[str, Any]:
+    blockers = []
+    warnings = []
+
+    if (
+        thresholds.require_complaint_coverage
+        and complaints["eligible_representative_complaint_count"] == 0
+    ):
+        blockers.append("no real/public-source complaint coverage")
+    if complaints["eligible_representative_complaint_count"] != complaints[
+        "eligible_traceability_complete_complaint_count"
+    ]:
+        blockers.append("not all eligible real/public-source complaints are traceability-complete")
+    if complaints["duplicate_stable_identity_rows"]:
+        blockers.append("duplicate source-derived stable identities are present")
+    linkage = cast(Mapping[str, Any], complaints["eligible_source_document_linkage"])
+    if linkage["missing_link_count"] or linkage["conflicting_link_count"]:
+        blockers.append("source-document linkage is missing or conflicting")
+    if complaints["provenance_counts"].get("unknown", 0):
+        blockers.append("some loaded complaint rows have unknown provenance")
+    if complaints["provenance_counts"].get("fixture_demo_test", 0):
+        warnings.append(
+            "fixture/demo/test complaint rows are loaded but excluded from representative counts"
+        )
+
+    if not complaints["eligible_representative_complaint_count"]:
+        status: RepresentativeCoverageStatus = "not_ready"
+    elif blockers:
+        status = "partial"
+    else:
+        status = "candidate"
+        warnings.append(
+            "Automated complaint coverage criteria are satisfied; manual source reconciliation "
+            "and stakeholder acceptance are still required before issue #414 can close."
+        )
+    return {
+        "status": status,
+        "blockers": tuple(blockers),
+        "warnings": tuple(warnings),
+        "validated_status_rule": (
+            "This report does not mark complaint coverage as validated from PostgreSQL "
+            "rows alone. Validated status is reserved for a future workflow that records "
+            "automated criteria, operator source reconciliation, and stakeholder acceptance."
+        ),
+    }
+
+
+def _facility_reference_coverage_status(
+    *,
+    facility_reference: Mapping[str, Any],
+    thresholds: CoverageThresholds,
+) -> dict[str, Any]:
+    blockers = []
+    warnings = []
+
+    if facility_reference["eligible_distinct_facility_number_count"] < (
+        thresholds.min_real_facility_count
+    ):
+        blockers.append("fewer real/public-source facilities than the configured threshold")
+    if facility_reference["eligible_facility_type_count"] < thresholds.min_real_facility_type_count:
+        blockers.append("fewer real/public-source facility types than the configured threshold")
+    if facility_reference["provenance_counts"].get("unknown", 0):
+        blockers.append("some loaded facility-reference rows have unknown provenance")
+    if facility_reference["provenance_counts"].get("fixture_demo_test", 0):
+        warnings.append(
+            "fixture/demo/test facility-reference rows are loaded but excluded from "
+            "representative counts"
+        )
+
+    if not facility_reference["eligible_representative_row_count"]:
+        status: RepresentativeCoverageStatus = "not_ready"
+    elif blockers:
+        status = "partial"
+    else:
+        status = "candidate"
+        warnings.append(
+            "Automated facility-reference coverage criteria are satisfied; manual source "
+            "reconciliation and stakeholder acceptance are still required before issue #414 "
+            "can close."
+        )
+    return {
+        "status": status,
+        "blockers": tuple(blockers),
+        "warnings": tuple(warnings),
+        "validated_status_rule": (
+            "This report does not mark facility-reference coverage as validated from "
+            "PostgreSQL rows alone. Validated status is reserved for a future workflow that "
+            "records automated criteria, operator source reconciliation, and stakeholder "
+            "acceptance."
         ),
     }
 

@@ -261,6 +261,13 @@ counts. The report reads only hosted PostgreSQL tables and does not run live
 CCLD calls, import rows, mutate reviewer-created state, prove production/QNAP
 coverage, or replace manual source reconciliation and acceptance.
 
+`representative_coverage_status` remains the conservative overall result. The
+additive `complaint_coverage_status` and `facility_reference_coverage_status`
+objects each provide deterministic status, blockers, and warnings for their
+respective dimension. Unknown facility-reference provenance remains visible in
+the facility-reference and overall results without by itself making the
+complaint-specific result partial. Neither dimension reports validated coverage.
+
 ## Local Datasette And CSV Review
 
 Datasette remains a validation and export-support layer. To populate a sample
