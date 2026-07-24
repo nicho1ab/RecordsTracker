@@ -29,7 +29,7 @@ Dependent work does not begin before prerequisite gates are complete.
 ## Pilot candidate status
 
 1. [#431](https://github.com/nicho1ab/RecordsTracker/issues/431) — completed Pilot Run 1.
-2. [#573](https://github.com/nicho1ab/RecordsTracker/issues/573) — qualified, risk-medium, requires manual UI review, unstarted.
+2. [#573](https://github.com/nicho1ab/RecordsTracker/issues/573) — completed Pilot Run 2.
 3. [#514](https://github.com/nicho1ab/RecordsTracker/issues/514) — qualified, risk-medium, requires manual UI review, unstarted.
 
 [#525](https://github.com/nicho1ab/RecordsTracker/issues/525) remains blocked
@@ -180,24 +180,128 @@ defect without expanding repository scope. The fresh-event requirement exposed
 a procedural improvement opportunity. No evidence supports reducing human
 authority for qualification, review, readiness, merge, or closure.
 
+## Run 2 — Issue #573
+
+### Identity and outcome
+
+- Pilot run: 2 of 5
+- Issue: [#573 — Prevent inline definition popups from obscuring content](https://github.com/nicho1ab/RecordsTracker/issues/573)
+- Category: shared glossary accessibility and collision-safe presentation correction
+- Risk: medium
+- Manual UI review: required and completed
+- Result: completed and merged
+- PR: [#585](https://github.com/nicho1ab/RecordsTracker/pull/585)
+- Squash SHA: `6b949cb73cb90b5f3c7f72187400fb874d00b445`
+- Pre-squash head: `b26e0d7590f0b37d7ce867502774fff096d466c3`
+- Merged UTC: 2026-07-24T05:44:55Z
+- Completion comment: [Issue #573 completion evidence](https://github.com/nicho1ab/RecordsTracker/issues/573#issuecomment-5066962358)
+
+### Model, timing, and iterations
+
+- Model: GPT-5.6 Terra
+- Effort: High
+- Implementation start: 2026-07-23T23:27:03-05:00 CDT
+- Initial implementation stop: 2026-07-23T23:35:23-05:00 CDT
+- Implementation elapsed: 8 minutes 20 seconds
+- Implementation iterations: 1
+- Correction iterations: 3
+- Usage/cost: unavailable
+
+### Human interventions
+
+- human code review identified the duplicate-tooltip-ID accessibility defect;
+- human UI review accepted the governed 720×600 reflow approximation after reviewing native interaction evidence; and
+- readiness, merge, and Issue #573 completion remained separately human-authorized decisions.
+
+### Objective implementation and validation evidence
+
+The merged change has two commits across six files, with 190 additions and 40
+deletions:
+
+- `src/ccld_complaints/hosted_app/ui_shell.py`
+- `src/ccld_complaints/hosted_app/reviewer_ui.py`
+- `src/ccld_complaints/hosted_app/ccld_facility_lookup.py`
+- `tests/unit/test_hosted_app_scaffold.py`
+- `tests/unit/test_hosted_reviewer_ui.py`
+- `tests/unit/test_hosted_facility_priorities.py`
+
+Objective validation and merge evidence:
+
+- duplicate-ID regression passed;
+- focused glossary regressions passed;
+- final affected hosted UI suite: 201 passed;
+- targeted Ruff and mypy passed;
+- independent workflow contract and independent PR-evidence verification passed;
+- required checks `validate`, `docs-check`, `fixtures`, and `security` passed in both required watch cycles;
+- the pre-merge secret scan passed;
+- squash-diff integrity passed; and
+- the post-merge combined local secret-scan invocation timed out and was stopped. This is not recorded as a security failure because both required Security checks and the pre-merge secret scan passed.
+
+The full suite was not run because the documented trigger was not met.
+
+### Corrections, evidence, and human judgment
+
+The initial implementation included a lint-only assertion-wrapping correction.
+Human code review then found repeated glossary terms producing duplicate tooltip
+IDs. The shared renderer was corrected to assign unique definition IDs and valid
+per-trigger accessible relationships. CI required one bounded compatibility
+correction, producing the final correction count of three.
+
+The first evidence package established reviewer focus and Escape behavior but
+also identified that facility fixture `900000001` had no in-scope facility
+glossary term, the initial browser mechanism did not establish native hover or
+native Tab focus-loss, and actual browser-chrome 200% zoom was unavailable.
+
+The second package used facility `157806098` and Python Playwright controlling
+installed Microsoft Edge. Its 20 PNGs, manifest, and evidence index record
+native reviewer and facility hover, Tab focus, Escape, focus loss, mobile edge
+placement, unique IDs, and valid `aria-describedby` relationships. The durable
+ZIP SHA-256 is
+`60E6D0A8A6136CE407E1A1B500D312E5AC0A442F1DD8EADE3B4473B177235E88`.
+
+After merge, the evidence directory and unchanged ZIP were preserved under
+authoritative main's ignored `data/processed/ui-evidence` location before the
+Issue #573 worktree registration and local and remote branches were removed.
+The former Issue #573 path remains unregistered and was not cleaned manually.
+
+One additional attempt confirmed that no installed supported mechanism could
+establish and report browser-chrome-controlled 200% zoom. Human review accepted
+the governed 720×600 reflow approximation together with the native desktop,
+standard, mobile, hover, focus, Escape, focus-loss, and edge-placement evidence.
+Actual browser-chrome 200% zoom and screen-reader product testing were not
+performed or claimed.
+
+### Scope and suitability assessment
+
+No glossary terminology or definition text, route design, Figma artifact,
+schema, migration, source, connector, ingestion, import, backfill, retrieval,
+production data, deployment, QNAP, security, privacy, or authorization behavior
+changed. The correction was suitable for the governed human-supervised workflow:
+human review added material value by finding the duplicate-tooltip-ID defect,
+and evidence capture required human judgment about fixture suitability and
+acceptable reflow proof. Independent verification remained advisory. This run
+does not support autonomous approval, merge, closure, or broader autonomy.
+
 ## Pilot-wide status
 
-- Completed runs: 1 of 5
-- Qualified unstarted runs: 2
-- Blocked potential candidates: at least 1
+- Completed runs: 2 of 5
+- Qualified unstarted runs: 1 (#514)
 - Unresolved candidate shortfall: 2
+- #525 remains blocked.
+- #533 remains blocked by incomplete pilot acceptance.
 - Pilot-wide acceptance: incomplete
 
 The automation decision gate in [#533](https://github.com/nicho1ab/RecordsTracker/issues/533)
-must not begin until #532 acceptance gates are complete. No conclusion about
-broad autonomous suitability may be drawn from Run 1 alone.
+must not begin until #532 acceptance gates are complete. Pilot Run 3 is not
+authorized. No conclusion about broad autonomous suitability may be drawn from
+the completed runs.
 
 ## Open follow-up observations
 
 1. Future RL-PREPARE prompts should use the repository's exact governed PR-evidence format rather than a custom summary.
 2. A PR-body-only correction may require a fresh `pull_request` event because rerunning an existing workflow preserves the original event payload.
 3. Candidate qualification remains the pilot's primary blocking risk, not implementation capability.
-4. Manual UI evidence remains required for planned Runs 2 and 3.
+4. Manual UI evidence remains required for any authorized future Run 3.
 5. The immutable logo-asset prerequisite must be resolved before #525 can be reconsidered.
 
 These observations do not create implementation commitments or new issue scope.
@@ -210,3 +314,10 @@ These observations do not create implementation commitments or new issue scope.
 - Usage/cost: unavailable
 - Documentation-contract finding: no authoritative pilot-evidence document previously existed; this document is indexed as a required developer workflow record.
 - Elapsed time: 2 minutes 19 seconds from the recorded documentation-edit start through final focused documentation validation (2026-07-23 22:48:03 to 22:50:22 CDT, UTC-05:00).
+
+## Run 2 documentation update measurements
+
+- Documentation implementation iterations: 1
+- Documentation correction iterations: 1
+- Human intervention: authorization to record completed Pilot Run 2 evidence after Issue #573 closure.
+- Usage/cost: unavailable
