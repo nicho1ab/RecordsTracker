@@ -6,6 +6,11 @@ import html
 from collections import Counter
 from dataclasses import dataclass
 
+from ccld_complaints.hosted_app.copy_controls import (
+    COPY_CONTROL_SCRIPT,
+    render_copy_icon_button,
+)
+
 
 @dataclass(frozen=True)
 class FacilityCaseBriefRecord:
@@ -66,10 +71,7 @@ def render_facility_case_brief(brief: FacilityCaseBrief) -> str:
     )
     flag_count = sum(1 for record in brief.records if has_review_flag(record))
     facility_label = brief.facility_name if brief.facility_name and brief.facility_name != "unknown" else "Facility"
-    facility_heading = _copyable_value(
-        "Copy facility name",
-        facility_label,
-    )
+    facility_heading = _escape(facility_label)
     facility_number = brief.facility_number or "unknown"
     facility_number_markup = _copyable_value("Copy Facility ID", facility_number)
     metric_cards = _metric_cards(
@@ -160,7 +162,7 @@ def render_facility_case_brief(brief: FacilityCaseBrief) -> str:
 {priority_section}
 {review_cue_section}
 {findings_section}
-    </section>"""
+    </section>{COPY_CONTROL_SCRIPT}"""
 
 
 def render_record_flag_reason_section(record: FacilityCaseBriefRecord) -> str:
@@ -329,12 +331,7 @@ def _copyable_value(accessible_label: str, value: str) -> str:
 
 
 def _copy_icon_button(accessible_label: str, value: str) -> str:
-    return (
-        f'<button class="copy-icon-button" type="button" '
-        f'data-copy-value="{_escape(value)}" '
-        f'aria-label="{_escape(accessible_label)}" title="{_escape(accessible_label)}">'
-        f'{_clipboard_icon_svg()}</button>'
-    )
+    return render_copy_icon_button(accessible_label, value)
 
 
 def _clipboard_icon_svg() -> str:

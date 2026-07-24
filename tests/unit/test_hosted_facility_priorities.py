@@ -472,6 +472,9 @@ def test_facility_intelligence_filters_reconciles_and_preserves_drilldown_contex
     assert "Open next complaint" in html
     assert "Open next complaint source" in html
     assert "Copy next complaint source URL" in html
+    assert 'aria-label="Next complaint source URL for' in html
+    assert 'class="copy-icon-button" type="button"' in html
+    assert 'class="copy-text-button"' not in html
     assert "120+ day gap" in html
     assert "Supervision topic" in html
     assert "Source available" in html
@@ -626,7 +629,7 @@ def test_facility_intelligence_accessible_structure_and_safe_language() -> None:
     assert "Feedback" in html
     assert "Job Status" not in html
     assert "shell-facility-search" not in html
-    assert "typeof navigator !== 'undefined'" in html
+    assert "typeof navigator === 'undefined'" in html
     assert "showCopyStatus(button, 'Copy unavailable');" in html
     assert "@media print" in html
     assert "@media (min-width: 1101px)" in html
@@ -771,7 +774,7 @@ def test_facility_intelligence_distinguishes_verified_zero_and_unavailable_value
     assert "Substantiated count unavailable" in html
     assert "Latest complaint date unavailable" in html
     assert "No substantiated count" not in html
-    assert "Copy next complaint source URL unavailable" in html
+    assert "Copy unavailable" in html
     assert 'aria-disabled="true">Source unavailable</span>' in html
 
 
@@ -1460,7 +1463,8 @@ def test_facility_hub_reuses_intelligence_aggregates_state_and_tie_order() -> No
     assert content_type == "text/html; charset=utf-8"
     assert after == before
     assert "<h2 id=\"facility-hub-heading\">" in html
-    assert ">Alpha Center<button" in html
+    assert ">Alpha Center</h2>" in html
+    assert 'aria-label="Copy facility name"' not in html
     assert html.count("Primary facility facts") == 1
     assert html.count("<dt>Facility type</dt>") == 1
     assert "Opened from</dt><dd>Compare Facilities" in html

@@ -13,6 +13,11 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlencode, urlparse
 
+from ccld_complaints.hosted_app.copy_controls import (
+    COPY_CONTROL_SCRIPT,
+    clipboard_icon_svg,
+    render_copy_icon_button,
+)
 from ccld_complaints.hosted_app.facility_identity_presenter import (
     present_facility_field,
     projected_display_text,
@@ -1040,9 +1045,6 @@ def _render_signal_only_facility_hub_page(
         if signals_summary is not None
         else ""
     )
-    facility_label_copy_aria = (
-        "Copy facility name" if signals_summary is not None else "Copy Facility ID"
-    )
     loaded_context_intro = (
         "Facility-directory record not available. Supported public licensing and "
         "visit observations and loaded complaint records can still guide the next "
@@ -1060,7 +1062,7 @@ def _render_signal_only_facility_hub_page(
             main=f"""    <section class="hero-card attorney-hero" aria-labelledby="signal-only-facility-hub-heading">
             <div>
                 <p class="launch-kicker">Facility Overview</p>
-                <h2 id="signal-only-facility-hub-heading">{_render_copyable_value("Copy facility name", facility_label)}</h2>
+                <h2 id="signal-only-facility-hub-heading">{_escape(facility_label)}</h2>
                 <p class="launch-value">Facility-directory record not available. Supported public licensing and visit observations can still guide the next review step.</p>
                 <dl class="summary-list">
                     <dt>Facility ID</dt>
@@ -1087,7 +1089,7 @@ def _render_signal_only_facility_hub_page(
     main=f"""    <section class="hero-card attorney-hero" aria-labelledby="signal-only-facility-hub-heading">
             <div>
                 <p class="launch-kicker">Facility Overview</p>
-                <h2 id="signal-only-facility-hub-heading">{_render_copyable_value(facility_label_copy_aria, facility_label)}</h2>
+                <h2 id="signal-only-facility-hub-heading">{_escape(facility_label)}</h2>
                 <p class="launch-value">{loaded_context_intro}</p>
                 <dl class="summary-list">
                     <dt>Facility ID</dt>
@@ -1766,7 +1768,7 @@ def _render_facility_identity_and_core_facts(
     return f"""<section class="hero-card attorney-hero" aria-labelledby="facility-hub-heading">
       <div>
         <p class="launch-kicker">Facility</p>
-        <h2 id="facility-hub-heading">{_render_copyable_value("Copy facility name", _facility_record_field(record, FacilityProjectionField.FACILITY_NAME))}</h2>
+        <h2 id="facility-hub-heading">{_escape(_facility_record_field(record, FacilityProjectionField.FACILITY_NAME))}</h2>
         <p class="launch-value">{_escape(launch_value)}</p>
         <dl class="summary-list" aria-label="Primary facility facts">
           <dt>Facility ID</dt>
@@ -1874,10 +1876,7 @@ def _render_copyable_value(accessible_label: str, value: str) -> str:
         return _escape(_display_value(value))
     return (
         f'<span class="copyable-value">{_escape(value)}'
-        f'<button class="copy-icon-button" type="button" data-copy-value="{_escape(value)}" '
-        f'aria-label="{_escape(accessible_label)}" title="{_escape(accessible_label)}">'
-        f'{_clipboard_icon_svg()}</button>'
-        '<span class="copy-feedback" data-copy-status aria-live="polite"></span></span>'
+        f'{render_copy_icon_button(accessible_label, value)}</span>'
     )
 
 
@@ -1885,44 +1884,16 @@ def _render_copy_button(accessible_label: str, value: str) -> str:
     if not value:
         return ""
     return (
-        f'<span class="copyable-value"><button class="copy-icon-button" type="button" '
-        f'data-copy-value="{_escape(value)}" aria-label="{_escape(accessible_label)}" '
-        f'title="{_escape(accessible_label)}">{_clipboard_icon_svg()}</button>'
-        '<span class="copy-feedback" data-copy-status aria-live="polite"></span></span>'
+        f'<span class="copyable-value">{render_copy_icon_button(accessible_label, value)}</span>'
     )
 
 
 def _clipboard_icon_svg() -> str:
-    return (
-        '<svg aria-hidden="true" viewBox="0 0 24 24" focusable="false" width="16" height="16">'
-        '<path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" '
-        'stroke-linejoin="round" d="M8 8h9a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2Z"/>'
-        '<path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" '
-        'stroke-linejoin="round" d="M4 15H3a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>'
-        '</svg>'
-    )
+    return clipboard_icon_svg()
 
 
 def _render_copy_control_script() -> str:
-    return """<script>
-(function () {
-  document.querySelectorAll('[data-copy-value]').forEach(function (button) {
-    button.addEventListener('click', function () {
-      var status = button.parentNode.querySelector('[data-copy-status]');
-      var value = button.getAttribute('data-copy-value') || '';
-      if (!navigator.clipboard || !navigator.clipboard.writeText) {
-        if (status) status.textContent = ' Copy unavailable';
-        return;
-      }
-      navigator.clipboard.writeText(value).then(function () {
-        if (status) status.textContent = ' Copied';
-      }, function () {
-        if (status) status.textContent = ' Copy unavailable';
-      });
-    });
-  });
-}());
-</script>"""
+    return COPY_CONTROL_SCRIPT
 
 
 def _display_facility_status_code(status: str) -> str:

@@ -164,7 +164,9 @@ def test_supported_first_activity_evidence_is_bounded_and_action_separated() -> 
     assert "04/14/2022" in html
     assert 'data-copy-value="04/14/2022"' in html
     assert 'aria-label="Copy First investigation activity date"' in html
-    assert '>Copy date</button>' in html
+    assert 'class="copy-icon-button source-evidence-copy"' in html
+    assert ">Copy date</button>" not in html
+    assert 'data-copy-status hidden aria-live="polite" aria-atomic="true"' in html
     assert 'aria-expanded="false"' in html
     assert 'aria-controls="first-investigation-evidence"' in html
     assert '>View source evidence</span>' in html
@@ -261,7 +263,7 @@ def test_missing_first_activity_date_has_no_evidence_controls() -> None:
     )
 
     assert "Blank in source" in html
-    assert "Copy date" not in html
+    assert 'aria-label="Copy First investigation activity date"' not in html
     assert "View source evidence" not in html
     assert "first-investigation-evidence" not in html
 
@@ -294,12 +296,22 @@ def test_first_activity_accessibility_focus_print_and_reflow_contract() -> None:
     html = _render(_event(event_text="Investigation activity occurred."))
     script = reviewer_ui._DETAIL_COPY_SCRIPT
 
-    copy_index = html.index("Copy date")
+    copy_index = html.index('aria-label="Copy First investigation activity date"')
     toggle_index = html.index("View source evidence")
     evidence_index = html.index('id="first-investigation-evidence"')
     source_index = html.index("Open original source")
     assert copy_index < toggle_index < evidence_index < source_index
-    assert '<button class="source-evidence-copy" type="button"' in html
+    assert '<button class="copy-icon-button source-evidence-copy" type="button"' in html
+    assert "data-copy-control-bound" in script
+    assert "typeof navigator === 'undefined'" in script
+    assert "!navigator.clipboard || !navigator.clipboard.writeText" in script
+    assert "showCopyStatus(button, 'Copied')" in script
+    assert "showCopyStatus(button, 'Copy unavailable')" in script
+    assert script.count("<script>") == 1
+    assert script.count("</script>") == 1
+    assert script.index("function setFirstActivityEvidenceExpanded") < script.index(
+        "</script>"
+    )
     assert (
         '<button id="first-investigation-evidence-toggle" '
         'class="source-evidence-toggle" type="button"'

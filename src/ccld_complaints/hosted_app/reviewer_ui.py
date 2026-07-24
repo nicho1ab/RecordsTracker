@@ -56,6 +56,11 @@ from ccld_complaints.hosted_app.ccld_facility_lookup import (
     load_active_ccld_facility_reference,
     render_ccld_facility_review_priority_page,
 )
+from ccld_complaints.hosted_app.copy_controls import (
+    clipboard_icon_svg,
+    render_copy_control_script,
+    render_copy_icon_button,
+)
 from ccld_complaints.hosted_app.facility_case_brief import (
     FacilityCaseBrief,
     FacilityCaseBriefRecord,
@@ -2646,30 +2651,23 @@ def _render_facility_intelligence_source_region(
             f'<a class="button button-secondary" href="{_escape(complaint.source_url_href)}" '
             f'aria-label="Open next complaint source for {_escape(control)}">Open next complaint source</a>'
         )
-        copy_action = _copy_text_button(
-            "Copy next complaint source URL",
-            complaint.source_url_href,
+        source_value = (
+            f'<span class="copyable-value"><a href="{_escape(complaint.source_url_href)}" '
+            f'aria-label="Next complaint source URL for {_escape(control)}">'
+            f'{_escape(complaint.source_url_href)}</a>'
+            f'{_copy_icon_button("Copy next complaint source URL", complaint.source_url_href)}</span>'
         )
     else:
         source_badge = _review_chip_markup("Source unavailable")
         open_action = '<span class="button button-disabled" aria-disabled="true">Source unavailable</span>'
-        copy_action = '<button class="copy-text-button" type="button" disabled>Copy next complaint source URL unavailable</button>'
+        source_value = '<span class="copy-feedback" data-copy-status aria-live="polite">Copy unavailable</span>'
     return f"""                <section class="facility-row-source" aria-label="Source record for complaint {_escape(control)}">
                   <h4>Source record</h4>
                   <p>{source_badge}</p>
                   <p>Next complaint: <strong>{_escape(control)}</strong></p>
                   {open_action}
-                  {copy_action}
+                  {source_value}
                 </section>"""
-
-
-def _copy_text_button(label: str, value: str) -> str:
-    return (
-        f'<span class="copy-text-control"><button class="copy-text-button" type="button" '
-        f'data-copy-value="{_escape(value)}" data-copy-feedback="Copied" '
-        f'aria-label="{_escape(label)}">{_clipboard_icon_svg()}<span>{_escape(label)}</span></button>'
-        '<span class="copy-feedback" data-copy-status hidden aria-live="polite" aria-atomic="true"></span></span>'
-    )
 
 
 def _facility_intelligence_reviewer_status(
@@ -9538,15 +9536,16 @@ def _copyable_value(label: str, value: str) -> str:
     )
 
 
-def _copy_icon_button(accessible_label: str, value: str) -> str:
-    return (
-        f'<button class="copy-icon-button" type="button" '
-        f'data-copy-value="{_escape(value)}" '
-        f'data-copy-feedback="Copied" '
-        f'aria-label="{_escape(accessible_label)}" title="{_escape(accessible_label)}">'
-        f'{_clipboard_icon_svg()}</button>'
-        '<span class="copy-feedback" data-copy-status hidden '
-        'aria-live="polite" aria-atomic="true"></span>'
+def _copy_icon_button(
+    accessible_label: str,
+    value: str,
+    *,
+    class_name: str = "copy-icon-button",
+) -> str:
+    return render_copy_icon_button(
+        accessible_label,
+        value,
+        class_name=class_name,
     )
 
 
@@ -9559,63 +9558,10 @@ def _copy_button_label(label: str) -> str:
 
 
 def _clipboard_icon_svg() -> str:
-    return (
-        '<svg aria-hidden="true" viewBox="0 0 24 24" focusable="false" '
-        'width="16" height="16">'
-        '<path fill="none" stroke="currentColor" stroke-width="2" '
-        'stroke-linecap="round" stroke-linejoin="round" '
-        'd="M8 8h9a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2Z"/>'
-        '<path fill="none" stroke="currentColor" stroke-width="2" '
-        'stroke-linecap="round" stroke-linejoin="round" '
-        'd="M4 15H3a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>'
-        "</svg>"
-    )
+    return clipboard_icon_svg()
 
 
-_DETAIL_COPY_SCRIPT = """<script>
-function ensureCopyStatus(button) {
-  var status = button.nextElementSibling;
-  if (!status || !status.hasAttribute('data-copy-status')) {
-    status = document.createElement('span');
-    status.className = 'copy-feedback';
-    status.setAttribute('data-copy-status', '');
-    status.setAttribute('aria-live', 'polite');
-    status.setAttribute('aria-atomic', 'true');
-    status.hidden = true;
-    button.insertAdjacentElement('afterend', status);
-  }
-  return status;
-}
-function showCopyStatus(button, message) {
-  var status = ensureCopyStatus(button);
-  window.clearTimeout(button._copyStatusTimer);
-  button.setAttribute('data-copy-feedback', message);
-  status.textContent = message;
-  status.hidden = false;
-  button._copyStatusTimer = window.setTimeout(function () {
-    status.hidden = true;
-    status.textContent = '';
-    button.removeAttribute('data-copy-state');
-  }, 2000);
-}
-document.querySelectorAll('[data-copy-value]').forEach(function (button) {
-  button.addEventListener('click', function () {
-    var value = button.getAttribute('data-copy-value') || '';
-    if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(value).then(function () {
-        button.setAttribute('data-copy-state', 'copied');
-        showCopyStatus(button, 'Copied');
-      }).catch(function () {
-        button.setAttribute('data-copy-state', 'unavailable');
-        showCopyStatus(button, 'Copy unavailable');
-      });
-    }
-    else {
-      button.setAttribute('data-copy-state', 'unavailable');
-      showCopyStatus(button, 'Copy unavailable');
-    }
-  });
-});
+_DETAIL_COPY_SCRIPT = render_copy_control_script(additional_script="""
 function setFirstActivityEvidenceExpanded(button, expanded) {
   var regionId = button.getAttribute('aria-controls');
   var region = regionId ? document.getElementById(regionId) : null;
@@ -9650,7 +9596,7 @@ document.querySelectorAll('[data-source-evidence-toggle]').forEach(function (but
     button.focus();
   }
 });
-</script>"""
+""")
 
 _COMPARE_FACILITIES_FOCUS_SCRIPT = """<script>
 (function () {
@@ -10884,13 +10830,10 @@ def _render_first_activity_milestone(
         related_records,
         displayed_date=presentation.display_text,
     )
-    copy_control = (
-        '<button class="source-evidence-copy" type="button" '
-        f'data-copy-value="{_escape(evidence.displayed_date)}" '
-        'data-copy-feedback="Copied" '
-        'aria-label="Copy First investigation activity date">Copy date</button>'
-        '<span class="copy-feedback" data-copy-status hidden '
-        'aria-live="polite" aria-atomic="true"></span>'
+    copy_control = _copy_icon_button(
+        "Copy First investigation activity date",
+        evidence.displayed_date,
+        class_name="copy-icon-button source-evidence-copy",
     )
     toggle_control = (
         '<button id="first-investigation-evidence-toggle" '

@@ -1224,8 +1224,12 @@ def test_ccld_facility_review_hub_renders_safe_directory_context() -> None:
     assert "Los Angeles" in html
     assert "24" in html
     assert "Licensed" in html
-    assert 'aria-label="Copy facility name"' in html
+    assert 'aria-label="Copy facility name"' not in html
     assert 'aria-label="Copy Facility ID"' in html
+    assert 'class="copy-icon-button" type="button"' in html
+    assert 'data-copy-status hidden aria-live="polite" aria-atomic="true"' in html
+    assert "data-copy-control-bound" in html
+    assert "showCopyStatus(button, 'Copy unavailable')" in html
     assert "Facility pattern review summary" not in html
     assert "No loaded complaint records are currently available" in html
     assert "not a public-source completeness conclusion" in normalized_html
