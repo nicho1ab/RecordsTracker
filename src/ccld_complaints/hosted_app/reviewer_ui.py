@@ -5938,8 +5938,6 @@ def _render_complaint_review_matrix_csv(
         query_end=return_context.end_date,
     )
     metadata = _aggregate_export_metadata(aggregate)
-    if not records:
-        writer.writerow(_empty_matrix_row(return_context) | metadata)
     for record in records:
         row = _matrix_row_for_record(
             record,
@@ -5985,15 +5983,6 @@ def _substantiated_fieldnames() -> list[str]:
         "Result Status",
         "Result Cause",
     ]
-
-
-def _empty_substantiated_row(
-    return_context: CcldQueueReturnContext,
-    metadata: Mapping[str, str] | None = None,
-) -> dict[str, str]:
-    return {key: NOT_APPLICABLE for key in _substantiated_fieldnames()} | {
-        "Facility/License Number": return_context.facility_number or NOT_APPLICABLE,
-    } | dict(metadata or {})
 
 
 def _render_substantiated_complaint_csv(
@@ -6061,9 +6050,6 @@ def _render_substantiated_complaint_csv(
         limit=explicit_limit,
     )
     export_metadata = _aggregate_export_metadata(aggregate)
-    if not filtered_records:
-        writer.writerow(_empty_substantiated_row(return_context, export_metadata))
-        return output.getvalue()
     records = filtered_records
 
     # Sort by the active date dimension first (desc), then missing-date rows by key.
@@ -6496,20 +6482,6 @@ def _matrix_review_guidance_text() -> str:
         "complaint review matrix; CSV export; Excel-ready; open source links and reviewer detail "
         "before relying on source-derived values; complaint records are requested/reviewed separately"
     )
-
-
-def _empty_matrix_row(return_context: CcldQueueReturnContext) -> dict[str, str]:
-    return {
-        key: NOT_APPLICABLE
-        for key in _matrix_fieldnames()
-    } | {
-        "matrix_status": "No loaded complaint records matched this facility/date context.",
-        "review_guidance": _matrix_review_guidance_text(),
-        "facility_number": return_context.facility_number or NOT_APPLICABLE,
-        "request_start_date": return_context.start_date or NOT_APPLICABLE,
-        "request_end_date": return_context.end_date or NOT_APPLICABLE,
-        "loaded_local_test_record_indicator": "no",
-    }
 
 
 def _matrix_row_for_record(

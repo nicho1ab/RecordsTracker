@@ -125,9 +125,9 @@ Governed CSVs use explicit value-state labels instead of unexplained blank cells
 Hosted complaint and complaint-matrix CSV exports are uncapped unless the
 request explicitly supplies a limit. Their metadata columns report the record
 universe, eligible/exported counts, source coverage, date dimension/range,
-limit, truncation status, and a plain-language result cause. An empty export row
-describes why no rows matched, and its record-specific cells use `Not applicable`;
-it does not imply that no records exist globally.
+limit, truncation status, and a plain-language result cause. A successful empty
+export contains the ordinary header row and zero complaint rows; it does not
+imply that no records exist globally.
 
 Facility-hub fact placement does not add duplicate export columns. The hosted
 complaint matrix continues to include one `facility_number` column and one
