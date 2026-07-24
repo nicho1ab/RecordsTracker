@@ -38,11 +38,12 @@ Dependent work does not begin before prerequisite gates are complete.
 1. [#431](https://github.com/nicho1ab/RecordsTracker/issues/431) — completed Pilot Run 1.
 2. [#573](https://github.com/nicho1ab/RecordsTracker/issues/573) — completed Pilot Run 2.
 3. [#514](https://github.com/nicho1ab/RecordsTracker/issues/514) — completed Pilot Run 3.
+4. [#466](https://github.com/nicho1ab/RecordsTracker/issues/466) — completed Pilot Run 4.
 
 [#525](https://github.com/nicho1ab/RecordsTracker/issues/525) remains blocked
 by the missing immutable approved-logo asset locator and SHA-256. Issues #465,
-#499, and #580 were substantively ineligible. No genuine fourth or fifth
-qualified run currently exists, so the candidate shortfall remains two.
+#499, and #580 were substantively ineligible. No genuine fifth qualified run
+currently exists, so the candidate shortfall remains one.
 Qualification criteria must not be weakened merely to fill the five-run target.
 
 ## Run 1 — Issue #431
@@ -319,15 +320,57 @@ does not support autonomous approval, merge, closure, or broader autonomy.
 - Stopping conditions worked: the initial precheck failed closed, the first evidence attempt did not fabricate focus, and defective evidence was preserved as superseded and recaptured only after correction. No deployment or production mutation occurred.
 - Run 3 supports retaining strict evidence and human-acceptance gates. Native browser evidence should use the supported Playwright/Edge route when the in-app browser cannot provide genuine keyboard input. Existing Issue #587 controls are sufficient; no new governance issue or ADR is warranted, and this run does not authorize greater automation.
 
+## Run 4 — Issue #466
+
+### Identity and lifecycle
+
+- Pilot run: 4 of 5.
+- Issue: [#466 — Define how zero-result reviewer CSV exports should work](https://github.com/nicho1ab/RecordsTracker/issues/466); PR: [#603](https://github.com/nicho1ab/RecordsTracker/pull/603).
+- Pre-squash implementation commit: `a38e45a1cafabadda57ab24e3d7ffbc9709d6a58`; squash commit: `946af266f87aa7e6fac7aebf2b2faea380e0e061`; merged UTC: 2026-07-24T19:32:41Z.
+- Issue qualification occurred before implementation, and Issue #466 was selected as Pilot Run 4 before its branch and worktree were created.
+- Issue #466 closed as completed only after the verified merge.
+
+### Scope and outcome
+
+- One implementation commit changed three files with 38 additions and 63 deletions: a bounded reviewer CSV renderer, focused tests, and user documentation.
+- No schema, source, ingestion, deployment, QNAP, production-data, authentication, authorization, security-policy, or privacy-policy change occurred.
+- Successful zero-result exports return the ordinary shared 38-column header and zero data rows; no synthetic complaint, status, metadata, blank, unrelated, or sentinel row is emitted.
+- One-result and multiple-result exports retain the ordinary complaint rows and schema. Filtering, authorization, deterministic ordering, HTTP success, CSV content type, source semantics, and accessible browser guidance remain unchanged.
+
+### Validation
+
+- Independent zero-result regression passed; focused CSV and filter tests passed (17 passed); directly affected reviewer tests passed (112 passed).
+- Targeted Ruff, targeted mypy, documentation checks, independent-verification contract, secret scan, diff and hygiene checks all passed.
+- Required GitHub checks passed: `validate` (30118839132), `docs-check` (30118839154), `fixtures` (30118839059), and `security` (30118839069). Within `validate`, Lint, Type check, Tests, Documentation check, required workflow-contract verification, and PR-evidence and governed-boundary verification passed.
+- The broad application suite was not run because no documented trigger applied to this bounded renderer, focused-test, and documentation change. No required check or test obligation was weakened.
+
+### Accepted evidence
+
+- Accepted ZIP: `data/processed/issue-466-csv-evidence.zip`; SHA-256: `cbb3e00f65db31a5b27c244957a5e04e1f6cfbbb54ad02b686683fc01361d2d8`; package members: six.
+- Zero-result, one-result, and multiple-result data-row counts were 0, 1, and 3. Shared ordered 38-column schema equality, field-count consistency, deterministic ordering, and the zero-result no-sentinel result passed.
+- Spreadsheet-compatible consumer review was accepted. Excel-specific and Power BI-specific application behavior were not separately tested.
+
+### Iterations and failure recovery
+
+- Implementation iterations: 1; source correction iterations: 3; PR-body correction iterations: 3; evidence attempts: 3.
+- No implementation failure or source defect was recorded. The corrections addressed PR-body evidence defects and stale pull-request event-payload validation, not defective required checks.
+- Live PR-body edits did not change the already captured event payload, and reruns reused that payload. This repository's workflows did not trigger on `ready_for_review`.
+- A controlled close and reopen produced a fresh supported `reopened` event, and final validation against that fresh event succeeded.
+
+### Governed workflow lessons
+
+- Changed test files require explicit test-boundary disclosure. `Authorized change` is the correct disclosure when test assertions intentionally change without weakening required checks or coverage obligations.
+- The event-payload and lifecycle observations above are limited to the repository evidence from Run 4; they do not support broader generalization or autonomous approval, merge, or issue closure.
+
 ## Pilot-wide status
 
-- Completed runs: 3 of 5.
-- Completed issues: #431, #573, #514.
+- Completed runs: 4 of 5.
+- Completed issues: #431, #573, #514, #466.
 - Qualified unstarted candidates: 0.
-- Unresolved candidate shortfall: 2.
+- Unresolved candidate shortfall: 1.
 - #525 remains unavailable pending an approved immutable logo asset locator and verified integrity hash.
 - #533 remains blocked by incomplete five-run pilot acceptance.
-- Pilot Run 4 is not selected or authorized.
+- Pilot Run 5 remains unselected.
 - Pilot-wide acceptance: incomplete.
 
 Issue #587 is governance provenance, not a pilot run. The automation decision gate in [#533](https://github.com/nicho1ab/RecordsTracker/issues/533) must not begin until #532 acceptance gates are complete. No conclusion about broad autonomous suitability may be drawn from the completed runs.
@@ -337,7 +380,7 @@ Issue #587 is governance provenance, not a pilot run. The automation decision ga
 1. Future RL-PREPARE prompts should use the repository's exact governed PR-evidence format rather than a custom summary.
 2. A PR-body-only correction may require a fresh `pull_request` event because rerunning an existing workflow preserves the original event payload.
 3. Candidate qualification remains the pilot's primary blocking risk, not implementation capability.
-4. Manual UI evidence remains required for any authorized future Run 3.
+4. Manual UI evidence remains required for any authorized future Pilot Run 5 when its selected issue requires it.
 5. The immutable logo-asset prerequisite must be resolved before #525 can be reconsidered.
 
 These observations do not create implementation commitments or new issue scope.
