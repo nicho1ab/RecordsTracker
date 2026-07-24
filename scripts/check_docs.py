@@ -840,6 +840,8 @@ CODEX_WORKFLOW_REQUIRED_MARKERS = {
         "durable task specification",
         "delta-only",
         "continuation never grants additional authority implicitly.",
+        "Independent GitHub Actions verification",
+        "fresh-context review remains advisory",
     ),
     "TESTING_STRATEGY.md": (
         "when repository governance specifically requires it",
@@ -912,6 +914,7 @@ PULL_REQUEST_TEMPLATE_MARKERS = (
     "| Production data and correction behavior |",
     "| Deployment and infrastructure |",
     "| Repository governance |",
+    "| Required GitHub workflows and checks |",
     "| Tests or checks weakened to obtain passage |",
     '"all tests passed" does not satisfy this review.',
     "Self-reported evidence supplements, and never replaces,",
