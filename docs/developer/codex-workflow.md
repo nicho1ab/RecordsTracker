@@ -283,6 +283,58 @@ only that exact persistent branch and updating only its matching remote with
 scoped authorization. Broad force-push authority is prohibited, and no reset or
 rewrite is allowed when unique branch content exists.
 
+### Read-only delivery-state snapshots
+
+`scripts/delivery_state.py snapshot` produces a versioned JSON record of the
+current local Git and live GitHub state for a bounded issue worktree. It is a
+read-only inspection tool: it does not fetch, change refs, create or realign
+worktrees, inspect stash contents, stage, commit, publish, edit a PR, rerun a
+check, merge, close an issue, deploy, or mutate production data.
+
+The committed schema is `schemas/delivery-state-snapshot-v1.schema.json`.
+Snapshots identify their local-Git and GitHub sources, collection times,
+expected-versus-observed immutable identifiers, and the fact that Git and
+GitHub do not provide one globally atomic read. A changed critical identifier
+is reported as instability rather than hidden by a stale success result.
+
+Historical merged or closed PRs that reuse a branch name at a different head
+SHA are informational. A live GitHub ref is authoritative for remote-branch
+existence; a local `origin/<branch>` ref may therefore be stale and is also
+informational when no live branch or ownership conflict exists. An exact-head
+open PR is an idempotent reuse state. A closed or merged PR at the exact current
+head is a blocking historical-publication condition until an authorized review
+establishes its disposition; creating another PR would otherwise be duplicate
+or inconsistent.
+
+Expected PR base branch/SHA and head branch/SHA are compared separately and
+fail closed. Required-check records retain both their observed and expected
+head SHAs; successful evidence from another head is marked stale and cannot
+satisfy the current-head check requirement.
+
+The snapshot records only durable delivery facts: repository and SHA identity,
+worktree and protected-stash metadata, changed scope, PR/check linkage, source
+attribution, and typed findings. Human-readable wording and command layout are
+supersedable. It does not decide product correctness, visual acceptance,
+deployment, issue closure, or production-data operations, and it never grants
+mutation authority.
+
+Use a fixed `--at` value only for deterministic fixture evidence. An explicitly
+requested output path is refused when it already exists unless safe replacement
+is deliberately requested; live snapshots belong under ignored evidence storage
+rather than tracked source paths. The PowerShell invocation remains one line:
+
+```powershell
+python scripts/delivery_state.py snapshot --issue <number> --expected-main-sha <sha> --protected-stash <sha>
+```
+
+Findings use `INFORMATIONAL_DISCREPANCY`, `RECOVERABLE_AUTOMATION_FAILURE`,
+`AUTHORIZATION_BLOCKER`, `DEPENDENCY_BLOCKER`,
+`MATERIAL_IMPLEMENTATION_BLOCKER`, `DESTRUCTIVE_ACTION_BLOCKER`, and
+`GOVERNED_BOUNDARY_REVIEW_REQUIRED`. Informational history does not fail the
+command; actual blockers and execution failures do. Future dependency or
+lifecycle integration must retain this schema and read-only boundary rather
+than creating a parallel governance path.
+
 ## Acceptance-evidence lifecycle
 
 Before removing a disposable worktree that contains the only acceptance-evidence
