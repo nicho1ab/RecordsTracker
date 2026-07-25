@@ -7,7 +7,10 @@
 3. Add or update tests.
 4. Update documentation.
 5. Run local validation.
-6. Open a pull request.
+6. Render and preflight the governed pull-request evidence body with
+   `scripts/prepare_pr_body.py`; do not substitute a freeform body when the
+   full template applies.
+7. Open a pull request.
 
 ## Creating loop-compatible implementation issues
 

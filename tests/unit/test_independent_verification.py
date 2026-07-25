@@ -36,6 +36,8 @@ def _valid_body() -> str:
 
 - Major files or components changed: verification policy
 - Important behavior intentionally left unchanged or out of scope: human approval
+- Reviewer UI regression contracts: Added `RT-RC-001`; other contracts are not
+  applicable to this policy-only change.
 
 ## Acceptance-criteria evidence
 
@@ -90,6 +92,9 @@ def _valid_body() -> str:
 """
 
 
+VALIDATOR = _load_module()
+
+
 def _governed_summary_body() -> str:
     summary = (
         "- adds objective independent verification for governing issues, PR evidence, "
@@ -136,6 +141,67 @@ def test_missing_governing_issue_fails_closed() -> None:
     )
 
     assert "missing governing issue reference" in violations
+
+
+@pytest.mark.parametrize("heading", VALIDATOR.REQUIRED_TEMPLATE_SECTIONS)
+def test_each_missing_required_template_heading_fails_closed(heading: str) -> None:
+    verification = _load_module()
+    body = _valid_body().replace(f"## {heading}\n", "", 1)
+
+    violations = verification.find_pr_evidence_violations(body, [])
+
+    assert f"missing PR evidence section: {heading}" in violations
+
+
+def test_duplicate_required_template_heading_fails_closed() -> None:
+    verification = _load_module()
+    body = _valid_body() + "\n## Required GitHub checks\n\n- duplicate\n"
+
+    violations = verification.find_pr_evidence_violations(body, [])
+
+    assert "duplicate PR evidence section: Required GitHub checks" in violations
+
+
+@pytest.mark.parametrize(
+    "value",
+    (
+        "",
+        "<!-- List affected contracts. -->",
+        "TBD",
+        "N/A",
+        "none",
+    ),
+)
+def test_reviewer_contract_placeholder_or_evasive_value_fails_closed(value: str) -> None:
+    verification = _load_module()
+    body = _valid_body().replace(
+        "Added `RT-RC-001`; other contracts are not\n  applicable to this policy-only change.",
+        value,
+    )
+
+    violations = verification.find_pr_evidence_violations(body, [])
+
+    assert any("reviewer-contract" in violation for violation in violations) or (
+        "missing PR evidence field: Reviewer UI regression contracts" in violations
+    )
+
+
+def test_reviewer_contract_not_applicable_requires_non_reviewer_scope() -> None:
+    verification = _load_module()
+    body = _valid_body().replace(
+        "Added `RT-RC-001`; other contracts are not\n  applicable to this policy-only change.",
+        "Not applicable - this script-only change has no reviewer-facing behavior.",
+    )
+
+    assert verification.find_pr_evidence_violations(
+        body, ["scripts/prepare_pr_body.py"]
+    ) == []
+    assert (
+        "reviewer-contract disposition cannot be not applicable for reviewer scope"
+        in verification.find_pr_evidence_violations(
+            body, ["tests/unit/test_hosted_reviewer_ui.py"]
+        )
+    )
 
 
 def test_governed_summary_passes_for_required_workflow_change() -> None:
@@ -227,3 +293,104 @@ def test_cli_reads_event_and_prints_verification_summary(
     output = capsys.readouterr().out
     assert "Independent verification summary" in output
     assert "- Governing issue: #531" in output
+
+
+def test_cli_reads_current_pr_body_instead_of_stale_event(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    verification = _load_module()
+    body_path = tmp_path / "current-pr-body.md"
+    changed_files = tmp_path / "changed-files.txt"
+    body_path.write_text(_valid_body(), encoding="utf-8")
+    changed_files.write_text(".github/workflows/ci.yml\n", encoding="utf-8")
+
+    assert verification.main(
+        [
+            "--repo-root",
+            str(ROOT),
+            "--pr-body",
+            str(body_path),
+            "--changed-files",
+            str(changed_files),
+        ]
+    ) == 0
+
+    assert "Independent verification summary" in capsys.readouterr().out
+
+
+def test_cli_reports_live_body_read_failure(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    verification = _load_module()
+    changed_files = tmp_path / "changed-files.txt"
+    changed_files.write_text(".github/workflows/ci.yml\n", encoding="utf-8")
+
+    assert verification.main(
+        [
+            "--repo-root",
+            str(ROOT),
+            "--pr-body",
+            str(tmp_path / "missing-body.md"),
+            "--changed-files",
+            str(changed_files),
+        ]
+    ) == 1
+
+    assert "cannot read pull-request body:" in capsys.readouterr().out
+
+
+def test_cli_preserves_multiline_special_character_live_body(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    verification = _load_module()
+    body_path = tmp_path / "current-pr-body.md"
+    changed_files = tmp_path / "changed-files.txt"
+    body_path.write_text(
+        _valid_body().replace(
+            "Developer workflow policy updated.",
+            "Developer workflow policy updated for review & audit.\n\nAdditional context: <safe>. ",
+        ),
+        encoding="utf-8",
+    )
+    changed_files.write_text(".github/workflows/ci.yml\n", encoding="utf-8")
+
+    assert verification.main(
+        [
+            "--repo-root",
+            str(ROOT),
+            "--pr-body",
+            str(body_path),
+            "--changed-files",
+            str(changed_files),
+        ]
+    ) == 0
+    assert "Independent verification summary" in capsys.readouterr().out
+
+
+def test_template_headings_match_the_validator_contract() -> None:
+    verification = _load_module()
+    template = (ROOT / ".github/PULL_REQUEST_TEMPLATE.md").read_text(encoding="utf-8")
+
+    assert [line[3:] for line in template.splitlines() if line.startswith("## ")] == list(
+        verification.REQUIRED_TEMPLATE_SECTIONS
+    )
+
+
+def test_ci_fetches_live_pr_body_before_validation() -> None:
+    workflow = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+
+    assert "--jq '.body' > .verification-pr-body.md" in workflow
+    assert "--pr-body .verification-pr-body.md" in workflow
+    assert '--event-path "$GITHUB_EVENT_PATH"' not in workflow
+    assert "contents: read" in workflow
+    assert "pull-requests: read" in workflow
+    assert "set -euo pipefail" in workflow
+    assert "write" not in workflow.partition("jobs:")[0]
+
+
+def test_changed_governed_boundary_normalizes_windows_paths() -> None:
+    verification = _load_module()
+
+    assert verification.changed_governed_boundaries([".github\\workflows\\ci.yml"]) == {
+        "Required GitHub workflows and checks": [".github/workflows/ci.yml"]
+    }

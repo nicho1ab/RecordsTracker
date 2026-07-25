@@ -13,6 +13,7 @@ the required GitHub checks.
 
 - Major files or components changed:
 - Important behavior intentionally left unchanged or out of scope:
+- Reviewer UI regression contracts: <!-- List affected, added, updated, superseded, or Not applicable - <specific reason>. -->
 
 ## Acceptance-criteria evidence
 

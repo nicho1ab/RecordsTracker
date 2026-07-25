@@ -103,6 +103,12 @@ For every code change:
 
 ## Required task handoff
 
+Before creating a PR body, render and preflight the authoritative
+template with `scripts/prepare_pr_body.py`. Record the applicable reviewer UI
+regression contracts from `docs/developer/reviewer-ui-regression-contracts.md`.
+Do not use a freeform body to avoid governed evidence fields.
+The command prepares a local body only; open-PR repair remains deferred.
+
 Implementation and RL-PREPARE handoffs are concise: outcome; root cause where
 applicable; changed files; focused validation; documentation or governance
 impact; PR number and state when applicable; blockers; and the exact stop

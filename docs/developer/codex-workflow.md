@@ -349,6 +349,27 @@ replacement is required before a ChatGPT Project relies on mirrored copies as
 current, but Codex may follow repository `main` directly. Between merge and
 Project Source replacement, planning chats must inspect repository `main`.
 
+## Pull-request evidence preflight
+
+Before creating a pull-request body, render the authoritative
+template with `scripts/prepare_pr_body.py render` and run
+`scripts/prepare_pr_body.py preflight` against the proposed body and the actual
+changed-file list. Local automatic discovery includes staged, unstaged, and
+untracked files. The preflight calls the same independent-verification rules as
+CI and fails with the same actionable messages. It does not replace required
+GitHub checks or human review. Reviewer-facing work must also identify affected,
+added, updated, superseded, or specifically not-applicable entries in
+`docs/developer/reviewer-ui-regression-contracts.md`.
+
+The current command prepares a local body only; open-PR repair remains deferred.
+CI validates the current live PR body whenever it runs. The current
+`pull_request` trigger does not automatically run for a body-only edit, so that
+edit needs a rerun or other supported validation path until lifecycle repair or
+trigger support is separately implemented.
+
+A freeform body cannot substitute for the full governed template. Compact
+governed-summary eligibility remains controlled only by the validator.
+
 ## Validation
 
 For a material reviewer-facing redesign, complete the pre-code artifact

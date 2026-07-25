@@ -596,6 +596,11 @@ Validate documentation structure and run manual or automated checks for user-fac
   validation before merge.
 - PR bodies identify the governing issue and intended outcome, major changed
   files or components, and map each acceptance criterion to concrete evidence.
+- PR preparation renders and preflights the authoritative evidence template
+  with `scripts/prepare_pr_body.py`; freeform bodies cannot substitute for the
+  governed template. Reviewer-facing PRs identify affected, added, updated,
+  superseded, or specifically not-applicable entries in
+  `docs/developer/reviewer-ui-regression-contracts.md`.
 - PR bodies list exact validation commands and results, identify intentionally
   unrun tests, and classify failures as implementation-caused, pre-existing, or
   environmental. UI and accessibility evidence is required only when the
