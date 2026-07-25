@@ -3269,6 +3269,20 @@ SHARED_CSS = r"""
       display: grid;
       gap: 0.5rem;
     }
+    .facility-status-form {
+      gap: 0.4rem;
+    }
+    .facility-status-label {
+      font-size: 0.78rem;
+      font-weight: 700;
+      margin: 0;
+    }
+    .facility-status-form select {
+      background: #fffdf8;
+      min-height: 2.75rem;
+      padding: 0.45rem 0.55rem;
+      width: 100%;
+    }
     .facility-row-source .button,
     .facility-row-reviewer .button,
     .facility-row-actions .button {
@@ -3528,7 +3542,8 @@ SHARED_CSS = r"""
       .site-header, .civic-header, .guided-stepper, .site-footer, .civic-footer,
       .packet-draft-actions, .technical-details, .skip-link, .mode-panel,
       .copy-icon-button, .copy-text-control, .facility-intelligence-sort,
-      .facility-pagination, .facility-row-actions, .compare-facilities-views,
+      .facility-pagination, .facility-row-actions, .facility-status-form,
+      .compare-facilities-views,
       .intelligence-filters, .compact-filter-panel {
         display: none !important;
       }

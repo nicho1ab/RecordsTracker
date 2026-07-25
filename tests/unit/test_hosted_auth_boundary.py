@@ -438,6 +438,7 @@ def test_authorized_facility_intelligence_page_enforces_existing_read_boundary(
     call = read.call_args
     assert call.kwargs["filters"] == filters
     assert call.kwargs["seek"] is None
+    assert call.kwargs["excluded_source_record_keys"] == ()
     assert call.kwargs["import_batch_query"] is not None
 
 

@@ -56,6 +56,9 @@ from ccld_complaints.hosted_app.ccld_facility_lookup import (
     load_active_ccld_facility_reference,
     render_ccld_facility_review_priority_page,
 )
+from ccld_complaints.hosted_app.ccld_retrieval_jobs import (
+    hosted_ccld_retrieval_jobs,
+)
 from ccld_complaints.hosted_app.copy_controls import (
     clipboard_icon_svg,
     render_copy_control_script,
@@ -111,7 +114,6 @@ from ccld_complaints.hosted_app.reviewer_workflow_shell import (
 from ccld_complaints.hosted_app.seeded_import import (
     SeededCorpusArtifact,
     SourceDerivedEntityType,
-    hosted_seeded_import_metadata,
     import_seeded_corpus_artifact,
     load_seeded_corpus_artifact,
 )
@@ -556,6 +558,7 @@ class ReviewerUiContext:
     engine: Engine | None = None
     manage_read_transactions: bool = False
     allow_visual_evidence_states: bool = False
+    facility_intelligence_excluded_source_record_keys: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -733,11 +736,20 @@ def build_local_test_reviewer_ui_context() -> ReviewerUiContext:
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
     )
-    hosted_seeded_import_metadata.create_all(engine)
+    hosted_ccld_retrieval_jobs.metadata.create_all(engine)
     connection = engine.connect()
     transaction = connection.begin()
     artifact = _with_local_rt_src_002_visual_fixture_records(
         load_seeded_corpus_artifact(LOCAL_REVIEWER_UI_FIXTURE)
+    )
+    excluded_source_record_keys = tuple(
+        f"complaint:{complaint_id}"
+        for record in artifact.records
+        if isinstance(record, Mapping)
+        and isinstance((complaint := record.get("complaint")), Mapping)
+        and isinstance((complaint_id := complaint.get("complaint_id")), str)
+        and "-rt-src-002-" in complaint_id
+        and complaint_id.endswith("-fixture")
     )
     import_seeded_corpus_artifact(connection, artifact)
     transaction.commit()
@@ -749,12 +761,26 @@ def build_local_test_reviewer_ui_context() -> ReviewerUiContext:
         ),
         engine=engine,
         allow_visual_evidence_states=True,
+        facility_intelligence_excluded_source_record_keys=excluded_source_record_keys,
     )
 
 
 def _with_local_rt_src_002_visual_fixture_records(
     artifact: SeededCorpusArtifact,
 ) -> SeededCorpusArtifact:
+    fixture_facility_ids = {
+        facility_id
+        for record in artifact.records
+        if isinstance(record, Mapping)
+        and isinstance((facility := record.get("facility")), Mapping)
+        and isinstance((facility_id := facility.get("facility_id")), str)
+        and facility_id
+    }
+    if len(fixture_facility_ids) != 1:
+        raise ValueError(
+            "Local visual fixtures require exactly one canonical facility identity."
+        )
+    canonical_facility_id = next(iter(fixture_facility_ids))
     visual_records: list[Mapping[str, Any]] = []
     for path, state in _LOCAL_RT_SRC_002_VISUAL_FIXTURES:
         loaded = json.loads(path.read_text(encoding="utf-8"))
@@ -769,11 +795,13 @@ def _with_local_rt_src_002_visual_fixture_records(
             raise ValueError(f"Local visual fixture events must be a list: {path}")
 
         local_source_document = dict(source_document)
+        local_source_document["facility_id"] = canonical_facility_id
         identity_suffix = f"rt-src-002-{state}-fixture"
         document_id = f"{local_source_document['document_id']}-{identity_suffix}"
         complaint_id = f"{complaint['complaint_id']}-{identity_suffix}"
         local_source_document["document_id"] = document_id
         local_complaint = dict(complaint)
+        local_complaint["facility_id"] = canonical_facility_id
         local_complaint["complaint_id"] = complaint_id
         local_complaint["document_id"] = document_id
         local_events: tuple[Mapping[str, Any], ...] = tuple(
@@ -815,6 +843,16 @@ def _with_local_rt_src_002_visual_fixture_records(
             "coverage.",
         ),
         records=artifact.records + tuple(visual_records),
+    )
+
+
+def _is_local_rt_src_002_visual_fixture_record(
+    record: Mapping[str, Any],
+) -> bool:
+    source_record_key = _optional_string(record, "source_record_key")
+    return (
+        "-rt-src-002-" in source_record_key
+        and source_record_key.endswith("-fixture")
     )
 
 
@@ -1220,6 +1258,9 @@ def _facility_priorities_response(
 def _facility_intelligence_response(
     query: str,
     context: ReviewerUiContext,
+    *,
+    status_message: str = "",
+    status_message_is_error: bool = False,
 ) -> tuple[int, str, bytes]:
     query_values = parse_qs(query, keep_blank_values=True)
     view = _first_form_value(query_values, "view").strip().casefold()
@@ -1301,6 +1342,9 @@ def _facility_intelligence_response(
             scope=source_context.scope,
             filters=_facility_intelligence_read_filters(filters),
             seek=seek,
+            excluded_source_record_keys=(
+                context.facility_intelligence_excluded_source_record_keys
+            ),
         )
     except ValueError as error:
         return _html_response(
@@ -1338,6 +1382,12 @@ def _facility_intelligence_response(
     source_result: list[Mapping[str, Any]] = [
         _source_derived_read_payload(record) for record in page.records
     ]
+    if context.allow_visual_evidence_states:
+        source_result = [
+            record
+            for record in source_result
+            if not _is_local_rt_src_002_visual_fixture_record(record)
+        ]
     page_priority_summaries = _facility_priority_summaries(
         source_result,
         date_dimension=filters.date_dimension,
@@ -1395,6 +1445,8 @@ def _facility_intelligence_response(
             reviewer_state_available=reviewer_state_available,
             actor_label=_signed_in_actor_label(context),
             page_state=("limited-data" if evidence_state == "limited-data" else None),
+            status_message=status_message,
+            status_message_is_error=status_message_is_error,
         ),
     )
 
@@ -2079,6 +2131,8 @@ def _render_facility_intelligence(
     actor_label: str | None,
     page_state: str | None = None,
     continuation_error: str = "",
+    status_message: str = "",
+    status_message_is_error: bool = False,
 ) -> str:
     resolved_state = page_state or (
         "populated"
@@ -2102,6 +2156,10 @@ def _render_facility_intelligence(
         summaries=summaries,
         continuation_error=continuation_error,
     )
+    status_feedback = _render_facility_intelligence_status_feedback(
+        status_message,
+        is_error=status_message_is_error,
+    )
     return _page(
         title="Compare Facilities",
         heading="Find Facilities That May Need Closer Review",
@@ -2117,10 +2175,28 @@ def _render_facility_intelligence(
         {_render_facility_intelligence_filters(filters, filter_options)}
         <p class="intelligence-glossary-line">{_glossary_term('Substantiated', 'A finding label shown in a public CCLD complaint record.', 'intelligence-substantiated')} <span>CCLD finding term</span></p>
         {status_markup}
+        {status_feedback}
 {result_markup}
         {_DETAIL_COPY_SCRIPT}
         {_COMPARE_FACILITIES_FOCUS_SCRIPT}
 """,
+    )
+
+
+def _render_facility_intelligence_status_feedback(
+    message: str,
+    *,
+    is_error: bool,
+) -> str:
+    if not message:
+        return ""
+    role = "alert" if is_error else "status"
+    class_name = "notice-card badge-danger" if is_error else "notice-card"
+    return (
+        f'<section id="facility-intelligence-status-feedback" '
+        f'class="{class_name}" role="{role}" tabindex="-1">'
+        f"<p>{_escape(message)}</p>"
+        "</section>"
     )
 
 
@@ -2539,8 +2615,11 @@ def _render_facility_intelligence_result(
     badges = _render_facility_intelligence_badges(item)
     next_complaint = summary.complaints[0]
     detail_href = _facility_intelligence_detail_href(next_complaint, summary, filters)
-    reviewer_status = _facility_intelligence_reviewer_status(
+    reviewer_status_control = _render_facility_intelligence_status_control(
         next_complaint,
+        filters,
+        result_id,
+        facility_name,
         state_summaries,
         reviewer_state_available=reviewer_state_available,
     )
@@ -2569,12 +2648,11 @@ def _render_facility_intelligence_result(
                 {source_region}
                 <section class="facility-row-reviewer" aria-labelledby="{result_id}-reviewer-heading">
                   <h4 id="{result_id}-reviewer-heading">Reviewer state</h4>
-                  <p>{_review_chip_markup(reviewer_status)}</p>
-                  <a class="button button-secondary" href="{_escape(detail_href)}#reviewer-state-heading" aria-label="Update reviewer status for {_escape(facility_name)}">Update status</a>
+                  {reviewer_status_control}
                 </section>
                 <div class="facility-row-actions" aria-label="Actions for {_escape(facility_name)}">
                   {facility_action}
-                  <a class="button button-secondary" href="{_escape(detail_href)}" aria-label="Open next complaint for {_escape(facility_name)}">Open next complaint</a>
+                  <a class="button button-secondary" href="{_escape(detail_href)}" aria-label="Review complaint for {_escape(facility_name)}">Review complaint</a>
                 </div>
               </article>
             </li>"""
@@ -2649,13 +2727,11 @@ def _render_facility_intelligence_source_region(
         source_badge = _review_chip_markup("Source available")
         open_action = (
             f'<a class="button button-secondary" href="{_escape(complaint.source_url_href)}" '
-            f'aria-label="Open next complaint source for {_escape(control)}">Open next complaint source</a>'
+            f'aria-label="Open source report for complaint {_escape(control)}">Open source report</a>'
         )
-        source_value = (
-            f'<span class="copyable-value"><a href="{_escape(complaint.source_url_href)}" '
-            f'aria-label="Next complaint source URL for {_escape(control)}">'
-            f'{_escape(complaint.source_url_href)}</a>'
-            f'{_copy_icon_button("Copy next complaint source URL", complaint.source_url_href)}</span>'
+        source_value = _copy_icon_button(
+            f"Copy source report URL for complaint {control}",
+            complaint.source_url_href,
         )
     else:
         source_badge = _review_chip_markup("Source unavailable")
@@ -2664,24 +2740,51 @@ def _render_facility_intelligence_source_region(
     return f"""                <section class="facility-row-source" aria-label="Source record for complaint {_escape(control)}">
                   <h4>Source record</h4>
                   <p>{source_badge}</p>
-                  <p>Next complaint: <strong>{_escape(control)}</strong></p>
+                  <p>Complaint: <strong>{_escape(control)}</strong></p>
                   {open_action}
                   {source_value}
                 </section>"""
 
 
-def _facility_intelligence_reviewer_status(
+def _render_facility_intelligence_status_control(
     complaint: FacilityPriorityComplaint,
+    filters: FacilityIntelligenceFilters,
+    result_id: str,
+    facility_name: str,
     state_summaries: Mapping[str, Mapping[str, Any]],
     *,
     reviewer_state_available: bool,
 ) -> str:
     if not reviewer_state_available:
-        return "Reviewer status unavailable"
-    status = _reviewer_queue_status(
+        return _review_chip_markup("Reviewer status unavailable")
+    current_status = _reviewer_queue_status(
         state_summaries.get(complaint.source_record_key, _empty_state_summary())
     )
-    return _REVIEWER_STATUS_LABELS.get(status, "Not started")
+    options = "\n".join(
+        _render_status_option(status, selected=status == current_status)
+        for status in REVIEWER_STATUS_VALUES
+    )
+    hidden_values = {
+        "source_record_key": complaint.source_record_key,
+        "return_context_origin": "facility_intelligence",
+        **_facility_intelligence_query_values(filters),
+    }
+    if filters.continuation:
+        hidden_values["continuation"] = filters.continuation
+    hidden = "\n".join(
+        f'<input type="hidden" name="{_escape(key)}" value="{_escape(value)}">'
+        for key, value in hidden_values.items()
+    )
+    control_id = f"{result_id}-reviewer-status"
+    label_id = f"{control_id}-label"
+    return f"""<form class="facility-status-form" action="{REVIEWER_UI_STATUS_PATH}#facility-intelligence-status-feedback" method="post">
+                    {hidden}
+                    <span class="facility-status-label" id="{label_id}">Review status</span>
+                    <select id="{control_id}" name="reviewer_status" aria-labelledby="{label_id}" aria-label="Review status for {_escape(facility_name)}">
+{options}
+                    </select>
+                    <button class="button button-secondary" type="submit">Save status</button>
+                  </form>"""
 
 
 def _render_facility_intelligence_facility_contributors(
@@ -2781,7 +2884,12 @@ def _facility_intelligence_detail_href(
         complaint.source_record_key,
         CcldQueueReturnContext(
             facility_number=(
-                summary.facility_number if summary.facility_number != "unknown" else None
+                _compare_facilities_public_id(
+                    summary.facility_number,
+                    summary.facility_identity,
+                )
+                if summary.facility_number != "unknown"
+                else None
             ),
             start_date=filters.start_date,
             end_date=filters.end_date,
@@ -3143,7 +3251,6 @@ def _facility_priority_complaint(
 ) -> FacilityPriorityComplaint:
     identity = _mapping(source_record, "identity")
     original_values = _mapping(source_record, "original_values")
-    source_document = _mapping(source_record, "source_document")
     source_record_key = _string(identity, "source_record_key")
     complaint_related_records = _facility_trend_complaint_related_records(
         source_record,
@@ -3153,11 +3260,8 @@ def _facility_priority_complaint(
         original_values,
         date_dimension=date_dimension,
     )
-    source_url = _optional_string(source_document, "source_url")
-    source_available = (
-        _has_display_value(source_url)
-        and source_url.casefold() not in {"unknown", "unavailable", "not available"}
-    )
+    source_url = _facility_intelligence_source_report_url(source_record)
+    source_available = bool(source_url)
     return FacilityPriorityComplaint(
         source_record_key=source_record_key,
         stable_complaint_id=_optional_string(identity, "stable_source_id"),
@@ -3181,6 +3285,92 @@ def _facility_priority_complaint(
         missing_dates=_facility_priority_missing_dates(original_values),
         source_available=source_available,
     )
+
+
+def _facility_intelligence_source_report_url(
+    source_record: Mapping[str, Any],
+) -> str:
+    identity = _mapping(source_record, "identity")
+    original_values = _mapping(source_record, "original_values")
+    source_document = _mapping(source_record, "source_document")
+    source_traceability = _mapping(source_record, "source_traceability")
+    source_url = _optional_string(source_document, "source_url").strip()
+    if not _has_display_value(source_url) or source_url.casefold() in {
+        "unknown",
+        "unavailable",
+        "not available",
+    }:
+        return ""
+
+    parsed = urlparse(source_url)
+    try:
+        parsed_port = parsed.port
+    except ValueError:
+        return ""
+    if (
+        parsed.scheme.casefold() != "https"
+        or parsed.hostname != "www.ccld.dss.ca.gov"
+        or parsed.path.rstrip("/") != "/transparencyapi/api/FacilityReports"
+        or parsed.fragment
+        or parsed.username
+        or parsed.password
+        or parsed_port not in {None, 443}
+    ):
+        return ""
+    query_values = parse_qs(parsed.query, keep_blank_values=True)
+    if set(query_values) != {"facNum", "inx"}:
+        return ""
+    facility_values = query_values["facNum"]
+    report_index_values = query_values["inx"]
+    if len(facility_values) != 1 or len(report_index_values) != 1:
+        return ""
+
+    facility_number = facility_values[0].strip()
+    report_index_text = report_index_values[0].strip()
+    traceability_report_index = source_traceability.get("report_index")
+    if (
+        not facility_number.isdigit()
+        or not report_index_text.isdigit()
+        or traceability_report_index is None
+        or isinstance(traceability_report_index, bool)
+    ):
+        return ""
+    try:
+        report_index = int(traceability_report_index)
+    except (TypeError, ValueError):
+        return ""
+    if report_index < 0 or report_index_text != str(report_index):
+        return ""
+
+    identity_facility_number = _compare_facilities_public_id(
+        _optional_string(identity, "facility_id")
+    )
+    original_facility_number = _compare_facilities_public_id(
+        _optional_string(original_values, "facility_id")
+    )
+    if (
+        identity_facility_number != facility_number
+        or original_facility_number != facility_number
+    ):
+        return ""
+
+    source_document_id = _optional_string(
+        source_document,
+        "source_document_id",
+    )
+    if (
+        source_document_id in {"", "unknown"}
+        or source_document_id
+        != _optional_string(original_values, "document_id")
+        or _optional_string(source_document, "connector_name")
+        != "ccld_facility_reports"
+        or not _has_display_value(source_document.get("retrieved_at"))
+    ):
+        return ""
+    raw_sha256 = _optional_string(source_document, "raw_sha256")
+    if re.fullmatch(r"[0-9a-fA-F]{64}", raw_sha256) is None:
+        return ""
+    return source_url
 
 
 def _facility_priority_activity_date(
@@ -7038,6 +7228,9 @@ def _status_form_response(
     source_record_key = _first_form_value(form, "source_record_key")
     reviewer_status = _first_form_value(form, "reviewer_status")
     return_context = _return_context_from_values(form, related_records=None)
+    return_to_facility_intelligence = (
+        return_context.context_origin == "facility_intelligence"
+    )
     if not source_record_key:
         return _invalid_form_response(
             title="Reviewer status was not saved",
@@ -7045,6 +7238,14 @@ def _status_form_response(
             source_record_key=None,
         )
     if not reviewer_status:
+        if return_to_facility_intelligence:
+            return _facility_intelligence_status_result(
+                form,
+                context,
+                status=400,
+                message="Reviewer status was not saved. Choose a review status and try again.",
+                is_error=True,
+            )
         return _invalid_form_response(
             title="Reviewer status was not saved",
             message="Choose a reviewer queue status before saving this record.",
@@ -7059,6 +7260,17 @@ def _status_form_response(
         ).encode("utf-8"),
     )
     if status != 201:
+        if return_to_facility_intelligence:
+            return _facility_intelligence_status_result(
+                form,
+                context,
+                status=status,
+                message=(
+                    "Reviewer status was not saved. The complaint record and "
+                    "source-derived values were not changed."
+                ),
+                is_error=True,
+            )
         return _workflow_error_page(
             status,
             body,
@@ -7072,6 +7284,21 @@ def _status_form_response(
             links=_retry_links(source_record_key),
         )
     payload = _json_object(body)
+    if return_to_facility_intelligence:
+        status_label = _REVIEWER_STATUS_LABELS.get(
+            reviewer_status,
+            reviewer_status,
+        )
+        return _facility_intelligence_status_result(
+            form,
+            context,
+            status=200,
+            message=(
+                f"Status saved as {status_label}. "
+                "Source-derived complaint records were not changed."
+            ),
+            is_error=False,
+        )
     return _detail_html_response(
         200,
         payload,
@@ -7079,6 +7306,46 @@ def _status_form_response(
         saved_action="status",
         saved_value=_REVIEWER_STATUS_LABELS.get(reviewer_status, reviewer_status),
         return_context=return_context,
+    )
+
+
+def _facility_intelligence_status_result(
+    form: Mapping[str, list[str]],
+    context: ReviewerUiContext,
+    *,
+    status: int,
+    message: str,
+    is_error: bool,
+) -> tuple[int, str, bytes]:
+    query = urlencode(
+        {
+            key: value
+            for key in (
+                "view",
+                "start_date",
+                "end_date",
+                "date_dimension",
+                "facility_type",
+                "geography",
+                "finding",
+                "serious_topic",
+                "coverage",
+                "sort",
+                "continuation",
+            )
+            if (value := _first_form_value(form, key))
+        }
+    )
+    rendered_status, content_type, body = _facility_intelligence_response(
+        query,
+        context,
+        status_message=message,
+        status_message_is_error=is_error,
+    )
+    return (
+        status if rendered_status == 200 else rendered_status,
+        content_type,
+        body,
     )
 
 

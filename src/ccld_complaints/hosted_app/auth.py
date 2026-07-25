@@ -1024,6 +1024,7 @@ def list_authorized_facility_intelligence_page(
     scope: HostedAccessScope,
     filters: FacilityIntelligenceReadFilters,
     seek: FacilityIntelligenceSeek | None = None,
+    excluded_source_record_keys: tuple[str, ...] = (),
 ) -> FacilityIntelligencePageRead:
     require_permission(
         actor,
@@ -1036,6 +1037,7 @@ def list_authorized_facility_intelligence_page(
         filters=filters,
         import_batch_query=_authorized_source_import_batch_query(scope),
         seek=seek,
+        excluded_source_record_keys=excluded_source_record_keys,
     )
 
 

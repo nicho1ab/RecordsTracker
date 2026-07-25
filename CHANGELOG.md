@@ -1,6 +1,13 @@
 # Changelog
 
 ## Unreleased
+- Fixed Compare Facilities complaint, source-report, and reviewer-status actions
+  for Issue #605. Complaint links now preserve a public facility identity,
+  source actions require a matching governed facility/document/report
+  relationship, and the existing audited reviewer-status write returns
+  accessible success or error feedback without leaving the comparison context.
+  Local visual-evidence fixtures remain available to their dedicated detail
+  scenarios but no longer enter the comparison inventory.
 - Hardened governed workflow transitions and evidence lifecycle policy: queued
   phases fail closed, dependent lifecycle work requires fresh authoritative
   state, persistent coordination branches have narrow squash handling, and
