@@ -601,6 +601,15 @@ Validate documentation structure and run manual or automated checks for user-fac
   governed template. Reviewer-facing PRs identify affected, added, updated,
   superseded, or specifically not-applicable entries in
   `docs/developer/reviewer-ui-regression-contracts.md`.
+- The same repository-owned tool validates current live body and paginated
+  changed-file scope for an open PR, previews a file-based repair without
+  mutation, and permits an explicitly confirmed body-only update only after the
+  proposed body passes the production validator. It revalidates the persisted
+  body and rejects a stale expected-body hash; the authoritative lifecycle is
+  in `docs/developer/codex-workflow.md`.
+- CI retrieves the current live body when it validates a PR. Its pull-request
+  `edited` event covers title and body edits because event selection cannot
+  distinguish them; the job remains read-only and validates body evidence only.
 - PR bodies list exact validation commands and results, identify intentionally
   unrun tests, and classify failures as implementation-caused, pre-existing, or
   environmental. UI and accessibility evidence is required only when the

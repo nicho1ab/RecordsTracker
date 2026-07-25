@@ -351,8 +351,8 @@ Project Source replacement, planning chats must inspect repository `main`.
 
 ## Pull-request evidence preflight
 
-Before creating a pull-request body, render the authoritative
-template with `scripts/prepare_pr_body.py render` and run
+Before creating a pull-request body, render the authoritative template with
+`scripts/prepare_pr_body.py render` and run
 `scripts/prepare_pr_body.py preflight` against the proposed body and the actual
 changed-file list. Local automatic discovery includes staged, unstaged, and
 untracked files. The preflight calls the same independent-verification rules as
@@ -361,11 +361,63 @@ GitHub checks or human review. Reviewer-facing work must also identify affected,
 added, updated, superseded, or specifically not-applicable entries in
 `docs/developer/reviewer-ui-regression-contracts.md`.
 
-The current command prepares a local body only; open-PR repair remains deferred.
-CI validates the current live PR body whenever it runs. The current
-`pull_request` trigger does not automatically run for a body-only edit, so that
-edit needs a rerun or other supported validation path until lifecycle repair or
-trigger support is separately implemented.
+### Open-PR body lifecycle
+
+The same repository-owned command supports an already-open PR without creating
+a parallel governance path. It derives the current GitHub repository from
+`origin` (or rejects a mismatched explicit repository), accepts a PR number,
+qualified reference, or GitHub PR URL, fetches the live body and complete
+paginated changed-file list, and identifies the current base, head, and head
+SHA. It rejects missing, inaccessible, malformed, or closed PRs. It never
+prints a full body unless another supported output mode is added deliberately.
+
+Validate the current live body without mutation:
+
+```powershell
+python scripts/prepare_pr_body.py open-pr validate --pr <number-or-reference> --repo <owner/repository>
+```
+
+Preview a file-based governed proposal against that exact live scope without
+mutation. The output supplies the normalized current-body SHA-256 and reports
+whether the proposal differs materially; it does not regenerate or overwrite
+evidence:
+
+```powershell
+python scripts/prepare_pr_body.py open-pr preview --pr <number-or-reference> --repo <owner/repository> --body <proposed-body-path>
+```
+
+Only an explicitly authorized caller may apply a body repair. `apply` requires
+both `--confirm-update` and the hash obtained from a current preview when a
+mutation is needed. It validates the proposal before update, refetches and
+compares the live body immediately before update to reject stale proposals,
+updates only the PR `body` field, refetches the persisted body and current
+changed-file list, then reruns the production validator. A normalized LF/CRLF
+match is a no-op and makes no update request. GitHub does not provide this tool
+with a body-field conditional update. The explicit current-body hash therefore
+detects a stale proposal immediately before PATCH, but cannot remove the narrow
+race between that final refetch and the update request. A post-update refetch
+detects an ordinary persistence mismatch and revalidates the persisted body; it
+does not claim atomic compare-and-swap behavior or rollback.
+
+```powershell
+python scripts/prepare_pr_body.py open-pr apply --pr <number-or-reference> --repo <owner/repository> --body <proposed-body-path> --expected-body-sha256 <previewed-hash> --confirm-update
+```
+
+This lifecycle changes only the PR body. It does not authorize code changes,
+commits, branch or check changes, labels, reviewers, draft state, approvals,
+merges, or issue closure. The authoritative template and production validator
+remain the source of truth, including compact-summary eligibility, required
+headings, governed-boundary disclosure, and Issue #504 classification; no static
+body snapshot is a repair contract. Future approved template changes continue
+through the existing template/validator parity checks.
+
+CI validates the current live PR body whenever it runs. The `pull_request`
+workflow includes `opened`, `reopened`, `synchronize`, and `edited`, so a title
+or body edit starts the same read-only validation workflow. GitHub event
+selection cannot distinguish a title edit from a body edit, but the job fetches
+the current live body immediately before validation rather than using stale
+event payload text. Forked PRs retain the workflow's `contents: read` and
+`pull-requests: read` token permissions; no CI write permission is granted.
 
 A freeform body cannot substitute for the full governed template. Compact
 governed-summary eligibility remains controlled only by the validator.

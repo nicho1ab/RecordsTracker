@@ -231,7 +231,7 @@ Keep handoffs copy/paste-safe for PowerShell users. Do not include secrets, pers
 
 ## Reviewer UI regression contracts
 
-For reviewer-facing work, consult `docs/developer/reviewer-ui-regression-contracts.md` and identify affected, added, updated, superseded, or specifically not-applicable contracts in PR preparation. Use the governed template and local preflight; a freeform PR body cannot substitute for required evidence. Use outcome-based focused checks during development and reserve broader regression for the final stable point or an actual failure/scope change. The registry implements Issue #504 anti-fossilization governance; it does not replace governing issue, approved-design, accessibility, source, or authorization requirements.
+For reviewer-facing work, consult `docs/developer/reviewer-ui-regression-contracts.md` and identify affected, added, updated, superseded, or specifically not-applicable contracts when creating or repairing a PR body. Use the governed template and local preflight; a freeform PR body cannot substitute for required evidence. The supported open-PR lifecycle is documented in `docs/developer/codex-workflow.md`; it validates current live body and scope, and an authorized repair changes only the PR body. Use outcome-based focused checks during development and reserve broader regression for the final stable point or an actual failure/scope change. The registry implements Issue #504 anti-fossilization governance; it does not replace governing issue, approved-design, accessibility, source, or authorization requirements.
 
 ## QNAP release deployment authority
 
