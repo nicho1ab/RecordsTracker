@@ -29,3 +29,9 @@ superseded, or not applicable with a specific reason. During development, run
 focused applicable checks; broader regression occurs at the final stable point
 or when a failure or scope change requires it. A documented or partially
 enforced status must not be presented as completed executable coverage.
+
+`RT-RC-006-distinct-purpose` is the only reusable duplication-exception ID.
+It requires a non-empty reason plus matching representation, duplicate-of, and
+section IDs; a boolean or unmatched exception does not bypass duplication or
+empty-section protection. Route adoption must record any additional governed
+exception before its test can pass.

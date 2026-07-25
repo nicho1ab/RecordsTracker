@@ -4,10 +4,61 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable, Mapping, Sequence
+from dataclasses import dataclass
+
+SUPPORTED_ACTION_KINDS = frozenset({"get", "external", "mutation"})
+PROHIBITED_INFORMATION_TIER_TERMS = frozenset(
+    {"validated-load", "pipeline command", "sqlite", "connection string", "operator mutation"}
+)
+NO_ANNOUNCEMENT_HELP_TYPES = frozenset({"static-inline-definition"})
+KNOWN_DUPLICATION_EXCEPTION_IDS = frozenset({"RT-RC-006-distinct-purpose"})
+
+
+@dataclass(frozen=True)
+class InformationTierException:
+    """A narrowly governed exception to one protected information-tier term."""
+
+    exception_id: str
+    reason: str
+    allowed_terms: frozenset[str]
+
+
+@dataclass(frozen=True)
+class DuplicationException:
+    """A narrowly governed duplicate-representation exception."""
+
+    exception_id: str
+    reason: str
+    representation_id: str
+    duplicate_of_id: str
+    section_id: str
 
 
 class ReviewerContractError(AssertionError):
     """A durable reviewer-facing outcome was not preserved."""
+
+
+def _required_text(value: object, description: str) -> str:
+    if not isinstance(value, str) or not value.strip():
+        raise ReviewerContractError(f"{description} is required")
+    return value
+
+
+def _validated_information_exception(exception: InformationTierException) -> frozenset[str]:
+    _required_text(exception.exception_id, "information-tier exception ID")
+    _required_text(exception.reason, "information-tier exception reason")
+    if not exception.allowed_terms or not exception.allowed_terms <= PROHIBITED_INFORMATION_TIER_TERMS:
+        raise ReviewerContractError("information-tier exception contains unknown governed terms")
+    return exception.allowed_terms
+
+
+def _validated_duplication_exception(exception: DuplicationException) -> None:
+    if exception.exception_id not in KNOWN_DUPLICATION_EXCEPTION_IDS:
+        raise ReviewerContractError("duplication exception ID is not governed")
+    _required_text(exception.reason, "duplication exception reason")
+    _required_text(exception.representation_id, "duplication exception representation ID")
+    _required_text(exception.duplicate_of_id, "duplication exception duplicate-of ID")
+    _required_text(exception.section_id, "duplication exception section ID")
 
 
 def assert_destinations(actions: Iterable[Mapping[str, object]], get: Callable[[str], int]) -> None:
@@ -15,11 +66,14 @@ def assert_destinations(actions: Iterable[Mapping[str, object]], get: Callable[[
         state = action.get("state", "available")
         if state == "unavailable":
             continue
-        if action.get("kind") == "external":
+        kind = action.get("kind")
+        if kind not in SUPPORTED_ACTION_KINDS:
+            raise ReviewerContractError("action kind is missing or unsupported")
+        if kind == "external":
             if not action.get("provenance"):
                 raise ReviewerContractError("external action lacks governed provenance")
             continue
-        if action.get("kind") == "mutation":
+        if kind == "mutation":
             if action.get("success") is not True or action.get("failure") is not True:
                 raise ReviewerContractError("mutation lacks success and failure contract")
             continue
@@ -30,19 +84,33 @@ def assert_destinations(actions: Iterable[Mapping[str, object]], get: Callable[[
             raise ReviewerContractError("internal action destination is unusable")
 
 
-def assert_information_tier(text: str, *, authorized: Sequence[str] = ()) -> None:
-    forbidden = ("validated-load", "pipeline command", "sqlite", "connection string", "operator mutation")
+def assert_information_tier(text: str, *, exception: InformationTierException | None = None) -> None:
+    allowed_terms = frozenset() if exception is None else _validated_information_exception(exception)
     lowered = text.casefold()
-    for phrase in forbidden:
-        if phrase in lowered and phrase not in {value.casefold() for value in authorized}:
+    for phrase in PROHIBITED_INFORMATION_TIER_TERMS:
+        if phrase in lowered and phrase not in allowed_terms:
             raise ReviewerContractError(f"reviewer information tier exposes {phrase}")
 
 
 def assert_help_surface(surfaces: Sequence[Mapping[str, object]], *, escape_supported: bool) -> None:
     active = [surface for surface in surfaces if surface.get("active")]
-    if len(active) > 1 or (active and not active[0].get("focus")) or (active and active[0].get("announcements", 1) != 1):
+    if len(active) > 1 or (active and not active[0].get("focus")):
         raise ReviewerContractError("help surface collision or accessibility state")
-    if active and escape_supported and not active[0].get("escape_dismisses"):
+    if not active:
+        return
+    surface = active[0]
+    announcement_mode = surface.get("announcement_mode", "required")
+    announcements = surface.get("announcements")
+    if isinstance(announcements, bool) or not isinstance(announcements, int):
+        raise ReviewerContractError("help announcement evidence is missing or malformed")
+    if announcement_mode == "required" and announcements != 1:
+        raise ReviewerContractError("help surface requires exactly one announcement")
+    if announcement_mode == "not-required":
+        if surface.get("help_type") not in NO_ANNOUNCEMENT_HELP_TYPES or announcements != 0:
+            raise ReviewerContractError("help no-announcement mode is not governed")
+    elif announcement_mode != "required":
+        raise ReviewerContractError("help announcement mode is unsupported")
+    if escape_supported and not surface.get("escape_dismisses"):
         raise ReviewerContractError("dismissible help surface lacks Escape behavior")
 
 
@@ -76,12 +144,25 @@ def assert_actions(actions: Sequence[Mapping[str, object]]) -> None:
 
 
 def assert_result_structure(representations: Sequence[Mapping[str, object]], sections: Sequence[Mapping[str, object]]) -> None:
-    seen: set[tuple[object, ...]] = set()
+    seen: dict[tuple[object, ...], str] = {}
     for representation in representations:
         raw_rows = representation.get("rows", ())
         rows: tuple[object, ...] = tuple(raw_rows) if isinstance(raw_rows, Iterable) else ()
-        if rows in seen and not (representation.get("distinct_purpose") or representation.get("registry_exception")):
-            raise ReviewerContractError("result set duplicated without distinct purpose")
-        seen.add(rows)
+        representation_id = str(representation.get("representation_id", ""))
+        if rows in seen:
+            exception = representation.get("duplication_exception")
+            if not isinstance(exception, DuplicationException):
+                raise ReviewerContractError("result set duplicated without governed exception")
+            _validated_duplication_exception(exception)
+            if (
+                exception.representation_id != representation_id
+                or exception.duplicate_of_id != seen[rows]
+                or exception.section_id != representation.get("section_id")
+            ):
+                raise ReviewerContractError("duplication exception does not match the duplicated representation")
+        else:
+            if not representation_id:
+                raise ReviewerContractError("representation ID is required")
+            seen[rows] = representation_id
     if any(section.get("empty") and not section.get("consolidated") for section in sections):
         raise ReviewerContractError("empty decision section was rendered")
