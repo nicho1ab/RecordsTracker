@@ -106,8 +106,11 @@ For every code change:
 Before creating a PR body, render and preflight the authoritative
 template with `scripts/prepare_pr_body.py`. Record the applicable reviewer UI
 regression contracts from `docs/developer/reviewer-ui-regression-contracts.md`.
-Do not use a freeform body to avoid governed evidence fields.
-The command prepares a local body only; open-PR repair remains deferred.
+Do not use a freeform body to avoid governed evidence fields. The same tool has
+a supported open-PR validate, preview, and explicitly confirmed body-only repair
+lifecycle; follow the authoritative details in `docs/developer/codex-workflow.md`.
+That lifecycle requires current live scope validation and does not authorize code
+changes, commits, merges, approvals, or issue closure.
 
 Implementation and RL-PREPARE handoffs are concise: outcome; root cause where
 applicable; changed files; focused validation; documentation or governance

@@ -12,6 +12,11 @@
    full template applies.
 7. Open a pull request.
 
+For an already-open pull request, use the governed body validate, preview, and
+explicitly authorized body-only repair lifecycle in
+`docs/developer/codex-workflow.md`. It does not authorize any code, commit,
+merge, approval, or issue-state change.
+
 ## Creating loop-compatible implementation issues
 
 Use the **Loop-compatible implementation** issue form when proposed work is

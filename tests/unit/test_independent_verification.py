@@ -388,6 +388,16 @@ def test_ci_fetches_live_pr_body_before_validation() -> None:
     assert "write" not in workflow.partition("jobs:")[0]
 
 
+def test_ci_runs_validation_for_pull_request_edits_without_write_permissions() -> None:
+    workflow = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+
+    assert "types: [opened, reopened, synchronize, edited]" in workflow
+    assert "contents: read" in workflow
+    assert "pull-requests: read" in workflow
+    assert "pull-requests: write" not in workflow
+    assert "validate:" in workflow
+
+
 def test_changed_governed_boundary_normalizes_windows_paths() -> None:
     verification = _load_module()
 
