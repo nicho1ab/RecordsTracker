@@ -42,6 +42,36 @@ REQUIRED_BOUNDARIES = (
     "Tests or checks weakened to obtain passage",
 )
 
+REQUIRED_TEMPLATE_SECTIONS = (
+    "Governing issue and intended outcome",
+    "Implementation scope",
+    "Acceptance-criteria evidence",
+    "Validation and failure classification",
+    "UI and accessibility evidence (when applicable)",
+    "Reviewer-facing redesign artifact classification (when applicable)",
+    "Documentation, assumptions, and remaining risks",
+    "Governed-boundary review",
+    "Required GitHub checks",
+)
+
+REVIEWER_CONTRACT_ID = re.compile(r"\bRT-RC-\d{3}\b")
+REVIEWER_CONTRACT_NOT_APPLICABLE = re.compile(
+    r"(?is)^not\s+applicable\s*-\s*(.+)$"
+)
+REVIEWER_CONTRACT_EVASIVE_VALUES = {
+    "n/a",
+    "na",
+    "none",
+    "tbd",
+    "todo",
+    "not applicable",
+}
+REVIEWER_CONTRACT_PATH_PREFIXES = (
+    "src/ccld_complaints/hosted_app/",
+    "tests/unit/test_hosted_",
+    "docs/developer/reviewer-ui-regression-contracts.md",
+)
+
 GOVERNED_SUMMARY_SECTIONS = (
     "Summary",
     "Required checks",
@@ -146,6 +176,13 @@ def find_pr_evidence_violations(body: str, changed_files: Iterable[str]) -> list
         return _find_governed_summary_violations(body, changed_files)
 
     violations: list[str] = []
+    for heading in REQUIRED_TEMPLATE_SECTIONS:
+        occurrences = _heading_occurrences(body, heading)
+        if not occurrences:
+            violations.append(f"missing PR evidence section: {heading}")
+        elif len(occurrences) > 1:
+            violations.append(f"duplicate PR evidence section: {heading}")
+
     governing_section = _markdown_section(body, "Governing issue and intended outcome")
     if not _field_value(governing_section, "Governing issue") or not re.search(
         r"(?<!\w)#\d+\b", governing_section
@@ -153,6 +190,17 @@ def find_pr_evidence_violations(body: str, changed_files: Iterable[str]) -> list
         violations.append("missing governing issue reference")
     if not _field_value(governing_section, "Intended outcome"):
         violations.append("missing intended outcome")
+
+    implementation_section = _markdown_section(body, "Implementation scope")
+    reviewer_contracts = _field_value(
+        implementation_section, "Reviewer UI regression contracts"
+    )
+    if not reviewer_contracts:
+        violations.append("missing PR evidence field: Reviewer UI regression contracts")
+    else:
+        violations.extend(
+            _reviewer_contract_violations(reviewer_contracts, changed_files)
+        )
 
     acceptance_section = _markdown_section(body, "Acceptance-criteria evidence")
     if not _has_completed_table_row(acceptance_section):
@@ -252,10 +300,19 @@ def verification_summary(body: str, changed_files: Iterable[str]) -> list[str]:
 
 
 def _markdown_section(body: str, heading: str) -> str:
-    match = re.search(
-        rf"(?ms)^## {re.escape(heading)}\s*$\n(.*?)(?=^## |\Z)", body
+    occurrences = _heading_occurrences(body, heading)
+    if not occurrences:
+        return ""
+    start = occurrences[0].end()
+    next_heading = re.search(r"(?m)^##[ \t]+", body[start:])
+    end = start + next_heading.start() if next_heading else len(body)
+    return body[start:end]
+
+
+def _heading_occurrences(body: str, heading: str) -> list[re.Match[str]]:
+    return list(
+        re.finditer(rf"(?m)^##[ \t]+{re.escape(heading)}[ \t]*$", body)
     )
-    return match.group(1) if match else ""
 
 
 def _field_value(section: str, label: str) -> str:
@@ -264,6 +321,28 @@ def _field_value(section: str, label: str) -> str:
         return ""
     value = _COMMENT.sub("", match.group(1))
     return _PLACEHOLDER.sub("", value).strip()
+
+
+def _reviewer_contract_violations(
+    value: str,
+    changed_files: Iterable[str],
+) -> list[str]:
+    normalized = " ".join(value.casefold().split())
+    if normalized in REVIEWER_CONTRACT_EVASIVE_VALUES:
+        return ["invalid reviewer-contract disposition: provide contracts or a reason"]
+    if REVIEWER_CONTRACT_ID.search(value):
+        return []
+    not_applicable = REVIEWER_CONTRACT_NOT_APPLICABLE.match(value)
+    if not_applicable and _meaningful(not_applicable.group(1)):
+        if any(
+            changed_file.replace("\\", "/").startswith(REVIEWER_CONTRACT_PATH_PREFIXES)
+            for changed_file in changed_files
+        ):
+            return [
+                "reviewer-contract disposition cannot be not applicable for reviewer scope"
+            ]
+        return []
+    return ["invalid reviewer-contract disposition: provide contracts or a reason"]
 
 
 def _has_completed_table_row(section: str) -> bool:
@@ -301,27 +380,51 @@ def _event_body(event_path: Path) -> str:
     return body if isinstance(body, str) else ""
 
 
+def _pr_body(path: Path) -> str:
+    return path.read_text(encoding="utf-8")
+
+
 def _changed_files(path: Path) -> list[str]:
     return [line.strip() for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+
+
+def find_verification_violations(
+    repo_root: Path,
+    body: str,
+    changed_files: Iterable[str],
+) -> list[str]:
+    """Return the same workflow and PR-evidence violations used by CI."""
+    return find_workflow_contract_violations(repo_root) + find_pr_evidence_violations(
+        body,
+        changed_files,
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo-root", type=Path, default=Path("."))
     parser.add_argument("--event-path", type=Path)
+    parser.add_argument("--pr-body", type=Path)
     parser.add_argument("--changed-files", type=Path)
     args = parser.parse_args(argv)
 
     violations = find_workflow_contract_violations(args.repo_root)
     changed_files: list[str] = []
     body = ""
-    if args.event_path or args.changed_files:
-        if not args.event_path or not args.changed_files:
-            parser.error("--event-path and --changed-files must be supplied together")
+    if args.event_path and args.pr_body:
+        parser.error("--event-path and --pr-body are mutually exclusive")
+    if args.event_path or args.pr_body or args.changed_files:
+        if not args.changed_files or not (args.event_path or args.pr_body):
+            parser.error("--changed-files and exactly one PR body input are required together")
         try:
-            body = _event_body(args.event_path)
+            body = (
+                _event_body(args.event_path)
+                if args.event_path is not None
+                else _pr_body(args.pr_body)
+            )
         except (OSError, ValueError, json.JSONDecodeError) as error:
-            violations.append(f"cannot read pull-request event: {error}")
+            source = "pull-request event" if args.event_path is not None else "pull-request body"
+            violations.append(f"cannot read {source}: {error}")
         try:
             changed_files = _changed_files(args.changed_files)
         except OSError as error:

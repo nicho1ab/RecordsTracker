@@ -5,6 +5,10 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+  pull-requests: read
+
 jobs:
   validate:
     runs-on: ubuntu-latest
@@ -32,5 +36,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          set -euo pipefail
+          gh api "/repos/$GITHUB_REPOSITORY/pulls/${{ github.event.pull_request.number }}" --jq '.body' > .verification-pr-body.md
           gh api --paginate "/repos/$GITHUB_REPOSITORY/pulls/${{ github.event.pull_request.number }}/files?per_page=100" --jq '.[].filename' > .verification-changed-files.txt
-          python scripts/check_independent_verification.py --event-path "$GITHUB_EVENT_PATH" --changed-files .verification-changed-files.txt
+          python scripts/check_independent_verification.py --pr-body .verification-pr-body.md --changed-files .verification-changed-files.txt

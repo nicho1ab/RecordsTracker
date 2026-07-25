@@ -897,6 +897,7 @@ PULL_REQUEST_TEMPLATE_MARKERS = (
     "Governing issue:",
     "Intended outcome:",
     "Major files or components changed:",
+    "Reviewer UI regression contracts:",
     "| Acceptance criterion | Evidence and result |",
     "| Exact command | Result | Failure classification, if applicable |",
     "Implementation-caused failures:",

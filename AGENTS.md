@@ -229,6 +229,10 @@ Keep handoffs copy/paste-safe for PowerShell users. Do not include secrets, pers
 - For an important reviewer-facing UI task, identify the approved Figma frame or design artifact, list prohibited interaction patterns, and stop if the implementation materially varies without approval.
 - Do not invent a generic teal-primary design. Implement the approved design tokens, including approved traffic-light protocol color semantics, exactly and accessibly.
 
+## Reviewer UI regression contracts
+
+For reviewer-facing work, consult `docs/developer/reviewer-ui-regression-contracts.md` and identify affected, added, updated, superseded, or specifically not-applicable contracts in PR preparation. Use the governed template and local preflight; a freeform PR body cannot substitute for required evidence. Use outcome-based focused checks during development and reserve broader regression for the final stable point or an actual failure/scope change. The registry implements Issue #504 anti-fossilization governance; it does not replace governing issue, approved-design, accessibility, source, or authorization requirements.
+
 ## QNAP release deployment authority
 
 For QNAP deployment, verification, hosted acceptance, or rollback, follow the authoritative [QNAP Release Deployment Runbook](docs/developer/qnap-release-deployment-runbook.md). Do not invent or substitute another deployment procedure.
