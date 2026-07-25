@@ -27,7 +27,8 @@ def test_initial_reviewer_ui_contract_registry_is_complete_and_bounded() -> None
         assert "|" in row
 
     assert "`RT-RC-006` | Enforced" in content
-    assert "No contract-specific executable check is recorded." in content
+    assert "tests/unit/reviewer_ui_contracts.py" in content
+    assert "Route-specific browser adoption" in content
 
 
 def test_registry_requires_pr_contract_disposition_and_focused_first_validation() -> None:
