@@ -5,12 +5,16 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
+from types import MappingProxyType
 
 SUPPORTED_ACTION_KINDS = frozenset({"get", "external", "mutation"})
 PROHIBITED_INFORMATION_TIER_TERMS = frozenset(
     {"validated-load", "pipeline command", "sqlite", "connection string", "operator mutation"}
 )
 NO_ANNOUNCEMENT_HELP_TYPES = frozenset({"static-inline-definition"})
+KNOWN_INFORMATION_TIER_EXCEPTION_TERMS = MappingProxyType(
+    {"RT-RC-002-sqlite": frozenset({"sqlite"})}
+)
 KNOWN_DUPLICATION_EXCEPTION_IDS = frozenset({"RT-RC-006-distinct-purpose"})
 
 
@@ -45,10 +49,13 @@ def _required_text(value: object, description: str) -> str:
 
 
 def _validated_information_exception(exception: InformationTierException) -> frozenset[str]:
-    _required_text(exception.exception_id, "information-tier exception ID")
+    exception_id = _required_text(exception.exception_id, "information-tier exception ID")
     _required_text(exception.reason, "information-tier exception reason")
-    if not exception.allowed_terms or not exception.allowed_terms <= PROHIBITED_INFORMATION_TIER_TERMS:
-        raise ReviewerContractError("information-tier exception contains unknown governed terms")
+    governed_terms = KNOWN_INFORMATION_TIER_EXCEPTION_TERMS.get(exception_id)
+    if governed_terms is None:
+        raise ReviewerContractError("information-tier exception ID is not governed")
+    if exception.allowed_terms != governed_terms:
+        raise ReviewerContractError("information-tier exception does not match its governed terms")
     return exception.allowed_terms
 
 
@@ -63,12 +70,17 @@ def _validated_duplication_exception(exception: DuplicationException) -> None:
 
 def assert_destinations(actions: Iterable[Mapping[str, object]], get: Callable[[str], int]) -> None:
     for action in actions:
+        kind = action.get("kind")
+        if not isinstance(kind, str) or kind not in SUPPORTED_ACTION_KINDS:
+            raise ReviewerContractError("action kind is missing or unsupported")
         state = action.get("state", "available")
         if state == "unavailable":
+            _required_text(action.get("unavailable_reason"), "unavailable action reason")
+            if action.get("destination") or action.get("mutation_path") or action.get("usable") is True:
+                raise ReviewerContractError("unavailable action exposes a usable destination or mutation path")
+            if kind == "external" and not action.get("provenance"):
+                raise ReviewerContractError("unavailable external action lacks governed provenance")
             continue
-        kind = action.get("kind")
-        if kind not in SUPPORTED_ACTION_KINDS:
-            raise ReviewerContractError("action kind is missing or unsupported")
         if kind == "external":
             if not action.get("provenance"):
                 raise ReviewerContractError("external action lacks governed provenance")

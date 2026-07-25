@@ -30,7 +30,9 @@ def test_destination_contract_accepts_only_explicit_supported_kinds():
             {"kind": "get", "destination": "/review"},
             {"kind": "mutation", "success": True, "failure": True},
             {"kind": "external", "provenance": "source"},
-            {"kind": "get", "state": "unavailable"},
+            {"kind": "get", "state": "unavailable", "unavailable_reason": "No authorized reviewer route exists."},
+            {"kind": "external", "state": "unavailable", "unavailable_reason": "The source is unavailable.", "provenance": "source"},
+            {"kind": "mutation", "state": "unavailable", "unavailable_reason": "This review state does not allow the action."},
         ],
         lambda path: 200,
     )
@@ -42,7 +44,17 @@ def test_destination_contract_accepts_only_explicit_supported_kinds():
             assert_destinations([{"kind": "get", "destination": "/bad"}], lambda path, value=status: value)
     with pytest.raises(ReviewerContractError):
         assert_destinations([{"kind":"external"}], lambda path: 200)
-    for action in ({"destination": "/review"}, {"kind": "", "destination": "/review"}, {"kind": "queue", "destination": "/review"}):
+    for action in (
+        {"destination": "/review"},
+        {"kind": "", "destination": "/review"},
+        {"kind": "queue", "destination": "/review"},
+        {"state": "unavailable", "unavailable_reason": "Unavailable."},
+        {"kind": "", "state": "unavailable", "unavailable_reason": "Unavailable."},
+        {"kind": "queue", "state": "unavailable", "unavailable_reason": "Unavailable."},
+        {"kind": ["get"], "state": "unavailable", "unavailable_reason": "Unavailable."},
+        {"kind": "get", "state": "unavailable", "unavailable_reason": "Unavailable.", "destination": "/review"},
+        {"kind": "mutation", "state": "unavailable", "unavailable_reason": "Unavailable.", "mutation_path": "/submit"},
+    ):
         with pytest.raises(ReviewerContractError):
             assert_destinations([action], lambda path: 200)
 
@@ -54,7 +66,11 @@ def test_information_tier_exceptions_are_narrow_and_governed():
     for exception in (
         InformationTierException("", "approved terminology", frozenset({"sqlite"})),
         InformationTierException("RT-RC-002-sqlite", "", frozenset({"sqlite"})),
+        InformationTierException("RT-RC-002-other", "unknown", frozenset({"sqlite"})),
+        InformationTierException("RT-RC-002-sqlite", "mismatched", frozenset({"connection string"})),
+        InformationTierException("RT-RC-002-sqlite", "unrelated", frozenset({"sqlite", "connection string"})),
         InformationTierException("RT-RC-002-any", "broad", frozenset({"*"})),
+        InformationTierException("550e8400-e29b-41d4-a716-446655440000", "free text", frozenset({"sqlite"})),
     ):
         with pytest.raises(ReviewerContractError):
             assert_information_tier("SQLite", exception=exception)

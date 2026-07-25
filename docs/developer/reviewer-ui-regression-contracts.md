@@ -35,3 +35,10 @@ It requires a non-empty reason plus matching representation, duplicate-of, and
 section IDs; a boolean or unmatched exception does not bypass duplication or
 empty-section protection. Route adoption must record any additional governed
 exception before its test can pass.
+
+`RT-RC-002-sqlite` is the only reusable information-tier exception ID. It may
+authorize only the exact `sqlite` term with a non-empty, route-specific reason;
+unknown IDs, wildcard terms, and terms outside that declaration fail closed.
+Unavailable actions must still declare a supported action kind and a non-empty
+unavailability reason, and may not expose a usable destination or mutation
+path.
