@@ -16,6 +16,15 @@
   acceptance-evidence lifecycle policy in `docs/developer/codex-workflow.md`.
   It preserves separate human authorization for merge, deployment, and closure;
   evidence remains ignored and untracked unless a separate contract requires it.
+- Issue #617 owns the canonical delivery-automation failure and prevention
+  registry: `.github/delivery-automation-registry.json`, its versioned schema,
+  the offline `scripts/delivery_automation_registry.py` validator, and the
+  lifecycle authority in `docs/developer/codex-workflow.md`. The initial
+  registry records only DA-029, DA-030, and DA-031; DA-001 through DA-028 remain
+  explicit unavailable historical gaps. Documentation validation runs the
+  validator without adding a required check, changing workflow permissions, or
+  granting autonomous approval, merge, issue closure, deployment, or
+  production-data authority.
 - Current implementation state: the Python, SQLite, and Datasette proof of
   concept has proven governed ingestion, deterministic extraction, raw source
   preservation, source traceability, local validation and review support, and

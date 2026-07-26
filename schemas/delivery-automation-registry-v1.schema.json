@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://recordstracker.example/schemas/delivery-automation-registry-v1.schema.json",
+  "title": "RecordsTracker delivery-automation registry v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "title", "purpose", "owner_issue", "highest_assigned_id", "historical_gaps", "records", "privacy_and_evidence_limits", "globally_atomic"],
+  "properties": {
+    "schema_version": {"const": "recordstracker.delivery-automation-registry.v1"},
+    "title": {"type": "string", "minLength": 1},
+    "purpose": {"type": "string", "minLength": 1},
+    "owner_issue": {"$ref": "#/$defs/issue_reference"},
+    "highest_assigned_id": {"type": "integer", "minimum": 1},
+    "historical_gaps": {"type": "array", "items": {"$ref": "#/$defs/gap"}},
+    "records": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/record"}},
+    "privacy_and_evidence_limits": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+    "globally_atomic": {"const": false}
+  },
+  "$defs": {
+    "issue_reference": {"type": "string", "pattern": "^#[1-9][0-9]*$"},
+    "pr_reference": {"type": "string", "pattern": "^#[1-9][0-9]*$"},
+    "repository_path": {"type": "string", "pattern": "^(?!/)(?![A-Za-z]:)(?!.*\\\\).+"},
+    "reference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "reference"],
+      "properties": {
+        "kind": {"enum": ["issue", "pull_request", "repository_path"]},
+        "reference": {"type": "string", "minLength": 1}
+      }
+    },
+    "gap": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["start_id", "end_id", "status", "reason"],
+      "properties": {
+        "start_id": {"type": "integer", "minimum": 1},
+        "end_id": {"type": "integer", "minimum": 1},
+        "status": {"const": "unavailable"},
+        "reason": {"type": "string", "minLength": 1}
+      }
+    },
+    "temporary_exception": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["owner", "reason", "scope", "creation_reference", "status", "replacement_or_exit_criteria", "relaxes_required_check", "relaxes_authorization_boundary"],
+      "properties": {
+        "owner": {"type": "string", "minLength": 1},
+        "reason": {"type": "string", "minLength": 1},
+        "scope": {"type": "string", "minLength": 1},
+        "creation_reference": {"$ref": "#/$defs/issue_reference"},
+        "expiration_date": {"type": "string", "format": "date"},
+        "mandatory_review_trigger": {"type": "string", "minLength": 1},
+        "status": {"enum": ["active", "expired", "closed"]},
+        "replacement_or_exit_criteria": {"type": "string", "minLength": 1},
+        "relaxes_required_check": {"const": false},
+        "relaxes_authorization_boundary": {"const": false}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"status": {"const": "active"}}},
+          "then": {"anyOf": [{"required": ["expiration_date"]}, {"required": ["mandatory_review_trigger"]}]}
+        }
+      ]
+    },
+    "record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "failure_pattern", "evidence_references", "owner_issue", "lifecycle_status", "prevention_state", "governance_change_classifications", "enforcement_levels", "evidence_completeness", "prevention_summary", "merged_prevention_prs", "regression_coverage", "documentation_impact", "remaining_work", "related_issues", "supersession", "retirement", "temporary_exception"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^DA-[0-9]{3}$"},
+        "title": {"type": "string", "minLength": 1},
+        "failure_pattern": {"type": "string", "minLength": 1},
+        "evidence_references": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/reference"}},
+        "owner_issue": {"$ref": "#/$defs/issue_reference"},
+        "lifecycle_status": {"enum": ["identified", "active", "prevention_in_progress", "prevented", "superseded", "retired", "exception_active", "review_required"]},
+        "prevention_state": {"enum": ["not_started", "in_progress", "prevention_complete", "not_applicable"]},
+        "governance_change_classifications": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"enum": ["clarification", "inconsistency_correction", "stronger_enforcement", "relaxed_enforcement", "supersession", "temporary_exception", "obsolete_control_removal"]}},
+        "enforcement_levels": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"enum": ["documentation_only", "validation", "guarded_mutation", "workflow_gate", "human_decision"]}},
+        "evidence_completeness": {"enum": ["complete", "sufficient_to_seed", "partial", "unavailable"]},
+        "prevention_summary": {"type": "string", "minLength": 1},
+        "merged_prevention_prs": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/pr_reference"}},
+        "regression_coverage": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/repository_path"}},
+        "documentation_impact": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/repository_path"}},
+        "remaining_work": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "related_issues": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/issue_reference"}},
+        "supersession": {"type": "object", "additionalProperties": false, "required": ["supersedes", "superseded_by"], "properties": {"supersedes": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^DA-[0-9]{3}$"}}, "superseded_by": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^DA-[0-9]{3}$"}}}},
+        "retirement": {"type": "object", "additionalProperties": false, "required": ["status", "rationale"], "properties": {"status": {"enum": ["not_applicable", "retired"]}, "rationale": {"type": ["string", "null"]}}},
+        "temporary_exception": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/temporary_exception"}]}
+      },
+      "allOf": [
+        {"if": {"properties": {"prevention_state": {"const": "prevention_complete"}}}, "then": {"properties": {"regression_coverage": {"minItems": 1}, "documentation_impact": {"minItems": 1}}}}
+      ]
+    }
+  }
+}

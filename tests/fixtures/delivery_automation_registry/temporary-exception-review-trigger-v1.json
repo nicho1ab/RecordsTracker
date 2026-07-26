@@ -1,0 +1,11 @@
+{
+  "owner": "Issue #617 maintainer",
+  "reason": "Bounded evidence review is pending.",
+  "scope": "Registry metadata only.",
+  "creation_reference": "#617",
+  "mandatory_review_trigger": "Review before the next governed lifecycle change.",
+  "status": "active",
+  "replacement_or_exit_criteria": "Record the reviewed disposition or close the exception.",
+  "relaxes_required_check": false,
+  "relaxes_authorization_boundary": false
+}
