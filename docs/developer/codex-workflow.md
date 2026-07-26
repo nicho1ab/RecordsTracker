@@ -660,7 +660,7 @@ Issue #617 also owns the canonical slice-1 policy at
 `.github/evidence-reuse-validation-impact-policy.json`, its versioned envelope
 schema at `schemas/evidence-reuse-validation-impact-v1.schema.json`, and the
 repository-local evaluator at `scripts/evaluate_evidence_reuse_policy.py`.
-The supported policy version is `1.0.1`; the supported schema version is
+The supported policy version is `1.0.2`; the supported schema version is
 `recordstracker.evidence-reuse-validation-impact.v1`.
 The evaluator accepts a complete caller-supplied repository-relative inventory
 and returns a deterministic compact decision only; it has no network,
@@ -680,11 +680,18 @@ reconstructed from the complete changed-file inventory and must match the
 compact result exactly. The live PR verifier additionally obtains authoritative live PR state:
 repository, number, base and head names and SHAs, persisted body,
 complete changed-file inventory, and the complete required-check run/job set for
-the exact head. Compact declarations must match that state; missing or partial
-live state fails closed. Its non-self-referential canonical body hash normalizes
-line endings and replaces every compact-envelope `pr_body_hash` value with
-`null` before deterministic JSON rendering and SHA-256 hashing. Preparation and
-live verification use that same canonical body hash. The envelope is
+the exact head. Each accepted job must come from the expected repository's
+`pull_request` event and GitHub-provided association with the current PR;
+non-PR runs cannot satisfy or supersede a required check. Compact declarations
+must match that state; missing or partial live state fails closed. The compact
+parser accepts exactly one JSON envelope, rejects duplicate JSON keys at every
+nesting level and ambiguous fences, and is shared by preparation, hashing, and
+verification. Its non-self-referential canonical body hash normalizes line
+endings and replaces only governed current-PR `pr_body_hash` values with `null`
+before deterministic JSON rendering and SHA-256 hashing. Preparation and live
+verification use that same canonical body hash. Exact run/job identity ties
+block unless their normalized authoritative records are byte-equivalent; such
+equivalent duplicates are collapsed deterministically. The envelope is
 deterministic, ASCII-safe, read-only, and records the decision, delta, identity, inventory, requirements, evidence
 reuse/recollection/supersession/invalidation, live obligations, blockers, and
 mutation boundary. Legacy full-template and governed-summary evidence remains
@@ -708,7 +715,8 @@ The policy retains these boundaries exactly:
 PR-template, PR-body preparation, independent-verification, and documentation
 contract without network access or policy-selected test execution. It rejects a
 missing or unsupported version, a changed fixed path, compact-field drift,
-missing #533 ownership boundary, missing governed phrase, or a claim that
+missing #533 ownership boundary, missing governed phrase, a contradictory
+current #617 status claim, an #533 authority transfer, or a claim that
 classification grants autonomous lifecycle authority. This is documentation
 enforcement only: it does not publish, retry, merge, recover, clean up, write
 issues, or execute the selected validation plan.

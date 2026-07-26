@@ -1,7 +1,7 @@
 {
   "kind": "policy",
   "schema_version": "recordstracker.evidence-reuse-validation-impact.v1",
-  "policy_version": "1.0.1",
+  "policy_version": "1.0.2",
   "title": "Governed evidence reuse and validation-impact policy",
   "purpose": "Produces deterministic, read-only evidence and validation decisions without executing validation, GitHub operations, publication, merge, recovery, or cleanup.",
   "evidence_states": ["retained", "fresh", "live", "superseded", "invalidated"],

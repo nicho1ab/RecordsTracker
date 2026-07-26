@@ -515,7 +515,7 @@ def test_evidence_policy_documentation_contract_requires_fixed_files(
     [
         (
             ".github/evidence-reuse-validation-impact-policy.json",
-            '"policy_version": "1.0.1"',
+            '"policy_version": "1.0.2"',
             '"policy_version": "2.0.0"',
             "evidence policy version is unsupported",
         ),
@@ -645,6 +645,50 @@ def test_evidence_policy_documentation_contract_rejects_stale_slice_status(
     assert "evidence-policy implementation status missing: TESTING_STRATEGY.md" in violations
     assert (
         "evidence-policy implementation status contradicts integration: TESTING_STRATEGY.md"
+        in violations
+    )
+
+
+@pytest.mark.parametrize(
+    "claim",
+    [
+        "Issue #617 is merged.",
+        "Issue #617 is accepted and complete.",
+        "These slices are completed and prevented the defect.",
+        "The current work is fully implemented, deployed, and production-ready.",
+        "Issue #617 is closed.",
+    ],
+)
+def test_evidence_policy_documentation_contract_rejects_untruthful_current_status(
+    tmp_path: Path, claim: str
+) -> None:
+    check_docs = _load_check_docs_module()
+    _copy_evidence_policy_contract_files(tmp_path)
+    path = tmp_path / "TESTING_STRATEGY.md"
+    path.write_text(path.read_text(encoding="utf-8") + "\n" + claim + "\n", encoding="utf-8")
+
+    assert any(
+        "makes an untruthful current claim" in violation
+        for violation in check_docs.find_evidence_policy_documentation_contract_violations(tmp_path)
+    )
+
+
+def test_evidence_policy_documentation_contract_rejects_authority_transfer_but_allows_history(
+    tmp_path: Path,
+) -> None:
+    check_docs = _load_check_docs_module()
+    _copy_evidence_policy_contract_files(tmp_path)
+    path = tmp_path / "docs/developer/codex-workflow.md"
+    path.write_text(
+        path.read_text(encoding="utf-8")
+        + "\n#533 execution authority has moved to #617.\n"
+        + "Issue #616 merged historically; no autonomous merge is authorized.\n",
+        encoding="utf-8",
+    )
+
+    violations = check_docs.find_evidence_policy_documentation_contract_violations(tmp_path)
+    assert (
+        "evidence-policy documentation transfers #533 authority: docs/developer/codex-workflow.md"
         in violations
     )
 

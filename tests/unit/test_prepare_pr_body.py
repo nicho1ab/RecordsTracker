@@ -130,7 +130,7 @@ def test_compact_policy_preparation_is_deterministic_and_independently_valid() -
         "tree_sha": "c" * 40,
         "changed_file_inventory_hash": scope_hash,
         "pr_body_hash": "d" * 64,
-        "policy_version": "1.0.1",
+        "policy_version": "1.0.2",
         "schema_version": "recordstracker.evidence-reuse-validation-impact.v1",
         "validator_version": "evaluator-v1",
         "governed_boundary_classification": ["Repository governance"],
@@ -204,6 +204,14 @@ def test_compact_policy_preparation_is_deterministic_and_independently_valid() -
             {
                 field: run[field]
                 for field in ("check_name", "run_id", "job_id", "status", "conclusion", "head_sha")
+            }
+            | {
+                "repository": envelope["policy_input"]["repository_state"]["repository"],
+                "event": "pull_request",
+                "pull_request_numbers": [
+                    envelope["policy_input"]["repository_state"]["pull_request_number"]
+                ],
+                "job_run_id": run["run_id"],
             }
             for run in envelope["policy_input"]["required_check_runs"]
         ],

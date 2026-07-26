@@ -15,7 +15,7 @@ import re
 import sys
 from collections.abc import Iterable, Mapping
 from pathlib import Path
-from typing import Any, NamedTuple
+from typing import Any, NamedTuple, cast
 
 REQUIRED_WORKFLOWS: dict[str, tuple[str, tuple[str, ...]]] = {
     ".github/workflows/ci.yml": (
@@ -159,7 +159,8 @@ _COMMENT = re.compile(r"<!--.*?-->", re.DOTALL)
 _PLACEHOLDER = re.compile(r"<[^>]+>")
 _UNRESOLVED_INSTRUCTION = re.compile(r"(?i)\bnot\s+run\s*-\s*<\s*reason\s*>")
 _MOJIBAKE_EM_DASH = "\u00e2\u20ac\u201d"
-_COMPACT_POLICY_FENCE = re.compile(r"(?ms)```json\s*\n(?P<payload>\{.*?\})\s*\n```")
+_COMPACT_POLICY_OPENING = re.compile(r"(?m)^```json[ \t]*$")
+_COMPACT_POLICY_CLOSING = re.compile(r"(?m)^```[ \t]*$")
 
 
 def _load_evidence_policy_module() -> Any:
@@ -208,38 +209,98 @@ def normalized_body_sha256(body: str) -> str:
     return hashlib.sha256(normalize_pr_body(body).encode("utf-8")).hexdigest()
 
 
+class CompactPolicyEnvelopeError(ValueError):
+    """Raised when the governed compact envelope is not uniquely parseable."""
+
+
+def _reject_duplicate_json_keys(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    value: dict[str, object] = {}
+    for key, item in pairs:
+        if key in value:
+            raise CompactPolicyEnvelopeError(f"duplicate compact policy JSON key: {key}")
+        value[key] = item
+    return value
+
+
+def _compact_policy_section_span(body: str) -> tuple[int, int]:
+    occurrences = _heading_occurrences(body, COMPACT_POLICY_HEADING)
+    if len(occurrences) != 1:
+        raise CompactPolicyEnvelopeError("compact policy heading is missing or ambiguous")
+    start = occurrences[0].end()
+    next_heading = re.search(r"(?m)^##[ \t]+", body[start:])
+    return start, start + next_heading.start() if next_heading else len(body)
+
+
+def _strict_compact_policy_envelope(section: str) -> tuple[dict[str, object], int, int]:
+    """Parse exactly one complete compact JSON fence without lossy key handling."""
+
+    openings = list(_COMPACT_POLICY_OPENING.finditer(section))
+    if not openings:
+        raise CompactPolicyEnvelopeError("compact policy JSON envelope is missing")
+    if len(openings) != 1:
+        raise CompactPolicyEnvelopeError("compact policy JSON envelope is ambiguous or repeated")
+    opening = openings[0]
+    closing = _COMPACT_POLICY_CLOSING.search(section, opening.end())
+    if closing is None:
+        raise CompactPolicyEnvelopeError("compact policy JSON envelope is malformed")
+    payload = section[opening.end() : closing.start()]
+    try:
+        envelope = json.loads(payload, object_pairs_hook=_reject_duplicate_json_keys)
+    except (CompactPolicyEnvelopeError, json.JSONDecodeError) as error:
+        raise CompactPolicyEnvelopeError(str(error)) from error
+    if not isinstance(envelope, dict):
+        raise CompactPolicyEnvelopeError("compact policy JSON envelope is malformed")
+    if envelope.get("kind") != "compact_policy_evidence":
+        raise CompactPolicyEnvelopeError("invalid compact policy envelope kind")
+    if envelope.get("schema_version") != SUPPORTED_SCHEMA_VERSION:
+        raise CompactPolicyEnvelopeError("compact policy envelope schema version is invalid")
+    return envelope, opening.end(), closing.start()
+
+
+def _governed_body_hashes_as_null(envelope: dict[str, object]) -> dict[str, object]:
+    """Null only self-referential current-PR hashes, preserving evidence identities."""
+
+    canonical = copy.deepcopy(envelope)
+    for container_name in ("policy_input", "policy_result"):
+        container = canonical.get(container_name)
+        if not isinstance(container, dict):
+            continue
+        repository_state = container.get("repository_state")
+        if isinstance(repository_state, dict) and "pr_body_hash" in repository_state:
+            repository_state["pr_body_hash"] = None
+        if container_name == "policy_input":
+            runs = container.get("required_check_runs")
+            if isinstance(runs, list):
+                for run in runs:
+                    if isinstance(run, dict) and "pr_body_hash" in run:
+                        run["pr_body_hash"] = None
+    return canonical
+
+
 def canonical_compact_body(body: str) -> str:
     """Remove compact-envelope body hashes before canonical body hashing.
 
     The compact envelope lives inside the persisted body, so its body-hash
-    fields cannot participate in their own digest. Every ``pr_body_hash``
-    value in that envelope is replaced with ``null`` before deterministic JSON
-    rendering; all body text outside the envelope remains unchanged.
+    fields cannot participate in their own digest. Only governed current-PR
+    ``pr_body_hash`` fields are replaced with ``null`` before deterministic
+    JSON rendering; all body text outside the envelope remains unchanged.
     """
 
     normalized = normalize_pr_body(body)
-    match = _COMPACT_POLICY_FENCE.search(normalized)
-    if match is None:
-        raise ValueError("compact policy JSON envelope is missing")
-    envelope = json.loads(match.group("payload"))
-    if not isinstance(envelope, dict):
-        raise ValueError("compact policy JSON envelope is malformed")
-
-    def without_body_hashes(value: object) -> object:
-        if isinstance(value, dict):
-            return {
-                key: None if key == "pr_body_hash" else without_body_hashes(item)
-                for key, item in value.items()
-            }
-        if isinstance(value, list):
-            return [without_body_hashes(item) for item in value]
-        return value
-
+    section_start, section_end = _compact_policy_section_span(normalized)
+    envelope, payload_start, payload_end = _strict_compact_policy_envelope(
+        normalized[section_start:section_end]
+    )
     canonical_json = json.dumps(
-        without_body_hashes(envelope), ensure_ascii=True, sort_keys=True, separators=(",", ":")
+        _governed_body_hashes_as_null(envelope),
+        ensure_ascii=True,
+        sort_keys=True,
+        separators=(",", ":"),
     )
     return (
-        normalized[: match.start("payload")] + canonical_json + normalized[match.end("payload") :]
+        normalized[: section_start + payload_start]
+        + canonical_json
+        + normalized[section_start + payload_end :]
     )
 
 
@@ -398,8 +459,11 @@ def find_pr_evidence_violations(body: str, changed_files: Iterable[str]) -> list
             violations.append(
                 "Required GitHub workflows and checks: changes require Concern - review required"
             )
+    compact_headings = _heading_occurrences(normalized_body, COMPACT_POLICY_HEADING)
     compact_section = _markdown_section(normalized_body, COMPACT_POLICY_HEADING)
-    if "```json" in compact_section:
+    if len(compact_headings) > 1:
+        violations.append("compact policy heading is missing or ambiguous")
+    elif "```json" in compact_section:
         violations.extend(_compact_policy_violations(compact_section, normalized_files))
     return violations
 
@@ -438,15 +502,10 @@ def _compact_policy_violations(section: str, changed_files: tuple[str, ...]) -> 
     """Independently reconstruct declared compact policy evidence from full scope."""
 
     violations: list[str] = []
-    match = _COMPACT_POLICY_FENCE.search(section.strip())
-    if match is None:
-        return ["missing compact policy JSON envelope"]
     try:
-        envelope = json.loads(match.group("payload"))
-    except json.JSONDecodeError:
-        return ["malformed compact policy JSON envelope"]
-    if not isinstance(envelope, dict):
-        return ["malformed compact policy JSON envelope"]
+        envelope, _, _ = _strict_compact_policy_envelope(section)
+    except CompactPolicyEnvelopeError as error:
+        return [str(error)]
     unknown = sorted(set(envelope) - set(COMPACT_POLICY_REQUIRED_FIELDS))
     missing = [field for field in COMPACT_POLICY_REQUIRED_FIELDS if field not in envelope]
     if unknown:
@@ -456,15 +515,18 @@ def _compact_policy_violations(section: str, changed_files: tuple[str, ...]) -> 
         return violations
     if envelope.get("kind") != "compact_policy_evidence":
         violations.append("invalid compact policy envelope kind")
-    if not isinstance(envelope.get("delta"), str) or not envelope["delta"].strip():
+    delta = envelope.get("delta")
+    if not isinstance(delta, str) or not delta.strip():
         violations.append("compact policy delta is missing")
     for field in ("validation_newly_performed", "live_evidence_recollected"):
         if not isinstance(envelope.get(field), list):
             violations.append(f"compact policy {field} is missing")
-    policy_input = envelope.get("policy_input")
-    declared_result = envelope.get("policy_result")
-    if not isinstance(policy_input, dict) or not isinstance(declared_result, dict):
+    policy_input_value = envelope.get("policy_input")
+    declared_result_value = envelope.get("policy_result")
+    if not isinstance(policy_input_value, dict) or not isinstance(declared_result_value, dict):
         return violations + ["compact policy input or result is malformed"]
+    policy_input = cast(dict[str, object], policy_input_value)
+    declared_result = cast(dict[str, object], declared_result_value)
     inventory = policy_input.get("changed_file_inventory")
     if not isinstance(inventory, dict):
         return violations + ["compact policy changed-file inventory is missing"]
@@ -485,7 +547,7 @@ def _compact_policy_violations(section: str, changed_files: tuple[str, ...]) -> 
         violations.append("compact policy result differs from independently reconstructed result")
     visible_fields = {
         "Decision": reconstructed["decision"],
-        "Delta": envelope["delta"],
+        "Delta": delta,
         "Policy version": reconstructed["policy_version"],
     }
     for label, expected in visible_fields.items():
@@ -507,7 +569,11 @@ def _compact_policy_violations(section: str, changed_files: tuple[str, ...]) -> 
         violations.append("compact policy invalidated evidence declaration is missing")
     if declared_result.get("authorized_mutations") not in ([],):
         violations.append("compact policy cannot authorize mutations")
-    if "automatic_rerun" not in declared_result.get("unauthorized_mutations", []):
+    unauthorized_mutations = declared_result.get("unauthorized_mutations")
+    if (
+        not isinstance(unauthorized_mutations, list)
+        or "automatic_rerun" not in unauthorized_mutations
+    ):
         violations.append("compact policy must prohibit automatic rerun")
     return violations
 
@@ -526,16 +592,15 @@ def _compact_live_binding_violations(
 
     if live_pr_state is None:
         return ["compact policy evidence requires authoritative live PR state"]
-    match = _COMPACT_POLICY_FENCE.search(body)
-    if match is None:
-        return ["missing compact policy JSON envelope"]
     try:
-        envelope = json.loads(match.group("payload"))
-    except json.JSONDecodeError:
-        return ["malformed compact policy JSON envelope"]
-    if not isinstance(envelope, dict) or not isinstance(envelope.get("policy_input"), dict):
+        section_start, section_end = _compact_policy_section_span(body)
+        envelope, _, _ = _strict_compact_policy_envelope(body[section_start:section_end])
+    except CompactPolicyEnvelopeError as error:
+        return [str(error)]
+    policy_input_value = envelope.get("policy_input")
+    if not isinstance(policy_input_value, dict):
         return ["compact policy input or result is malformed"]
-    policy_input = envelope["policy_input"]
+    policy_input = cast(dict[str, object], policy_input_value)
     current = policy_input.get("repository_state")
     if not isinstance(current, dict):
         return ["compact policy repository state is malformed"]
@@ -568,7 +633,8 @@ def _compact_live_binding_violations(
                 violations.append(
                     "compact policy body hash differs from authoritative persisted PR body"
                 )
-            for run in policy_input.get("required_check_runs", []):
+            policy_runs = policy_input.get("required_check_runs")
+            for run in policy_runs if isinstance(policy_runs, list) else []:
                 if isinstance(run, dict) and run.get("pr_body_hash") != body_hash:
                     violations.append(
                         "compact policy check body hash differs from authoritative "
@@ -629,13 +695,52 @@ def _compact_live_binding_violations(
             violations.append(f"{source} required check run belongs to another head")
         return tuple(value[field] for field in fields)
 
-    actual = [run_identity(run, source="authoritative") for run in live_runs]
+    def authoritative_run_identity(value: object) -> tuple[object, ...] | None:
+        record = run_identity(value, source="authoritative")
+        if record is None or not isinstance(value, Mapping):
+            return None
+        association_fields = ("repository", "event", "pull_request_numbers", "job_run_id")
+        if any(field not in value for field in association_fields):
+            violations.append("authoritative required check run association is incomplete")
+            return None
+        if value["repository"] != live_pr_state.get("repository"):
+            violations.append("authoritative required check run belongs to another repository")
+            return None
+        if value["event"] != "pull_request":
+            # Other event types cannot satisfy a PR check and cannot supersede it.
+            return None
+        numbers = value["pull_request_numbers"]
+        if not isinstance(numbers, list) or any(not isinstance(number, int) for number in numbers):
+            violations.append(
+                "authoritative required check run pull request association is incomplete"
+            )
+            return None
+        if numbers != [live_pr_state.get("pull_request_number")]:
+            violations.append("authoritative required check run belongs to another pull request")
+            return None
+        if value["job_run_id"] != value["run_id"]:
+            violations.append("authoritative required check job belongs to another run")
+            return None
+        return record
+
+    actual = [authoritative_run_identity(run) for run in live_runs]
     declared = [run_identity(run, source="compact policy") for run in declared_runs]
     actual_records = [record for record in actual if record is not None]
     declared_records = [record for record in declared if record is not None]
+    all_actual_records_valid = len(actual_records) == len(actual)
+    all_declared_records_valid = len(declared_records) == len(declared)
+    unique_actual: dict[tuple[object, ...], tuple[object, ...]] = {}
+    for record in actual_records:
+        key = record[:3]
+        existing = unique_actual.get(key)
+        if existing is not None and existing != record:
+            violations.append("authoritative required check run tie is contradictory")
+        else:
+            unique_actual[key] = record
+    actual_records = list(unique_actual.values())
     if (
-        len(actual_records) == len(actual)
-        and len(declared_records) == len(declared)
+        all_actual_records_valid
+        and all_declared_records_valid
         and (
             sorted(json.dumps(record, separators=(",", ":")) for record in actual_records)
             != sorted(json.dumps(record, separators=(",", ":")) for record in declared_records)
@@ -644,7 +749,7 @@ def _compact_live_binding_violations(
         violations.append(
             "compact policy required check runs differ from authoritative live evidence"
         )
-    observed_names = {item[0] for item in actual if item is not None}
+    observed_names = {item[0] for item in actual_records}
     for check in sorted(required_names - observed_names):
         violations.append(f"authoritative required check evidence is missing: {check}")
     return sorted(set(violations))
@@ -703,8 +808,9 @@ def validate_pr_evidence(
     violations = find_workflow_contract_violations(repo_root) + find_pr_evidence_violations(
         normalized_body, normalized_files
     )
+    compact_headings = _heading_occurrences(normalized_body, COMPACT_POLICY_HEADING)
     compact_section = _markdown_section(normalized_body, COMPACT_POLICY_HEADING)
-    if "```json" in compact_section:
+    if len(compact_headings) == 1 and "```json" in compact_section:
         violations.extend(
             _compact_live_binding_violations(normalized_body, normalized_files, live_pr_state)
         )

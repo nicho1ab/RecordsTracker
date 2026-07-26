@@ -42,7 +42,7 @@ def _identity(**overrides: object) -> dict[str, object]:
         "tree_sha": TREE_A,
         "changed_file_inventory_hash": HASH_A,
         "pr_body_hash": HASH_A,
-        "policy_version": "1.0.1",
+        "policy_version": "1.0.2",
         "schema_version": "recordstracker.evidence-reuse-validation-impact.v1",
         "validator_version": "evaluator-v1",
         "governed_boundary_classification": ["Repository governance"],
@@ -230,6 +230,21 @@ def test_duplicate_pending_and_failed_required_runs_have_stable_outcomes() -> No
     )
     assert "REQUIRED_CHECK_FAILED:validate" in failed["blockers"]
     assert "NEWER_FAILED_RUN_SUPERSEDES_SUCCESS:validate" in failed["reasons"]
+
+
+def test_exact_required_run_identity_ties_fail_closed_unless_equivalent() -> None:
+    paths = ["docs/developer/codex-workflow.md"]
+    scope_hash = _digest(paths)
+    runs = [
+        _run(name, index + 1, scope_hash=scope_hash)
+        for index, name in enumerate(("validate", "docs-check", "fixtures", "security"))
+    ]
+    equivalent = POLICY.evaluate(_input(paths, required_check_runs=runs + [copy.deepcopy(runs[0])]))
+    assert equivalent["decision"] == "ready"
+    contradictory = copy.deepcopy(runs[0])
+    contradictory["conclusion"] = "failure"
+    result = POLICY.evaluate(_input(paths, required_check_runs=runs + [contradictory]))
+    assert "AMBIGUOUS_REQUIRED_CHECK_RUN_TIE:validate" in result["blockers"]
 
 
 def test_result_is_deterministic_complete_and_non_mutating() -> None:

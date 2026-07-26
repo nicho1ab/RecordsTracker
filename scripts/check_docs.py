@@ -120,6 +120,15 @@ EVIDENCE_IMPLEMENTATION_STATUS = (
     "slice_3=documentation-checks; state=local-unmerged-unaccepted; "
     "issue_533_execution_authority=absent."
 )
+_EVIDENCE_CURRENT_STATUS_CLAIM = re.compile(
+    r"(?im)^\s*(?:[-*]\s*)?(?:issue\s*#617|(?:these|the)\s+slices?|"
+    r"the\s+(?:current\s+)?work)\b[^\n]*\b(?:is|are|status[^\n]*=)[^\n]*\b"
+    r"(?:merged|accepted|complete(?:d)?|prevented|fully\s+implemented|deployed|production-ready|closed)\b"
+)
+_EVIDENCE_AUTHORITY_TRANSFER_CLAIM = re.compile(
+    r"(?im)^\s*(?:[-*]\s*)?(?:#533\b[^\n]*(?:moved|transferred|superseded)[^\n]*#617\b|"
+    r"#617\b[^\n]*(?:owns|has|retains)[^\n]*\b(?:execution|publication|merge|recovery|orchestration|lifecycle)\b)"
+)
 EVIDENCE_MATRIX_HEADER = (
     "Impact class",
     "Focused validation",
@@ -1400,6 +1409,15 @@ def find_evidence_policy_documentation_contract_violations(
         ):
             violations.append(
                 f"evidence-policy implementation status contradicts integration: {document_name}"
+            )
+        if _EVIDENCE_CURRENT_STATUS_CLAIM.search(content):
+            violations.append(
+                "evidence-policy implementation status makes an untruthful current claim: "
+                f"{document_name}"
+            )
+        if _EVIDENCE_AUTHORITY_TRANSFER_CLAIM.search(content):
+            violations.append(
+                f"evidence-policy documentation transfers #533 authority: {document_name}"
             )
 
     rows = _matrix_rows(_markdown_section(documentation, "Validation-impact matrix"))

@@ -39,7 +39,7 @@
       "properties": {
         "kind": {"const": "policy"},
         "schema_version": {"const": "recordstracker.evidence-reuse-validation-impact.v1"},
-        "policy_version": {"type": "string", "pattern": "^1\\.0\\.1$"},
+        "policy_version": {"type": "string", "pattern": "^1\\.0\\.2$"},
         "title": {"type": "string", "minLength": 1},
         "purpose": {"type": "string", "minLength": 1},
         "evidence_states": {"type": "array", "const": ["retained", "fresh", "live", "superseded", "invalidated"]},

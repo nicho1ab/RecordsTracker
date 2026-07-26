@@ -115,7 +115,7 @@ def _compact_input(paths: list[str], **overrides: object) -> dict[str, object]:
         "tree_sha": TREE_A,
         "changed_file_inventory_hash": scope_hash,
         "pr_body_hash": HASH_A,
-        "policy_version": "1.0.1",
+        "policy_version": "1.0.2",
         "schema_version": "recordstracker.evidence-reuse-validation-impact.v1",
         "validator_version": "evaluator-v1",
         "governed_boundary_classification": ["Repository governance"],
@@ -204,6 +204,12 @@ def _live_pr_state(policy_input: dict[str, object], body: str) -> dict[str, obje
             {
                 field: run[field]
                 for field in ("check_name", "run_id", "job_id", "status", "conclusion", "head_sha")
+            }
+            | {
+                "repository": identity["repository"],
+                "event": "pull_request",
+                "pull_request_numbers": [identity["pull_request_number"]],
+                "job_run_id": run["run_id"],
             }
             for run in runs
         ],
@@ -304,11 +310,11 @@ def test_live_compact_binding_enforces_exact_latest_required_check_runs() -> Non
     body, policy_input = _bound_compact_body(paths)
     live = _live_pr_state(policy_input, body)
     older_success = copy.deepcopy(live["required_check_runs"])
-    older_success[0]["run_id"] = 1
+    older_success[0].update({"run_id": 1, "job_run_id": 1})
     pending = copy.deepcopy(live["required_check_runs"])
-    pending[0].update({"run_id": 99, "status": "pending", "conclusion": None})
+    pending[0].update({"run_id": 99, "job_run_id": 99, "status": "pending", "conclusion": None})
     failed = copy.deepcopy(live["required_check_runs"])
-    failed[0].update({"run_id": 99, "status": "failure", "conclusion": "failure"})
+    failed[0].update({"run_id": 99, "job_run_id": 99, "status": "failure", "conclusion": "failure"})
 
     for authoritative_runs in (older_success + pending, older_success + failed):
         violations = verification.validate_pr_evidence(
@@ -339,6 +345,92 @@ def test_live_compact_binding_enforces_exact_latest_required_check_runs() -> Non
         ROOT, body, paths, live_pr_state={**live, "changed_file_inventory_complete": False}
     ).violations
     assert "authoritative changed-file inventory is incomplete" in incomplete_scope
+
+
+def test_compact_parser_rejects_duplicate_keys_and_ambiguous_envelopes() -> None:
+    verification = _load_module()
+    paths = ["docs/developer/codex-workflow.md"]
+    body, _ = _bound_compact_body(paths)
+    payload = body.split("```json\n", 1)[1].split("\n```", 1)[0]
+    duplicate_top = body.replace(
+        '"kind":"compact_policy_evidence",',
+        '"kind":"compact_policy_evidence","kind":"compact_policy_evidence",',
+        1,
+    )
+    duplicate_nested = body.replace(
+        '"repository":"nicho1ab/RecordsTracker",',
+        '"repository":"nicho1ab/RecordsTracker","repository":"nicho1ab/RecordsTracker",',
+        1,
+    )
+    duplicate_hash = body.replace('"pr_body_hash":"', '"pr_body_hash":"x","pr_body_hash":"', 1)
+    repeated = body + "\n## Validation impact and evidence delta\n\n```json\n" + payload + "\n```\n"
+    malformed_then_valid = body.replace("```json\n", "```json\n{not-json}\n```\n```json\n", 1)
+    for candidate in (
+        duplicate_top,
+        duplicate_nested,
+        duplicate_hash,
+        repeated,
+        malformed_then_valid,
+    ):
+        assert verification.find_pr_evidence_violations(candidate, paths)
+        with pytest.raises(ValueError):
+            verification.canonical_compact_body(candidate)
+
+
+def test_canonical_compact_body_preserves_content_but_excludes_only_governed_hashes() -> None:
+    verification = _load_module()
+    paths = ["docs/developer/codex-workflow.md"]
+    body, _ = _bound_compact_body(paths)
+    original = verification.canonical_compact_body_sha256(body)
+    changed_hash = body.replace('"pr_body_hash":"', '"pr_body_hash":"z', 1)
+    assert verification.canonical_compact_body_sha256(changed_hash) == original
+    assert (
+        verification.canonical_compact_body_sha256(body + "\nOutside envelope text.\n") != original
+    )
+
+
+def test_live_required_run_association_and_ties_fail_closed() -> None:
+    verification = _load_module()
+    paths = ["docs/developer/codex-workflow.md"]
+    body, policy_input = _bound_compact_body(paths)
+    live = _live_pr_state(policy_input, body)
+    for field, value, expected in (
+        ("event", "push", "authoritative required check evidence is missing"),
+        ("event", "workflow_dispatch", "authoritative required check evidence is missing"),
+        ("pull_request_numbers", [618], "another pull request"),
+        ("pull_request_numbers", None, "association is incomplete"),
+        ("job_run_id", 999, "job belongs to another run"),
+    ):
+        tampered = copy.deepcopy(live)
+        tampered["required_check_runs"][0][field] = value
+        assert any(
+            expected in violation
+            for violation in verification.validate_pr_evidence(
+                ROOT, body, paths, live_pr_state=tampered
+            ).violations
+        )
+    duplicate = copy.deepcopy(live)
+    contradictory = copy.deepcopy(duplicate["required_check_runs"][0])
+    contradictory["conclusion"] = "failure"
+    duplicate["required_check_runs"].append(contradictory)
+    assert (
+        "authoritative required check run tie is contradictory"
+        in verification.validate_pr_evidence(ROOT, body, paths, live_pr_state=duplicate).violations
+    )
+    equivalent = copy.deepcopy(live)
+    equivalent["required_check_runs"].append(copy.deepcopy(equivalent["required_check_runs"][0]))
+    assert (
+        verification.validate_pr_evidence(ROOT, body, paths, live_pr_state=equivalent).violations
+        == ()
+    )
+    non_pr = copy.deepcopy(live["required_check_runs"][0])
+    non_pr.update({"run_id": 999, "job_run_id": 999, "event": "push"})
+    unrelated = copy.deepcopy(live)
+    unrelated["required_check_runs"].append(non_pr)
+    assert (
+        verification.validate_pr_evidence(ROOT, body, paths, live_pr_state=unrelated).violations
+        == ()
+    )
 
 
 def test_body_only_retains_source_evidence_and_invalidates_body_dependent_evidence() -> None:

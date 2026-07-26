@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 POLICY_PATH = ROOT / ".github" / "evidence-reuse-validation-impact-policy.json"
 SCHEMA_PATH = ROOT / "schemas" / "evidence-reuse-validation-impact-v1.schema.json"
 SCHEMA_VERSION = "recordstracker.evidence-reuse-validation-impact.v1"
-POLICY_VERSION = "1.0.1"
+POLICY_VERSION = "1.0.2"
 _PATH = re.compile(
     r"^(?!/)(?![A-Za-z]:)(?!.*//)(?!.*(?:^|/)\.(?:/|$))"
     r"(?!.*(?:^|/)\.\.(?:/|$))[A-Za-z0-9._-]+(?:/[A-Za-z0-9._-]+)*$"
@@ -164,8 +164,19 @@ def _run_obligations(
     blockers: list[str] = []
     reasons: list[str] = []
     for check in policy["required_check_names"]:
+        observed_runs = [run for run in runs if run["check_name"] == check]
+        by_identity: dict[tuple[object, object], dict[str, Any]] = {}
+        for run in observed_runs:
+            identity = (run["run_id"], run["job_id"])
+            existing = by_identity.get(identity)
+            if existing is not None and existing != run:
+                blockers.append(f"AMBIGUOUS_REQUIRED_CHECK_RUN_TIE:{check}")
+                continue
+            by_identity[identity] = run
+        if any(blocker == f"AMBIGUOUS_REQUIRED_CHECK_RUN_TIE:{check}" for blocker in blockers):
+            continue
         check_runs = sorted(
-            (run for run in runs if run["check_name"] == check),
+            by_identity.values(),
             key=lambda run: (run["run_id"], run["job_id"]),
         )
         if not check_runs:
