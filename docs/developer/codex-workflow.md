@@ -622,6 +622,12 @@ closing development link, or attributable post-merge close event. Unknown or
 malformed timeline events fail closed; the hidden development-link closure
 effect remains the separate `platform_not_exposed` residual.
 
+GitHub `committed` timeline events are separately retained as non-linkage
+operational metadata only when the documented event shape supplies a valid
+commit SHA and author timestamp without a linkage semantic. They grant neither
+closure nor reopen authority, identify no related issue, and do not affect
+readiness. A malformed or linkage-shaped `committed` event remains fail-closed.
+
 Its production CLI accepts only an existing repository-relative contract path:
 normalization, containment, and symlink resolution must all remain beneath the
 verified repository root. It has no caller-supplied schema, evidence, output,

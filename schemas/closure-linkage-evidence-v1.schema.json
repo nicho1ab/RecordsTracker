@@ -199,6 +199,7 @@
         "target_pull_request_number",
         "actor",
         "occurred_at",
+        "commit_sha",
         "explicit_closure_semantic"
       ],
       "properties": {
@@ -209,6 +210,7 @@
             "explicit_closing_reference",
             "observed_development_link",
             "observed_closing_development_link",
+            "operational_commit_event",
             "reopen_event",
             "close_event",
             "unknown_timeline_event"
@@ -218,6 +220,7 @@
         "target_pull_request_number": {"type": "integer", "minimum": 1},
         "actor": {"type": ["string", "null"], "minLength": 1, "maxLength": 120},
         "occurred_at": {"type": ["string", "null"], "maxLength": 40},
+        "commit_sha": {"type": ["string", "null"], "pattern": "^[0-9a-f]{40}$"},
         "explicit_closure_semantic": {"type": "boolean"}
       }
     },

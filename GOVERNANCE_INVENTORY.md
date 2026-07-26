@@ -35,7 +35,9 @@
   verification and granting no merge authority; no PR-body-only result proves
   closure safety. Informational timeline cross-references remain relationship
   evidence only; explicit closing semantics are required before linkage blocks
-  a must-remain-open issue, and unknown timeline events fail closed. Contract input is
+  a must-remain-open issue. Documented GitHub committed events are non-linkage
+  operational metadata only with their required fields; unknown or malformed
+  timeline events fail closed. Contract input is
   repository-bounded and post-merge collection uses fixed read-only queries for
   exact declared issues only. It does not merge, close, reopen, unlink,
   recover, or grant merge authority.

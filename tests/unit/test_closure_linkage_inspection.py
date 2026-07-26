@@ -207,6 +207,7 @@ def test_informational_cross_reference_is_recorded_without_blocking_readiness():
             "target_pull_request_number": 615,
             "actor": "nicho1ab",
             "occurred_at": "2026-07-26T00:00:00Z",
+            "commit_sha": None,
             "explicit_closure_semantic": False,
         }
     ]
@@ -229,6 +230,75 @@ def test_explicit_closing_development_linkage_conflicting_with_open_contract_is_
     )
     assert evidence["primary_readiness_classification"] == "NOT_READY"
     assert "UNAUTHORIZED_CLOSURE_LINKAGE" in codes(evidence["closure_risk_findings"])
+
+
+def test_committed_events_are_deterministic_operational_metadata():
+    commits = (
+        {
+            "event": "committed",
+            "sha": "a" * 40,
+            "author": {"date": "2026-07-26T00:00:00Z"},
+        },
+        {
+            "event": "committed",
+            "sha": "b" * 40,
+            "author": {"date": "2026-07-26T00:01:00Z"},
+        },
+    )
+    evidence = inspect(timeline=commits)
+    assert evidence["primary_readiness_classification"] == "READY_FOR_SEPARATE_MERGE_AUTHORIZATION"
+    assert evidence["observed_development_links"] == []
+    assert evidence["post_merge_verification_obligations"][0]["issue_number"] == 608
+    assert [item["commit_sha"] for item in evidence["observed_timeline_evidence"]] == [
+        "a" * 40,
+        "b" * 40,
+    ]
+    assert {item["classification"] for item in evidence["observed_timeline_evidence"]} == {
+        "operational_commit_event"
+    }
+
+
+def test_committed_events_coexist_with_informational_cross_reference_and_residual():
+    evidence = inspect(
+        timeline=(
+            {
+                "event": "cross-referenced",
+                "source": {"issue": {"number": 608}},
+            },
+            {
+                "event": "committed",
+                "sha": "a" * 40,
+                "author": {"date": "2026-07-26T00:00:00Z"},
+            },
+        )
+    )
+    assert evidence["primary_readiness_classification"] == "READY_FOR_SEPARATE_MERGE_AUTHORIZATION"
+    assert evidence["residual_platform_limitations"][0]["availability"] == "platform_not_exposed"
+    assert {item["classification"] for item in evidence["observed_timeline_evidence"]} == {
+        "informational_cross_reference",
+        "operational_commit_event",
+    }
+
+
+@pytest.mark.parametrize(
+    "timeline",
+    (
+        ({"event": "committed", "sha": "a" * 40},),
+        ({"event": "committed", "sha": "short", "author": {"date": "2026-07-26T00:00:00Z"}},),
+        (
+            {
+                "event": "committed",
+                "sha": "a" * 40,
+                "author": {"date": "2026-07-26T00:00:00Z"},
+                "source": {"issue": {"number": 608}},
+            },
+        ),
+    ),
+)
+def test_malformed_or_linkage_shaped_committed_event_remains_evidence_incomplete(timeline):
+    evidence = inspect(timeline=timeline)
+    assert evidence["primary_readiness_classification"] == "EVIDENCE_INCOMPLETE"
+    assert evidence["observed_timeline_evidence"][0]["classification"] == "unknown_timeline_event"
 
 
 @pytest.mark.parametrize(
@@ -344,6 +414,7 @@ def test_schema_rejects_malformed_contract_evidence_and_unknown_properties():
             "target_pull_request_number": 615,
             "actor": None,
             "occurred_at": None,
+            "commit_sha": None,
             "explicit_closure_semantic": False,
         }
     ]

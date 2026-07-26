@@ -65,6 +65,7 @@ TIMELINE_CLASSIFICATIONS = {
     "explicit_closing_reference",
     "observed_development_link",
     "observed_closing_development_link",
+    "operational_commit_event",
     "reopen_event",
     "close_event",
     "unknown_timeline_event",
@@ -74,6 +75,7 @@ Runner = Callable[..., subprocess.CompletedProcess[str]]
 CLOSING_REFERENCE = re.compile(
     r"(?i)\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s+#([1-9][0-9]*)\b"
 )
+COMMIT_SHA = re.compile(r"[0-9a-f]{40}")
 GRAPHQL_CLOSING_QUERY = """query ClosingIssues(
   $owner: String!, $name: String!, $number: Int!, $cursor: String
 ) {
@@ -313,6 +315,7 @@ def _timeline_observation(item: dict[str, Any], pr_number: int) -> dict[str, Any
     issue_number = _issue_number(source.get("number"))
     actor = (item.get("actor") or {}).get("login")
     occurred_at = item.get("created_at")
+    commit_sha = None
     classification = "unknown_timeline_event"
     explicit_closure_semantic = False
     if not isinstance(event, str):
@@ -330,6 +333,19 @@ def _timeline_observation(item: dict[str, Any], pr_number: int) -> dict[str, Any
         explicit_closure_semantic = True
     elif event == "reopened":
         classification = "reopen_event"
+    elif event == "committed":
+        candidate_sha = item.get("sha")
+        author_date = (item.get("author") or {}).get("date")
+        has_linkage_semantic = "source" in item or "closes_issue" in item
+        if (
+            isinstance(candidate_sha, str)
+            and COMMIT_SHA.fullmatch(candidate_sha)
+            and isinstance(author_date, str)
+            and not has_linkage_semantic
+        ):
+            classification = "operational_commit_event"
+            commit_sha = candidate_sha
+            occurred_at = occurred_at if isinstance(occurred_at, str) else author_date
     return {
         "event": event,
         "classification": classification,
@@ -337,6 +353,7 @@ def _timeline_observation(item: dict[str, Any], pr_number: int) -> dict[str, Any
         "target_pull_request_number": pr_number,
         "actor": actor if isinstance(actor, str) else None,
         "occurred_at": occurred_at if isinstance(occurred_at, str) else None,
+        "commit_sha": commit_sha,
         "explicit_closure_semantic": explicit_closure_semantic,
     }
 

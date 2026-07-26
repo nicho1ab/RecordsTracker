@@ -624,7 +624,8 @@ Validate documentation structure and run manual or automated checks for user-fac
   schema rejection, GraphQL cursor pagination and duplicate detection,
   partial-source and malformed-response failure, normalized closing references,
   informational cross-reference classification, explicit platform-not-exposed
-  residuals, deterministic post-merge obligations, fixed post-merge state collection,
+  residuals, deterministic committed-event operational metadata, deterministic
+  post-merge obligations, fixed post-merge state collection,
   pre/post-merge state-reason-timestamp checks, and the PR #615/#608
   regression. It has no live API, merge, issue-write, recovery, arbitrary path,
   or PR-body mutation path.
