@@ -556,24 +556,50 @@ def fetch_open_pull_request(
     )
 
 
-def verification_violations(repo_root: Path, body: str, changed_files: Sequence[str]) -> list[str]:
+def _live_state_for_pull_request(
+    pull_request: OpenPullRequest, live_pr_state: Mapping[str, object] | None, *, body: str | None = None
+) -> Mapping[str, object] | None:
+    if live_pr_state is None:
+        return None
+    expected = {
+        "repository": pull_request.repository,
+        "pull_request_number": pull_request.number,
+        "base_ref": pull_request.base,
+        "base_sha": pull_request.base_sha,
+        "head_ref": pull_request.head,
+        "head_sha": pull_request.head_sha,
+    }
+    if any(live_pr_state.get(key) != value for key, value in expected.items()):
+        raise ProposalValidationError("authoritative live PR state does not match current PR identity")
+    if live_pr_state.get("changed_file_inventory_complete") is not True:
+        raise ProposalValidationError("authoritative changed-file inventory is incomplete")
+    if body is None and normalize_body(str(live_pr_state.get("body", ""))) != normalize_body(pull_request.body):
+        raise ProposalValidationError("authoritative live PR state body is stale")
+    normalized = dict(live_pr_state)
+    normalized["body"] = pull_request.body if body is None else body
+    return normalized
+
+
+def verification_violations(
+    repo_root: Path, body: str, changed_files: Sequence[str], live_pr_state: Mapping[str, object] | None = None
+) -> list[str]:
     """Use exactly the production independent-verification implementation."""
 
-    return list(verification.validate_pr_evidence(repo_root, body, changed_files).violations)
+    return list(verification.validate_pr_evidence(repo_root, body, changed_files, live_pr_state=live_pr_state).violations)
 
 
-def validate_open_pull_request(repo_root: Path, pull_request: OpenPullRequest) -> list[str]:
+def validate_open_pull_request(repo_root: Path, pull_request: OpenPullRequest, live_pr_state: Mapping[str, object] | None = None) -> list[str]:
     """Validate the live API body against the current complete API file scope."""
 
-    return verification_violations(repo_root, pull_request.body, pull_request.changed_files)
+    return verification_violations(repo_root, pull_request.body, pull_request.changed_files, _live_state_for_pull_request(pull_request, live_pr_state))
 
 
 def validate_proposed_repair(
-    repo_root: Path, pull_request: OpenPullRequest, proposal: str
+    repo_root: Path, pull_request: OpenPullRequest, proposal: str, live_pr_state: Mapping[str, object] | None = None
 ) -> list[str]:
     """Validate a file proposal against live scope without mutating GitHub."""
 
-    return verification_violations(repo_root, proposal, pull_request.changed_files)
+    return verification_violations(repo_root, proposal, pull_request.changed_files, _live_state_for_pull_request(pull_request, live_pr_state, body=proposal))
 
 
 def _raise_for_violations(violations: list[str]) -> None:
@@ -582,12 +608,12 @@ def _raise_for_violations(violations: list[str]) -> None:
 
 
 def preview_open_pull_request_repair(
-    *, repo_root: Path, pull_request: OpenPullRequest, proposal: str
+    *, repo_root: Path, pull_request: OpenPullRequest, proposal: str, live_pr_state: Mapping[str, object] | None = None
 ) -> tuple[list[str], list[str], bool]:
     """Return live/proposed validation results and normalized material difference."""
 
-    live_violations = validate_open_pull_request(repo_root, pull_request)
-    proposal_violations = validate_proposed_repair(repo_root, pull_request, proposal)
+    live_violations = validate_open_pull_request(repo_root, pull_request, live_pr_state)
+    proposal_violations = validate_proposed_repair(repo_root, pull_request, proposal, live_pr_state)
     differs = normalize_body(pull_request.body) != normalize_body(proposal)
     return live_violations, proposal_violations, differs
 
@@ -750,8 +776,19 @@ def _complete_convergence(
     pull_request: OpenPullRequest,
     attempt: PersistenceAttempt,
     delayed: bool,
+    live_pr_state: Mapping[str, object] | None = None,
 ) -> PersistenceAttempt:
-    violations = tuple(validate_open_pull_request(repo_root, pull_request))
+    if live_pr_state is None:
+        violations = tuple(validate_open_pull_request(repo_root, pull_request))
+    else:
+        refreshed_live_state = _live_state_for_pull_request(
+            pull_request, live_pr_state, body=pull_request.body
+        )
+        violations = tuple(
+            verification_violations(
+                repo_root, pull_request.body, pull_request.changed_files, refreshed_live_state
+            )
+        )
     attempt.validator_violations = violations
     if violations:
         return attempt.finish(
@@ -779,6 +816,7 @@ def apply_open_pull_request_repair(
     interval_seconds: float = DEFAULT_STABILIZATION_INTERVAL_SECONDS,
     sleeper: Callable[[float], None] = time.sleep,
     now: Callable[[], str] = _utc_now,
+    live_pr_state: Mapping[str, object] | None = None,
 ) -> PersistenceAttempt:
     """Apply at most one body PATCH and classify sanitized persistence evidence.
 
@@ -824,7 +862,7 @@ def apply_open_pull_request_repair(
             PersistenceOutcome.NO_MUTATION_PRECONDITION_FAILED,
             final_state="; ".join(initial_mismatches),
         )
-    violations = tuple(validate_proposed_repair(repo_root, initial, proposal))
+    violations = tuple(validate_proposed_repair(repo_root, initial, proposal, live_pr_state))
     if violations:
         attempt.validator_violations = violations
         return attempt.finish(
@@ -833,7 +871,7 @@ def apply_open_pull_request_repair(
         )
     if normalize_body(initial.body) == normalize_body(proposal):
         completed = _complete_convergence(
-            repo_root=repo_root, pull_request=initial, attempt=attempt, delayed=False
+            repo_root=repo_root, pull_request=initial, attempt=attempt, delayed=False, live_pr_state=live_pr_state
         )
         if completed.outcome is PersistenceOutcome.POST_PERSISTENCE_VALIDATION_FAILED:
             return completed
@@ -968,7 +1006,8 @@ def apply_open_pull_request_repair(
         )
         if rest_matches and graph_matches and representations_agree:
             return _complete_convergence(
-                repo_root=repo_root, pull_request=observed, attempt=attempt, delayed=index > 0
+                repo_root=repo_root, pull_request=observed, attempt=attempt, delayed=index > 0,
+                live_pr_state=live_pr_state
             )
         if not representations_agree:
             attempt.add_classification(PersistenceOutcome.TRANSIENT_REPRESENTATION_DISAGREEMENT)
@@ -1066,13 +1105,21 @@ def open_pr_main(args: argparse.Namespace, transport: GitHubTransport | None = N
     try:
         repository = _open_pr_repository(args)
         pull_request = fetch_open_pull_request(client, repository, args.pr)
+        live_pr_state = (
+            _parse_json(args.live_pr_state.read_text(encoding="utf-8"), "authoritative live PR state")
+            if args.live_pr_state is not None
+            else None
+        )
         if args.open_pr_action == "validate":
             _print_open_pr_summary(pull_request)
-            return _print_violations(validate_open_pull_request(args.repo_root, pull_request))
+            return _print_violations(
+                validate_open_pull_request(args.repo_root, pull_request, live_pr_state)
+            )
         proposal = _read_proposal(args.body)
         if args.open_pr_action == "preview":
             live, proposed, differs = preview_open_pull_request_repair(
-                repo_root=args.repo_root, pull_request=pull_request, proposal=proposal
+                repo_root=args.repo_root, pull_request=pull_request, proposal=proposal,
+                live_pr_state=live_pr_state
             )
             _print_open_pr_summary(pull_request)
             print("Current body validation: " + ("passed" if not live else "failed"))
@@ -1110,6 +1157,7 @@ def open_pr_main(args: argparse.Namespace, transport: GitHubTransport | None = N
             confirmed=args.confirm_update,
             max_observations=args.max_observations,
             interval_seconds=args.interval_seconds,
+            live_pr_state=live_pr_state,
         )
     except PrBodyLifecycleError as error:
         return _print_lifecycle_error(error)
@@ -1140,6 +1188,7 @@ def _add_open_pr_arguments(parser: argparse.ArgumentParser, *, proposal: bool) -
         "--repo", help="GitHub owner/repository; must match current origin when supplied"
     )
     parser.add_argument("--repo-root", type=Path, default=Path("."))
+    parser.add_argument("--live-pr-state", type=Path, help="authoritative normalized live PR snapshot")
     if proposal:
         parser.add_argument(
             "--body", type=Path, required=True, help="proposed governed PR-body file"
