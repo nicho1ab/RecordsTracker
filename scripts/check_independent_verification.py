@@ -7,10 +7,12 @@ not approve product, UX, privacy, security, legal, or governance decisions.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 from collections.abc import Iterable, Mapping
 from pathlib import Path
+from typing import NamedTuple
 
 REQUIRED_WORKFLOWS: dict[str, tuple[str, tuple[str, ...]]] = {
     ".github/workflows/ci.yml": (
@@ -126,6 +128,47 @@ BOUNDARY_PATH_PREFIXES: dict[str, tuple[str, ...]] = {
 
 _COMMENT = re.compile(r"<!--.*?-->", re.DOTALL)
 _PLACEHOLDER = re.compile(r"<[^>]+>")
+_UNRESOLVED_INSTRUCTION = re.compile(r"(?i)\bnot\s+run\s*-\s*<\s*reason\s*>")
+_MOJIBAKE_EM_DASH = "\u00e2\u20ac\u201d"
+
+
+class PrEvidenceValidation(NamedTuple):
+    """One canonical, normalized PR-evidence validation result."""
+
+    body: str
+    body_sha256: str
+    changed_files: tuple[str, ...]
+    template_mode: str
+    violations: tuple[str, ...]
+
+
+def normalize_pr_body(body: str) -> str:
+    """Normalize only line endings before all PR-body parsing.
+
+    The canonical representation converts CRLF and lone CR to LF while
+    preserving Unicode, Markdown, substantive whitespace, and whether the
+    input ends in a trailing newline. It intentionally does not repair
+    mojibake.
+    """
+
+    return body.replace("\r\n", "\n").replace("\r", "\n")
+
+
+def normalized_body_sha256(body: str) -> str:
+    """Hash the canonical UTF-8, line-ending-normalized body representation."""
+
+    return hashlib.sha256(normalize_pr_body(body).encode("utf-8")).hexdigest()
+
+
+def normalize_changed_files(changed_files: Iterable[str]) -> tuple[str, ...]:
+    """Return the complete changed scope as slash-normalized unique paths."""
+
+    normalized: dict[str, None] = {}
+    for changed_file in changed_files:
+        path = changed_file.strip().replace("\\", "/")
+        if path:
+            normalized.setdefault(path, None)
+    return tuple(normalized)
 
 
 def find_workflow_contract_violations(repo_root: Path = Path(".")) -> list[str]:
@@ -162,8 +205,8 @@ def changed_governed_boundaries(changed_files: Iterable[str]) -> dict[str, list[
     disclosure, and an unknown path is never represented as an approval.
     """
     changed: dict[str, list[str]] = {}
-    for changed_file in changed_files:
-        normalized = changed_file.replace("\\", "/")
+    for changed_file in normalize_changed_files(changed_files):
+        normalized = changed_file
         for boundary, prefixes in BOUNDARY_PATH_PREFIXES.items():
             if any(normalized.startswith(prefix) for prefix in prefixes):
                 changed.setdefault(boundary, []).append(normalized)
@@ -172,18 +215,31 @@ def changed_governed_boundaries(changed_files: Iterable[str]) -> dict[str, list[
 
 def find_pr_evidence_violations(body: str, changed_files: Iterable[str]) -> list[str]:
     """Validate the PR evidence that is reliable to evaluate mechanically."""
-    if _is_governed_summary(body):
-        return _find_governed_summary_violations(body, changed_files)
-
+    normalized_body = normalize_pr_body(body)
+    normalized_files = normalize_changed_files(changed_files)
+    without_comments = _COMMENT.sub("", normalized_body)
     violations: list[str] = []
+    if _UNRESOLVED_INSTRUCTION.search(without_comments):
+        violations.append(
+            "unresolved PR template instruction: replace `Not run - <reason>` "
+            "with completed evidence or a truthful reason"
+        )
+    if _MOJIBAKE_EM_DASH in normalized_body:
+        violations.append(
+            "invalid PR evidence text: detected mojibake em dash; preserve the "
+            "intended Unicode text"
+        )
+    if _is_governed_summary(normalized_body):
+        return violations + _find_governed_summary_violations(normalized_body, normalized_files)
+
     for heading in REQUIRED_TEMPLATE_SECTIONS:
-        occurrences = _heading_occurrences(body, heading)
+        occurrences = _heading_occurrences(normalized_body, heading)
         if not occurrences:
             violations.append(f"missing PR evidence section: {heading}")
         elif len(occurrences) > 1:
             violations.append(f"duplicate PR evidence section: {heading}")
 
-    governing_section = _markdown_section(body, "Governing issue and intended outcome")
+    governing_section = _markdown_section(normalized_body, "Governing issue and intended outcome")
     if not _field_value(governing_section, "Governing issue") or not re.search(
         r"(?<!\w)#\d+\b", governing_section
     ):
@@ -191,7 +247,7 @@ def find_pr_evidence_violations(body: str, changed_files: Iterable[str]) -> list
     if not _field_value(governing_section, "Intended outcome"):
         violations.append("missing intended outcome")
 
-    implementation_section = _markdown_section(body, "Implementation scope")
+    implementation_section = _markdown_section(normalized_body, "Implementation scope")
     reviewer_contracts = _field_value(
         implementation_section, "Reviewer UI regression contracts"
     )
@@ -199,19 +255,19 @@ def find_pr_evidence_violations(body: str, changed_files: Iterable[str]) -> list
         violations.append("missing PR evidence field: Reviewer UI regression contracts")
     else:
         violations.extend(
-            _reviewer_contract_violations(reviewer_contracts, changed_files)
+            _reviewer_contract_violations(reviewer_contracts, normalized_files)
         )
 
-    acceptance_section = _markdown_section(body, "Acceptance-criteria evidence")
+    acceptance_section = _markdown_section(normalized_body, "Acceptance-criteria evidence")
     if not _has_completed_table_row(acceptance_section):
         violations.append("missing completed acceptance-criteria evidence row")
 
-    validation_section = _markdown_section(body, "Validation and failure classification")
+    validation_section = _markdown_section(normalized_body, "Validation and failure classification")
     if not _has_completed_table_row(validation_section):
         violations.append("missing completed validation evidence row")
 
     documentation_section = _markdown_section(
-        body, "Documentation, assumptions, and remaining risks"
+        normalized_body, "Documentation, assumptions, and remaining risks"
     )
     for label in (
         "Documentation impact",
@@ -221,14 +277,14 @@ def find_pr_evidence_violations(body: str, changed_files: Iterable[str]) -> list
         if not _field_value(documentation_section, label):
             violations.append(f"missing PR evidence field: {label}")
 
-    boundary_section = _markdown_section(body, "Governed-boundary review")
+    boundary_section = _markdown_section(normalized_body, "Governed-boundary review")
     statuses = _boundary_statuses(boundary_section)
     for boundary in REQUIRED_BOUNDARIES:
         status = statuses.get(boundary)
         if status not in {"No change", "Authorized change", "Concern - review required"}:
             violations.append(f"missing or invalid governed-boundary status: {boundary}")
 
-    for boundary in changed_governed_boundaries(changed_files):
+    for boundary in changed_governed_boundaries(normalized_files):
         status = statuses.get(boundary)
         if status == "No change":
             violations.append(f"{boundary}: changed files require explicit disclosure")
@@ -280,6 +336,29 @@ def _find_governed_summary_violations(
     ):
         violations.append("required workflow change lacks explicit disclosure rule")
     return violations
+
+
+def validate_pr_evidence(
+    repo_root: Path,
+    body: str,
+    changed_files: Iterable[str],
+) -> PrEvidenceValidation:
+    """Validate every PR-body input through one canonical production boundary."""
+
+    normalized_body = normalize_pr_body(body)
+    normalized_files = normalize_changed_files(changed_files)
+    template_mode = "governed-summary" if _is_governed_summary(normalized_body) else "full-template"
+    violations = tuple(
+        find_workflow_contract_violations(repo_root)
+        + find_pr_evidence_violations(normalized_body, normalized_files)
+    )
+    return PrEvidenceValidation(
+        body=normalized_body,
+        body_sha256=normalized_body_sha256(normalized_body),
+        changed_files=normalized_files,
+        template_mode=template_mode,
+        violations=violations,
+    )
 
 
 def verification_summary(body: str, changed_files: Iterable[str]) -> list[str]:
@@ -394,10 +473,7 @@ def find_verification_violations(
     changed_files: Iterable[str],
 ) -> list[str]:
     """Return the same workflow and PR-evidence violations used by CI."""
-    return find_workflow_contract_violations(repo_root) + find_pr_evidence_violations(
-        body,
-        changed_files,
-    )
+    return list(validate_pr_evidence(repo_root, body, changed_files).violations)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -408,7 +484,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--changed-files", type=Path)
     args = parser.parse_args(argv)
 
-    violations = find_workflow_contract_violations(args.repo_root)
+    input_violations: list[str] = []
     changed_files: list[str] = []
     body = ""
     if args.event_path and args.pr_body:
@@ -424,12 +500,17 @@ def main(argv: list[str] | None = None) -> int:
             )
         except (OSError, ValueError, json.JSONDecodeError) as error:
             source = "pull-request event" if args.event_path is not None else "pull-request body"
-            violations.append(f"cannot read {source}: {error}")
+            input_violations.append(f"cannot read {source}: {error}")
         try:
             changed_files = _changed_files(args.changed_files)
         except OSError as error:
-            violations.append(f"cannot read changed-file list: {error}")
-        violations.extend(find_pr_evidence_violations(body, changed_files))
+            input_violations.append(f"cannot read changed-file list: {error}")
+        validation = validate_pr_evidence(args.repo_root, body, changed_files)
+        violations = input_violations + list(validation.violations)
+        body = validation.body
+        changed_files = list(validation.changed_files)
+    else:
+        violations = find_workflow_contract_violations(args.repo_root)
 
     if violations:
         print("Independent verification failed:")
