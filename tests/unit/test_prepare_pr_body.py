@@ -202,12 +202,37 @@ class FakeTransport:
     def changed_files(self, _repository: str, _number: int) -> tuple[str, ...]:
         return self.changed_files_value
 
-    def update_body(self, repository: str, number: int, body: str) -> None:
+    def update_body(self, repository: str, number: int, body: str) -> dict[str, object]:
         self.update_calls.append((repository, number, body))
+        return {"body": body}
 
 
 def _fetch(prepare: ModuleType, transport: FakeTransport, body: str):
     return prepare.fetch_open_pull_request(transport, "nicho1ab/RecordsTracker", "#613")
+
+
+def _preconditions(
+    prepare: ModuleType,
+    current: str,
+    proposal: str,
+    *,
+    body_hash: str | None = None,
+    changed_files: tuple[str, ...] = ("scripts/prepare_pr_body.py",),
+) -> object:
+    return prepare.MutationPreconditions(
+        repository="nicho1ab/RecordsTracker",
+        number=613,
+        state="open",
+        draft=False,
+        base="main",
+        base_sha="base-sha",
+        head="repair",
+        head_sha="head-sha",
+        scope_sha256=prepare.changed_scope_sha256(changed_files),
+        body_sha256=body_hash or prepare.body_sha256(current),
+        candidate_sha256=prepare.body_sha256(proposal),
+        authorization="body-only",
+    )
 
 
 def test_fetches_live_body_paginated_files_and_pr_identity() -> None:
@@ -302,17 +327,17 @@ def test_invalid_proposal_cannot_update_open_pr() -> None:
     prepare = _load_module()
     transport = FakeTransport([_completed_body()])
 
-    with pytest.raises(prepare.ProposalValidationError, match="missing governing issue reference"):
-        prepare.apply_open_pull_request_repair(
-            transport=transport,
-            repo_root=ROOT,
-            repository="nicho1ab/RecordsTracker",
-            reference="613",
-            proposal="# Pull Request Evidence\n",
-            expected_body_sha256=prepare.body_sha256(_completed_body()),
-            confirmed=True,
-        )
+    attempt = prepare.apply_open_pull_request_repair(
+        transport=transport,
+        repo_root=ROOT,
+        repository="nicho1ab/RecordsTracker",
+        reference="613",
+        proposal="# Pull Request Evidence\n",
+        preconditions=_preconditions(prepare, _completed_body(), "# Pull Request Evidence\n"),
+        confirmed=True,
+    )
 
+    assert attempt.outcome is prepare.PersistenceOutcome.NO_MUTATION_PRECONDITION_FAILED
     assert transport.update_calls == []
 
 
@@ -329,7 +354,7 @@ def test_apply_requires_explicit_confirmation_before_mutation() -> None:
             repository="nicho1ab/RecordsTracker",
             reference="613",
             proposal=proposal,
-            expected_body_sha256=prepare.body_sha256(current),
+            preconditions=_preconditions(prepare, current, proposal),
             confirmed=False,
         )
 
@@ -342,17 +367,18 @@ def test_apply_updates_only_body_then_refetches_and_revalidates() -> None:
     proposal = current.replace("Preflight catches", "Open PR repair catches")
     transport = FakeTransport([current, current, proposal])
 
-    changed = prepare.apply_open_pull_request_repair(
+    attempt = prepare.apply_open_pull_request_repair(
         transport=transport,
         repo_root=ROOT,
         repository="nicho1ab/RecordsTracker",
         reference="613",
         proposal=proposal,
-        expected_body_sha256=prepare.body_sha256(current),
+        preconditions=_preconditions(prepare, current, proposal),
         confirmed=True,
     )
 
-    assert changed is True
+    assert attempt.outcome is prepare.PersistenceOutcome.IMMEDIATE_CONVERGENCE
+    assert attempt.mutation_count == 1
     assert transport.update_calls == [("nicho1ab/RecordsTracker", 613, proposal)]
 
 
@@ -361,18 +387,16 @@ def test_apply_is_idempotent_when_transport_normalized_bodies_match() -> None:
     current = _completed_body()
     transport = FakeTransport([current.replace("\n", "\r\n")])
 
-    assert (
-        prepare.apply_open_pull_request_repair(
-            transport=transport,
-            repo_root=ROOT,
-            repository="nicho1ab/RecordsTracker",
-            reference="613",
-            proposal=current,
-            expected_body_sha256=None,
-            confirmed=False,
-        )
-        is False
+    attempt = prepare.apply_open_pull_request_repair(
+        transport=transport,
+        repo_root=ROOT,
+        repository="nicho1ab/RecordsTracker",
+        reference="613",
+        proposal=current,
+        preconditions=_preconditions(prepare, current, current),
+        confirmed=False,
     )
+    assert attempt.outcome is prepare.PersistenceOutcome.NO_MUTATION_ALREADY_CONVERGED
     assert transport.update_calls == []
 
 
@@ -383,17 +407,17 @@ def test_apply_rejects_a_concurrent_live_body_change() -> None:
     changed_elsewhere = current.replace("Preflight catches", "Another editor catches")
     transport = FakeTransport([current, changed_elsewhere])
 
-    with pytest.raises(prepare.ConcurrentBodyUpdateError, match="changed after preview"):
-        prepare.apply_open_pull_request_repair(
-            transport=transport,
-            repo_root=ROOT,
-            repository="nicho1ab/RecordsTracker",
-            reference="613",
-            proposal=proposal,
-            expected_body_sha256=prepare.body_sha256(current),
-            confirmed=True,
-        )
+    attempt = prepare.apply_open_pull_request_repair(
+        transport=transport,
+        repo_root=ROOT,
+        repository="nicho1ab/RecordsTracker",
+        reference="613",
+        proposal=proposal,
+        preconditions=_preconditions(prepare, current, proposal),
+        confirmed=True,
+    )
 
+    assert attempt.outcome is prepare.PersistenceOutcome.NO_MUTATION_PRECONDITION_FAILED
     assert transport.update_calls == []
 
 
@@ -403,17 +427,18 @@ def test_apply_rejects_an_incorrect_expected_body_hash() -> None:
     proposal = current.replace("Preflight catches", "Open PR repair catches")
     transport = FakeTransport([current, current])
 
-    with pytest.raises(prepare.ConcurrentBodyUpdateError, match="changed after preview"):
-        prepare.apply_open_pull_request_repair(
-            transport=transport,
-            repo_root=ROOT,
-            repository="nicho1ab/RecordsTracker",
-            reference="613",
-            proposal=proposal,
-            expected_body_sha256="0" * 64,
-            confirmed=True,
-        )
+    attempt = prepare.apply_open_pull_request_repair(
+        transport=transport,
+        repo_root=ROOT,
+        repository="nicho1ab/RecordsTracker",
+        reference="613",
+        proposal=proposal,
+        preconditions=_preconditions(prepare, current, proposal, body_hash="0" * 64),
+        confirmed=True,
+    )
 
+    assert transport.update_calls == []
+    assert attempt.outcome is prepare.PersistenceOutcome.NO_MUTATION_PRECONDITION_FAILED
     assert transport.update_calls == []
 
 
@@ -424,16 +449,17 @@ def test_apply_reports_persistence_mismatch_after_refetch() -> None:
     persisted_different = current.replace("Preflight catches", "Different valid body catches")
     transport = FakeTransport([current, current, persisted_different])
 
-    with pytest.raises(prepare.PersistenceMismatchError, match="materially different"):
-        prepare.apply_open_pull_request_repair(
-            transport=transport,
-            repo_root=ROOT,
-            repository="nicho1ab/RecordsTracker",
-            reference="613",
-            proposal=proposal,
-            expected_body_sha256=prepare.body_sha256(current),
-            confirmed=True,
-        )
+    attempt = prepare.apply_open_pull_request_repair(
+        transport=transport,
+        repo_root=ROOT,
+        repository="nicho1ab/RecordsTracker",
+        reference="613",
+        proposal=proposal,
+        preconditions=_preconditions(prepare, current, proposal),
+        confirmed=True,
+        sleeper=lambda _seconds: None,
+    )
+    assert attempt.outcome is prepare.PersistenceOutcome.STABLE_PERSISTENCE_MISMATCH
 
 
 def test_apply_reports_invalid_persisted_body_after_update() -> None:
@@ -442,18 +468,19 @@ def test_apply_reports_invalid_persisted_body_after_update() -> None:
     proposal = current.replace("Preflight catches", "Open PR repair catches")
     transport = FakeTransport([current, current, "# Pull Request Evidence\n"])
 
-    with pytest.raises(prepare.ProposalValidationError, match="missing governing issue reference"):
-        prepare.apply_open_pull_request_repair(
-            transport=transport,
-            repo_root=ROOT,
-            repository="nicho1ab/RecordsTracker",
-            reference="613",
-            proposal=proposal,
-            expected_body_sha256=prepare.body_sha256(current),
-            confirmed=True,
-        )
+    attempt = prepare.apply_open_pull_request_repair(
+        transport=transport,
+        repo_root=ROOT,
+        repository="nicho1ab/RecordsTracker",
+        reference="613",
+        proposal=proposal,
+        preconditions=_preconditions(prepare, current, proposal),
+        confirmed=True,
+        sleeper=lambda _seconds: None,
+    )
 
     assert transport.update_calls == [("nicho1ab/RecordsTracker", 613, proposal)]
+    assert attempt.outcome is prepare.PersistenceOutcome.STABLE_PERSISTENCE_MISMATCH
 
 
 def test_github_read_and_update_failures_are_classified() -> None:
@@ -510,15 +537,16 @@ def test_body_transport_preserves_multiline_unicode_quotes_and_markdown() -> Non
     )
     transport = FakeTransport([body.replace("\n", "\r\n"), body.replace("\n", "\r\n"), body])
 
-    assert prepare.apply_open_pull_request_repair(
+    attempt = prepare.apply_open_pull_request_repair(
         transport=transport,
         repo_root=ROOT,
         repository="nicho1ab/RecordsTracker",
         reference="https://github.com/nicho1ab/RecordsTracker/pull/613",
         proposal=body,
-        expected_body_sha256=prepare.body_sha256(body),
+        preconditions=_preconditions(prepare, body.replace("\n", "\r\n"), body),
         confirmed=True,
-    ) is False
+    )
+    assert attempt.outcome is prepare.PersistenceOutcome.NO_MUTATION_ALREADY_CONVERGED
     assert transport.update_calls == []
 
 

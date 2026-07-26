@@ -607,6 +607,12 @@ Validate documentation structure and run manual or automated checks for user-fac
   proposed body passes the production validator. It revalidates the persisted
   body and rejects a stale expected-body hash; the authoritative lifecycle is
   in `docs/developer/codex-workflow.md`.
+- DA-030 persistence tests use sanitized deterministic transports to prove
+  UTF-8 body-only payload bytes, immutable preconditions, one-PATCH budget,
+  REST/GraphQL normalized comparison, bounded read-only stabilization,
+  delayed convergence, stable mismatch, identity/scope changes, API failures,
+  post-persistence validation, privacy-bounded evidence, and no retry or
+  rollback. They do not perform a live PR-body mutation.
 - CI retrieves the current live body when it validates a PR. Its pull-request
   `edited` event covers title and body edits because event selection cannot
   distinguish them; the job remains read-only and validates body evidence only.
