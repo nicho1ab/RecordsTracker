@@ -127,7 +127,10 @@ _EVIDENCE_CURRENT_STATUS_CLAIM = re.compile(
 )
 _EVIDENCE_AUTHORITY_TRANSFER_CLAIM = re.compile(
     r"(?im)^\s*(?:[-*]\s*)?(?:#533\b[^\n]*(?:moved|transferred|superseded)[^\n]*#617\b|"
-    r"#617\b[^\n]*(?:owns|has|retains)[^\n]*\b(?:execution|publication|merge|recovery|orchestration|lifecycle)\b)"
+    r"(?:issue\s*)?#617\b[^\n]*(?:now\s+)?(?:owns|has|retains|inherited|replaced)[^\n]*\b"
+    r"(?:execution|publication|merge|recovery|orchestration|lifecycle|closure|rerun|deployment|production-data)\b|"
+    r"(?:execution|publication|merge|recovery|orchestration|lifecycle|closure|rerun|deployment|production-data)"
+    r"[^\n]*\b(?:belongs to|owned by)\s+(?:issue\s*)?#617\b)"
 )
 EVIDENCE_MATRIX_HEADER = (
     "Impact class",

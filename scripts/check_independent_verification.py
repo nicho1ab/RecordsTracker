@@ -161,6 +161,7 @@ _UNRESOLVED_INSTRUCTION = re.compile(r"(?i)\bnot\s+run\s*-\s*<\s*reason\s*>")
 _MOJIBAKE_EM_DASH = "\u00e2\u20ac\u201d"
 _COMPACT_POLICY_OPENING = re.compile(r"(?m)^```json[ \t]*$")
 _COMPACT_POLICY_CLOSING = re.compile(r"(?m)^```[ \t]*$")
+_COMPACT_POLICY_DECLARATION = re.compile(r"(?m)^- Compact evidence envelope:[ \t]*$")
 
 
 def _load_evidence_policy_module() -> Any:
@@ -229,6 +230,33 @@ def _compact_policy_section_span(body: str) -> tuple[int, int]:
     start = occurrences[0].end()
     next_heading = re.search(r"(?m)^##[ \t]+", body[start:])
     return start, start + next_heading.start() if next_heading else len(body)
+
+
+def _compact_mode_declared(section: str) -> bool:
+    """Treat a populated compact declaration as authoritative, not its JSON fence."""
+
+    return bool(_COMPACT_POLICY_DECLARATION.search(section)) and any(
+        re.search(rf"(?m)^- {re.escape(label)}:[ \t]*\S", section)
+        for label in ("Decision", "Delta", "Policy version")
+    )
+
+
+def _compact_mode_violations(body: str) -> list[str]:
+    """Classify compact declaration and envelope presence before parsing either."""
+
+    headings = _heading_occurrences(body, COMPACT_POLICY_HEADING)
+    if len(headings) > 1:
+        return ["compact policy heading is missing or ambiguous"]
+    if not headings:
+        return []
+    section = _markdown_section(body, COMPACT_POLICY_HEADING)
+    declared = _compact_mode_declared(section)
+    envelopes = len(_COMPACT_POLICY_OPENING.findall(section))
+    if declared and envelopes == 0:
+        return ["compact policy declaration is missing its JSON envelope"]
+    if not declared and envelopes:
+        return ["compact policy JSON envelope is missing its declaration"]
+    return []
 
 
 def _strict_compact_policy_envelope(section: str) -> tuple[dict[str, object], int, int]:
@@ -459,11 +487,10 @@ def find_pr_evidence_violations(body: str, changed_files: Iterable[str]) -> list
             violations.append(
                 "Required GitHub workflows and checks: changes require Concern - review required"
             )
+    violations.extend(_compact_mode_violations(normalized_body))
     compact_headings = _heading_occurrences(normalized_body, COMPACT_POLICY_HEADING)
     compact_section = _markdown_section(normalized_body, COMPACT_POLICY_HEADING)
-    if len(compact_headings) > 1:
-        violations.append("compact policy heading is missing or ambiguous")
-    elif "```json" in compact_section:
+    if len(compact_headings) == 1 and "```json" in compact_section:
         violations.extend(_compact_policy_violations(compact_section, normalized_files))
     return violations
 
@@ -679,6 +706,9 @@ def _compact_live_binding_violations(
     required_names = set(
         EVIDENCE_POLICY._load_json(EVIDENCE_POLICY.POLICY_PATH)["required_check_names"]
     )
+    required_workflows = EVIDENCE_POLICY._load_json(EVIDENCE_POLICY.POLICY_PATH)[
+        "required_check_workflows"
+    ]
 
     def run_identity(value: object, *, source: str) -> tuple[object, ...] | None:
         if not isinstance(value, Mapping):
@@ -699,7 +729,14 @@ def _compact_live_binding_violations(
         record = run_identity(value, source="authoritative")
         if record is None or not isinstance(value, Mapping):
             return None
-        association_fields = ("repository", "event", "pull_request_numbers", "job_run_id")
+        association_fields = (
+            "repository",
+            "event",
+            "pull_request_numbers",
+            "job_run_id",
+            "workflow_id",
+            "workflow_path",
+        )
         if any(field not in value for field in association_fields):
             violations.append("authoritative required check run association is incomplete")
             return None
@@ -720,6 +757,12 @@ def _compact_live_binding_violations(
             return None
         if value["job_run_id"] != value["run_id"]:
             violations.append("authoritative required check job belongs to another run")
+            return None
+        if not isinstance(value["workflow_id"], int) or value["workflow_id"] < 1:
+            violations.append("authoritative required check workflow identity is incomplete")
+            return None
+        if value["workflow_path"] != required_workflows.get(value["check_name"]):
+            violations.append("authoritative required check belongs to an unexpected workflow")
             return None
         return record
 

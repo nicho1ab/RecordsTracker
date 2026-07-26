@@ -42,7 +42,7 @@ def _identity(**overrides: object) -> dict[str, object]:
         "tree_sha": TREE_A,
         "changed_file_inventory_hash": HASH_A,
         "pr_body_hash": HASH_A,
-        "policy_version": "1.0.2",
+        "policy_version": "1.0.3",
         "schema_version": "recordstracker.evidence-reuse-validation-impact.v1",
         "validator_version": "evaluator-v1",
         "governed_boundary_classification": ["Repository governance"],

@@ -130,7 +130,7 @@ def test_compact_policy_preparation_is_deterministic_and_independently_valid() -
         "tree_sha": "c" * 40,
         "changed_file_inventory_hash": scope_hash,
         "pr_body_hash": "d" * 64,
-        "policy_version": "1.0.2",
+        "policy_version": "1.0.3",
         "schema_version": "recordstracker.evidence-reuse-validation-impact.v1",
         "validator_version": "evaluator-v1",
         "governed_boundary_classification": ["Repository governance"],
@@ -212,6 +212,13 @@ def test_compact_policy_preparation_is_deterministic_and_independently_valid() -
                     envelope["policy_input"]["repository_state"]["pull_request_number"]
                 ],
                 "job_run_id": run["run_id"],
+                "workflow_id": 1,
+                "workflow_path": {
+                    "validate": ".github/workflows/ci.yml",
+                    "docs-check": ".github/workflows/docs-check.yml",
+                    "fixtures": ".github/workflows/regression.yml",
+                    "security": ".github/workflows/security.yml",
+                }[run["check_name"]],
             }
             for run in envelope["policy_input"]["required_check_runs"]
         ],

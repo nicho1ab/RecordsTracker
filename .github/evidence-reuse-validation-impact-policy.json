@@ -1,7 +1,7 @@
 {
   "kind": "policy",
   "schema_version": "recordstracker.evidence-reuse-validation-impact.v1",
-  "policy_version": "1.0.2",
+  "policy_version": "1.0.3",
   "title": "Governed evidence reuse and validation-impact policy",
   "purpose": "Produces deterministic, read-only evidence and validation decisions without executing validation, GitHub operations, publication, merge, recovery, or cleanup.",
   "evidence_states": ["retained", "fresh", "live", "superseded", "invalidated"],
@@ -25,6 +25,7 @@
     {"path": "RUNBOOK.md", "impact_class": "deployment_or_infrastructure"}
   ],
   "required_check_names": ["validate", "docs-check", "fixtures", "security"],
+  "required_check_workflows": {"validate": ".github/workflows/ci.yml", "docs-check": ".github/workflows/docs-check.yml", "fixtures": ".github/workflows/regression.yml", "security": ".github/workflows/security.yml"},
   "governed_boundary_disclosures": ["requires disclosure when governed workflow boundaries change", "no branch-protection or ruleset change", "no required-check rename or removal", "no autonomous approval or merge"],
   "scope": "Slice 1 defines policy decisions; slice 2 integrates PR evidence and PR-body preparation; slice 3 enforces the fixed contract through documentation checks. Generic orchestration, executable operation manifests, autonomous publication, merge, recovery, and Issue #533 implementation remain out of scope. The deferred merged timeline event classifier remains out of scope."
 }

@@ -4,6 +4,7 @@ import copy
 import hashlib
 import importlib.util
 import json
+import re
 from pathlib import Path
 from types import ModuleType
 
@@ -115,7 +116,7 @@ def _compact_input(paths: list[str], **overrides: object) -> dict[str, object]:
         "tree_sha": TREE_A,
         "changed_file_inventory_hash": scope_hash,
         "pr_body_hash": HASH_A,
-        "policy_version": "1.0.2",
+        "policy_version": "1.0.3",
         "schema_version": "recordstracker.evidence-reuse-validation-impact.v1",
         "validator_version": "evaluator-v1",
         "governed_boundary_classification": ["Repository governance"],
@@ -210,6 +211,13 @@ def _live_pr_state(policy_input: dict[str, object], body: str) -> dict[str, obje
                 "event": "pull_request",
                 "pull_request_numbers": [identity["pull_request_number"]],
                 "job_run_id": run["run_id"],
+                "workflow_id": 1,
+                "workflow_path": {
+                    "validate": ".github/workflows/ci.yml",
+                    "docs-check": ".github/workflows/docs-check.yml",
+                    "fixtures": ".github/workflows/regression.yml",
+                    "security": ".github/workflows/security.yml",
+                }[run["check_name"]],
             }
             for run in runs
         ],
@@ -327,7 +335,7 @@ def test_live_compact_binding_enforces_exact_latest_required_check_runs() -> Non
 
     wrong_check = copy.deepcopy(live)
     wrong_check["required_check_runs"][0]["check_name"] = "security"
-    assert "compact policy required check runs differ from authoritative live evidence" in (
+    assert "authoritative required check belongs to an unexpected workflow" in (
         verification.validate_pr_evidence(ROOT, body, paths, live_pr_state=wrong_check).violations
     )
 
@@ -375,6 +383,10 @@ def test_compact_parser_rejects_duplicate_keys_and_ambiguous_envelopes() -> None
         assert verification.find_pr_evidence_violations(candidate, paths)
         with pytest.raises(ValueError):
             verification.canonical_compact_body(candidate)
+    declaration_without_envelope = re.sub(r"(?ms)```json\n.*?\n```\n?", "", body, count=1)
+    assert "compact policy declaration is missing its JSON envelope" in (
+        verification.find_pr_evidence_violations(declaration_without_envelope, paths)
+    )
 
 
 def test_canonical_compact_body_preserves_content_but_excludes_only_governed_hashes() -> None:
@@ -430,6 +442,13 @@ def test_live_required_run_association_and_ties_fail_closed() -> None:
     assert (
         verification.validate_pr_evidence(ROOT, body, paths, live_pr_state=unrelated).violations
         == ()
+    )
+    wrong_workflow = copy.deepcopy(live)
+    wrong_workflow["required_check_runs"][0]["workflow_path"] = ".github/workflows/unrelated.yml"
+    assert "authoritative required check belongs to an unexpected workflow" in (
+        verification.validate_pr_evidence(
+            ROOT, body, paths, live_pr_state=wrong_workflow
+        ).violations
     )
 
 

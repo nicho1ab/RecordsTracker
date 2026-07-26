@@ -515,7 +515,7 @@ def test_evidence_policy_documentation_contract_requires_fixed_files(
     [
         (
             ".github/evidence-reuse-validation-impact-policy.json",
-            '"policy_version": "1.0.2"',
+            '"policy_version": "1.0.3"',
             '"policy_version": "2.0.0"',
             "evidence policy version is unsupported",
         ),

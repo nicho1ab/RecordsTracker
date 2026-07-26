@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 POLICY_PATH = ROOT / ".github" / "evidence-reuse-validation-impact-policy.json"
 SCHEMA_PATH = ROOT / "schemas" / "evidence-reuse-validation-impact-v1.schema.json"
 SCHEMA_VERSION = "recordstracker.evidence-reuse-validation-impact.v1"
-POLICY_VERSION = "1.0.2"
+POLICY_VERSION = "1.0.3"
 _PATH = re.compile(
     r"^(?!/)(?![A-Za-z]:)(?!.*//)(?!.*(?:^|/)\.(?:/|$))"
     r"(?!.*(?:^|/)\.\.(?:/|$))[A-Za-z0-9._-]+(?:/[A-Za-z0-9._-]+)*$"

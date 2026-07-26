@@ -660,7 +660,7 @@ Issue #617 also owns the canonical slice-1 policy at
 `.github/evidence-reuse-validation-impact-policy.json`, its versioned envelope
 schema at `schemas/evidence-reuse-validation-impact-v1.schema.json`, and the
 repository-local evaluator at `scripts/evaluate_evidence_reuse_policy.py`.
-The supported policy version is `1.0.2`; the supported schema version is
+The supported policy version is `1.0.3`; the supported schema version is
 `recordstracker.evidence-reuse-validation-impact.v1`.
 The evaluator accepts a complete caller-supplied repository-relative inventory
 and returns a deterministic compact decision only; it has no network,
@@ -681,7 +681,8 @@ compact result exactly. The live PR verifier additionally obtains authoritative 
 repository, number, base and head names and SHAs, persisted body,
 complete changed-file inventory, and the complete required-check run/job set for
 the exact head. Each accepted job must come from the expected repository's
-`pull_request` event and GitHub-provided association with the current PR;
+`pull_request` event, the repository-governed workflow path for its required
+check, and GitHub-provided association with the current PR;
 non-PR runs cannot satisfy or supersede a required check. Compact declarations
 must match that state; missing or partial live state fails closed. The compact
 parser accepts exactly one JSON envelope, rejects duplicate JSON keys at every
