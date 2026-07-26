@@ -930,6 +930,31 @@ def test_ci_fetches_authoritative_live_pr_state_before_validation() -> None:
     assert "write" not in workflow.partition("jobs:")[0]
 
 
+def test_ci_jq_programs_declare_all_variable_bindings_with_governed_types() -> None:
+    workflow = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+    programs = list(re.finditer(r"jq\b(?P<args>.*?)'(?P<program>[^']*)'", workflow, re.DOTALL))
+    assert programs
+
+    bindings: list[dict[str, str]] = []
+    for invocation in programs:
+        declared = {
+            match.group(2): match.group(1)
+            for match in re.finditer(r"--(argjson|arg)\s+([A-Za-z_]\w*)", invocation.group("args"))
+        }
+        referenced = set(re.findall(r"\$([A-Za-z_]\w*)", invocation.group("program")))
+        assert referenced <= set(declared)
+        assert "${" not in invocation.group("program")
+        bindings.append(declared)
+
+    for name, binding_type in (
+        ("repository", "arg"),
+        ("run", "argjson"),
+        ("check_runs", "argjson"),
+        ("workflows", "argjson"),
+    ):
+        assert any(declared.get(name) == binding_type for declared in bindings)
+
+
 def test_ci_runs_validation_for_pull_request_edits_without_write_permissions() -> None:
     workflow = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
 
