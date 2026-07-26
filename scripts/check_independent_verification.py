@@ -7,6 +7,7 @@ not approve product, UX, privacy, security, legal, or governance decisions.
 from __future__ import annotations
 
 import argparse
+import copy
 import hashlib
 import importlib.util
 import json
@@ -205,6 +206,65 @@ def normalized_body_sha256(body: str) -> str:
     """Hash the canonical UTF-8, line-ending-normalized body representation."""
 
     return hashlib.sha256(normalize_pr_body(body).encode("utf-8")).hexdigest()
+
+
+def canonical_compact_body(body: str) -> str:
+    """Remove compact-envelope body hashes before canonical body hashing.
+
+    The compact envelope lives inside the persisted body, so its body-hash
+    fields cannot participate in their own digest. Every ``pr_body_hash``
+    value in that envelope is replaced with ``null`` before deterministic JSON
+    rendering; all body text outside the envelope remains unchanged.
+    """
+
+    normalized = normalize_pr_body(body)
+    match = _COMPACT_POLICY_FENCE.search(normalized)
+    if match is None:
+        raise ValueError("compact policy JSON envelope is missing")
+    envelope = json.loads(match.group("payload"))
+    if not isinstance(envelope, dict):
+        raise ValueError("compact policy JSON envelope is malformed")
+
+    def without_body_hashes(value: object) -> object:
+        if isinstance(value, dict):
+            return {
+                key: None if key == "pr_body_hash" else without_body_hashes(item)
+                for key, item in value.items()
+            }
+        if isinstance(value, list):
+            return [without_body_hashes(item) for item in value]
+        return value
+
+    canonical_json = json.dumps(
+        without_body_hashes(envelope), ensure_ascii=True, sort_keys=True, separators=(",", ":")
+    )
+    return (
+        normalized[: match.start("payload")] + canonical_json + normalized[match.end("payload") :]
+    )
+
+
+def canonical_compact_body_sha256(body: str) -> str:
+    """Hash the non-self-referential canonical compact-body representation."""
+
+    return hashlib.sha256(canonical_compact_body(body).encode("utf-8")).hexdigest()
+
+
+def bind_compact_policy_body_hash(
+    policy_input: Mapping[str, object], body: str
+) -> dict[str, object]:
+    """Copy policy input and bind its current state to a canonical compact body."""
+
+    bound = copy.deepcopy(dict(policy_input))
+    digest = canonical_compact_body_sha256(body)
+    repository_state = bound.get("repository_state")
+    if isinstance(repository_state, dict):
+        repository_state["pr_body_hash"] = digest
+    runs = bound.get("required_check_runs")
+    if isinstance(runs, list):
+        for run in runs:
+            if isinstance(run, dict):
+                run["pr_body_hash"] = digest
+    return bound
 
 
 def normalize_changed_files(changed_files: Iterable[str]) -> tuple[str, ...]:
@@ -452,6 +512,144 @@ def _compact_policy_violations(section: str, changed_files: tuple[str, ...]) -> 
     return violations
 
 
+def _compact_live_binding_violations(
+    body: str,
+    changed_files: tuple[str, ...],
+    live_pr_state: Mapping[str, object] | None,
+) -> list[str]:
+    """Compare compact claims with complete authoritative PR state.
+
+    This boundary intentionally consumes an already-collected, read-only live
+    snapshot. The policy evaluator remains offline and never receives GitHub
+    credentials, URLs, or caller-selected network behavior.
+    """
+
+    if live_pr_state is None:
+        return ["compact policy evidence requires authoritative live PR state"]
+    match = _COMPACT_POLICY_FENCE.search(body)
+    if match is None:
+        return ["missing compact policy JSON envelope"]
+    try:
+        envelope = json.loads(match.group("payload"))
+    except json.JSONDecodeError:
+        return ["malformed compact policy JSON envelope"]
+    if not isinstance(envelope, dict) or not isinstance(envelope.get("policy_input"), dict):
+        return ["compact policy input or result is malformed"]
+    policy_input = envelope["policy_input"]
+    current = policy_input.get("repository_state")
+    if not isinstance(current, dict):
+        return ["compact policy repository state is malformed"]
+
+    violations: list[str] = []
+    for field, live_field in (
+        ("repository", "repository"),
+        ("pull_request_number", "pull_request_number"),
+        ("base_ref", "base_ref"),
+        ("base_sha", "base_sha"),
+        ("head_ref", "head_ref"),
+        ("head_sha", "head_sha"),
+    ):
+        if live_pr_state.get(live_field) is None:
+            violations.append(f"authoritative live PR state is missing {live_field}")
+        elif current.get(field) != live_pr_state[live_field]:
+            violations.append(f"compact policy {field} differs from authoritative live PR state")
+    live_body = live_pr_state.get("body")
+    if not isinstance(live_body, str):
+        violations.append("authoritative live PR state is missing body")
+    elif normalize_pr_body(live_body) != body:
+        violations.append("compact policy body differs from authoritative persisted PR body")
+    else:
+        try:
+            body_hash = canonical_compact_body_sha256(body)
+        except (TypeError, ValueError, json.JSONDecodeError) as error:
+            violations.append(f"cannot canonicalize compact policy body hash: {error}")
+        else:
+            if current.get("pr_body_hash") != body_hash:
+                violations.append(
+                    "compact policy body hash differs from authoritative persisted PR body"
+                )
+            for run in policy_input.get("required_check_runs", []):
+                if isinstance(run, dict) and run.get("pr_body_hash") != body_hash:
+                    violations.append(
+                        "compact policy check body hash differs from authoritative "
+                        "persisted PR body"
+                    )
+                    break
+
+    inventory = policy_input.get("changed_file_inventory")
+    if live_pr_state.get("changed_file_inventory_complete") is not True:
+        violations.append("authoritative changed-file inventory is incomplete")
+    if not isinstance(inventory, dict):
+        violations.append("compact policy changed-file inventory is missing")
+    else:
+        declared_paths = inventory.get("paths")
+        expected_hash = hashlib.sha256("\n".join(changed_files).encode("utf-8")).hexdigest()
+        if declared_paths != list(changed_files):
+            violations.append(
+                "compact policy changed-file inventory differs from authoritative live scope"
+            )
+        if current.get("changed_file_inventory_hash") != expected_hash:
+            violations.append(
+                "compact policy changed-file inventory digest differs from authoritative live scope"
+            )
+        declared_count = len(declared_paths) if isinstance(declared_paths, list) else -1
+        if declared_count != len(changed_files):
+            violations.append(
+                "compact policy changed-file count differs from authoritative live scope"
+            )
+
+    if live_pr_state.get("required_check_runs_complete") is not True:
+        violations.append("authoritative required-check evidence is incomplete")
+        return sorted(set(violations))
+    live_runs = live_pr_state.get("required_check_runs")
+    declared_runs = policy_input.get("required_check_runs")
+    if not isinstance(live_runs, list):
+        violations.append("authoritative live PR state is missing required check runs")
+        return sorted(set(violations))
+    if not isinstance(declared_runs, list):
+        violations.append("compact policy required check runs are malformed")
+        return sorted(set(violations))
+
+    required_names = set(
+        EVIDENCE_POLICY._load_json(EVIDENCE_POLICY.POLICY_PATH)["required_check_names"]
+    )
+
+    def run_identity(value: object, *, source: str) -> tuple[object, ...] | None:
+        if not isinstance(value, Mapping):
+            violations.append(f"{source} required check run is malformed")
+            return None
+        fields = ("check_name", "run_id", "job_id", "status", "conclusion", "head_sha")
+        if any(field not in value for field in fields):
+            violations.append(f"{source} required check run is incomplete")
+            return None
+        if value["check_name"] not in required_names:
+            violations.append(f"{source} required check name is unsupported")
+            return None
+        if value["head_sha"] != live_pr_state.get("head_sha"):
+            violations.append(f"{source} required check run belongs to another head")
+        return tuple(value[field] for field in fields)
+
+    actual = [run_identity(run, source="authoritative") for run in live_runs]
+    declared = [run_identity(run, source="compact policy") for run in declared_runs]
+    actual_records = [record for record in actual if record is not None]
+    declared_records = [record for record in declared if record is not None]
+    if (
+        len(actual_records) == len(actual)
+        and len(declared_records) == len(declared)
+        and (
+            sorted(json.dumps(record, separators=(",", ":")) for record in actual_records)
+            != sorted(json.dumps(record, separators=(",", ":")) for record in declared_records)
+        )
+    ):
+        violations.append(
+            "compact policy required check runs differ from authoritative live evidence"
+        )
+    observed_names = {item[0] for item in actual if item is not None}
+    for check in sorted(required_names - observed_names):
+        violations.append(f"authoritative required check evidence is missing: {check}")
+    return sorted(set(violations))
+
+
 def _is_governed_summary(body: str) -> bool:
     return all(_markdown_section(body, heading) for heading in GOVERNED_SUMMARY_SECTIONS)
 
@@ -494,22 +692,28 @@ def validate_pr_evidence(
     repo_root: Path,
     body: str,
     changed_files: Iterable[str],
+    *,
+    live_pr_state: Mapping[str, object] | None = None,
 ) -> PrEvidenceValidation:
     """Validate every PR-body input through one canonical production boundary."""
 
     normalized_body = normalize_pr_body(body)
     normalized_files = normalize_changed_files(changed_files)
     template_mode = "governed-summary" if _is_governed_summary(normalized_body) else "full-template"
-    violations = tuple(
-        find_workflow_contract_violations(repo_root)
-        + find_pr_evidence_violations(normalized_body, normalized_files)
+    violations = find_workflow_contract_violations(repo_root) + find_pr_evidence_violations(
+        normalized_body, normalized_files
     )
+    compact_section = _markdown_section(normalized_body, COMPACT_POLICY_HEADING)
+    if "```json" in compact_section:
+        violations.extend(
+            _compact_live_binding_violations(normalized_body, normalized_files, live_pr_state)
+        )
     return PrEvidenceValidation(
         body=normalized_body,
         body_sha256=normalized_body_sha256(normalized_body),
         changed_files=normalized_files,
         template_mode=template_mode,
-        violations=violations,
+        violations=tuple(sorted(set(violations))),
     )
 
 
@@ -611,6 +815,13 @@ def _pr_body(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
+def _live_pr_state(path: Path) -> Mapping[str, object]:
+    value = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(value, Mapping):
+        raise ValueError("live PR state is not an object")
+    return value
+
+
 def _changed_files(path: Path) -> list[str]:
     return [line.strip() for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
 
@@ -629,31 +840,45 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--repo-root", type=Path, default=Path("."))
     parser.add_argument("--event-path", type=Path)
     parser.add_argument("--pr-body", type=Path)
+    parser.add_argument("--live-pr-state", type=Path)
     parser.add_argument("--changed-files", type=Path)
     args = parser.parse_args(argv)
 
     input_violations: list[str] = []
     changed_files: list[str] = []
     body = ""
-    if args.event_path and args.pr_body:
-        parser.error("--event-path and --pr-body are mutually exclusive")
-    if args.event_path or args.pr_body or args.changed_files:
-        if not args.changed_files or not (args.event_path or args.pr_body):
+    body_inputs = sum(
+        value is not None for value in (args.event_path, args.pr_body, args.live_pr_state)
+    )
+    if body_inputs > 1:
+        parser.error("PR body inputs are mutually exclusive")
+    live_pr_state: Mapping[str, object] | None = None
+    if args.event_path or args.pr_body or args.live_pr_state or args.changed_files:
+        if not args.changed_files or body_inputs != 1:
             parser.error("--changed-files and exactly one PR body input are required together")
         try:
-            body = (
-                _event_body(args.event_path)
-                if args.event_path is not None
-                else _pr_body(args.pr_body)
-            )
+            if args.event_path is not None:
+                body = _event_body(args.event_path)
+            elif args.pr_body is not None:
+                body = _pr_body(args.pr_body)
+            else:
+                live_pr_state = _live_pr_state(args.live_pr_state)
+                value = live_pr_state.get("body")
+                if not isinstance(value, str):
+                    raise ValueError("live PR state does not contain a body")
+                body = value
         except (OSError, ValueError, json.JSONDecodeError) as error:
             source = "pull-request event" if args.event_path is not None else "pull-request body"
+            if args.live_pr_state is not None:
+                source = "authoritative live PR state"
             input_violations.append(f"cannot read {source}: {error}")
         try:
             changed_files = _changed_files(args.changed_files)
         except OSError as error:
             input_violations.append(f"cannot read changed-file list: {error}")
-        validation = validate_pr_evidence(args.repo_root, body, changed_files)
+        validation = validate_pr_evidence(
+            args.repo_root, body, changed_files, live_pr_state=live_pr_state
+        )
         violations = input_violations + list(validation.violations)
         body = validation.body
         changed_files = list(validation.changed_files)

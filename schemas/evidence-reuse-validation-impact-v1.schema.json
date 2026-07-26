@@ -1,30 +1,144 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://recordstracker.example/schemas/evidence-reuse-validation-impact-v1.schema.json",
-  "oneOf": [{"$ref": "#/$defs/policy"}, {"$ref": "#/$defs/input"}, {"$ref": "#/$defs/result"}],
+  "oneOf": [
+    {"$ref": "#/$defs/policy"},
+    {"$ref": "#/$defs/input"},
+    {"$ref": "#/$defs/result"}
+  ],
   "$defs": {
     "sha": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
     "hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
-    "path": {"type": "string", "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/-]+$"},
-    "impact_class": {"enum": ["evidence_only_metadata", "documentation_only", "test_only", "schema_or_governance_validator", "application_implementation", "ingestion_or_source_contract", "database_or_migration", "security_or_privacy", "workflow_or_required_check_contract", "deployment_or_infrastructure", "unknown"]},
+    "path": {
+      "type": "string",
+      "pattern": "^(?!/)(?![A-Za-z]:)(?!.*//)(?!.*(?:^|/)\\.(?:/|$))(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._-]+(?:/[A-Za-z0-9._-]+)*$"
+    },
+    "path_prefix": {
+      "type": "string",
+      "pattern": "^(?!/)(?![A-Za-z]:)(?!.*//)(?!.*(?:^|/)\\.(?:/|$))(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._-]+(?:/[A-Za-z0-9._-]+)*/?$"
+    },
+    "impact_class": {
+      "enum": [
+        "evidence_only_metadata",
+        "documentation_only",
+        "test_only",
+        "schema_or_governance_validator",
+        "application_implementation",
+        "ingestion_or_source_contract",
+        "database_or_migration",
+        "security_or_privacy",
+        "workflow_or_required_check_contract",
+        "deployment_or_infrastructure",
+        "unknown"
+      ]
+    },
     "policy": {
-      "type": "object", "additionalProperties": false,
+      "type": "object",
+      "additionalProperties": false,
       "required": ["kind", "schema_version", "policy_version", "title", "purpose", "evidence_states", "evidence_identity_fields", "impact_classes", "path_rules", "required_check_names", "governed_boundary_disclosures", "scope"],
       "properties": {
-        "kind": {"const": "policy"}, "schema_version": {"const": "recordstracker.evidence-reuse-validation-impact.v1"}, "policy_version": {"type": "string", "pattern": "^1\\.0\\.0$"}, "title": {"type": "string", "minLength": 1}, "purpose": {"type": "string", "minLength": 1},
+        "kind": {"const": "policy"},
+        "schema_version": {"const": "recordstracker.evidence-reuse-validation-impact.v1"},
+        "policy_version": {"type": "string", "pattern": "^1\\.0\\.1$"},
+        "title": {"type": "string", "minLength": 1},
+        "purpose": {"type": "string", "minLength": 1},
         "evidence_states": {"type": "array", "const": ["retained", "fresh", "live", "superseded", "invalidated"]},
         "evidence_identity_fields": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
         "impact_classes": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/impact_class"}},
-        "path_rules": {"type": "array", "minItems": 1, "items": {"type": "object", "additionalProperties": false, "required": ["path", "impact_class"], "properties": {"path": {"$ref": "#/$defs/path"}, "impact_class": {"$ref": "#/$defs/impact_class"}}}},
+        "path_rules": {"type": "array", "minItems": 1, "items": {"type": "object", "additionalProperties": false, "required": ["path", "impact_class"], "properties": {"path": {"$ref": "#/$defs/path_prefix"}, "impact_class": {"$ref": "#/$defs/impact_class"}}}},
         "required_check_names": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
-        "governed_boundary_disclosures": {"type": "array", "minItems": 4, "uniqueItems": true, "items": {"type": "string", "minLength": 1}}, "scope": {"type": "string", "minLength": 1}
+        "governed_boundary_disclosures": {"type": "array", "minItems": 4, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+        "scope": {"type": "string", "minLength": 1}
       }
     },
-    "identity": {"type": "object", "additionalProperties": false, "required": ["repository", "base_sha", "head_sha", "tree_sha", "changed_file_inventory_hash", "pr_body_hash", "policy_version", "schema_version", "validator_version", "governed_boundary_classification", "dependency_state_digest"], "properties": {"repository": {"type": "string", "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"}, "base_sha": {"$ref": "#/$defs/sha"}, "head_sha": {"$ref": "#/$defs/sha"}, "tree_sha": {"$ref": "#/$defs/sha"}, "changed_file_inventory_hash": {"$ref": "#/$defs/hash"}, "pr_body_hash": {"anyOf": [{"$ref": "#/$defs/hash"}, {"type": "null"}]}, "policy_version": {"type": "string", "minLength": 1}, "schema_version": {"type": "string", "minLength": 1}, "validator_version": {"type": "string", "minLength": 1}, "governed_boundary_classification": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}}, "dependency_state_digest": {"anyOf": [{"$ref": "#/$defs/hash"}, {"type": "null"}]} }},
-    "evidence": {"type": "object", "additionalProperties": false, "required": ["id", "state", "purpose", "identity", "body_dependent", "immutable_references"], "properties": {"id": {"type": "string", "minLength": 1}, "state": {"enum": ["retained", "fresh", "live", "superseded", "invalidated"]}, "purpose": {"type": "string", "minLength": 1}, "identity": {"$ref": "#/$defs/identity"}, "body_dependent": {"type": "boolean"}, "immutable_references": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}}}},
-    "run": {"type": "object", "additionalProperties": false, "required": ["check_name", "run_id", "job_id", "status", "head_sha", "tree_sha", "changed_file_inventory_hash", "pr_body_hash"], "properties": {"check_name": {"type": "string", "minLength": 1}, "run_id": {"type": "integer", "minimum": 1}, "job_id": {"type": "integer", "minimum": 1}, "status": {"enum": ["success", "failure", "pending"]}, "head_sha": {"$ref": "#/$defs/sha"}, "tree_sha": {"$ref": "#/$defs/sha"}, "changed_file_inventory_hash": {"$ref": "#/$defs/hash"}, "pr_body_hash": {"anyOf": [{"$ref": "#/$defs/hash"}, {"type": "null"}]}}},
-    "input": {"type": "object", "additionalProperties": false, "required": ["kind", "schema_version", "repository_state", "changed_file_inventory", "dependency_state", "evidence", "required_check_runs"], "properties": {"kind": {"const": "input"}, "schema_version": {"const": "recordstracker.evidence-reuse-validation-impact.v1"}, "repository_state": {"$ref": "#/$defs/identity"}, "changed_file_inventory": {"type": "object", "additionalProperties": false, "required": ["complete", "paths"], "properties": {"complete": {"type": "boolean"}, "paths": {"type": "array", "items": {"$ref": "#/$defs/path"}}}}, "dependency_state": {"type": "object", "additionalProperties": false, "required": ["status", "digest"], "properties": {"status": {"enum": ["known", "uncertain"]}, "digest": {"anyOf": [{"$ref": "#/$defs/hash"}, {"type": "null"}]}}}, "evidence": {"type": "array", "items": {"$ref": "#/$defs/evidence"}}, "required_check_runs": {"type": "array", "items": {"$ref": "#/$defs/run"}}}},
-    "result": {"type": "object", "additionalProperties": false, "required": ["kind", "schema_version", "policy_version", "decision", "repository_state", "change_inventory", "impact_classes", "validation_requirements", "evidence_reused", "evidence_recollected", "evidence_superseded", "evidence_invalidated", "live_obligations", "blockers", "authorized_mutations", "unauthorized_mutations", "governed_boundary_disclosures", "reasons"], "properties": {"kind": {"const": "result"}, "schema_version": {"const": "recordstracker.evidence-reuse-validation-impact.v1"}, "policy_version": {"type": "string", "minLength": 1}, "decision": {"enum": ["ready", "blocked"]}, "repository_state": {"$ref": "#/$defs/identity"}, "change_inventory": {"type": "object", "additionalProperties": false, "required": ["complete", "count", "hash", "paths"], "properties": {"complete": {"type": "boolean"}, "count": {"type": "integer", "minimum": 0}, "hash": {"$ref": "#/$defs/hash"}, "paths": {"type": "array", "items": {"$ref": "#/$defs/path"}}}}, "impact_classes": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/impact_class"}}, "validation_requirements": {"type": "object"}, "evidence_reused": {"type": "array"}, "evidence_recollected": {"type": "array"}, "evidence_superseded": {"type": "array"}, "evidence_invalidated": {"type": "array"}, "live_obligations": {"type": "array"}, "blockers": {"type": "array"}, "authorized_mutations": {"type": "array"}, "unauthorized_mutations": {"type": "array", "minItems": 1}, "governed_boundary_disclosures": {"type": "array", "minItems": 4}, "reasons": {"type": "array", "minItems": 1}}
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository", "pull_request_number", "base_ref", "base_sha", "head_ref", "head_sha", "tree_sha", "changed_file_inventory_hash", "pr_body_hash", "policy_version", "schema_version", "validator_version", "governed_boundary_classification", "dependency_state_digest"],
+      "properties": {
+        "repository": {"type": "string", "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"},
+        "pull_request_number": {"type": "integer", "minimum": 1},
+        "base_ref": {"type": "string", "minLength": 1},
+        "base_sha": {"$ref": "#/$defs/sha"},
+        "head_ref": {"type": "string", "minLength": 1},
+        "head_sha": {"$ref": "#/$defs/sha"},
+        "tree_sha": {"$ref": "#/$defs/sha"},
+        "changed_file_inventory_hash": {"$ref": "#/$defs/hash"},
+        "pr_body_hash": {"anyOf": [{"$ref": "#/$defs/hash"}, {"type": "null"}]},
+        "policy_version": {"type": "string", "minLength": 1},
+        "schema_version": {"type": "string", "minLength": 1},
+        "validator_version": {"type": "string", "minLength": 1},
+        "governed_boundary_classification": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+        "dependency_state_digest": {"anyOf": [{"$ref": "#/$defs/hash"}, {"type": "null"}]}
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "state", "purpose", "identity", "body_dependent", "immutable_references"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "state": {"enum": ["retained", "fresh", "live", "superseded", "invalidated"]},
+        "purpose": {"type": "string", "minLength": 1},
+        "identity": {"$ref": "#/$defs/identity"},
+        "body_dependent": {"type": "boolean"},
+        "immutable_references": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}}
+      }
+    },
+    "run": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["check_name", "run_id", "job_id", "status", "conclusion", "head_sha", "tree_sha", "changed_file_inventory_hash", "pr_body_hash"],
+      "properties": {
+        "check_name": {"type": "string", "minLength": 1},
+        "run_id": {"type": "integer", "minimum": 1},
+        "job_id": {"type": "integer", "minimum": 1},
+        "status": {"enum": ["success", "failure", "pending"]},
+        "conclusion": {"anyOf": [{"type": "string", "minLength": 1}, {"type": "null"}]},
+        "head_sha": {"$ref": "#/$defs/sha"},
+        "tree_sha": {"$ref": "#/$defs/sha"},
+        "changed_file_inventory_hash": {"$ref": "#/$defs/hash"},
+        "pr_body_hash": {"anyOf": [{"$ref": "#/$defs/hash"}, {"type": "null"}]}
+      }
+    },
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "schema_version", "repository_state", "changed_file_inventory", "dependency_state", "evidence", "required_check_runs"],
+      "properties": {
+        "kind": {"const": "input"},
+        "schema_version": {"const": "recordstracker.evidence-reuse-validation-impact.v1"},
+        "repository_state": {"$ref": "#/$defs/identity"},
+        "changed_file_inventory": {"type": "object", "additionalProperties": false, "required": ["complete", "paths"], "properties": {"complete": {"type": "boolean"}, "paths": {"type": "array", "items": {"$ref": "#/$defs/path"}}}},
+        "dependency_state": {"type": "object", "additionalProperties": false, "required": ["status", "digest"], "properties": {"status": {"enum": ["known", "uncertain"]}, "digest": {"anyOf": [{"$ref": "#/$defs/hash"}, {"type": "null"}]}}},
+        "evidence": {"type": "array", "items": {"$ref": "#/$defs/evidence"}},
+        "required_check_runs": {"type": "array", "items": {"$ref": "#/$defs/run"}}
+      }
+    },
+    "result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "schema_version", "policy_version", "decision", "repository_state", "change_inventory", "impact_classes", "validation_requirements", "evidence_reused", "evidence_recollected", "evidence_superseded", "evidence_invalidated", "live_obligations", "blockers", "authorized_mutations", "unauthorized_mutations", "governed_boundary_disclosures", "reasons"],
+      "properties": {
+        "kind": {"const": "result"},
+        "schema_version": {"const": "recordstracker.evidence-reuse-validation-impact.v1"},
+        "policy_version": {"type": "string", "minLength": 1},
+        "decision": {"enum": ["ready", "blocked"]},
+        "repository_state": {"$ref": "#/$defs/identity"},
+        "change_inventory": {"type": "object", "additionalProperties": false, "required": ["complete", "count", "hash", "paths"], "properties": {"complete": {"type": "boolean"}, "count": {"type": "integer", "minimum": 0}, "hash": {"$ref": "#/$defs/hash"}, "paths": {"type": "array", "items": {"$ref": "#/$defs/path"}}}},
+        "impact_classes": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/impact_class"}},
+        "validation_requirements": {"type": "object"},
+        "evidence_reused": {"type": "array"},
+        "evidence_recollected": {"type": "array"},
+        "evidence_superseded": {"type": "array"},
+        "evidence_invalidated": {"type": "array"},
+        "live_obligations": {"type": "array"},
+        "blockers": {"type": "array"},
+        "authorized_mutations": {"type": "array"},
+        "unauthorized_mutations": {"type": "array", "minItems": 1},
+        "governed_boundary_disclosures": {"type": "array", "minItems": 4},
+        "reasons": {"type": "array", "minItems": 1}
+      }
     }
   }
 }

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import hashlib
 import importlib.util
 import json
@@ -106,12 +107,15 @@ def _compact_input(paths: list[str], **overrides: object) -> dict[str, object]:
     scope_hash = hashlib.sha256("\n".join(paths).encode("utf-8")).hexdigest()
     identity: dict[str, object] = {
         "repository": "nicho1ab/RecordsTracker",
+        "pull_request_number": 617,
+        "base_ref": "main",
         "base_sha": SHA_A,
+        "head_ref": "codex/test",
         "head_sha": SHA_A,
         "tree_sha": TREE_A,
         "changed_file_inventory_hash": scope_hash,
         "pr_body_hash": HASH_A,
-        "policy_version": "1.0.0",
+        "policy_version": "1.0.1",
         "schema_version": "recordstracker.evidence-reuse-validation-impact.v1",
         "validator_version": "evaluator-v1",
         "governed_boundary_classification": ["Repository governance"],
@@ -123,6 +127,7 @@ def _compact_input(paths: list[str], **overrides: object) -> dict[str, object]:
             "run_id": number,
             "job_id": number + 100,
             "status": "success",
+            "conclusion": "success",
             "head_sha": SHA_A,
             "tree_sha": TREE_A,
             "changed_file_inventory_hash": scope_hash,
@@ -155,6 +160,54 @@ def _compact_body(paths: list[str], **overrides: object) -> str:
             live_evidence_recollected=["required checks"],
         )
     )
+
+
+def _bound_compact_body(paths: list[str]) -> tuple[str, dict[str, object]]:
+    verification = _load_module()
+    policy_input = _compact_input(paths)
+    prefix = _valid_body() + "\n"
+    preliminary = verification.compact_policy_section(
+        policy_input,
+        delta="Policy evidence added for the changed scope.",
+        validation_newly_performed=["focused"],
+        live_evidence_recollected=["required checks"],
+    )
+    bound = verification.bind_compact_policy_body_hash(policy_input, prefix + preliminary)
+    body = prefix + verification.compact_policy_section(
+        bound,
+        delta="Policy evidence added for the changed scope.",
+        validation_newly_performed=["focused"],
+        live_evidence_recollected=["required checks"],
+    )
+    return body, bound
+
+
+def _live_pr_state(policy_input: dict[str, object], body: str) -> dict[str, object]:
+    identity = copy.deepcopy(policy_input["repository_state"])
+    runs = copy.deepcopy(policy_input["required_check_runs"])
+    return {
+        **{
+            field: identity[field]
+            for field in (
+                "repository",
+                "pull_request_number",
+                "base_ref",
+                "base_sha",
+                "head_ref",
+                "head_sha",
+            )
+        },
+        "body": body,
+        "changed_file_inventory_complete": True,
+        "required_check_runs_complete": True,
+        "required_check_runs": [
+            {
+                field: run[field]
+                for field in ("check_name", "run_id", "job_id", "status", "conclusion", "head_sha")
+            }
+            for run in runs
+        ],
+    }
 
 
 def _governed_summary_body() -> str:
@@ -208,6 +261,84 @@ def test_valid_compact_evidence_reconstructs_requirements() -> None:
         "scripts/delivery_automation_registry.py",
     ):
         assert verification.find_pr_evidence_violations(_compact_body([path]), [path]) == []
+
+
+def test_live_compact_binding_rejects_false_identity_scope_and_body_claims() -> None:
+    verification = _load_module()
+    paths = ["docs/developer/codex-workflow.md"]
+    body, policy_input = _bound_compact_body(paths)
+    live = _live_pr_state(policy_input, body)
+
+    assert verification.validate_pr_evidence(ROOT, body, paths, live_pr_state=live).violations == ()
+    for field, value, expected in (
+        ("repository", "other/repository", "repository differs"),
+        ("pull_request_number", 618, "pull_request_number differs"),
+        ("base_sha", SHA_B, "base_sha differs"),
+        ("head_sha", SHA_B, "head_sha differs"),
+    ):
+        tampered = {**live, field: value}
+        violations = verification.validate_pr_evidence(
+            ROOT, body, paths, live_pr_state=tampered
+        ).violations
+        assert any(expected in violation for violation in violations)
+
+    body_hash = body.replace('"pr_body_hash":"', '"pr_body_hash":"e', 1)
+    violations = verification.validate_pr_evidence(
+        ROOT, body_hash, paths, live_pr_state={**live, "body": body_hash}
+    ).violations
+    assert "compact policy body hash differs from authoritative persisted PR body" in violations
+
+    wrong_scope = verification.validate_pr_evidence(
+        ROOT, body, paths + ["README.md"], live_pr_state=live
+    ).violations
+    assert "compact policy changed-file count differs from authoritative live scope" in wrong_scope
+    assert (
+        "compact policy changed-file inventory digest differs from authoritative live scope"
+        in wrong_scope
+    )
+
+
+def test_live_compact_binding_enforces_exact_latest_required_check_runs() -> None:
+    verification = _load_module()
+    paths = ["docs/developer/codex-workflow.md"]
+    body, policy_input = _bound_compact_body(paths)
+    live = _live_pr_state(policy_input, body)
+    older_success = copy.deepcopy(live["required_check_runs"])
+    older_success[0]["run_id"] = 1
+    pending = copy.deepcopy(live["required_check_runs"])
+    pending[0].update({"run_id": 99, "status": "pending", "conclusion": None})
+    failed = copy.deepcopy(live["required_check_runs"])
+    failed[0].update({"run_id": 99, "status": "failure", "conclusion": "failure"})
+
+    for authoritative_runs in (older_success + pending, older_success + failed):
+        violations = verification.validate_pr_evidence(
+            ROOT, body, paths, live_pr_state={**live, "required_check_runs": authoritative_runs}
+        ).violations
+        assert (
+            "compact policy required check runs differ from authoritative live evidence"
+            in violations
+        )
+
+    wrong_check = copy.deepcopy(live)
+    wrong_check["required_check_runs"][0]["check_name"] = "security"
+    assert "compact policy required check runs differ from authoritative live evidence" in (
+        verification.validate_pr_evidence(ROOT, body, paths, live_pr_state=wrong_check).violations
+    )
+
+    wrong_head = copy.deepcopy(live)
+    wrong_head["required_check_runs"][0]["head_sha"] = SHA_B
+    assert "authoritative required check run belongs to another head" in (
+        verification.validate_pr_evidence(ROOT, body, paths, live_pr_state=wrong_head).violations
+    )
+
+    incomplete = verification.validate_pr_evidence(
+        ROOT, body, paths, live_pr_state={**live, "required_check_runs_complete": False}
+    ).violations
+    assert "authoritative required-check evidence is incomplete" in incomplete
+    incomplete_scope = verification.validate_pr_evidence(
+        ROOT, body, paths, live_pr_state={**live, "changed_file_inventory_complete": False}
+    ).violations
+    assert "authoritative changed-file inventory is incomplete" in incomplete_scope
 
 
 def test_body_only_retains_source_evidence_and_invalidates_body_dependent_evidence() -> None:
@@ -284,6 +415,7 @@ def test_compact_policy_rejects_unsafe_runs_unknowns_and_legacy_mixing() -> None
     paths = ["docs/developer/codex-workflow.md"]
     pending = _compact_input(paths)
     pending["required_check_runs"][-1]["status"] = "pending"
+    pending["required_check_runs"][-1]["conclusion"] = None
     pending_body = (
         _valid_body()
         + "\n"
@@ -566,11 +698,13 @@ def test_template_headings_match_the_validator_contract() -> None:
     assert [line[3:] for line in template.splitlines() if line.startswith("## ")] == expected
 
 
-def test_ci_fetches_live_pr_body_before_validation() -> None:
+def test_ci_fetches_authoritative_live_pr_state_before_validation() -> None:
     workflow = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
 
-    assert "--jq '.body' > .verification-pr-body.md" in workflow
-    assert "--pr-body .verification-pr-body.md" in workflow
+    assert "> .verification-live-pr.json" in workflow
+    assert "actions/runs?head_sha=$head_sha" in workflow
+    assert "actions/runs/$run_id/jobs?per_page=100" in workflow
+    assert "--live-pr-state .verification-live-pr-state.json" in workflow
     assert '--event-path "$GITHUB_EVENT_PATH"' not in workflow
     assert "contents: read" in workflow
     assert "pull-requests: read" in workflow

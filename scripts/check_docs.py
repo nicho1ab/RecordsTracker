@@ -16,6 +16,7 @@ EVIDENCE_EVALUATOR_PATH = "scripts/evaluate_evidence_reuse_policy.py"
 EVIDENCE_INDEPENDENT_VERIFIER_PATH = "scripts/check_independent_verification.py"
 EVIDENCE_PREPARATION_PATH = "scripts/prepare_pr_body.py"
 EVIDENCE_DOCUMENTATION_PATH = "docs/developer/codex-workflow.md"
+EVIDENCE_TESTING_STRATEGY_PATH = "TESTING_STRATEGY.md"
 EVIDENCE_POLICY_HEADING = "Governed evidence reuse and validation-impact policy"
 EVIDENCE_COMPACT_HEADING = "Validation impact and evidence delta"
 EVIDENCE_REQUIRED_CHECKS = ("validate", "docs-check", "fixtures", "security")
@@ -86,6 +87,8 @@ EVIDENCE_DOCUMENTATION_MARKERS = (
     "#617 owns:",
     "#533 owns unless explicitly reassigned:",
     "The deferred `merged` timeline-event classifier remains out of scope.",
+    "authoritative live PR state",
+    "non-self-referential canonical body hash",
     "requires disclosure when governed workflow boundaries change",
     "no branch-protection or ruleset change",
     "no required-check rename or removal",
@@ -110,6 +113,12 @@ EVIDENCE_DOCUMENTATION_MARKERS = (
     "maximum of three routine comments",
     "not enforced through autonomous publication",
     "failed or safety-relevant evidence must not be omitted",
+)
+EVIDENCE_IMPLEMENTATION_STATUS = (
+    "Issue #617 implementation status: slice_1=policy-schema-evaluator; "
+    "slice_2=PR-preparation-and-independent-verification; "
+    "slice_3=documentation-checks; state=local-unmerged-unaccepted; "
+    "issue_533_execution_authority=absent."
 )
 EVIDENCE_MATRIX_HEADER = (
     "Impact class",
@@ -1256,6 +1265,7 @@ def find_evidence_policy_documentation_contract_violations(
         EVIDENCE_INDEPENDENT_VERIFIER_PATH,
         EVIDENCE_PREPARATION_PATH,
         EVIDENCE_DOCUMENTATION_PATH,
+        EVIDENCE_TESTING_STRATEGY_PATH,
         ".github/PULL_REQUEST_TEMPLATE.md",
     )
     for relative_path in required_paths:
@@ -1339,7 +1349,8 @@ def find_evidence_policy_documentation_contract_violations(
     for marker in (
         "SUPPORTED_POLICY_VERSION = verification.SUPPORTED_POLICY_VERSION",
         "SUPPORTED_SCHEMA_VERSION = verification.SUPPORTED_SCHEMA_VERSION",
-        "return verification.compact_policy_section(",
+        "preliminary = verification.compact_policy_section(",
+        "verification.bind_compact_policy_body_hash(",
     ):
         if marker not in preparation_source:
             violations.append("PR-body preparation policy contract drift")
@@ -1365,6 +1376,31 @@ def find_evidence_policy_documentation_contract_violations(
         section,
     ):
         violations.append("evidence-policy documentation claims autonomous lifecycle authority")
+
+    testing_strategy = (root / EVIDENCE_TESTING_STRATEGY_PATH).read_text(encoding="utf-8")
+    for document_name, content in (
+        (EVIDENCE_DOCUMENTATION_PATH, documentation),
+        (EVIDENCE_TESTING_STRATEGY_PATH, testing_strategy),
+    ):
+        if EVIDENCE_IMPLEMENTATION_STATUS not in content:
+            violations.append(f"evidence-policy implementation status missing: {document_name}")
+            if re.search(
+                r"(?i)(?:PR[- ]evidence|documentation[- ]check).*?\b"
+                r"(?:absent|not integrated|no integration)\b",
+                content,
+            ):
+                violations.append(
+                    "evidence-policy implementation status contradicts integration: "
+                    f"{document_name}"
+                )
+        if re.search(
+            r"(?i)(?:PR-evidence|documentation-check) integration remain later "
+            r"separately authorized work",
+            content,
+        ):
+            violations.append(
+                f"evidence-policy implementation status contradicts integration: {document_name}"
+            )
 
     rows = _matrix_rows(_markdown_section(documentation, "Validation-impact matrix"))
     policy_classes = policy.get("impact_classes", [])

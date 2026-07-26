@@ -633,9 +633,12 @@ Validate documentation structure and run manual or automated checks for user-fac
   and deterministic inputs for every supported path class, strict mixed-scope
   union, freshness and invalidation, body-dependent evidence, exact immutable
   references, duplicate/pending/failed required-run classification, compact
-  result completeness, path safety, and no mutation or command output. The
-  slice-1 evaluator calculates requirements only; PR-evidence and
-  documentation-check integration remain later separately authorized work.
+  result completeness, path safety, and no mutation or command output. Slice 1
+  establishes the policy, schema, and evaluator; slice 2 integrates PR
+  preparation and independent verification; and slice 3 integrates
+  documentation checks. All three remain local, unmerged, and unaccepted until
+  review, publication, and merge; no #533 execution authority is added.
+  Issue #617 implementation status: slice_1=policy-schema-evaluator; slice_2=PR-preparation-and-independent-verification; slice_3=documentation-checks; state=local-unmerged-unaccepted; issue_533_execution_authority=absent.
 - PR-evidence slice 2 uses the same fixed evaluator during preparation and
   independent validation. Focused coverage proves deterministic compact
   rendering, exact full-scope reconstruction, legacy compatibility without a

@@ -472,6 +472,7 @@ EVIDENCE_POLICY_CONTRACT_FILES = (
     "scripts/check_independent_verification.py",
     "scripts/prepare_pr_body.py",
     "docs/developer/codex-workflow.md",
+    "TESTING_STRATEGY.md",
 )
 
 
@@ -514,7 +515,7 @@ def test_evidence_policy_documentation_contract_requires_fixed_files(
     [
         (
             ".github/evidence-reuse-validation-impact-policy.json",
-            '"policy_version": "1.0.0"',
+            '"policy_version": "1.0.1"',
             '"policy_version": "2.0.0"',
             "evidence policy version is unsupported",
         ),
@@ -554,7 +555,7 @@ def test_evidence_policy_documentation_contract_rejects_version_and_path_drift(
         ),
         (
             "scripts/prepare_pr_body.py",
-            "return verification.compact_policy_section(",
+            "verification.bind_compact_policy_body_hash(",
             "PR-body preparation policy contract drift",
         ),
         (
@@ -621,6 +622,30 @@ def test_evidence_policy_documentation_contract_rejects_autonomous_lifecycle_cla
 
     assert "evidence-policy documentation claims autonomous lifecycle authority" in (
         check_docs.find_evidence_policy_documentation_contract_violations(tmp_path)
+    )
+
+
+def test_evidence_policy_documentation_contract_rejects_stale_slice_status(
+    tmp_path: Path,
+) -> None:
+    check_docs = _load_check_docs_module()
+    _copy_evidence_policy_contract_files(tmp_path)
+    path = tmp_path / "TESTING_STRATEGY.md"
+    path.write_text(
+        path.read_text(encoding="utf-8").replace(
+            check_docs.EVIDENCE_IMPLEMENTATION_STATUS,
+            "The slice-1 evaluator calculates requirements only; PR-evidence and "
+            "documentation-check integration remain later separately authorized work.",
+            1,
+        ),
+        encoding="utf-8",
+    )
+
+    violations = check_docs.find_evidence_policy_documentation_contract_violations(tmp_path)
+    assert "evidence-policy implementation status missing: TESTING_STRATEGY.md" in violations
+    assert (
+        "evidence-policy implementation status contradicts integration: TESTING_STRATEGY.md"
+        in violations
     )
 
 

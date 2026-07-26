@@ -18,8 +18,11 @@ ROOT = Path(__file__).resolve().parents[1]
 POLICY_PATH = ROOT / ".github" / "evidence-reuse-validation-impact-policy.json"
 SCHEMA_PATH = ROOT / "schemas" / "evidence-reuse-validation-impact-v1.schema.json"
 SCHEMA_VERSION = "recordstracker.evidence-reuse-validation-impact.v1"
-POLICY_VERSION = "1.0.0"
-_PATH = re.compile(r"^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)\.\.(?:/|$))[A-Za-z0-9._/-]+$")
+POLICY_VERSION = "1.0.1"
+_PATH = re.compile(
+    r"^(?!/)(?![A-Za-z]:)(?!.*//)(?!.*(?:^|/)\.(?:/|$))"
+    r"(?!.*(?:^|/)\.\.(?:/|$))[A-Za-z0-9._-]+(?:/[A-Za-z0-9._-]+)*$"
+)
 
 
 class EvidencePolicyError(ValueError):
@@ -134,7 +137,10 @@ def _same_identity(evidence: dict[str, Any], current: dict[str, Any]) -> tuple[b
     prior = evidence["identity"]
     fields = (
         "repository",
+        "pull_request_number",
+        "base_ref",
         "base_sha",
+        "head_ref",
         "head_sha",
         "tree_sha",
         "changed_file_inventory_hash",
@@ -170,6 +176,15 @@ def _run_obligations(
         if any(newest[field] != current[field] for field in input_fields):
             blockers.append(f"REQUIRED_CHECK_INPUT_MISMATCH:{check}")
             reasons.append(f"REQUIRED_CHECK_INPUT_MISMATCH:{check}")
+        elif newest["status"] == "success" and newest["conclusion"] != "success":
+            blockers.append(f"REQUIRED_CHECK_CONCLUSION_MISMATCH:{check}")
+            reasons.append(f"REQUIRED_CHECK_CONCLUSION_MISMATCH:{check}")
+        elif newest["status"] == "pending" and newest["conclusion"] is not None:
+            blockers.append(f"REQUIRED_CHECK_CONCLUSION_MISMATCH:{check}")
+            reasons.append(f"REQUIRED_CHECK_CONCLUSION_MISMATCH:{check}")
+        elif newest["status"] == "failure" and newest["conclusion"] in (None, "success"):
+            blockers.append(f"REQUIRED_CHECK_CONCLUSION_MISMATCH:{check}")
+            reasons.append(f"REQUIRED_CHECK_CONCLUSION_MISMATCH:{check}")
         elif newest["status"] == "pending":
             blockers.append(f"REQUIRED_CHECK_PENDING:{check}")
         elif newest["status"] == "failure":

@@ -122,12 +122,15 @@ def test_compact_policy_preparation_is_deterministic_and_independently_valid() -
     scope_hash = prepare.changed_scope_sha256(paths)
     identity = {
         "repository": "nicho1ab/RecordsTracker",
+        "pull_request_number": 617,
+        "base_ref": "main",
         "base_sha": "a" * 40,
+        "head_ref": "codex/test",
         "head_sha": "a" * 40,
         "tree_sha": "c" * 40,
         "changed_file_inventory_hash": scope_hash,
         "pr_body_hash": "d" * 64,
-        "policy_version": "1.0.0",
+        "policy_version": "1.0.1",
         "schema_version": "recordstracker.evidence-reuse-validation-impact.v1",
         "validator_version": "evaluator-v1",
         "governed_boundary_classification": ["Repository governance"],
@@ -146,6 +149,7 @@ def test_compact_policy_preparation_is_deterministic_and_independently_valid() -
                 "run_id": number,
                 "job_id": number + 10,
                 "status": "success",
+                "conclusion": "success",
                 "head_sha": "a" * 40,
                 "tree_sha": "c" * 40,
                 "changed_file_inventory_hash": scope_hash,
@@ -154,24 +158,57 @@ def test_compact_policy_preparation_is_deterministic_and_independently_valid() -
             for number, check in enumerate(("validate", "docs-check", "fixtures", "security"), 1)
         ],
     }
+    completed = _completed_body()
+    start = completed.index("## Validation impact and evidence delta")
+    end = completed.index("## UI and accessibility evidence", start)
+    prefix = completed[:start]
+    suffix = completed[end:]
     first = prepare.render_compact_policy_evidence(
         policy_input,
         delta="Documentation delta.",
         validation_newly_performed=["focused"],
         live_evidence_recollected=["required checks"],
+        body_prefix=prefix,
+        body_suffix=suffix,
     )
     assert first == prepare.render_compact_policy_evidence(
         policy_input,
         delta="Documentation delta.",
         validation_newly_performed=["focused"],
         live_evidence_recollected=["required checks"],
+        body_prefix=prefix,
+        body_suffix=suffix,
     )
     assert "command" not in first.lower()
-    completed = _completed_body()
-    start = completed.index("## Validation impact and evidence delta")
-    end = completed.index("## UI and accessibility evidence", start)
-    completed = completed[:start] + completed[end:]
-    assert verification.find_pr_evidence_violations(completed + "\n" + first, paths) == []
+    body = prefix + first + suffix
+    envelope = json.loads(first.split("```json\n", 1)[1].split("\n```", 1)[0])
+    assert envelope["policy_input"]["repository_state"]["pr_body_hash"] == (
+        verification.canonical_compact_body_sha256(body)
+    )
+    live = {
+        **{
+            field: envelope["policy_input"]["repository_state"][field]
+            for field in (
+                "repository",
+                "pull_request_number",
+                "base_ref",
+                "base_sha",
+                "head_ref",
+                "head_sha",
+            )
+        },
+        "body": body,
+        "changed_file_inventory_complete": True,
+        "required_check_runs_complete": True,
+        "required_check_runs": [
+            {
+                field: run[field]
+                for field in ("check_name", "run_id", "job_id", "status", "conclusion", "head_sha")
+            }
+            for run in envelope["policy_input"]["required_check_runs"]
+        ],
+    }
+    assert verification.validate_pr_evidence(ROOT, body, paths, live_pr_state=live).violations == ()
 
 
 def test_preflight_uses_validator_rules_and_actionable_failures(tmp_path: Path, capsys) -> None:

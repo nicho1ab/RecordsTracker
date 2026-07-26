@@ -291,15 +291,38 @@ def render_compact_policy_evidence(
     delta: str,
     validation_newly_performed: list[str],
     live_evidence_recollected: list[str],
+    body_prefix: str = "",
+    body_suffix: str = "",
 ) -> str:
-    """Format a fixed-policy compact section without executing validation or mutation."""
+    """Format compact evidence with the validator's non-self-referential body hash."""
 
-    return verification.compact_policy_section(
+    preliminary = verification.compact_policy_section(
         policy_input,
         delta=delta,
         validation_newly_performed=validation_newly_performed,
         live_evidence_recollected=live_evidence_recollected,
     )
+    bound_input = verification.bind_compact_policy_body_hash(
+        policy_input, body_prefix + preliminary + body_suffix
+    )
+    rendered = verification.compact_policy_section(
+        bound_input,
+        delta=delta,
+        validation_newly_performed=validation_newly_performed,
+        live_evidence_recollected=live_evidence_recollected,
+    )
+    repository_state = bound_input.get("repository_state")
+    if not isinstance(repository_state, dict):
+        raise ValueError("compact policy input is missing repository state")
+    body_hash = repository_state.get("pr_body_hash")
+    if not isinstance(body_hash, str):
+        raise ValueError("compact policy input is missing bound body hash")
+    if (
+        verification.canonical_compact_body_sha256(body_prefix + rendered + body_suffix)
+        != body_hash
+    ):
+        raise ValueError("compact policy body hash did not stabilize")
+    return rendered
 
 
 def preflight_body(

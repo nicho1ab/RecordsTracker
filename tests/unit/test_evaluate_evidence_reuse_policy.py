@@ -34,12 +34,15 @@ POLICY = _load_module()
 def _identity(**overrides: object) -> dict[str, object]:
     value: dict[str, object] = {
         "repository": "nicho1ab/RecordsTracker",
+        "pull_request_number": 617,
+        "base_ref": "main",
         "base_sha": SHA_A,
+        "head_ref": "codex/test",
         "head_sha": SHA_A,
         "tree_sha": TREE_A,
         "changed_file_inventory_hash": HASH_A,
         "pr_body_hash": HASH_A,
-        "policy_version": "1.0.0",
+        "policy_version": "1.0.1",
         "schema_version": "recordstracker.evidence-reuse-validation-impact.v1",
         "validator_version": "evaluator-v1",
         "governed_boundary_classification": ["Repository governance"],
@@ -61,6 +64,7 @@ def _run(
         "run_id": run_id,
         "job_id": run_id + 1000,
         "status": status,
+        "conclusion": None if status == "pending" else status,
         "head_sha": SHA_A,
         "tree_sha": TREE_A,
         "changed_file_inventory_hash": scope_hash,
@@ -263,6 +267,38 @@ def test_schema_and_path_safety_fail_closed() -> None:
         POLICY.evaluate(malformed)
     with pytest.raises(POLICY.EvidencePolicyError):
         POLICY.evaluate(_input(["../outside.py"]))
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "docs/./developer/codex-workflow.md",
+        "./README.md",
+        "docs/../README.md",
+        "docs//README.md",
+        "docs\\README.md",
+        "C:README.md",
+        "//server/share/file.md",
+    ],
+)
+def test_unnormalized_repository_paths_fail_closed(path: str) -> None:
+    with pytest.raises(POLICY.EvidencePolicyError):
+        POLICY.evaluate(_input([path]))
+
+
+def test_normalized_paths_remain_valid_and_duplicate_paths_fail_closed() -> None:
+    assert POLICY.evaluate(_input(["docs/developer/codex-workflow.md"]))["decision"] == "ready"
+    duplicate = _input(["docs/developer/codex-workflow.md"])
+    duplicate["changed_file_inventory"] = {
+        "complete": True,
+        "paths": ["docs/developer/codex-workflow.md", "docs/developer/codex-workflow.md"],
+    }
+    duplicate["repository_state"]["changed_file_inventory_hash"] = _digest(
+        duplicate["changed_file_inventory"]["paths"]
+    )
+    result = POLICY.evaluate(duplicate)
+    assert result["decision"] == "blocked"
+    assert "NONDETERMINISTIC_CHANGED_FILE_INVENTORY" in result["blockers"]
 
 
 def test_immutable_references_are_preserved_in_compact_result() -> None:

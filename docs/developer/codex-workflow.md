@@ -660,7 +660,7 @@ Issue #617 also owns the canonical slice-1 policy at
 `.github/evidence-reuse-validation-impact-policy.json`, its versioned envelope
 schema at `schemas/evidence-reuse-validation-impact-v1.schema.json`, and the
 repository-local evaluator at `scripts/evaluate_evidence_reuse_policy.py`.
-The supported policy version is `1.0.0`; the supported schema version is
+The supported policy version is `1.0.1`; the supported schema version is
 `recordstracker.evidence-reuse-validation-impact.v1`.
 The evaluator accepts a complete caller-supplied repository-relative inventory
 and returns a deterministic compact decision only; it has no network,
@@ -677,14 +677,23 @@ not execute selected validation or required checks. Slice 2 integrates the
 fixed evaluator with PR evidence validation and PR-body preparation: a declared
 `Validation impact and evidence delta` JSON envelope is independently
 reconstructed from the complete changed-file inventory and must match the
-compact result exactly. The envelope is deterministic, ASCII-safe, read-only,
-and records the decision, delta, identity, inventory, requirements, evidence
+compact result exactly. The live PR verifier additionally obtains authoritative live PR state:
+repository, number, base and head names and SHAs, persisted body,
+complete changed-file inventory, and the complete required-check run/job set for
+the exact head. Compact declarations must match that state; missing or partial
+live state fails closed. Its non-self-referential canonical body hash normalizes
+line endings and replaces every compact-envelope `pr_body_hash` value with
+`null` before deterministic JSON rendering and SHA-256 hashing. Preparation and
+live verification use that same canonical body hash. The envelope is
+deterministic, ASCII-safe, read-only, and records the decision, delta, identity, inventory, requirements, evidence
 reuse/recollection/supersession/invalidation, live obligations, blockers, and
 mutation boundary. Legacy full-template and governed-summary evidence remains
 valid when no compact envelope is declared; a compact envelope mixed with the
 legacy governed-summary form fails closed. Documentation-check integration
 is slice 3; generic orchestration remains owned by #533. The deferred `merged`
 timeline-event classifier remains out of scope.
+
+Issue #617 implementation status: slice_1=policy-schema-evaluator; slice_2=PR-preparation-and-independent-verification; slice_3=documentation-checks; state=local-unmerged-unaccepted; issue_533_execution_authority=absent.
 
 The policy retains these boundaries exactly:
 
