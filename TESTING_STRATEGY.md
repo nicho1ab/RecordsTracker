@@ -613,6 +613,12 @@ Validate documentation structure and run manual or automated checks for user-fac
   delayed convergence, stable mismatch, identity/scope changes, API failures,
   post-persistence validation, privacy-bounded evidence, and no retry or
   rollback. They do not perform a live PR-body mutation.
+- The delivery-automation registry validator is read-only and offline. Focused
+  tests cover its versioned schema, deterministic diagnostics, declared
+  historical gaps, stable DA identifiers, prevention evidence, temporary
+  exception review rules, supersession and retirement traceability, and
+  repository-relative privacy boundaries. Documentation validation invokes the
+  same production validator for the canonical registry.
 - CI retrieves the current live body when it validates a PR. Its pull-request
   `edited` event covers title and body edits because event selection cannot
   distinguish them; the job remains read-only and validates body evidence only.

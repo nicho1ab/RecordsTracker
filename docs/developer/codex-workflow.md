@@ -529,6 +529,55 @@ does not implement Issue #617 grouped lifecycle orchestration, consume any
 authorization automatically, alter issue closure behavior, or change CI
 permissions, required checks, branch protection, or rulesets.
 
+## Delivery-automation failure and prevention registry
+
+Issue #617 owns the repository's canonical delivery-automation failure and
+prevention registry. The machine-readable source is
+`.github/delivery-automation-registry.json`, its versioned local schema is
+`schemas/delivery-automation-registry-v1.schema.json`, and the offline
+validator is `scripts/delivery_automation_registry.py`. The validator is part
+of the existing documentation-validation path; it does not contact GitHub or
+mutate the registry, repository, issues, pull requests, checks, or worktrees.
+
+Each stable `DA-NNN` identifier is unique, uppercase, numerically ordered, and
+never silently renumbered or reused. A declared historical gap is a truthful
+absence of authoritative evidence, not an empty failure record. DA-001 through
+DA-028 are explicitly unavailable because the #617 readiness audit found no
+authoritative repository evidence; only DA-029 through DA-031 are seeded.
+
+Records identify their owner issue, lifecycle status, prevention state,
+governance-change classification, enforcement level, evidence completeness,
+regression coverage, documentation impact, remaining work, and any
+supersession, retirement, or temporary exception. Lifecycle values distinguish
+identified, active, prevention-in-progress, prevented, superseded, retired,
+exception-active, and review-required records. Governance changes are classified
+as clarification, inconsistency correction, stronger enforcement, relaxed
+enforcement, supersession, temporary exception, or obsolete-control removal.
+Enforcement levels are documentation only, validation, guarded mutation,
+workflow gate, and human decision; none grants autonomous execution.
+
+Conditional workflow-learning capture is the registry's purpose, but this
+foundation does not yet require automatic capture or implement an autonomous
+governance engine. A preventable failure correction must retain its evidence,
+identify its owner, link regression coverage and documentation impact, and
+declare parity when the same contract has more than one enforcement path.
+
+A temporary exception requires an owner, reason, scope, creation reference,
+current status, replacement or exit criteria, and either an expiration date or
+mandatory review trigger. It cannot silently relax a required check or an
+authorization boundary. Superseded records remain historically traceable;
+retirement requires a rationale, and obsolete-control removal must name its
+replacement or explain why none is required. Registry evidence is limited to
+public issue and pull-request identifiers, repository-relative paths, and
+concise summaries. It excludes credentials, headers, environment content,
+private hosts, full PR bodies, and private evidence payloads.
+
+DA-031 remains active: future work must inspect development links and closing
+references, bind closure authorization to exact issue numbers, verify
+post-merge issue state, and record closure source. This registry foundation does
+not implement a merge controller, issue closure, recovery mutation, grouped
+RL-PREPARE or RL-MERGE execution, deployment, or production-data behavior.
+
 CI validates the current live PR body whenever it runs. The `pull_request`
 workflow includes `opened`, `reopened`, `synchronize`, and `edited`, so a title
 or body edit starts the same read-only validation workflow. GitHub event

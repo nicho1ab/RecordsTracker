@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import importlib.util
 import re
 import subprocess
+import sys
 from collections.abc import Iterable
 from pathlib import Path
+from typing import cast
 
 REVIEWER_UI_GOVERNANCE_SECTIONS = {
     "AGENTS.md": "Reviewer-facing design enforcement",
@@ -1335,6 +1338,21 @@ def find_anti_fossilization_contract_violations(
     return violations
 
 
+def find_delivery_automation_registry_violations(root: Path = Path(".")) -> list[str]:
+    """Run the canonical offline DA-registry validator through docs validation."""
+
+    script = Path(__file__).with_name("delivery_automation_registry.py")
+    if not script.is_file():
+        return ["missing delivery-automation registry validator"]
+    spec = importlib.util.spec_from_file_location("delivery_automation_registry", script)
+    if not spec or not spec.loader:
+        return ["cannot load delivery-automation registry validator"]
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return cast(list[str], module.validate_canonical_registry())
+
+
 def main() -> None:
     missing_files = find_missing_files()
     if missing_files:
@@ -1401,6 +1419,13 @@ def main() -> None:
         raise SystemExit(
             "Invalid anti-fossilization contract: "
             + "; ".join(anti_fossilization_violations)
+        )
+
+    delivery_automation_registry_violations = find_delivery_automation_registry_violations()
+    if delivery_automation_registry_violations:
+        raise SystemExit(
+            "Invalid delivery-automation registry: "
+            + "; ".join(delivery_automation_registry_violations)
         )
 
     print("Documentation check passed.")
