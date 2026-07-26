@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import re
 import subprocess
@@ -78,15 +77,15 @@ class OpenPullRequest:
 
 
 def normalize_body(body: str) -> str:
-    """Normalize transport line endings without changing substantive Markdown."""
+    """Delegate to the canonical validator normalization boundary."""
 
-    return body.replace("\r\n", "\n").replace("\r", "\n")
+    return verification.normalize_pr_body(body)
 
 
 def body_sha256(body: str) -> str:
-    """Return a stable hash of the transport-normalized body."""
+    """Return the canonical validator's normalized UTF-8 body hash."""
 
-    return hashlib.sha256(normalize_body(body).encode("utf-8")).hexdigest()
+    return verification.normalized_body_sha256(body)
 
 
 def _changed_files_from_git(base: str) -> list[str]:
@@ -135,7 +134,7 @@ def preflight_body(
         else _changed_files_from_git(base)
     )
     return _print_violations(
-        verification.find_verification_violations(repo_root, body, changed_files)
+        list(verification.validate_pr_evidence(repo_root, body, changed_files).violations)
     )
 
 
@@ -306,7 +305,7 @@ def fetch_open_pull_request(
 def verification_violations(repo_root: Path, body: str, changed_files: Sequence[str]) -> list[str]:
     """Use exactly the production independent-verification implementation."""
 
-    return verification.find_verification_violations(repo_root, body, list(changed_files))
+    return list(verification.validate_pr_evidence(repo_root, body, changed_files).violations)
 
 
 def validate_open_pull_request(repo_root: Path, pull_request: OpenPullRequest) -> list[str]:

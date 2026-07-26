@@ -413,6 +413,19 @@ GitHub checks or human review. Reviewer-facing work must also identify affected,
 added, updated, superseded, or specifically not-applicable entries in
 `docs/developer/reviewer-ui-regression-contracts.md`.
 
+All PR-body paths use the validator's one canonical boundary before template
+mode detection or any evidence parsing. It converts CRLF and lone CR to LF,
+preserves Unicode, Markdown, substantive whitespace, and trailing-newline
+state, and never repairs mojibake. The same canonical UTF-8 normalized body
+representation supplies validation and body hashes; changed-file scope is
+complete, slash-normalized, and deduplicated in first-seen order. Local
+preflight, CI body-file validation, and open-PR live JSON validation therefore
+return the same decision and ordered violations for equivalent body and scope.
+An unresolved non-comment instruction such as `Not run - <reason>` fails with
+an actionable violation; a truthful completed `Not run - reason` explanation
+remains valid. This contract does not replace DA-030 transport-persistence
+work, add automatic retry, or add rollback.
+
 ### Open-PR body lifecycle
 
 The same repository-owned command supports an already-open PR without creating

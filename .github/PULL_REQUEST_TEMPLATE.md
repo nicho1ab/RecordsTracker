@@ -23,8 +23,8 @@ the required GitHub checks.
 
 ## Validation and failure classification
 
-List each exact command that was run. Use `Not run - <reason>` instead of
-implying that unrun validation passed.
+List each exact command that was run. For unrun validation, record `Not run -`
+followed by a truthful specific reason instead of implying that it passed.
 
 | Exact command | Result | Failure classification, if applicable |
 | --- | --- | --- |
