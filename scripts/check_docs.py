@@ -1,12 +1,126 @@
 from __future__ import annotations
 
+import ast
 import importlib.util
+import json
 import re
 import subprocess
 import sys
 from collections.abc import Iterable
 from pathlib import Path
-from typing import cast
+from typing import Any, cast
+
+EVIDENCE_POLICY_PATH = ".github/evidence-reuse-validation-impact-policy.json"
+EVIDENCE_SCHEMA_PATH = "schemas/evidence-reuse-validation-impact-v1.schema.json"
+EVIDENCE_EVALUATOR_PATH = "scripts/evaluate_evidence_reuse_policy.py"
+EVIDENCE_INDEPENDENT_VERIFIER_PATH = "scripts/check_independent_verification.py"
+EVIDENCE_PREPARATION_PATH = "scripts/prepare_pr_body.py"
+EVIDENCE_DOCUMENTATION_PATH = "docs/developer/codex-workflow.md"
+EVIDENCE_POLICY_HEADING = "Governed evidence reuse and validation-impact policy"
+EVIDENCE_COMPACT_HEADING = "Validation impact and evidence delta"
+EVIDENCE_REQUIRED_CHECKS = ("validate", "docs-check", "fixtures", "security")
+EVIDENCE_GOVERNED_DISCLOSURES = (
+    "requires disclosure when governed workflow boundaries change",
+    "no branch-protection or ruleset change",
+    "no required-check rename or removal",
+    "no autonomous approval or merge",
+)
+EVIDENCE_ENVELOPE_FIELDS = (
+    "kind",
+    "schema_version",
+    "policy_input",
+    "policy_result",
+    "delta",
+    "validation_newly_performed",
+    "live_evidence_recollected",
+)
+EVIDENCE_RESULT_FIELDS = (
+    "decision",
+    "repository_state",
+    "change_inventory",
+    "impact_classes",
+    "validation_requirements",
+    "evidence_reused",
+    "evidence_recollected",
+    "evidence_superseded",
+    "evidence_invalidated",
+    "live_obligations",
+    "blockers",
+    "authorized_mutations",
+    "unauthorized_mutations",
+    "governed_boundary_disclosures",
+    "reasons",
+)
+EVIDENCE_TEMPLATE_MARKERS = (
+    "exact base/head identity",
+    "inventory count and digest",
+    "impact classes",
+    "requirements",
+    "retained/recollected/",
+    "superseded/invalidated evidence",
+    "live obligations",
+    "blockers",
+    "authorized/unauthorized mutations",
+    "- Decision:",
+    "- Delta:",
+    "- Policy version:",
+    "- Compact evidence envelope:",
+    "- Validation newly performed:",
+    "- Retained evidence reused:",
+    "- Live evidence recollected:",
+    "- Superseded evidence:",
+    "- Invalidated evidence:",
+    "- Required-check state:",
+    "- Blockers:",
+    "- Governed-boundary disclosures:",
+    "- Authorized mutations:",
+    "- Unauthorized mutations:",
+)
+EVIDENCE_DOCUMENTATION_MARKERS = (
+    "### Documentation-contract enforcement",
+    "## Validation-impact matrix",
+    "## Evidence-reuse examples",
+    "## Worktree lifecycle definitions",
+    "## Publication guidance",
+    "## Issue #617 and #533 ownership boundary",
+    "#617 owns:",
+    "#533 owns unless explicitly reassigned:",
+    "The deferred `merged` timeline-event classifier remains out of scope.",
+    "requires disclosure when governed workflow boundaries change",
+    "no branch-protection or ruleset change",
+    "no required-check rename or removal",
+    "no autonomous approval or merge",
+    "source tests remain retained",
+    "body-dependent evidence is invalidated",
+    "blocks readiness",
+    "supersedes earlier successful readiness evidence",
+    "documentation and whitespace validation",
+    "owning collection are required",
+    "classification fails closed.",
+    "prior boundary review is invalidated",
+    "**Active:**",
+    "**Parked:**",
+    "**Retained after merge:**",
+    "**Blocked:**",
+    "**Safe to remove:**",
+    "**Preserved for evidence:**",
+    "A state classification grants no cleanup authority.",
+    "automatic branch deletion",
+    "stash mutation, pruning, or broad",
+    "maximum of three routine comments",
+    "not enforced through autonomous publication",
+    "failed or safety-relevant evidence must not be omitted",
+)
+EVIDENCE_MATRIX_HEADER = (
+    "Impact class",
+    "Focused validation",
+    "Full suite",
+    "Documentation validation",
+    "Live GitHub evidence",
+    "Body regeneration",
+    "Independent review",
+    "Primary invalidation triggers",
+)
 
 REVIEWER_UI_GOVERNANCE_SECTIONS = {
     "AGENTS.md": "Reviewer-facing design enforcement",
@@ -889,6 +1003,7 @@ PULL_REQUEST_TEMPLATE_SECTIONS = (
     "Implementation scope",
     "Acceptance-criteria evidence",
     "Validation and failure classification",
+    "Validation impact and evidence delta",
     "UI and accessibility evidence (when applicable)",
     "Reviewer-facing redesign artifact classification (when applicable)",
     "Documentation, assumptions, and remaining risks",
@@ -1070,6 +1185,212 @@ def _markdown_table_cells(line: str) -> tuple[str, ...]:
     return tuple(cell.strip().strip("`") for cell in line.strip().strip("|").split("|"))
 
 
+def _load_fixed_evidence_policy_module(root: Path) -> Any:
+    path = root / EVIDENCE_EVALUATOR_PATH
+    spec = importlib.util.spec_from_file_location("docs_evidence_policy", path)
+    if not spec or not spec.loader:
+        raise RuntimeError("cannot load fixed evidence policy evaluator")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def _matrix_rows(section: str) -> dict[str, tuple[str, ...]]:
+    lines = section.splitlines()
+    header_index = next(
+        (
+            index
+            for index, line in enumerate(lines)
+            if line.startswith("|") and _markdown_table_cells(line) == EVIDENCE_MATRIX_HEADER
+        ),
+        None,
+    )
+    if header_index is None:
+        return {}
+    rows: dict[str, tuple[str, ...]] = {}
+    for line in lines[header_index + 1 :]:
+        if not line.startswith("|"):
+            if rows:
+                break
+            continue
+        cells = _markdown_table_cells(line)
+        if cells and all(re.fullmatch(r"-+", cell) for cell in cells):
+            continue
+        if len(cells) == len(EVIDENCE_MATRIX_HEADER):
+            rows[cells[0]] = cells
+    return rows
+
+
+def _literal_tuple_assignment(source: str, name: str) -> tuple[str, ...] | None:
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        return None
+    for statement in tree.body:
+        if not isinstance(statement, ast.Assign):
+            continue
+        if not any(
+            isinstance(target, ast.Name) and target.id == name for target in statement.targets
+        ):
+            continue
+        try:
+            value = ast.literal_eval(statement.value)
+        except ValueError:
+            return None
+        if isinstance(value, tuple) and all(isinstance(item, str) for item in value):
+            return value
+    return None
+
+
+def find_evidence_policy_documentation_contract_violations(
+    root: Path = Path("."),
+) -> list[str]:
+    """Validate the fixed, read-only evidence-policy documentation contract."""
+
+    violations: list[str] = []
+    required_paths = (
+        EVIDENCE_POLICY_PATH,
+        EVIDENCE_SCHEMA_PATH,
+        EVIDENCE_EVALUATOR_PATH,
+        EVIDENCE_INDEPENDENT_VERIFIER_PATH,
+        EVIDENCE_PREPARATION_PATH,
+        EVIDENCE_DOCUMENTATION_PATH,
+        ".github/PULL_REQUEST_TEMPLATE.md",
+    )
+    for relative_path in required_paths:
+        if not (root / relative_path).is_file():
+            violations.append(f"missing evidence-policy contract file: {relative_path}")
+    if violations:
+        return sorted(violations)
+
+    try:
+        policy = json.loads((root / EVIDENCE_POLICY_PATH).read_text(encoding="utf-8"))
+        schema = json.loads((root / EVIDENCE_SCHEMA_PATH).read_text(encoding="utf-8"))
+    except json.JSONDecodeError as error:
+        return [f"invalid evidence-policy JSON: {error.msg}"]
+    if not isinstance(policy, dict) or not isinstance(schema, dict):
+        return ["invalid evidence-policy contract JSON object"]
+
+    try:
+        evaluator = _load_fixed_evidence_policy_module(root)
+    except (ImportError, RuntimeError, SyntaxError) as error:
+        return [f"cannot load fixed evidence policy evaluator: {error}"]
+
+    supported_schema_version = cast(str, getattr(evaluator, "SCHEMA_VERSION", ""))
+    supported_policy_version = cast(str, getattr(evaluator, "POLICY_VERSION", ""))
+    if not supported_schema_version or not supported_policy_version:
+        return ["fixed evidence policy evaluator does not declare supported versions"]
+    if policy.get("schema_version") != supported_schema_version:
+        violations.append("evidence policy schema version is unsupported")
+    if policy.get("policy_version") != supported_policy_version:
+        violations.append("evidence policy version is unsupported")
+
+    schema_policy = schema.get("$defs", {}).get("policy", {}).get("properties", {})
+    schema_result = schema.get("$defs", {}).get("result", {}).get("properties", {})
+    if schema_policy.get("schema_version", {}).get("const") != supported_schema_version:
+        violations.append("evidence schema version does not match evaluator support")
+    policy_version_pattern = schema_policy.get("policy_version", {}).get("pattern", "")
+    if not re.fullmatch(policy_version_pattern, supported_policy_version):
+        violations.append("evidence schema policy version does not match evaluator support")
+    if schema_result.get("schema_version", {}).get("const") != supported_schema_version:
+        violations.append("evidence result schema version does not match evaluator support")
+
+    required_checks = tuple(policy.get("required_check_names", ()))
+    if required_checks != EVIDENCE_REQUIRED_CHECKS:
+        violations.append("evidence policy required checks differ from repository contract")
+    disclosures = tuple(policy.get("governed_boundary_disclosures", ()))
+    if disclosures != EVIDENCE_GOVERNED_DISCLOSURES:
+        violations.append(
+            "evidence policy governed-boundary disclosures differ from repository contract"
+        )
+
+    evaluator_source = (root / EVIDENCE_EVALUATOR_PATH).read_text(encoding="utf-8")
+    for marker in (
+        'POLICY_PATH = ROOT / ".github" / "evidence-reuse-validation-impact-policy.json"',
+        'SCHEMA_PATH = ROOT / "schemas" / "evidence-reuse-validation-impact-v1.schema.json"',
+    ):
+        if marker not in evaluator_source:
+            violations.append("evidence evaluator fixed canonical path is incorrect")
+
+    independent_source = (root / EVIDENCE_INDEPENDENT_VERIFIER_PATH).read_text(encoding="utf-8")
+    for marker in (
+        "SUPPORTED_POLICY_VERSION = EVIDENCE_POLICY.POLICY_VERSION",
+        "SUPPORTED_SCHEMA_VERSION = EVIDENCE_POLICY.SCHEMA_VERSION",
+        f'COMPACT_POLICY_HEADING = "{EVIDENCE_COMPACT_HEADING}"',
+    ):
+        if marker not in independent_source:
+            violations.append("independent verification policy contract drift")
+            break
+    declared_envelope_fields = _literal_tuple_assignment(
+        independent_source, "COMPACT_POLICY_REQUIRED_FIELDS"
+    )
+    declared_result_fields = _literal_tuple_assignment(
+        independent_source, "COMPACT_POLICY_RESULT_FIELDS"
+    )
+    for field in EVIDENCE_ENVELOPE_FIELDS:
+        if declared_envelope_fields is None or field not in declared_envelope_fields:
+            violations.append(f"independent verification compact field drift: {field}")
+    for field in EVIDENCE_RESULT_FIELDS:
+        if declared_result_fields is None or field not in declared_result_fields:
+            violations.append(f"independent verification compact field drift: {field}")
+
+    preparation_source = (root / EVIDENCE_PREPARATION_PATH).read_text(encoding="utf-8")
+    for marker in (
+        "SUPPORTED_POLICY_VERSION = verification.SUPPORTED_POLICY_VERSION",
+        "SUPPORTED_SCHEMA_VERSION = verification.SUPPORTED_SCHEMA_VERSION",
+        "return verification.compact_policy_section(",
+    ):
+        if marker not in preparation_source:
+            violations.append("PR-body preparation policy contract drift")
+            break
+
+    template = (root / ".github/PULL_REQUEST_TEMPLATE.md").read_text(encoding="utf-8")
+    if template.count(f"## {EVIDENCE_COMPACT_HEADING}") != 1:
+        violations.append("PR template compact evidence heading drift")
+    for marker in EVIDENCE_TEMPLATE_MARKERS:
+        if marker not in template:
+            violations.append(f"PR template compact evidence field drift: {marker}")
+
+    documentation = (root / EVIDENCE_DOCUMENTATION_PATH).read_text(encoding="utf-8")
+    section = _markdown_section(documentation, EVIDENCE_POLICY_HEADING)
+    for marker in EVIDENCE_DOCUMENTATION_MARKERS:
+        if marker not in documentation:
+            violations.append(f"evidence-policy documentation missing marker: {marker}")
+    if supported_policy_version not in section or supported_schema_version not in section:
+        violations.append("evidence-policy documentation version declaration drift")
+    if re.search(
+        r"(?i)\b(?:authorizes|allows|grants)\s+(?:an?\s+)?autonomous\s+"
+        r"(?:publication|retry|merge|recovery|cleanup|issue\s+(?:write|mutation))",
+        section,
+    ):
+        violations.append("evidence-policy documentation claims autonomous lifecycle authority")
+
+    rows = _matrix_rows(_markdown_section(documentation, "Validation-impact matrix"))
+    policy_classes = policy.get("impact_classes", [])
+    if not isinstance(policy_classes, list):
+        violations.append("evidence-policy impact-class contract is malformed")
+    else:
+        for impact_class in policy_classes:
+            requirements = evaluator._strict_requirements([impact_class], policy)
+            expected = (
+                impact_class,
+                ", ".join(requirements["required_focused_validation_categories"]) or "none",
+                "yes" if requirements["full_suite_required"] else "no",
+                "yes" if requirements["docs_validation_required"] else "no",
+                "yes" if requirements["live_github_evidence_required"] else "no",
+                "yes" if requirements["pr_body_regeneration_required"] else "no",
+                "yes" if requirements["independent_review_required"] else "no",
+            )
+            row = rows.get(impact_class)
+            if row is None:
+                violations.append(f"evidence-policy matrix missing impact class: {impact_class}")
+            elif row[:7] != expected or not row[7]:
+                violations.append(f"evidence-policy matrix drift: {impact_class}")
+
+    return sorted(set(violations))
+
+
 def find_reviewer_ui_governance_contract_violations(
     root: Path = Path("."),
 ) -> list[str]:
@@ -1082,9 +1403,7 @@ def find_reviewer_ui_governance_contract_violations(
         content = path.read_text(encoding="utf-8")
         marker = f"## {heading}"
         if content.count(marker) != 1:
-            violations.append(
-                f"{relative_path}: expected exactly one section heading: {marker}"
-            )
+            violations.append(f"{relative_path}: expected exactly one section heading: {marker}")
 
     evidence_path = root / "docs/developer/ui-evidence-review.md"
     if not evidence_path.exists():
@@ -1126,9 +1445,7 @@ def find_reviewer_ui_governance_contract_violations(
             "reviewer UI evidence gate IDs must be exactly: " + ", ".join(expected_ids)
         )
 
-    for index, (expected_id, expected_family) in enumerate(
-        REVIEWER_UI_EVIDENCE_GATE_CONTRACT
-    ):
+    for index, (expected_id, expected_family) in enumerate(REVIEWER_UI_EVIDENCE_GATE_CONTRACT):
         if index >= len(rows):
             continue
         row = rows[index]
@@ -1163,13 +1480,9 @@ def find_attorney_information_architecture_contract_violations(
             continue
         marker = f"## {heading}"
         if path.read_text(encoding="utf-8").count(marker) != 1:
-            violations.append(
-                f"{relative_path}: expected exactly one section heading: {marker}"
-            )
+            violations.append(f"{relative_path}: expected exactly one section heading: {marker}")
 
-    decision_path = (
-        root / "docs/product/records-tracker-attorney-information-architecture.md"
-    )
+    decision_path = root / "docs/product/records-tracker-attorney-information-architecture.md"
     design_path = root / "docs/product/records-tracker-approved-design-decisions.md"
     if not decision_path.exists() or not design_path.exists():
         return violations
@@ -1179,17 +1492,13 @@ def find_attorney_information_architecture_contract_violations(
     for requirement_id in ATTORNEY_IA_REQUIREMENT_IDS:
         marker = f"### {requirement_id} —"
         if design_content.count(marker) != 1:
-            violations.append(
-                "approved design register must define exactly one " + requirement_id
-            )
+            violations.append("approved design register must define exactly one " + requirement_id)
 
     navigation_text = ", ".join(ATTORNEY_IA_NAVIGATION_ORDER)
     navigation_section = _markdown_section(decision_content, "Approved navigation")
     normalized_navigation_section = " ".join(navigation_section.split())
     if navigation_text not in normalized_navigation_section:
-        violations.append(
-            "attorney navigation order must be exactly: " + navigation_text
-        )
+        violations.append("attorney navigation order must be exactly: " + navigation_text)
 
     route_section = _markdown_section(decision_content, "Route dispositions")
     lines = route_section.splitlines()
@@ -1234,9 +1543,7 @@ def find_attorney_information_architecture_contract_violations(
         "repository-readable package as the controlled variance",
     ):
         if required_text not in normalized_figma_section:
-            violations.append(
-                "attorney IA Figma status must preserve: " + required_text
-            )
+            violations.append("attorney IA Figma status must preserve: " + required_text)
 
     return violations
 
@@ -1254,8 +1561,7 @@ def find_anti_fossilization_contract_violations(
         marker = f"## {heading}"
         if content.count(marker) != 1:
             violations.append(
-                f"{ANTI_FOSSILIZATION_DOCUMENT}: expected exactly one section "
-                f"heading: {marker}"
+                f"{ANTI_FOSSILIZATION_DOCUMENT}: expected exactly one section heading: {marker}"
             )
 
     classification_section = _markdown_section(content, "Artifact classification model")
@@ -1284,17 +1590,13 @@ def find_anti_fossilization_contract_violations(
             rows.append(cells)
 
         actual_model = tuple(
-            (row[0], row[1])
-            for row in rows
-            if len(row) == len(ANTI_FOSSILIZATION_TABLE_HEADER)
+            (row[0], row[1]) for row in rows if len(row) == len(ANTI_FOSSILIZATION_TABLE_HEADER)
         )
         if actual_model != ANTI_FOSSILIZATION_CLASS_MODEL:
             expected = ", ".join(
                 f"{number} {name}" for number, name in ANTI_FOSSILIZATION_CLASS_MODEL
             )
-            violations.append(
-                "anti-fossilization class model must be exactly: " + expected
-            )
+            violations.append("anti-fossilization class model must be exactly: " + expected)
         for row in rows:
             if len(row) != len(ANTI_FOSSILIZATION_TABLE_HEADER):
                 violations.append(
@@ -1302,9 +1604,7 @@ def find_anti_fossilization_contract_violations(
                 )
                 break
             if any(not cell for cell in row):
-                violations.append(
-                    "anti-fossilization class rows must not contain empty cells"
-                )
+                violations.append("anti-fossilization class rows must not contain empty cells")
                 break
 
     findings = _markdown_section(content, "Issue 501, 502, and 503 findings")
@@ -1331,9 +1631,7 @@ def find_anti_fossilization_contract_violations(
             violations.append(f"missing anti-fossilization governance file: {relative_path}")
             continue
         if marker not in path.read_text(encoding="utf-8"):
-            violations.append(
-                f"{relative_path}: missing anti-fossilization marker: {marker}"
-            )
+            violations.append(f"{relative_path}: missing anti-fossilization marker: {marker}")
 
     return violations
 
@@ -1360,21 +1658,23 @@ def main() -> None:
 
     missing_content = find_missing_required_content()
     if missing_content:
-        raise SystemExit(
-            "Missing required documentation content: " + "; ".join(missing_content)
-        )
+        raise SystemExit("Missing required documentation content: " + "; ".join(missing_content))
 
     codex_workflow_violations = find_codex_workflow_contract_violations()
     if codex_workflow_violations:
-        raise SystemExit(
-            "Invalid Codex workflow contract: " + "; ".join(codex_workflow_violations)
-        )
+        raise SystemExit("Invalid Codex workflow contract: " + "; ".join(codex_workflow_violations))
 
     pull_request_template_violations = find_pull_request_template_contract_violations()
     if pull_request_template_violations:
         raise SystemExit(
-            "Invalid pull-request template contract: "
-            + "; ".join(pull_request_template_violations)
+            "Invalid pull-request template contract: " + "; ".join(pull_request_template_violations)
+        )
+
+    evidence_policy_violations = find_evidence_policy_documentation_contract_violations()
+    if evidence_policy_violations:
+        raise SystemExit(
+            "Invalid evidence-policy documentation contract: "
+            + "; ".join(evidence_policy_violations)
         )
 
     forbidden_content = find_forbidden_content()
@@ -1386,21 +1686,17 @@ def main() -> None:
     stale_roadmap_priorities = find_stale_roadmap_priorities()
     if stale_roadmap_priorities:
         raise SystemExit(
-            "Stale completed roadmap priorities found: "
-            + "; ".join(stale_roadmap_priorities)
+            "Stale completed roadmap priorities found: " + "; ".join(stale_roadmap_priorities)
         )
 
     user_specific_repository_paths = find_user_specific_repository_paths()
     if user_specific_repository_paths:
         raise SystemExit(
             "User-specific absolute repository paths found; replace the local "
-            "repository prefix with <Repo Path>\\: "
-            + "; ".join(user_specific_repository_paths)
+            "repository prefix with <Repo Path>\\: " + "; ".join(user_specific_repository_paths)
         )
 
-    reviewer_ui_governance_violations = (
-        find_reviewer_ui_governance_contract_violations()
-    )
+    reviewer_ui_governance_violations = find_reviewer_ui_governance_contract_violations()
     if reviewer_ui_governance_violations:
         raise SystemExit(
             "Invalid reviewer UI governance contract: "
@@ -1417,8 +1713,7 @@ def main() -> None:
     anti_fossilization_violations = find_anti_fossilization_contract_violations()
     if anti_fossilization_violations:
         raise SystemExit(
-            "Invalid anti-fossilization contract: "
-            + "; ".join(anti_fossilization_violations)
+            "Invalid anti-fossilization contract: " + "; ".join(anti_fossilization_violations)
         )
 
     delivery_automation_registry_violations = find_delivery_automation_registry_violations()

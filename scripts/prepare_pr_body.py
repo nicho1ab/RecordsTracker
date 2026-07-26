@@ -21,6 +21,8 @@ import check_independent_verification as verification
 
 ROOT = Path(__file__).resolve().parents[1]
 TEMPLATE_PATH = ROOT / ".github" / "PULL_REQUEST_TEMPLATE.md"
+SUPPORTED_POLICY_VERSION = verification.SUPPORTED_POLICY_VERSION
+SUPPORTED_SCHEMA_VERSION = verification.SUPPORTED_SCHEMA_VERSION
 Runner = Callable[..., subprocess.CompletedProcess[str]]
 
 

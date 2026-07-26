@@ -58,6 +58,13 @@
   no historical evidence is silently reinterpreted as fresh. This adds no
   workflow, check, publication, merge, issue, recovery, or #533 orchestration
   behavior.
+- Issue #617 slice 3 makes the evidence-policy contract repository-wide through
+  deterministic documentation validation. The fixed policy, schema, evaluator,
+  template, preparation, independent verification, impact matrix, examples,
+  lifecycle language, publication guidance, and #617/#533 boundary must remain
+  synchronized. All three local implementation slices are complete, but the
+  work remains active, in progress, and partial until review, publication, and
+  merge are separately accepted; this grants no #533 execution authority.
 - Current implementation state: the Python, SQLite, and Datasette proof of
   concept has proven governed ingestion, deterministic extraction, raw source
   preservation, source traceability, local validation and review support, and

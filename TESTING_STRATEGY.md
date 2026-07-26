@@ -643,6 +643,11 @@ Validate documentation structure and run manual or automated checks for user-fac
   retained, invalidated, pending, failed, and superseded evidence treatment.
   The evaluator and PR evidence validator never execute selected validation,
   checks, reruns, publication, merge, or recovery.
+- Documentation-check slice 3 independently validates the fixed policy,
+  schema, evaluator, PR-template, preparation, and verification contract;
+  executable impact-matrix parity; evidence-reuse examples; lifecycle and
+  publication boundaries; and #617/#533 ownership. It stays deterministic,
+  offline, and read-only, and never executes a policy-selected test plan.
 - CI retrieves the current live body when it validates a PR. Its pull-request
   `edited` event covers title and body edits because event selection cannot
   distinguish them; the job remains read-only and validates body evidence only.

@@ -175,6 +175,8 @@ def _load_evidence_policy_module() -> Any:
 
 
 EVIDENCE_POLICY = _load_evidence_policy_module()
+SUPPORTED_POLICY_VERSION = EVIDENCE_POLICY.POLICY_VERSION
+SUPPORTED_SCHEMA_VERSION = EVIDENCE_POLICY.SCHEMA_VERSION
 
 
 class PrEvidenceValidation(NamedTuple):

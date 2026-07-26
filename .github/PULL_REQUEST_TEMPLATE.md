@@ -49,6 +49,16 @@ independently reproducible.
 - Decision:
 - Delta:
 - Policy version:
+- Validation newly performed:
+- Retained evidence reused:
+- Live evidence recollected:
+- Superseded evidence:
+- Invalidated evidence:
+- Required-check state:
+- Blockers:
+- Governed-boundary disclosures:
+- Authorized mutations:
+- Unauthorized mutations:
 - Compact evidence envelope:
 
 ## UI and accessibility evidence (when applicable)

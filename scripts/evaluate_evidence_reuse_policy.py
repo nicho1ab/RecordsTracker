@@ -18,6 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 POLICY_PATH = ROOT / ".github" / "evidence-reuse-validation-impact-policy.json"
 SCHEMA_PATH = ROOT / "schemas" / "evidence-reuse-validation-impact-v1.schema.json"
 SCHEMA_VERSION = "recordstracker.evidence-reuse-validation-impact.v1"
+POLICY_VERSION = "1.0.0"
 _PATH = re.compile(r"^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)\.\.(?:/|$))[A-Za-z0-9._/-]+$")
 
 
@@ -195,6 +196,8 @@ def evaluate(policy_input: dict[str, Any]) -> dict[str, Any]:
 
     policy = _load_json(POLICY_PATH)
     schema = _load_json(SCHEMA_PATH)
+    if policy.get("policy_version") != POLICY_VERSION:
+        raise EvidencePolicyError("unsupported policy version")
     for value, label in ((policy, "policy"), (policy_input, "input")):
         errors = _schema_errors(value, schema)
         if errors:
