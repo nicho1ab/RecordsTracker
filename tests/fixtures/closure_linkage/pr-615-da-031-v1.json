@@ -1,0 +1,22 @@
+{
+  "repository": "nicho1ab/RecordsTracker",
+  "pr_number": 615,
+  "observed_closing_references": {
+    "pr_body_issue_numbers": [],
+    "graphql_issue_numbers": []
+  },
+  "observed_development_links": [608],
+  "observed_timeline_evidence": [
+    {
+      "event": "connected",
+      "source": {"issue": {"number": 608}},
+      "closes_issue": true
+    }
+  ],
+  "pre_merge_issue_state": "open",
+  "post_merge_issue_state": "closed",
+  "post_merge_state_reason": "completed",
+  "closure_source": "development_linkage",
+  "later_reopened": true,
+  "evidence_source_availability": "incomplete"
+}

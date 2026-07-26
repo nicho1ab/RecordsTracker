@@ -25,6 +25,22 @@
   validator without adding a required check, changing workflow permissions, or
   granting autonomous approval, merge, issue closure, deployment, or
   production-data authority.
+- DA-031 adds `scripts/closure_linkage_inspection.py` and a versioned
+  closure-linkage evidence schema. It records exact declared issue outcomes,
+  sanitized evidence, deterministic source availability, and fully paginated
+  read-only closing observations for later authorization only. Incomplete,
+  partial, malformed, or unavailable observable evidence fails closed. A
+  supported-API gap in the development-link closure effect is an explicit
+  residual limitation, requiring exact immediate post-merge issue-state
+  verification and granting no merge authority; no PR-body-only result proves
+  closure safety. Informational timeline cross-references remain relationship
+  evidence only; explicit closing semantics are required before linkage blocks
+  a must-remain-open issue. Documented GitHub committed events are non-linkage
+  operational metadata only with their required fields; unknown or malformed
+  timeline events fail closed. Contract input is
+  repository-bounded and post-merge collection uses fixed read-only queries for
+  exact declared issues only. It does not merge, close, reopen, unlink,
+  recover, or grant merge authority.
 - Current implementation state: the Python, SQLite, and Datasette proof of
   concept has proven governed ingestion, deterministic extraction, raw source
   preservation, source traceability, local validation and review support, and

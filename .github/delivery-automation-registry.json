@@ -89,19 +89,20 @@
       ],
       "owner_issue": "#617",
       "lifecycle_status": "active",
-      "prevention_state": "not_started",
+      "prevention_state": "in_progress",
       "governance_change_classifications": ["stronger_enforcement"],
       "enforcement_levels": ["human_decision"],
-      "evidence_completeness": "sufficient_to_seed",
-      "prevention_summary": "Future prevention must inspect all issue-closing mechanisms, bind closure authority to exact issue numbers, verify post-merge issue states, and record the closure source.",
+      "evidence_completeness": "partial",
+      "prevention_summary": "Read-only closure-linkage inspection binds exact issue outcomes, accepts only repository-bounded contract input, distinguishes informational timeline cross-references from explicit closing semantics, fails closed on partial, malformed, unavailable, or other incomplete observable evidence, records the unexposed development-link closure effect as an explicit residual limitation, and requires exact immediate post-merge issue-state verification without merge, closure, reopening, or recovery authority.",
       "merged_prevention_prs": [],
-      "regression_coverage": [],
+      "regression_coverage": ["tests/unit/test_closure_linkage_inspection.py"],
       "documentation_impact": [
-        "docs/developer/codex-workflow.md#delivery-automation-failure-and-prevention-registry"
+        "docs/developer/codex-workflow.md#da-031-read-only-closure-linkage-inspection",
+        "TESTING_STRATEGY.md"
       ],
       "remaining_work": [
-        "Implement read-only closure-linkage inspection and its regression coverage in a later #617 slice.",
-        "Do not infer closure safety solely from PR-body wording or implement a merge controller in this slice."
+        "Merge execution, issue recovery, and merge-controller behavior remain separately authorized work.",
+        "Do not infer closure safety solely from PR-body wording; incomplete observable evidence, partial pagination, unknown timeline events, and unknown closure sources fail closed, while informational cross-references remain relationship evidence and the unexposed development-link closure effect requires explicit post-merge verification."
       ],
       "related_issues": ["#608", "#617"],
       "supersession": {"supersedes": [], "superseded_by": []},

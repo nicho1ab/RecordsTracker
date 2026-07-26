@@ -1,0 +1,296 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://recordstracker.example/schemas/closure-linkage-evidence-v1.schema.json",
+  "title": "Closure-linkage evidence v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "repository",
+    "pull_request",
+    "inspected_at",
+    "issue_outcome_contract",
+    "observed_closing_references",
+    "observed_development_links",
+    "observed_timeline_evidence",
+    "observed_issue_states",
+    "evidence_source_availability",
+    "residual_platform_limitations",
+    "post_merge_verification_obligations",
+    "closure_risk_findings",
+    "post_merge_findings",
+    "primary_readiness_classification",
+    "prohibited_actions",
+    "source_attribution",
+    "globally_atomic"
+  ],
+  "properties": {
+    "schema_version": {"const": "recordstracker.closure-linkage-evidence.v1"},
+    "repository": {"$ref": "#/$defs/repository"},
+    "pull_request": {"$ref": "#/$defs/pull_request"},
+    "inspected_at": {"type": "string", "format": "date-time"},
+    "issue_outcome_contract": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/issue_contract"}
+    },
+    "observed_closing_references": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pr_body_issue_numbers", "graphql_issue_numbers"],
+      "properties": {
+        "pr_body_issue_numbers": {"$ref": "#/$defs/issue_numbers"},
+        "graphql_issue_numbers": {"$ref": "#/$defs/issue_numbers"}
+      }
+    },
+    "observed_development_links": {"$ref": "#/$defs/issue_numbers"},
+    "observed_timeline_evidence": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/timeline_item"}
+    },
+    "observed_issue_states": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/issue_state"}
+    },
+    "evidence_source_availability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pr_body",
+        "graphql_closing_references",
+        "timeline",
+        "development_link_closure_effect",
+        "post_merge_issue_states"
+      ],
+      "properties": {
+        "pr_body": {"$ref": "#/$defs/availability"},
+        "graphql_closing_references": {"$ref": "#/$defs/availability"},
+        "timeline": {"$ref": "#/$defs/availability"},
+        "development_link_closure_effect": {"$ref": "#/$defs/availability"},
+        "post_merge_issue_states": {"$ref": "#/$defs/availability"}
+      }
+    },
+    "residual_platform_limitations": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/platform_limitation"}
+    },
+    "post_merge_verification_obligations": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/post_merge_obligation"}
+    },
+    "closure_risk_findings": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/finding"}
+    },
+    "post_merge_findings": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/finding"}
+    },
+    "primary_readiness_classification": {
+      "enum": [
+        "READY_FOR_SEPARATE_MERGE_AUTHORIZATION",
+        "NOT_READY",
+        "EVIDENCE_INCOMPLETE"
+      ]
+    },
+    "prohibited_actions": {
+      "type": "array",
+      "minItems": 6,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "merge",
+          "issue_close",
+          "issue_reopen",
+          "development_link_mutation",
+          "pr_body_mutation",
+          "recovery_mutation"
+        ]
+      }
+    },
+    "source_attribution": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"enum": ["github_rest", "github_graphql"]}
+    },
+    "globally_atomic": {"const": false}
+  },
+  "$defs": {
+    "repository": {"type": "string", "pattern": "^[^/\\s]+/[^/\\s]+$"},
+    "issue_number": {"type": "integer", "minimum": 1},
+    "issue_numbers": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/issue_number"}
+    },
+    "sha": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "nullable_timestamp": {"type": ["string", "null"], "format": "date-time"},
+    "pull_request": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["number", "base", "base_sha", "head", "head_sha"],
+      "properties": {
+        "number": {"$ref": "#/$defs/issue_number"},
+        "base": {"type": "string", "minLength": 1},
+        "base_sha": {"$ref": "#/$defs/sha"},
+        "head": {"type": "string", "minLength": 1},
+        "head_sha": {"$ref": "#/$defs/sha"}
+      }
+    },
+    "issue_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repository",
+        "issue_number",
+        "role",
+        "expected_pre_merge_state",
+        "expected_post_merge_state",
+        "closure_authorized",
+        "reopen_authorized",
+        "authority_reference",
+        "rationale",
+        "must_remain_open"
+      ],
+      "properties": {
+        "repository": {"$ref": "#/$defs/repository"},
+        "issue_number": {"$ref": "#/$defs/issue_number"},
+        "role": {
+          "enum": [
+            "completed_target",
+            "parent",
+            "continuation",
+            "related",
+            "historical_evidence",
+            "unknown"
+          ]
+        },
+        "expected_pre_merge_state": {"enum": ["open", "closed"]},
+        "expected_post_merge_state": {"enum": ["open", "closed"]},
+        "expected_post_merge_state_reason": {"type": ["string", "null"], "maxLength": 120},
+        "expected_reopen": {"type": "boolean"},
+        "closure_authorized": {"type": "boolean"},
+        "reopen_authorized": {"type": "boolean"},
+        "authority_reference": {"type": "string", "minLength": 1, "maxLength": 200},
+        "rationale": {"type": "string", "minLength": 1, "maxLength": 400},
+        "must_remain_open": {"type": "boolean"}
+      }
+    },
+    "issue_state": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["issue_number", "state", "state_reason", "closed_at", "reopened_at"],
+      "properties": {
+        "issue_number": {"$ref": "#/$defs/issue_number"},
+        "state": {"enum": ["open", "closed", "unknown"]},
+        "state_reason": {"type": ["string", "null"], "maxLength": 120},
+        "closed_at": {"$ref": "#/$defs/nullable_timestamp"},
+        "reopened_at": {"$ref": "#/$defs/nullable_timestamp"}
+      }
+    },
+    "timeline_item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "event",
+        "classification",
+        "issue_number",
+        "target_pull_request_number",
+        "actor",
+        "occurred_at",
+        "commit_sha",
+        "explicit_closure_semantic"
+      ],
+      "properties": {
+        "event": {"type": "string", "minLength": 1, "maxLength": 80},
+        "classification": {
+          "enum": [
+            "informational_cross_reference",
+            "explicit_closing_reference",
+            "observed_development_link",
+            "observed_closing_development_link",
+            "operational_commit_event",
+            "reopen_event",
+            "close_event",
+            "unknown_timeline_event"
+          ]
+        },
+        "issue_number": {"type": ["integer", "null"], "minimum": 1},
+        "target_pull_request_number": {"type": "integer", "minimum": 1},
+        "actor": {"type": ["string", "null"], "minLength": 1, "maxLength": 120},
+        "occurred_at": {"type": ["string", "null"], "maxLength": 40},
+        "commit_sha": {"type": ["string", "null"], "pattern": "^[0-9a-f]{40}$"},
+        "explicit_closure_semantic": {"type": "boolean"}
+      }
+    },
+    "availability": {
+      "enum": [
+        "complete",
+        "collection_failed",
+        "partial",
+        "malformed",
+        "platform_not_exposed",
+        "not_applicable",
+        "not_observed"
+      ]
+    },
+    "platform_limitation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mechanism", "availability", "rationale"],
+      "properties": {
+        "mechanism": {"const": "development_link_closure_effect"},
+        "availability": {"const": "platform_not_exposed"},
+        "rationale": {"type": "string", "minLength": 1, "maxLength": 240}
+      }
+    },
+    "post_merge_obligation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repository",
+        "pull_request_number",
+        "issue_number",
+        "expected_post_merge_state",
+        "immediate_observation_required"
+      ],
+      "properties": {
+        "repository": {"$ref": "#/$defs/repository"},
+        "pull_request_number": {"$ref": "#/$defs/issue_number"},
+        "issue_number": {"$ref": "#/$defs/issue_number"},
+        "expected_post_merge_state": {"enum": ["open", "closed"]},
+        "immediate_observation_required": {"const": true}
+      }
+    },
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "issue_number", "source", "detail"],
+      "properties": {
+        "code": {
+          "enum": [
+            "NO_CLOSING_LINKAGE_DETECTED",
+            "AUTHORIZED_CLOSURE_LINKAGE",
+            "UNAUTHORIZED_CLOSURE_LINKAGE",
+            "CLOSURE_EVIDENCE_INCOMPLETE",
+            "ISSUE_STATE_PRECONDITION_MISMATCH",
+            "ISSUE_ROLE_UNDECLARED",
+            "CLOSURE_AUTHORITY_MISSING",
+            "POST_MERGE_STATE_MATCHED",
+            "POST_MERGE_UNAUTHORIZED_CLOSURE",
+            "POST_MERGE_EXPECTED_CLOSURE_MISSING",
+            "POST_MERGE_UNAUTHORIZED_REOPEN",
+            "POST_MERGE_EXPECTED_REOPEN_MISSING",
+            "POST_MERGE_STATE_REASON_MISMATCH",
+            "POST_MERGE_TIMESTAMP_AMBIGUOUS",
+            "CLOSURE_SOURCE_UNKNOWN"
+          ]
+        },
+        "issue_number": {"type": ["integer", "null"], "minimum": 1},
+        "source": {"type": "string", "minLength": 1, "maxLength": 80},
+        "detail": {"type": "string", "minLength": 1, "maxLength": 240}
+      }
+    }
+  }
+}

@@ -309,6 +309,7 @@ def test_facility_threshold_gap_is_separate_from_complaint_candidate() -> None:
 def test_repair_live_retrieval_provenance_relinks_reused_fixture_batch() -> None:
     reused_fixture_batch_id = "seeded-ccld-fixture-2026-06-13"
     target_batch_id = retrieval_import_batch_id(DEFAULT_JOB_ID)
+    generated_at = datetime(2026, 7, 26, 12, 0, tzinfo=UTC)
     with _connection(_engine()) as connection:
         _insert_real_facilities(connection)
         _insert_import_batch(
@@ -332,15 +333,21 @@ def test_repair_live_retrieval_provenance_relinks_reused_fixture_batch() -> None
             import_batch_id=reused_fixture_batch_id,
         )
 
-        before_report = build_representative_coverage_report(connection)
+        before_report = build_representative_coverage_report(
+            connection, generated_at=generated_at
+        )
         dry_run = repair_live_retrieval_provenance(connection)
-        after_dry_run_report = build_representative_coverage_report(connection)
+        after_dry_run_report = build_representative_coverage_report(
+            connection, generated_at=generated_at
+        )
         applied = repair_live_retrieval_provenance(connection, dry_run=False)
         repaired_rows = connection.execute(
             select(hosted_source_derived_records.c.import_batch_id)
             .where(hosted_source_derived_records.c.import_batch_id == target_batch_id)
         ).all()
-        after_report = build_representative_coverage_report(connection)
+        after_report = build_representative_coverage_report(
+            connection, generated_at=generated_at
+        )
         second_apply = repair_live_retrieval_provenance(connection, dry_run=False)
 
     assert before_report["complaints"]["provenance_counts"]["fixture_demo_test"] == 1

@@ -578,6 +578,71 @@ post-merge issue state, and record closure source. This registry foundation does
 not implement a merge controller, issue closure, recovery mutation, grouped
 RL-PREPARE or RL-MERGE execution, deployment, or production-data behavior.
 
+### DA-031 read-only closure-linkage inspection
+
+`scripts/closure_linkage_inspection.py` is a dedicated read-only inspector, not
+a delivery-state snapshot or merge controller. It requires exact issue-outcome
+declarations: repository, issue number, declared role, expected pre- and
+post-merge state, explicit closure and reopen authorization, authority
+reference, rationale, and must-remain-open status. Roles are declared evidence,
+not autonomous semantic conclusions.
+
+The versioned evidence schema rejects unknown fields and requires repository and
+pull-request identity, normalized references, sanitized timeline facts,
+observed issue state/reason/timestamps, source availability, deterministic
+findings, prohibited actions, attribution, and explicit non-atomic status. It
+does not retain a full PR body, credentials, private host details, environment
+contents, or a recovery instruction. Contract role values are
+`completed_target`, `parent`, `continuation`, `related`,
+`historical_evidence`, and `unknown`; their outcome declarations remain exact
+evidence rather than autonomous semantic conclusions.
+
+The inspector observes normalized PR-body references, fully paginated GraphQL
+closing issues, fully paginated timeline linkage, and issue state/state-reason
+evidence where the APIs expose it. A malformed response, exhausted GraphQL
+page bound, duplicate closing-reference node, partial page result, unavailable
+observable source, or other collection failure is evidence incomplete and fails
+closed. The GitHub development-link closure effect is instead recorded as an
+explicit `platform_not_exposed` residual: supported read-only APIs expose the
+links, not their closure effect. This does not claim that an unexposed mechanism
+is absent. No-link evidence is ready only when every required observable source
+is complete and each must-remain-open issue has an exact, immediate post-merge
+state-verification obligation. Readiness grants no merge authority. Pre-merge
+findings are deterministic by code, issue number, and
+source; post-merge inspection separately compares declared state, state reason,
+timestamps, closure source, and authorized reopen expectations without taking
+recovery action.
+
+Timeline cross-references are relationship evidence, not closure evidence. An
+informational `cross-referenced` event remains visible with its exact related
+issue, but does not grant closure or reopen authority and does not block a
+must-remain-open outcome. Blocking linkage requires explicit closing semantics
+from a recognized PR-body keyword, GraphQL closing reference, API-exposed
+closing development link, or attributable post-merge close event. Unknown or
+malformed timeline events fail closed; the hidden development-link closure
+effect remains the separate `platform_not_exposed` residual.
+
+GitHub `committed` timeline events are separately retained as non-linkage
+operational metadata only when the documented event shape supplies a valid
+commit SHA and author timestamp without a linkage semantic. They grant neither
+closure nor reopen authority, identify no related issue, and do not affect
+readiness. A malformed or linkage-shaped `committed` event remains fail-closed.
+
+Its production CLI accepts only an existing repository-relative contract path:
+normalization, containment, and symlink resolution must all remain beneath the
+verified repository root. It has no caller-supplied schema, evidence, output,
+endpoint, HTTP method, GraphQL text, or field-selection path. Canonical schema
+validation stays repository-fixed. Optional post-merge collection first
+revalidates the fixed repository and pull request, then reads only issue
+numbers declared by the exact outcome contract through internally constructed
+read-only endpoints; partial collection is evidence incomplete.
+
+It reports ready for separate merge authorization, not ready, or evidence
+incomplete; it never merges, closes, reopens, unlinks, repairs, or rolls back
+an issue. This is an independent read-only inspection surface, not a
+replacement for existing delivery-state snapshots or a merge controller. #533
+retains generic orchestration ownership.
+
 CI validates the current live PR body whenever it runs. The `pull_request`
 workflow includes `opened`, `reopened`, `synchronize`, and `edited`, so a title
 or body edit starts the same read-only validation workflow. GitHub event
