@@ -619,6 +619,14 @@ Validate documentation structure and run manual or automated checks for user-fac
   exception review rules, supersession and retirement traceability, and
   repository-relative privacy boundaries. Documentation validation invokes the
   same production validator for the canonical registry.
+- DA-031 closure-linkage coverage uses fixture-backed read-only transport
+  evidence for exact issue contracts, repository-bounded contract paths,
+  schema rejection, GraphQL cursor pagination and duplicate detection,
+  partial-source failure, normalized closing references, development-link
+  incompleteness, deterministic findings, fixed post-merge state collection,
+  pre/post-merge state-reason-timestamp checks, and the PR #615/#608
+  regression. It has no live API, merge, issue-write, recovery, arbitrary path,
+  or PR-body mutation path.
 - CI retrieves the current live body when it validates a PR. Its pull-request
   `edited` event covers title and body edits because event selection cannot
   distinguish them; the job remains read-only and validates body evidence only.
