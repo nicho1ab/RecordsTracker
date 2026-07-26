@@ -105,7 +105,9 @@ class FixtureTransport:
         if self.timeline_error:
             raise INSPECTOR.ClosureLinkageError(self.timeline_error_message)
         return [
-            {"event": "connected", "source": {"issue": {"number": value}}}
+            value
+            if isinstance(value, dict)
+            else {"event": "connected", "source": {"issue": {"number": value}}}
             for value in self.timeline
         ]
 
@@ -184,14 +186,62 @@ def test_detectable_closing_references_fail_closed(body, closing, code):
     assert code in codes(inspect(body=body, closing=closing)["closure_risk_findings"])
 
 
-def test_observable_development_linkage_conflicting_with_open_contract_is_not_ready():
-    evidence = inspect(timeline=(608,))
-    assert evidence["primary_readiness_classification"] == "NOT_READY"
-    assert "UNAUTHORIZED_CLOSURE_LINKAGE" in codes(evidence["closure_risk_findings"])
+def test_informational_cross_reference_is_recorded_without_blocking_readiness():
+    evidence = inspect(
+        timeline=(
+            {
+                "event": "cross-referenced",
+                "source": {"issue": {"number": 608}},
+                "actor": {"login": "nicho1ab"},
+                "created_at": "2026-07-26T00:00:00Z",
+            },
+        )
+    )
+    assert evidence["primary_readiness_classification"] == "READY_FOR_SEPARATE_MERGE_AUTHORIZATION"
+    assert evidence["observed_development_links"] == []
+    assert evidence["observed_timeline_evidence"] == [
+        {
+            "event": "cross-referenced",
+            "classification": "informational_cross_reference",
+            "issue_number": 608,
+            "target_pull_request_number": 615,
+            "actor": "nicho1ab",
+            "occurred_at": "2026-07-26T00:00:00Z",
+            "explicit_closure_semantic": False,
+        }
+    ]
+    assert "UNAUTHORIZED_CLOSURE_LINKAGE" not in codes(evidence["closure_risk_findings"])
     assert (
         evidence["evidence_source_availability"]["development_link_closure_effect"]
         == "platform_not_exposed"
     )
+
+
+def test_explicit_closing_development_linkage_conflicting_with_open_contract_is_not_ready():
+    evidence = inspect(
+        timeline=(
+            {
+                "event": "connected",
+                "source": {"issue": {"number": 608}},
+                "closes_issue": True,
+            },
+        )
+    )
+    assert evidence["primary_readiness_classification"] == "NOT_READY"
+    assert "UNAUTHORIZED_CLOSURE_LINKAGE" in codes(evidence["closure_risk_findings"])
+
+
+@pytest.mark.parametrize(
+    "timeline",
+    (
+        ({"event": "unrecognized", "source": {"issue": {"number": 608}}},),
+        ({"source": {"issue": {"number": 608}}},),
+    ),
+)
+def test_unknown_or_malformed_timeline_event_remains_evidence_incomplete(timeline):
+    evidence = inspect(timeline=timeline)
+    assert evidence["primary_readiness_classification"] == "EVIDENCE_INCOMPLETE"
+    assert evidence["observed_timeline_evidence"][0]["classification"] == "unknown_timeline_event"
 
 
 def test_unavailable_and_partial_transport_sources_are_incomplete_not_ready():
@@ -283,6 +333,20 @@ def test_schema_rejects_malformed_contract_evidence_and_unknown_properties():
         INSPECTOR.validate_evidence(malformed)
     malformed = json.loads(json.dumps(evidence))
     malformed["raw_pr_body"] = "forbidden"
+    with pytest.raises(INSPECTOR.ClosureLinkageError):
+        INSPECTOR.validate_evidence(malformed)
+    malformed = json.loads(json.dumps(evidence))
+    malformed["observed_timeline_evidence"] = [
+        {
+            "event": "cross-referenced",
+            "classification": "unexpected",
+            "issue_number": 608,
+            "target_pull_request_number": 615,
+            "actor": None,
+            "occurred_at": None,
+            "explicit_closure_semantic": False,
+        }
+    ]
     with pytest.raises(INSPECTOR.ClosureLinkageError):
         INSPECTOR.validate_evidence(malformed)
 
@@ -384,7 +448,7 @@ def test_pr_615_fixture_regression_contains_sanitized_historical_evidence_only()
         "pr_body_issue_numbers": [],
         "graphql_issue_numbers": [],
     }
-    evidence = inspect(timeline=fixture["observed_development_links"])
+    evidence = inspect(timeline=fixture["observed_timeline_evidence"])
     assert evidence["primary_readiness_classification"] == "NOT_READY"
     assert fixture["later_reopened"] is True
 

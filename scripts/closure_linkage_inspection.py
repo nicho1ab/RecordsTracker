@@ -60,6 +60,15 @@ PROHIBITED_ACTIONS = [
     "pr_body_mutation",
     "recovery_mutation",
 ]
+TIMELINE_CLASSIFICATIONS = {
+    "informational_cross_reference",
+    "explicit_closing_reference",
+    "observed_development_link",
+    "observed_closing_development_link",
+    "reopen_event",
+    "close_event",
+    "unknown_timeline_event",
+}
 MAX_GRAPHQL_PAGES = 20
 Runner = Callable[..., subprocess.CompletedProcess[str]]
 CLOSING_REFERENCE = re.compile(
@@ -297,6 +306,53 @@ def _observed_state(number: int, issue: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _timeline_observation(item: dict[str, Any], pr_number: int) -> dict[str, Any]:
+    """Classify only explicit timeline semantics; unknown data remains fail-closed."""
+    event = item.get("event")
+    source = (item.get("source") or {}).get("issue") or {}
+    issue_number = _issue_number(source.get("number"))
+    actor = (item.get("actor") or {}).get("login")
+    occurred_at = item.get("created_at")
+    classification = "unknown_timeline_event"
+    explicit_closure_semantic = False
+    if not isinstance(event, str):
+        event = "unknown"
+    elif event == "cross-referenced" and issue_number is not None:
+        classification = "informational_cross_reference"
+    elif event == "connected" and issue_number is not None:
+        if item.get("closes_issue") is True:
+            classification = "observed_closing_development_link"
+            explicit_closure_semantic = True
+        else:
+            classification = "observed_development_link"
+    elif event == "closed":
+        classification = "close_event"
+        explicit_closure_semantic = True
+    elif event == "reopened":
+        classification = "reopen_event"
+    return {
+        "event": event,
+        "classification": classification,
+        "issue_number": issue_number,
+        "target_pull_request_number": pr_number,
+        "actor": actor if isinstance(actor, str) else None,
+        "occurred_at": occurred_at if isinstance(occurred_at, str) else None,
+        "explicit_closure_semantic": explicit_closure_semantic,
+    }
+
+
+def _sorted_timeline_observations(observations: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
+    return sorted(
+        observations,
+        key=lambda item: (
+            str(item["classification"]),
+            item["issue_number"] or 0,
+            str(item["event"]),
+            str(item["occurred_at"] or ""),
+        ),
+    )
+
+
 def _repository_contract_path(path: Path) -> Path:
     """Resolve an existing repository-relative contract without escape capability."""
     raw_path = str(path)
@@ -373,16 +429,37 @@ def inspect_pre_merge(
                 "timeline collection did not complete",
             )
         )
-    development_links = _numbers(
-        ((item.get("source") or {}).get("issue") or {}).get("number")
-        for item in timeline
-        if item.get("event") in {"connected", "cross-referenced"}
+    timeline_observations = _sorted_timeline_observations(
+        _timeline_observation(item, pr_number) for item in timeline
     )
+    unknown_timeline = [
+        item for item in timeline_observations if item["classification"] == "unknown_timeline_event"
+    ]
+    for item in unknown_timeline:
+        findings.append(
+            _finding(
+                "CLOSURE_EVIDENCE_INCOMPLETE",
+                item["issue_number"],
+                "timeline",
+                "timeline event lacks explicit supported classification",
+            )
+        )
+    development_links = _numbers(
+        item["issue_number"]
+        for item in timeline_observations
+        if item["classification"] == "observed_development_link"
+    )
+    closing_development_links = _numbers(
+        item["issue_number"]
+        for item in timeline_observations
+        if item["classification"] == "observed_closing_development_link"
+    )
+    timeline_issue_numbers = _numbers(item["issue_number"] for item in timeline_observations)
     # GitHub exposes links but not a supported read-only closure-effect field.
     # This fixed residual limitation cannot be supplied by a caller or transport.
     development_effect_availability = "platform_not_exposed"
 
-    discoverable = sorted(set(body_links) | set(graphql_links) | set(development_links))
+    discoverable = sorted(set(body_links) | set(graphql_links) | set(timeline_issue_numbers))
     declared = {int(entry["issue_number"]): entry for entry in contract}
     observed_states: list[dict[str, Any]] = []
     for number in sorted(set(discoverable) | set(declared)):
@@ -453,7 +530,7 @@ def inspect_pre_merge(
                     "exact declared closure authorization observed",
                 )
             )
-        elif number in development_links and (
+        elif number in closing_development_links and (
             entry["must_remain_open"] or not entry["closure_authorized"]
         ):
             findings.append(
@@ -461,16 +538,16 @@ def inspect_pre_merge(
                     "UNAUTHORIZED_CLOSURE_LINKAGE",
                     number,
                     "timeline",
-                    "observable development linkage conflicts with declared open outcome",
+                    "explicit closing development linkage conflicts with declared open outcome",
                 )
             )
-        elif number in development_links:
+        elif number in closing_development_links:
             findings.append(
                 _finding(
-                    "CLOSURE_EVIDENCE_INCOMPLETE",
+                    "AUTHORIZED_CLOSURE_LINKAGE",
                     number,
                     "timeline",
-                    "observable development linkage requires separate authority evidence",
+                    "explicit closing development linkage has exact declared authorization",
                 )
             )
         else:
@@ -499,16 +576,7 @@ def inspect_pre_merge(
             "graphql_issue_numbers": graphql_links,
         },
         "observed_development_links": development_links,
-        "observed_timeline_evidence": [
-            {
-                "event": item.get("event"),
-                "issue_number": _issue_number(
-                    ((item.get("source") or {}).get("issue") or {}).get("number")
-                ),
-            }
-            for item in timeline
-            if item.get("event") in {"connected", "cross-referenced"}
-        ],
+        "observed_timeline_evidence": timeline_observations,
         "observed_issue_states": sorted(observed_states, key=lambda item: item["issue_number"]),
         "evidence_source_availability": {
             "pr_body": "complete",

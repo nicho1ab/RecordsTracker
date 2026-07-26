@@ -192,10 +192,33 @@
     "timeline_item": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["event", "issue_number"],
+      "required": [
+        "event",
+        "classification",
+        "issue_number",
+        "target_pull_request_number",
+        "actor",
+        "occurred_at",
+        "explicit_closure_semantic"
+      ],
       "properties": {
-        "event": {"enum": ["connected", "cross-referenced"]},
-        "issue_number": {"type": ["integer", "null"], "minimum": 1}
+        "event": {"type": "string", "minLength": 1, "maxLength": 80},
+        "classification": {
+          "enum": [
+            "informational_cross_reference",
+            "explicit_closing_reference",
+            "observed_development_link",
+            "observed_closing_development_link",
+            "reopen_event",
+            "close_event",
+            "unknown_timeline_event"
+          ]
+        },
+        "issue_number": {"type": ["integer", "null"], "minimum": 1},
+        "target_pull_request_number": {"type": "integer", "minimum": 1},
+        "actor": {"type": ["string", "null"], "minLength": 1, "maxLength": 120},
+        "occurred_at": {"type": ["string", "null"], "maxLength": 40},
+        "explicit_closure_semantic": {"type": "boolean"}
       }
     },
     "availability": {

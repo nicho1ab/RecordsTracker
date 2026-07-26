@@ -613,6 +613,15 @@ source; post-merge inspection separately compares declared state, state reason,
 timestamps, closure source, and authorized reopen expectations without taking
 recovery action.
 
+Timeline cross-references are relationship evidence, not closure evidence. An
+informational `cross-referenced` event remains visible with its exact related
+issue, but does not grant closure or reopen authority and does not block a
+must-remain-open outcome. Blocking linkage requires explicit closing semantics
+from a recognized PR-body keyword, GraphQL closing reference, API-exposed
+closing development link, or attributable post-merge close event. Unknown or
+malformed timeline events fail closed; the hidden development-link closure
+effect remains the separate `platform_not_exposed` residual.
+
 Its production CLI accepts only an existing repository-relative contract path:
 normalization, containment, and symlink resolution must all remain beneath the
 verified repository root. It has no caller-supplied schema, evidence, output,
