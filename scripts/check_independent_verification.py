@@ -161,7 +161,12 @@ _UNRESOLVED_INSTRUCTION = re.compile(r"(?i)\bnot\s+run\s*-\s*<\s*reason\s*>")
 _MOJIBAKE_EM_DASH = "\u00e2\u20ac\u201d"
 _COMPACT_POLICY_OPENING = re.compile(r"(?m)^```json[ \t]*$")
 _COMPACT_POLICY_CLOSING = re.compile(r"(?m)^```[ \t]*$")
-_COMPACT_POLICY_DECLARATION = re.compile(r"(?m)^- Compact evidence envelope:[ \t]*$")
+_COMPACT_POLICY_DECLARATION = re.compile(
+    r"(?im)^[ \t]*(?:[-*+][ \t]+)?compact evidence envelope:[ \t]*$"
+)
+_COMPACT_POLICY_DECLARATION_CANDIDATE = re.compile(
+    r"(?im)^[ \t]*(?:[-*+][ \t]+)?compact[ \t]+evidence(?:[ \t]+.*)?$"
+)
 
 
 def _load_evidence_policy_module() -> Any:
@@ -241,17 +246,50 @@ def _compact_mode_declared(section: str) -> bool:
     )
 
 
+def _is_blank_compact_placeholder(body: str, declaration: re.Match[str]) -> bool:
+    """Recognize the template's entirely blank compact declaration block only."""
+
+    preceding = body[: declaration.start()].splitlines()
+    for index in range(len(preceding) - 1, -1, -1):
+        if preceding[index].startswith("## "):
+            preceding = preceding[index + 1 :]
+            break
+    values: dict[str, str] = {}
+    for line in preceding:
+        match = re.match(r"^- (Decision|Delta|Policy version):[ \t]*(.*)$", line)
+        if match:
+            values[match.group(1)] = match.group(2)
+    return set(values) == {"Decision", "Delta", "Policy version"} and not any(values.values())
+
+
 def _compact_mode_violations(body: str) -> list[str]:
     """Classify compact declaration and envelope presence before parsing either."""
 
     headings = _heading_occurrences(body, COMPACT_POLICY_HEADING)
+    declarations = list(_COMPACT_POLICY_DECLARATION.finditer(body))
+    candidates = list(_COMPACT_POLICY_DECLARATION_CANDIDATE.finditer(body))
+    if len(candidates) != len(declarations):
+        return ["compact policy declaration is malformed"]
+    populated_declarations = [
+        declaration
+        for declaration in declarations
+        if not _is_blank_compact_placeholder(body, declaration)
+    ]
     if len(headings) > 1:
         return ["compact policy heading is missing or ambiguous"]
     if not headings:
-        return []
+        return (
+            ["compact policy declaration is outside its governed section"]
+            if populated_declarations
+            else []
+        )
     section = _markdown_section(body, COMPACT_POLICY_HEADING)
     declared = _compact_mode_declared(section)
     envelopes = len(_COMPACT_POLICY_OPENING.findall(section))
+    if declared and len(populated_declarations) != 1:
+        return ["compact policy declaration is ambiguous or repeated"]
+    if not declared and populated_declarations:
+        return ["compact policy declaration is outside its governed section"]
     if declared and envelopes == 0:
         return ["compact policy declaration is missing its JSON envelope"]
     if not declared and envelopes:
@@ -315,6 +353,9 @@ def canonical_compact_body(body: str) -> str:
     """
 
     normalized = normalize_pr_body(body)
+    classification_violations = _compact_mode_violations(normalized)
+    if classification_violations:
+        raise CompactPolicyEnvelopeError(classification_violations[0])
     section_start, section_end = _compact_policy_section_span(normalized)
     envelope, payload_start, payload_end = _strict_compact_policy_envelope(
         normalized[section_start:section_end]
@@ -619,6 +660,9 @@ def _compact_live_binding_violations(
 
     if live_pr_state is None:
         return ["compact policy evidence requires authoritative live PR state"]
+    classification_violations = _compact_mode_violations(body)
+    if classification_violations:
+        return classification_violations
     try:
         section_start, section_end = _compact_policy_section_span(body)
         envelope, _, _ = _strict_compact_policy_envelope(body[section_start:section_end])
@@ -709,6 +753,19 @@ def _compact_live_binding_violations(
     required_workflows = EVIDENCE_POLICY._load_json(EVIDENCE_POLICY.POLICY_PATH)[
         "required_check_workflows"
     ]
+    workflow_metadata = live_pr_state.get("workflow_metadata")
+    if (
+        live_pr_state.get("workflow_metadata_complete") is not True
+        or live_pr_state.get("workflow_metadata_pagination_complete") is not True
+        or not isinstance(workflow_metadata, list)
+    ):
+        violations.append("authoritative workflow metadata is incomplete")
+        workflow_metadata = []
+    elif any(
+        not isinstance(item, Mapping) or item.get("repository") != live_pr_state.get("repository")
+        for item in workflow_metadata
+    ):
+        violations.append("authoritative workflow metadata belongs to another repository")
 
     def run_identity(value: object, *, source: str) -> tuple[object, ...] | None:
         if not isinstance(value, Mapping):
@@ -758,11 +815,22 @@ def _compact_live_binding_violations(
         if value["job_run_id"] != value["run_id"]:
             violations.append("authoritative required check job belongs to another run")
             return None
-        if not isinstance(value["workflow_id"], int) or value["workflow_id"] < 1:
+        if type(value["workflow_id"]) is not int or value["workflow_id"] < 1:
             violations.append("authoritative required check workflow identity is incomplete")
             return None
         if value["workflow_path"] != required_workflows.get(value["check_name"]):
             violations.append("authoritative required check belongs to an unexpected workflow")
+            return None
+        matches = [
+            item
+            for item in workflow_metadata
+            if isinstance(item, Mapping)
+            and item.get("repository") == live_pr_state.get("repository")
+            and item.get("path") == value["workflow_path"]
+        ]
+        ids = {item.get("id") for item in matches if type(item.get("id")) is int}
+        if len(matches) != 1 or len(ids) != 1 or value["workflow_id"] not in ids:
+            violations.append("authoritative workflow path-to-ID binding is invalid")
             return None
         return record
 

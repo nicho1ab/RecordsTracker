@@ -201,6 +201,21 @@ def _live_pr_state(policy_input: dict[str, object], body: str) -> dict[str, obje
         "body": body,
         "changed_file_inventory_complete": True,
         "required_check_runs_complete": True,
+        "workflow_metadata_complete": True,
+        "workflow_metadata_pagination_complete": True,
+        "workflow_metadata": [
+            {
+                "repository": identity["repository"],
+                "id": 1,
+                "path": path,
+            }
+            for path in (
+                ".github/workflows/ci.yml",
+                ".github/workflows/docs-check.yml",
+                ".github/workflows/regression.yml",
+                ".github/workflows/security.yml",
+            )
+        ],
         "required_check_runs": [
             {
                 field: run[field]
@@ -386,6 +401,97 @@ def test_compact_parser_rejects_duplicate_keys_and_ambiguous_envelopes() -> None
     declaration_without_envelope = re.sub(r"(?ms)```json\n.*?\n```\n?", "", body, count=1)
     assert "compact policy declaration is missing its JSON envelope" in (
         verification.find_pr_evidence_violations(declaration_without_envelope, paths)
+    )
+
+
+def test_compact_declaration_cardinality_is_body_wide_and_placeholder_aware() -> None:
+    verification = _load_module()
+    paths = ["docs/developer/codex-workflow.md"]
+    body, _ = _bound_compact_body(paths)
+    declaration = "- Compact evidence envelope:"
+    blank_placeholder = "- Decision:\n- Delta:\n- Policy version:\n- Compact evidence envelope:"
+    valid_with_blank = body + "\n## Optional draft\n\n" + blank_placeholder + "\n"
+    assert verification.find_pr_evidence_violations(valid_with_blank, paths) == []
+
+    invalid = body + "\n" + declaration + "\n"
+    separators = (
+        "\n",
+        "\nordinary prose\n",
+        "\n## Another heading\n",
+        "\n<!-- note -->\n",
+        "\n> quote\n",
+        "\n```text\ntext\n```\n",
+    )
+    for separator in separators:
+        candidate = body + separator + declaration + "\n"
+        assert "compact policy declaration is ambiguous or repeated" in (
+            verification.find_pr_evidence_violations(candidate, paths)
+        )
+        with pytest.raises(ValueError):
+            verification.canonical_compact_body(candidate)
+    assert "compact policy declaration is ambiguous or repeated" in (
+        verification.find_pr_evidence_violations(invalid.replace("\n", "\r\n"), paths)
+    )
+    for malformed in (
+        "- Compact evidence envelope",
+        "- Compact evidence bundle:",
+    ):
+        candidate = body + "\n" + malformed + "\n"
+        assert "compact policy declaration is malformed" in (
+            verification.find_pr_evidence_violations(candidate, paths)
+        )
+        with pytest.raises(ValueError):
+            verification.canonical_compact_body(candidate)
+
+
+def test_live_workflow_metadata_binding_fails_closed() -> None:
+    verification = _load_module()
+    paths = ["docs/developer/codex-workflow.md"]
+    body, policy_input = _bound_compact_body(paths)
+    live = _live_pr_state(policy_input, body)
+    assert verification.validate_pr_evidence(ROOT, body, paths, live_pr_state=live).violations == ()
+
+    for workflow_id in (999999, 2, 0, -1, None, True):
+        candidate = copy.deepcopy(live)
+        candidate["required_check_runs"][0]["workflow_id"] = workflow_id
+        assert "authoritative workflow path-to-ID binding is invalid" in (
+            verification.validate_pr_evidence(ROOT, body, paths, live_pr_state=candidate).violations
+        ) or "authoritative required check workflow identity is incomplete" in (
+            verification.validate_pr_evidence(ROOT, body, paths, live_pr_state=candidate).violations
+        )
+
+    wrong_path = copy.deepcopy(live)
+    wrong_path["required_check_runs"][0]["workflow_path"] = ".github/workflows/unrelated.yml"
+    assert "authoritative required check belongs to an unexpected workflow" in (
+        verification.validate_pr_evidence(ROOT, body, paths, live_pr_state=wrong_path).violations
+    )
+    for field, value in (
+        ("workflow_metadata_complete", False),
+        ("workflow_metadata_pagination_complete", False),
+        ("workflow_metadata_pagination_complete", None),
+        ("workflow_metadata", []),
+    ):
+        candidate = copy.deepcopy(live)
+        candidate[field] = value
+        violations = verification.validate_pr_evidence(
+            ROOT, body, paths, live_pr_state=candidate
+        ).violations
+        assert any(
+            "workflow metadata" in violation or "path-to-ID" in violation
+            for violation in violations
+        )
+
+    foreign = copy.deepcopy(live)
+    foreign["workflow_metadata"][0]["repository"] = "other/repository"
+    assert "authoritative workflow metadata belongs to another repository" in (
+        verification.validate_pr_evidence(ROOT, body, paths, live_pr_state=foreign).violations
+    )
+    conflicting = copy.deepcopy(live)
+    conflicting["workflow_metadata"].append(
+        {"repository": "nicho1ab/RecordsTracker", "id": 999999, "path": ".github/workflows/ci.yml"}
+    )
+    assert "authoritative workflow path-to-ID binding is invalid" in (
+        verification.validate_pr_evidence(ROOT, body, paths, live_pr_state=conflicting).violations
     )
 
 
@@ -815,6 +921,7 @@ def test_ci_fetches_authoritative_live_pr_state_before_validation() -> None:
     assert "> .verification-live-pr.json" in workflow
     assert "actions/runs?head_sha=$head_sha" in workflow
     assert "actions/runs/$run_id/jobs?per_page=100" in workflow
+    assert "workflow_metadata_pagination_complete: true" in workflow
     assert "--live-pr-state .verification-live-pr-state.json" in workflow
     assert '--event-path "$GITHUB_EVENT_PATH"' not in workflow
     assert "contents: read" in workflow

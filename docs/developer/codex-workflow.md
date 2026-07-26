@@ -682,11 +682,19 @@ repository, number, base and head names and SHAs, persisted body,
 complete changed-file inventory, and the complete required-check run/job set for
 the exact head. Each accepted job must come from the expected repository's
 `pull_request` event, the repository-governed workflow path for its required
-check, and GitHub-provided association with the current PR;
+check, and GitHub-provided association with the current PR. The repository's
+read-only, pagination-complete workflow metadata must bind each governed
+workflow path to exactly one authoritative workflow ID, and the run must report
+that same ID; display names and a positive integer alone cannot satisfy this
+binding. Missing, unrelated, ambiguous, conflicting, or incomplete workflow
+metadata fails closed;
 non-PR runs cannot satisfy or supersede a required check. Compact declarations
-must match that state; missing or partial live state fails closed. The compact
-parser accepts exactly one JSON envelope, rejects duplicate JSON keys at every
-nesting level and ambiguous fences, and is shared by preparation, hashing, and
+must match that state; missing or partial live state fails closed. Exactly one
+populated compact declaration is permitted across the complete body; blank
+template placeholders do not declare compact mode, and malformed, repeated, or
+unpaired declarations fail closed before JSON extraction. The compact parser
+accepts exactly one JSON envelope, rejects duplicate JSON keys at every nesting
+level and ambiguous fences, and is shared by preparation, hashing, and
 verification. Its non-self-referential canonical body hash normalizes line
 endings and replaces only governed current-PR `pr_body_hash` values with `null`
 before deterministic JSON rendering and SHA-256 hashing. Preparation and live

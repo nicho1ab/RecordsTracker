@@ -200,6 +200,17 @@ def test_compact_policy_preparation_is_deterministic_and_independently_valid() -
         "body": body,
         "changed_file_inventory_complete": True,
         "required_check_runs_complete": True,
+        "workflow_metadata_complete": True,
+        "workflow_metadata_pagination_complete": True,
+        "workflow_metadata": [
+            {"repository": identity["repository"], "id": 1, "path": path}
+            for path in (
+                ".github/workflows/ci.yml",
+                ".github/workflows/docs-check.yml",
+                ".github/workflows/regression.yml",
+                ".github/workflows/security.yml",
+            )
+        ],
         "required_check_runs": [
             {
                 field: run[field]
