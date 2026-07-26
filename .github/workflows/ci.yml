@@ -33,7 +33,7 @@ jobs:
       - name: Verify required workflow contract
         run: python scripts/check_independent_verification.py
       - name: Verify pull request evidence and governed boundaries
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && github.event.action != 'synchronize'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |

@@ -643,15 +643,17 @@ an issue. This is an independent read-only inspection surface, not a
 replacement for existing delivery-state snapshots or a merge controller. #533
 retains generic orchestration ownership.
 
-CI validates the current live PR body for `opened`, `reopened`, and
-`synchronize` events. A body-only evidence update does not start another
-required validation run: the persisted compact evidence therefore remains bound
-to the completed check set it records. A subsequent code update uses
-`synchronize`, creates fresh required checks, and must satisfy the same live
-validation boundary. Each job fetches the current live body immediately before
-validation rather than using stale event payload text. Forked PRs retain the
-workflow's `contents: read` and `pull-requests: read` token permissions; no CI
-write permission is granted.
+CI runs the code, documentation, workflow-contract, and security checks for
+`opened`, `reopened`, and `synchronize` events. Compact PR-body verification
+runs for `opened` and `reopened`; it is deferred for `synchronize` because the
+new successful check set does not exist until that run completes. A body-only
+evidence update does not start another required validation run, so the
+persisted compact evidence remains bound to the completed check set it records.
+A subsequent code update uses `synchronize`, creates fresh required checks,
+and must pass those checks before its compact body is regenerated and verified
+against the same completed evidence. Forked PRs retain the workflow's
+`contents: read` and `pull-requests: read` token permissions; no CI write
+permission is granted.
 
 A freeform body cannot substitute for the full governed template. Compact
 governed-summary eligibility remains controlled only by the validator.

@@ -965,6 +965,7 @@ def test_pr_body_only_update_keeps_completed_check_evidence_stable() -> None:
     assert verification.validate_pr_evidence(ROOT, body, paths, live_pr_state=live).violations == ()
     assert "types: [opened, reopened, synchronize]" in workflow
     assert "edited" not in workflow.partition("permissions:")[0]
+    assert "github.event.action != 'synchronize'" in workflow
     assert "contents: read" in workflow
     assert "pull-requests: read" in workflow
     assert "pull-requests: write" not in workflow
