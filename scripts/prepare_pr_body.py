@@ -104,11 +104,7 @@ def build_body_payload(body: str) -> bytes:
     payload = {"body": body}
     encoded = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
     decoded = json.loads(encoded.decode("utf-8"))
-    if (
-        not isinstance(decoded, dict)
-        or tuple(decoded) != ("body",)
-        or decoded["body"] != body
-    ):
+    if not isinstance(decoded, dict) or tuple(decoded) != ("body",) or decoded["body"] != body:
         raise ProposalValidationError(
             "PR-body mutation payload must contain exactly the body field"
         )
@@ -287,6 +283,23 @@ def render_body(output: Path) -> int:
     return 0
 
 
+def render_compact_policy_evidence(
+    policy_input: dict[str, object],
+    *,
+    delta: str,
+    validation_newly_performed: list[str],
+    live_evidence_recollected: list[str],
+) -> str:
+    """Format a fixed-policy compact section without executing validation or mutation."""
+
+    return verification.compact_policy_section(
+        policy_input,
+        delta=delta,
+        validation_newly_performed=validation_newly_performed,
+        live_evidence_recollected=live_evidence_recollected,
+    )
+
+
 def preflight_body(
     *,
     body_path: Path,
@@ -369,9 +382,7 @@ class GitHubTransport:
         """Issue one byte-safe body-only PATCH and return its REST response."""
 
         encoded_payload = build_body_payload(body)
-        with tempfile.NamedTemporaryFile(
-            mode="wb", suffix=".json", delete=False
-        ) as payload:
+        with tempfile.NamedTemporaryFile(mode="wb", suffix=".json", delete=False) as payload:
             payload.write(encoded_payload)
             payload_path = Path(payload.name)
         try:
@@ -430,9 +441,7 @@ class GitHubTransport:
 
 
 _NUMBER_REFERENCE = re.compile(r"^#?(?P<number>[1-9][0-9]*)$")
-_QUALIFIED_REFERENCE = re.compile(
-    r"^(?P<repository>[^/\s]+/[^#\s]+)#(?P<number>[1-9][0-9]*)$"
-)
+_QUALIFIED_REFERENCE = re.compile(r"^(?P<repository>[^/\s]+/[^#\s]+)#(?P<number>[1-9][0-9]*)$")
 _URL_REFERENCE = re.compile(
     r"^https://github\.com/(?P<repository>[^/\s]+/[^/\s]+)/pull/(?P<number>[1-9][0-9]*)/?$"
 )
@@ -668,9 +677,7 @@ def _observe_live_representations(
             now=now,
         )
         return None
-    topology_stable = not _precondition_mismatches(
-        observed, preconditions, include_body=False
-    )
+    topology_stable = not _precondition_mismatches(observed, preconditions, include_body=False)
     graphql_body = _graphql_body_or_none(transport, repository, number, attempt)
     representations_agree = (
         normalize_body(observed.body) == normalize_body(graphql_body)
@@ -920,11 +927,7 @@ def apply_open_pull_request_repair(
             )
         rest_hash = body_sha256(observed.body)
         latest_graphql = next(
-            (
-                item
-                for item in reversed(attempt.observations)
-                if item.source == f"{label}:graphql"
-            ),
+            (item for item in reversed(attempt.observations) if item.source == f"{label}:graphql"),
             None,
         )
         graph_matches = (
@@ -995,9 +998,7 @@ def _print_lifecycle_error(error: PrBodyLifecycleError) -> int:
     return 1
 
 
-def _write_persistence_evidence(
-    repo_root: Path, path: Path, attempt: PersistenceAttempt
-) -> None:
+def _write_persistence_evidence(repo_root: Path, path: Path, attempt: PersistenceAttempt) -> None:
     """Persist only opt-in sanitized lifecycle evidence, never a full PR body."""
 
     root = repo_root.resolve()

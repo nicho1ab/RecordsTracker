@@ -636,6 +636,13 @@ Validate documentation structure and run manual or automated checks for user-fac
   result completeness, path safety, and no mutation or command output. The
   slice-1 evaluator calculates requirements only; PR-evidence and
   documentation-check integration remain later separately authorized work.
+- PR-evidence slice 2 uses the same fixed evaluator during preparation and
+  independent validation. Focused coverage proves deterministic compact
+  rendering, exact full-scope reconstruction, legacy compatibility without a
+  declared envelope, rejection of mixed compact/governed-summary evidence, and
+  retained, invalidated, pending, failed, and superseded evidence treatment.
+  The evaluator and PR evidence validator never execute selected validation,
+  checks, reruns, publication, merge, or recovery.
 - CI retrieves the current live body when it validates a PR. Its pull-request
   `edited` event covers title and body edits because event selection cannot
   distinguish them; the job remains read-only and validates body evidence only.

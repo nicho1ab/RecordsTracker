@@ -21,6 +21,15 @@ def _load_module() -> ModuleType:
     return module
 
 
+def _load_module_from_path(name: str, path: Path) -> ModuleType:
+    spec = importlib.util.spec_from_file_location(name, path)
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
 def _completed_body() -> str:
     template = (ROOT / ".github/PULL_REQUEST_TEMPLATE.md").read_text(encoding="utf-8")
     replacements = (
@@ -103,6 +112,68 @@ def test_render_copies_the_authoritative_template(tmp_path: Path) -> None:
     assert output.read_text(encoding="utf-8") == template
 
 
+def test_compact_policy_preparation_is_deterministic_and_independently_valid() -> None:
+    prepare = _load_module()
+    verification = _load_module_from_path(
+        "independent_verification_for_compact_policy",
+        ROOT / "scripts" / "check_independent_verification.py",
+    )
+    paths = ["docs/developer/codex-workflow.md"]
+    scope_hash = prepare.changed_scope_sha256(paths)
+    identity = {
+        "repository": "nicho1ab/RecordsTracker",
+        "base_sha": "a" * 40,
+        "head_sha": "a" * 40,
+        "tree_sha": "c" * 40,
+        "changed_file_inventory_hash": scope_hash,
+        "pr_body_hash": "d" * 64,
+        "policy_version": "1.0.0",
+        "schema_version": "recordstracker.evidence-reuse-validation-impact.v1",
+        "validator_version": "evaluator-v1",
+        "governed_boundary_classification": ["Repository governance"],
+        "dependency_state_digest": "d" * 64,
+    }
+    policy_input = {
+        "kind": "input",
+        "schema_version": "recordstracker.evidence-reuse-validation-impact.v1",
+        "repository_state": identity,
+        "changed_file_inventory": {"complete": True, "paths": paths},
+        "dependency_state": {"status": "known", "digest": "d" * 64},
+        "evidence": [],
+        "required_check_runs": [
+            {
+                "check_name": check,
+                "run_id": number,
+                "job_id": number + 10,
+                "status": "success",
+                "head_sha": "a" * 40,
+                "tree_sha": "c" * 40,
+                "changed_file_inventory_hash": scope_hash,
+                "pr_body_hash": "d" * 64,
+            }
+            for number, check in enumerate(("validate", "docs-check", "fixtures", "security"), 1)
+        ],
+    }
+    first = prepare.render_compact_policy_evidence(
+        policy_input,
+        delta="Documentation delta.",
+        validation_newly_performed=["focused"],
+        live_evidence_recollected=["required checks"],
+    )
+    assert first == prepare.render_compact_policy_evidence(
+        policy_input,
+        delta="Documentation delta.",
+        validation_newly_performed=["focused"],
+        live_evidence_recollected=["required checks"],
+    )
+    assert "command" not in first.lower()
+    completed = _completed_body()
+    start = completed.index("## Validation impact and evidence delta")
+    end = completed.index("## UI and accessibility evidence", start)
+    completed = completed[:start] + completed[end:]
+    assert verification.find_pr_evidence_violations(completed + "\n" + first, paths) == []
+
+
 def test_preflight_uses_validator_rules_and_actionable_failures(tmp_path: Path, capsys) -> None:
     prepare = _load_module()
     body = tmp_path / "body.md"
@@ -110,12 +181,15 @@ def test_preflight_uses_validator_rules_and_actionable_failures(tmp_path: Path, 
     body.write_text(_completed_body(), encoding="utf-8")
     changed.write_text(".github/workflows/ci.yml\n", encoding="utf-8")
 
-    assert prepare.preflight_body(
-        body_path=body,
-        changed_files_path=changed,
-        base="origin/main",
-        repo_root=ROOT,
-    ) == 1
+    assert (
+        prepare.preflight_body(
+            body_path=body,
+            changed_files_path=changed,
+            base="origin/main",
+            repo_root=ROOT,
+        )
+        == 1
+    )
     failure_message = (
         "Required GitHub workflows and checks: changes require Concern - review required"
     )
@@ -130,12 +204,15 @@ def test_preflight_uses_validator_rules_and_actionable_failures(tmp_path: Path, 
         ),
         encoding="utf-8",
     )
-    assert prepare.preflight_body(
-        body_path=body,
-        changed_files_path=changed,
-        base="origin/main",
-        repo_root=ROOT,
-    ) == 0
+    assert (
+        prepare.preflight_body(
+            body_path=body,
+            changed_files_path=changed,
+            base="origin/main",
+            repo_root=ROOT,
+        )
+        == 0
+    )
     assert "Independent verification passed." in capsys.readouterr().out
 
 
@@ -514,9 +591,7 @@ def test_missing_closed_and_wrong_repository_references_fail_safely() -> None:
             return {"state": "closed", "body": ""}
 
     with pytest.raises(prepare.PullRequestStateError, match="not open"):
-        prepare.fetch_open_pull_request(
-            ClosedTransport([""]), "nicho1ab/RecordsTracker", "613"
-        )
+        prepare.fetch_open_pull_request(ClosedTransport([""]), "nicho1ab/RecordsTracker", "613")
 
     class WrongRepositoryTransport(FakeTransport):
         def repository(self, _repository: str) -> str:

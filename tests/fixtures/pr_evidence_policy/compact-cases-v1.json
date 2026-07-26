@@ -1,0 +1,6 @@
+{
+  "schema_version": "recordstracker.evidence-reuse-validation-impact.v1",
+  "cases": [
+    "documentation_only", "test_only", "governance_validator", "body_only_source_retained", "body_only_validator_invalidated", "duplicate_success", "pending_latest", "failed_latest", "superseded_not_authoritative", "changed_head", "changed_inventory", "changed_policy_version", "dependency_uncertain", "unknown_path", "missing_invalidation", "missing_live_obligation", "missing_failure_classification", "incorrect_digest", "incorrect_count", "body_claim_mismatch", "deterministic_ordering", "no_command_or_mutation", "legacy_supported", "contradictory_legacy_compact", "boundary_phrases", "required_checks", "schema_valid_output", "round_trip"
+  ]
+}

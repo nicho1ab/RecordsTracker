@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import json
 from pathlib import Path
@@ -9,6 +10,12 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
 SCRIPT_PATH = ROOT / "scripts" / "check_independent_verification.py"
+COMPACT_FIXTURE = ROOT / "tests" / "fixtures" / "pr_evidence_policy" / "compact-cases-v1.json"
+SHA_A = "a" * 40
+SHA_B = "b" * 40
+TREE_A = "c" * 40
+HASH_A = "d" * 64
+HASH_B = "e" * 64
 
 
 def _load_module() -> ModuleType:
@@ -95,6 +102,61 @@ def _valid_body() -> str:
 VALIDATOR = _load_module()
 
 
+def _compact_input(paths: list[str], **overrides: object) -> dict[str, object]:
+    scope_hash = hashlib.sha256("\n".join(paths).encode("utf-8")).hexdigest()
+    identity: dict[str, object] = {
+        "repository": "nicho1ab/RecordsTracker",
+        "base_sha": SHA_A,
+        "head_sha": SHA_A,
+        "tree_sha": TREE_A,
+        "changed_file_inventory_hash": scope_hash,
+        "pr_body_hash": HASH_A,
+        "policy_version": "1.0.0",
+        "schema_version": "recordstracker.evidence-reuse-validation-impact.v1",
+        "validator_version": "evaluator-v1",
+        "governed_boundary_classification": ["Repository governance"],
+        "dependency_state_digest": HASH_A,
+    }
+    checks = [
+        {
+            "check_name": check,
+            "run_id": number,
+            "job_id": number + 100,
+            "status": "success",
+            "head_sha": SHA_A,
+            "tree_sha": TREE_A,
+            "changed_file_inventory_hash": scope_hash,
+            "pr_body_hash": HASH_A,
+        }
+        for number, check in enumerate(("validate", "docs-check", "fixtures", "security"), 1)
+    ]
+    value: dict[str, object] = {
+        "kind": "input",
+        "schema_version": "recordstracker.evidence-reuse-validation-impact.v1",
+        "repository_state": identity,
+        "changed_file_inventory": {"complete": True, "paths": paths},
+        "dependency_state": {"status": "known", "digest": HASH_A},
+        "evidence": [],
+        "required_check_runs": checks,
+    }
+    value.update(overrides)
+    return value
+
+
+def _compact_body(paths: list[str], **overrides: object) -> str:
+    verification = _load_module()
+    return (
+        _valid_body()
+        + "\n"
+        + verification.compact_policy_section(
+            _compact_input(paths, **overrides),
+            delta="Policy evidence added for the changed scope.",
+            validation_newly_performed=["focused"],
+            live_evidence_recollected=["required checks"],
+        )
+    )
+
+
 def _governed_summary_body() -> str:
     summary = (
         "- adds objective independent verification for governing issues, PR evidence, "
@@ -128,9 +190,126 @@ Refs #531
 def test_valid_evidence_passes_for_required_workflow_change() -> None:
     verification = _load_module()
 
-    assert verification.find_pr_evidence_violations(
-        _valid_body(), [".github/workflows/ci.yml"]
-    ) == []
+    assert (
+        verification.find_pr_evidence_violations(_valid_body(), [".github/workflows/ci.yml"]) == []
+    )
+
+
+@pytest.mark.parametrize("case", json.loads(COMPACT_FIXTURE.read_text(encoding="utf-8"))["cases"])
+def test_compact_fixture_contract_names_remain_complete(case: str) -> None:
+    assert case
+
+
+def test_valid_compact_evidence_reconstructs_requirements() -> None:
+    verification = _load_module()
+    for path in (
+        "docs/developer/codex-workflow.md",
+        "tests/unit/test_independent_verification.py",
+        "scripts/delivery_automation_registry.py",
+    ):
+        assert verification.find_pr_evidence_violations(_compact_body([path]), [path]) == []
+
+
+def test_body_only_retains_source_evidence_and_invalidates_body_dependent_evidence() -> None:
+    verification = _load_module()
+    paths = [".github/delivery-automation-registry.json"]
+    policy_input = _compact_input(paths)
+    current = policy_input["repository_state"]
+    source = {
+        "id": "source-test",
+        "state": "fresh",
+        "purpose": "source test",
+        "identity": {**current, "pr_body_hash": HASH_B},
+        "body_dependent": False,
+        "immutable_references": ["commit:" + SHA_A],
+    }
+    body = {**source, "id": "body-validator", "body_dependent": True}
+    policy_input["evidence"] = [source, body]
+    rendered = verification.compact_policy_section(
+        policy_input,
+        delta="Body-only evidence change.",
+        validation_newly_performed=[],
+        live_evidence_recollected=["required checks"],
+    )
+    assert verification.find_pr_evidence_violations(_valid_body() + "\n" + rendered, paths) == []
+    assert '"id":"source-test"' in rendered
+    assert '"id":"body-validator"' in rendered
+
+
+def test_compact_policy_rejects_scope_result_and_live_obligation_mismatches() -> None:
+    verification = _load_module()
+    body = _compact_body(["docs/developer/codex-workflow.md"])
+    assert "compact policy" not in "\n".join(
+        verification.find_pr_evidence_violations(body, ["docs/developer/codex-workflow.md"])
+    )
+    scope_violations = verification.find_pr_evidence_violations(
+        body, ["tests/unit/test_independent_verification.py"]
+    )
+    assert (
+        "compact policy changed-file inventory differs from independently supplied scope"
+        in scope_violations
+    )
+    missing_live = body.replace(
+        '"live_obligations":["observe_terminal_required_checks","recollect_mutable_issue_state"]',
+        '"live_obligations":[]',
+    )
+    live_violations = verification.find_pr_evidence_violations(
+        missing_live, ["docs/developer/codex-workflow.md"]
+    )
+    assert (
+        "compact policy result differs from independently reconstructed result" in live_violations
+    )
+
+
+def test_compact_policy_rejects_tampered_visible_claims_and_schema_version() -> None:
+    verification = _load_module()
+    paths = ["docs/developer/codex-workflow.md"]
+    body = _compact_body(paths)
+    decision_violations = verification.find_pr_evidence_violations(
+        body.replace("- Decision: ready", "- Decision: blocked"), paths
+    )
+    assert "compact policy visible decision differs from envelope" in decision_violations
+    source_version = '"schema_version":"recordstracker.evidence-reuse-validation-impact.v1"'
+    tampered_schema = '"schema_version":"recordstracker.evidence-reuse-validation-impact.v0"'
+    before_envelope_version, _, after_envelope_version = body.rpartition(source_version)
+    schema_violations = verification.find_pr_evidence_violations(
+        before_envelope_version + tampered_schema + after_envelope_version,
+        paths,
+    )
+    assert "compact policy envelope schema version is invalid" in schema_violations
+
+
+def test_compact_policy_rejects_unsafe_runs_unknowns_and_legacy_mixing() -> None:
+    verification = _load_module()
+    paths = ["docs/developer/codex-workflow.md"]
+    pending = _compact_input(paths)
+    pending["required_check_runs"][-1]["status"] = "pending"
+    pending_body = (
+        _valid_body()
+        + "\n"
+        + verification.compact_policy_section(
+            pending,
+            delta="Pending check retained.",
+            validation_newly_performed=[],
+            live_evidence_recollected=["required checks"],
+        )
+    )
+    assert verification.find_pr_evidence_violations(pending_body, paths) == []
+    assert "REQUIRED_CHECK_PENDING:security" in pending_body
+    mixed = (
+        _governed_summary_body()
+        + "\n"
+        + verification.compact_policy_section(
+            pending,
+            delta="Pending check retained.",
+            validation_newly_performed=[],
+            live_evidence_recollected=["required checks"],
+        )
+    )
+    assert (
+        "compact policy evidence cannot be mixed with legacy governed summary"
+        in verification.find_pr_evidence_violations(mixed, paths)
+    )
 
 
 def test_missing_governing_issue_fails_closed() -> None:
@@ -193,23 +372,22 @@ def test_reviewer_contract_not_applicable_requires_non_reviewer_scope() -> None:
         "Not applicable - this script-only change has no reviewer-facing behavior.",
     )
 
-    assert verification.find_pr_evidence_violations(
-        body, ["scripts/prepare_pr_body.py"]
-    ) == []
+    assert verification.find_pr_evidence_violations(body, ["scripts/prepare_pr_body.py"]) == []
     assert (
         "reviewer-contract disposition cannot be not applicable for reviewer scope"
-        in verification.find_pr_evidence_violations(
-            body, ["tests/unit/test_hosted_reviewer_ui.py"]
-        )
+        in verification.find_pr_evidence_violations(body, ["tests/unit/test_hosted_reviewer_ui.py"])
     )
 
 
 def test_governed_summary_passes_for_required_workflow_change() -> None:
     verification = _load_module()
 
-    assert verification.find_pr_evidence_violations(
-        _governed_summary_body(), [".github/workflows/ci.yml"]
-    ) == []
+    assert (
+        verification.find_pr_evidence_violations(
+            _governed_summary_body(), [".github/workflows/ci.yml"]
+        )
+        == []
+    )
 
 
 def test_governed_summary_requires_workflow_disclosure_rule() -> None:
@@ -279,16 +457,19 @@ def test_cli_reads_event_and_prints_verification_summary(
     event_path.write_text(json.dumps({"pull_request": {"body": _valid_body()}}), encoding="utf-8")
     changed_files.write_text(".github/workflows/ci.yml\n", encoding="utf-8")
 
-    assert verification.main(
-        [
-            "--repo-root",
-            str(ROOT),
-            "--event-path",
-            str(event_path),
-            "--changed-files",
-            str(changed_files),
-        ]
-    ) == 0
+    assert (
+        verification.main(
+            [
+                "--repo-root",
+                str(ROOT),
+                "--event-path",
+                str(event_path),
+                "--changed-files",
+                str(changed_files),
+            ]
+        )
+        == 0
+    )
 
     output = capsys.readouterr().out
     assert "Independent verification summary" in output
@@ -304,16 +485,19 @@ def test_cli_reads_current_pr_body_instead_of_stale_event(
     body_path.write_text(_valid_body(), encoding="utf-8")
     changed_files.write_text(".github/workflows/ci.yml\n", encoding="utf-8")
 
-    assert verification.main(
-        [
-            "--repo-root",
-            str(ROOT),
-            "--pr-body",
-            str(body_path),
-            "--changed-files",
-            str(changed_files),
-        ]
-    ) == 0
+    assert (
+        verification.main(
+            [
+                "--repo-root",
+                str(ROOT),
+                "--pr-body",
+                str(body_path),
+                "--changed-files",
+                str(changed_files),
+            ]
+        )
+        == 0
+    )
 
     assert "Independent verification summary" in capsys.readouterr().out
 
@@ -325,16 +509,19 @@ def test_cli_reports_live_body_read_failure(
     changed_files = tmp_path / "changed-files.txt"
     changed_files.write_text(".github/workflows/ci.yml\n", encoding="utf-8")
 
-    assert verification.main(
-        [
-            "--repo-root",
-            str(ROOT),
-            "--pr-body",
-            str(tmp_path / "missing-body.md"),
-            "--changed-files",
-            str(changed_files),
-        ]
-    ) == 1
+    assert (
+        verification.main(
+            [
+                "--repo-root",
+                str(ROOT),
+                "--pr-body",
+                str(tmp_path / "missing-body.md"),
+                "--changed-files",
+                str(changed_files),
+            ]
+        )
+        == 1
+    )
 
     assert "cannot read pull-request body:" in capsys.readouterr().out
 
@@ -354,16 +541,19 @@ def test_cli_preserves_multiline_special_character_live_body(
     )
     changed_files.write_text(".github/workflows/ci.yml\n", encoding="utf-8")
 
-    assert verification.main(
-        [
-            "--repo-root",
-            str(ROOT),
-            "--pr-body",
-            str(body_path),
-            "--changed-files",
-            str(changed_files),
-        ]
-    ) == 0
+    assert (
+        verification.main(
+            [
+                "--repo-root",
+                str(ROOT),
+                "--pr-body",
+                str(body_path),
+                "--changed-files",
+                str(changed_files),
+            ]
+        )
+        == 0
+    )
     assert "Independent verification summary" in capsys.readouterr().out
 
 
@@ -371,9 +561,9 @@ def test_template_headings_match_the_validator_contract() -> None:
     verification = _load_module()
     template = (ROOT / ".github/PULL_REQUEST_TEMPLATE.md").read_text(encoding="utf-8")
 
-    assert [line[3:] for line in template.splitlines() if line.startswith("## ")] == list(
-        verification.REQUIRED_TEMPLATE_SECTIONS
-    )
+    expected = list(verification.REQUIRED_TEMPLATE_SECTIONS)
+    expected.insert(4, verification.COMPACT_POLICY_HEADING)
+    assert [line[3:] for line in template.splitlines() if line.startswith("## ")] == expected
 
 
 def test_ci_fetches_live_pr_body_before_validation() -> None:

@@ -50,6 +50,14 @@
   PR-evidence and documentation-check integration remain later slices, generic
   orchestration remains under #533, and the deferred `merged` timeline-event
   classifier remains out of scope.
+- Issue #617 slice 2 integrates that fixed policy with the existing PR evidence
+  validator, PR-body preparation path, and template. Declared compact policy
+  evidence is independently reconstructed from complete supplied scope and
+  fails closed when contradictory, incomplete, unsafe, or stale. Legacy PR
+  evidence remains supported only when it does not declare the compact envelope;
+  no historical evidence is silently reinterpreted as fresh. This adds no
+  workflow, check, publication, merge, issue, recovery, or #533 orchestration
+  behavior.
 - Current implementation state: the Python, SQLite, and Datasette proof of
   concept has proven governed ingestion, deterministic extraction, raw source
   preservation, source traceability, local validation and review support, and

@@ -671,10 +671,19 @@ references; and fails closed on unknown paths, incomplete inventories, malformed
 or traversal paths, uncertain dependencies, changed required-check definitions,
 or changed governed-boundary classifications. It applies a strict requirement
 union so mixed scope never reduces the most restrictive requirement. It does
-not execute selected validation or required checks. Integration into PR evidence,
-PR-body preparation, and documentation checks remains a later separately
-authorized slice; generic orchestration remains owned by #533. The deferred
-`merged` timeline-event classifier remains out of scope.
+not execute selected validation or required checks. Slice 2 integrates the
+fixed evaluator with PR evidence validation and PR-body preparation: a declared
+`Validation impact and evidence delta` JSON envelope is independently
+reconstructed from the complete changed-file inventory and must match the
+compact result exactly. The envelope is deterministic, ASCII-safe, read-only,
+and records the decision, delta, identity, inventory, requirements, evidence
+reuse/recollection/supersession/invalidation, live obligations, blockers, and
+mutation boundary. Legacy full-template and governed-summary evidence remains
+valid when no compact envelope is declared; a compact envelope mixed with the
+legacy governed-summary form fails closed. Documentation-check integration
+remains a later separately authorized slice; generic orchestration remains
+owned by #533. The deferred `merged` timeline-event classifier remains out of
+scope.
 
 The policy retains these boundaries exactly:
 
