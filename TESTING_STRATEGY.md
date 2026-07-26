@@ -629,6 +629,28 @@ Validate documentation structure and run manual or automated checks for user-fac
   pre/post-merge state-reason-timestamp checks, and the PR #615/#608
   regression. It has no live API, merge, issue-write, recovery, arbitrary path,
   or PR-body mutation path.
+- Evidence-reuse and validation-impact policy coverage uses sanitized fixtures
+  and deterministic inputs for every supported path class, strict mixed-scope
+  union, freshness and invalidation, body-dependent evidence, exact immutable
+  references, duplicate/pending/failed required-run classification, compact
+  result completeness, path safety, and no mutation or command output. Slice 1
+  establishes the policy, schema, and evaluator; slice 2 integrates PR
+  preparation and independent verification; and slice 3 integrates
+  documentation checks. All three remain local, unmerged, and unaccepted until
+  review, publication, and merge; no #533 execution authority is added.
+  Issue #617 implementation status: slice_1=policy-schema-evaluator; slice_2=PR-preparation-and-independent-verification; slice_3=documentation-checks; state=local-unmerged-unaccepted; issue_533_execution_authority=absent.
+- PR-evidence slice 2 uses the same fixed evaluator during preparation and
+  independent validation. Focused coverage proves deterministic compact
+  rendering, exact full-scope reconstruction, legacy compatibility without a
+  declared envelope, rejection of mixed compact/governed-summary evidence, and
+  retained, invalidated, pending, failed, and superseded evidence treatment.
+  The evaluator and PR evidence validator never execute selected validation,
+  checks, reruns, publication, merge, or recovery.
+- Documentation-check slice 3 independently validates the fixed policy,
+  schema, evaluator, PR-template, preparation, and verification contract;
+  executable impact-matrix parity; evidence-reuse examples; lifecycle and
+  publication boundaries; and #617/#533 ownership. It stays deterministic,
+  offline, and read-only, and never executes a policy-selected test plan.
 - CI retrieves the current live body when it validates a PR. Its pull-request
   `edited` event covers title and body edits because event selection cannot
   distinguish them; the job remains read-only and validates body evidence only.

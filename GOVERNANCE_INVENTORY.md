@@ -41,6 +41,30 @@
   repository-bounded and post-merge collection uses fixed read-only queries for
   exact declared issues only. It does not merge, close, reopen, unlink,
   recover, or grant merge authority.
+- Issue #617 slice 1 adds the canonical governed evidence-reuse and
+  validation-impact policy, versioned envelope schema, deterministic local
+  evaluator, and sanitized fixtures. It classifies only complete
+  repository-relative change inventories, evaluates evidence freshness and
+  invalidation, and returns compact read-only requirement decisions. It does
+  not run validation, checks, reruns, publication, merge, recovery, or cleanup;
+  PR-evidence and documentation-check integration remain later slices, generic
+  orchestration remains under #533, and the deferred `merged` timeline-event
+  classifier remains out of scope.
+- Issue #617 slice 2 integrates that fixed policy with the existing PR evidence
+  validator, PR-body preparation path, and template. Declared compact policy
+  evidence is independently reconstructed from complete supplied scope and
+  fails closed when contradictory, incomplete, unsafe, or stale. Legacy PR
+  evidence remains supported only when it does not declare the compact envelope;
+  no historical evidence is silently reinterpreted as fresh. This adds no
+  workflow, check, publication, merge, issue, recovery, or #533 orchestration
+  behavior.
+- Issue #617 slice 3 makes the evidence-policy contract repository-wide through
+  deterministic documentation validation. The fixed policy, schema, evaluator,
+  template, preparation, independent verification, impact matrix, examples,
+  lifecycle language, publication guidance, and #617/#533 boundary must remain
+  synchronized. All three local implementation slices are complete, but the
+  work remains active, in progress, and partial until review, publication, and
+  merge are separately accepted; this grants no #533 execution authority.
 - Current implementation state: the Python, SQLite, and Datasette proof of
   concept has proven governed ingestion, deterministic extraction, raw source
   preservation, source traceability, local validation and review support, and

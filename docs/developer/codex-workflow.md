@@ -643,16 +643,185 @@ an issue. This is an independent read-only inspection surface, not a
 replacement for existing delivery-state snapshots or a merge controller. #533
 retains generic orchestration ownership.
 
-CI validates the current live PR body whenever it runs. The `pull_request`
-workflow includes `opened`, `reopened`, `synchronize`, and `edited`, so a title
-or body edit starts the same read-only validation workflow. GitHub event
-selection cannot distinguish a title edit from a body edit, but the job fetches
-the current live body immediately before validation rather than using stale
-event payload text. Forked PRs retain the workflow's `contents: read` and
-`pull-requests: read` token permissions; no CI write permission is granted.
+CI runs the code, documentation, workflow-contract, and security checks for
+`opened`, `reopened`, and `synchronize` events. Compact PR-body verification
+runs for `opened` and `reopened`; it is deferred for `synchronize` because the
+new successful check set does not exist until that run completes. A body-only
+evidence update does not start another required validation run, so the
+persisted compact evidence remains bound to the completed check set it records.
+A subsequent code update uses `synchronize`, creates fresh required checks,
+and must pass those checks before its compact body is regenerated and verified
+against the same completed evidence. Forked PRs retain the workflow's
+`contents: read` and `pull-requests: read` token permissions; no CI write
+permission is granted.
 
 A freeform body cannot substitute for the full governed template. Compact
 governed-summary eligibility remains controlled only by the validator.
+
+### Governed evidence reuse and validation-impact policy
+
+Issue #617 also owns the canonical slice-1 policy at
+`.github/evidence-reuse-validation-impact-policy.json`, its versioned envelope
+schema at `schemas/evidence-reuse-validation-impact-v1.schema.json`, and the
+repository-local evaluator at `scripts/evaluate_evidence_reuse_policy.py`.
+The supported policy version is `1.0.3`; the supported schema version is
+`recordstracker.evidence-reuse-validation-impact.v1`.
+The evaluator accepts a complete caller-supplied repository-relative inventory
+and returns a deterministic compact decision only; it has no network,
+subprocess, command-generation, mutation, rerun, publication, merge, recovery,
+or cleanup capability.
+
+The policy distinguishes retained, fresh, live, superseded, and invalidated
+evidence; preserves immutable commit, tree, run, job, body, issue, and validator
+references; and fails closed on unknown paths, incomplete inventories, malformed
+or traversal paths, uncertain dependencies, changed required-check definitions,
+or changed governed-boundary classifications. It applies a strict requirement
+union so mixed scope never reduces the most restrictive requirement. It does
+not execute selected validation or required checks. Slice 2 integrates the
+fixed evaluator with PR evidence validation and PR-body preparation: a declared
+`Validation impact and evidence delta` JSON envelope is independently
+reconstructed from the complete changed-file inventory and must match the
+compact result exactly. The live PR verifier additionally obtains authoritative live PR state:
+repository, number, base and head names and SHAs, persisted body,
+complete changed-file inventory, and the complete required-check run/job set for
+the exact head. Each accepted job must come from the expected repository's
+`pull_request` event, the repository-governed workflow path for its required
+check, and GitHub-provided association with the current PR. The repository's
+read-only, pagination-complete workflow metadata must bind each governed
+workflow path to exactly one authoritative workflow ID, and the run must report
+that same ID; display names and a positive integer alone cannot satisfy this
+binding. Missing, unrelated, ambiguous, conflicting, or incomplete workflow
+metadata fails closed;
+non-PR runs cannot satisfy or supersede a required check. Compact declarations
+must match that state; missing or partial live state fails closed. Exactly one
+populated compact declaration is permitted across the complete body; blank
+template placeholders do not declare compact mode, and malformed, repeated, or
+unpaired declarations fail closed before JSON extraction. The compact parser
+accepts exactly one JSON envelope, rejects duplicate JSON keys at every nesting
+level and ambiguous fences, and is shared by preparation, hashing, and
+verification. Its non-self-referential canonical body hash normalizes line
+endings and replaces only governed current-PR `pr_body_hash` values with `null`
+before deterministic JSON rendering and SHA-256 hashing. Preparation and live
+verification use that same canonical body hash. Exact run/job identity ties
+block unless their normalized authoritative records are byte-equivalent; such
+equivalent duplicates are collapsed deterministically. The envelope is
+deterministic, ASCII-safe, read-only, and records the decision, delta, identity, inventory, requirements, evidence
+reuse/recollection/supersession/invalidation, live obligations, blockers, and
+mutation boundary. Legacy full-template and governed-summary evidence remains
+valid when no compact envelope is declared; a compact envelope mixed with the
+legacy governed-summary form fails closed. Documentation-check integration
+is slice 3; generic orchestration remains owned by #533. The deferred `merged`
+timeline-event classifier remains out of scope.
+
+Issue #617 implementation status: slice_1=policy-schema-evaluator; slice_2=PR-preparation-and-independent-verification; slice_3=documentation-checks; state=local-unmerged-unaccepted; issue_533_execution_authority=absent.
+
+The policy retains these boundaries exactly:
+
+- requires disclosure when governed workflow boundaries change
+- no branch-protection or ruleset change
+- no required-check rename or removal
+- no autonomous approval or merge
+
+### Documentation-contract enforcement
+
+`scripts/check_docs.py` verifies the fixed canonical policy, schema, evaluator,
+PR-template, PR-body preparation, independent-verification, and documentation
+contract without network access or policy-selected test execution. It rejects a
+missing or unsupported version, a changed fixed path, compact-field drift,
+missing #533 ownership boundary, missing governed phrase, a contradictory
+current #617 status claim, an #533 authority transfer, or a claim that
+classification grants autonomous lifecycle authority. This is documentation
+enforcement only: it does not publish, retry, merge, recover, clean up, write
+issues, or execute the selected validation plan.
+
+## Validation-impact matrix
+
+The matrix is validated against the executable policy. Every row still requires
+live GitHub evidence and terminal required checks; `yes` and `no` are policy
+decisions, not execution authority.
+
+| Impact class | Focused validation | Full suite | Documentation validation | Live GitHub evidence | Body regeneration | Independent review | Primary invalidation triggers |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| evidence_only_metadata | evidence_metadata | no | no | yes | yes | no | changed body, scope, or identity |
+| documentation_only | documentation, whitespace | no | yes | yes | no | no | changed scope or documentation contract |
+| test_only | affected_regression, owning_test_collection | no | no | yes | no | yes | changed head, scope, fixture, or collection dependency |
+| schema_or_governance_validator | schema_or_governance_validator | yes | yes | yes | no | yes | changed schema, policy, validator, or workflow contract |
+| application_implementation | affected_application | yes | no | yes | no | yes | changed implementation, head, or scope |
+| ingestion_or_source_contract | source_contract | yes | no | yes | no | yes | changed connector or source-contract dependency |
+| database_or_migration | schema_or_migration | yes | no | yes | no | yes | changed migration, schema, or data boundary |
+| security_or_privacy | security_or_privacy | yes | no | yes | no | yes | changed security or privacy control |
+| workflow_or_required_check_contract | workflow_contract | yes | no | yes | no | yes | changed workflow, check, or governed boundary |
+| deployment_or_infrastructure | infrastructure | yes | no | yes | no | yes | changed deployment or infrastructure boundary |
+| unknown | none | no | no | yes | no | yes | unknown path or dependency uncertainty |
+
+## Evidence-reuse examples
+
+- **Body-only edit:** source tests remain retained when their declared inputs
+  exclude the body; body-dependent evidence is invalidated; the required check
+  triggered by the platform is observed to terminal state. The body must not
+  claim source tests were rerun unless they were actually run.
+- **Duplicate successful run:** one exact-input run is authoritative and the
+  others remain immutable retained references.
+- **Newer pending run:** a newer pending required run remains visible and
+  blocks readiness.
+- **Newer failed run:** a newer failed required run supersedes earlier successful readiness evidence.
+- **Documentation-only change:** documentation and whitespace validation are
+  required; no local full suite is required unless executable documentation
+  machinery or governance validation changed.
+- **Test-only deterministic isolation correction:** the affected regression and
+  owning collection are required; unrelated implementation evidence may remain
+  retained only when declared dependencies permit it.
+- **Unknown changed path:** classification fails closed.
+- **Governed-boundary change:** prior boundary review is invalidated and
+  disclosure is required.
+
+## Worktree lifecycle definitions
+
+- **Active:** assigned work is in progress on its bounded branch and worktree.
+- **Parked:** work is intentionally paused while its branch and evidence remain.
+- **Retained after merge:** a merged branch/worktree remains available for
+  evidence or a separately authorized follow-up.
+- **Blocked:** a stated dependency or authority boundary prevents progress.
+- **Safe to remove:** a human has independently confirmed the worktree is no
+  longer needed and separately authorized removal.
+- **Preserved for evidence:** the worktree or branch remains because it is part
+  of the reviewable evidence record.
+
+A state classification grants no cleanup authority. There is no automatic
+worktree removal, automatic branch deletion, stash mutation, pruning, or broad
+cleanup.
+
+## Publication guidance
+
+Use a maximum of three routine comments: review-ready evidence; a correction or
+material blocker update only when necessary; and merge-completion evidence.
+This guidance is not enforced through autonomous publication. Exceptions
+require documented rationale, comment count alone does not determine readiness,
+and failed or safety-relevant evidence must not be omitted to meet the limit.
+
+## Issue #617 and #533 ownership boundary
+
+#617 owns:
+
+- policy;
+- schema;
+- deterministic classification;
+- read-only validation;
+- compact evidence formatting;
+- documentation enforcement.
+
+#533 owns unless explicitly reassigned:
+
+- executable operation manifests;
+- workflow reruns;
+- autonomous publication;
+- merge execution controllers;
+- issue writes;
+- recovery;
+- generic orchestration;
+- lifecycle control.
+
+This documentation creates no executable #533 behavior. The deferred `merged` timeline-event classifier remains out of scope.
 
 ## Validation
 

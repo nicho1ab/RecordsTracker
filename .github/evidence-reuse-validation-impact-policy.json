@@ -1,0 +1,31 @@
+{
+  "kind": "policy",
+  "schema_version": "recordstracker.evidence-reuse-validation-impact.v1",
+  "policy_version": "1.0.3",
+  "title": "Governed evidence reuse and validation-impact policy",
+  "purpose": "Produces deterministic, read-only evidence and validation decisions without executing validation, GitHub operations, publication, merge, recovery, or cleanup.",
+  "evidence_states": ["retained", "fresh", "live", "superseded", "invalidated"],
+  "evidence_identity_fields": ["repository", "pull_request_number", "base_ref", "base_sha", "head_ref", "head_sha", "tree_sha", "changed_file_inventory_hash", "pr_body_hash", "policy_version", "schema_version", "validator_version", "workflow_check_name", "run_id", "job_id", "issue_number", "issue_state_observed_at", "governed_boundary_classification", "dependency_state_digest"],
+  "impact_classes": ["evidence_only_metadata", "documentation_only", "test_only", "schema_or_governance_validator", "application_implementation", "ingestion_or_source_contract", "database_or_migration", "security_or_privacy", "workflow_or_required_check_contract", "deployment_or_infrastructure", "unknown"],
+  "path_rules": [
+    {"path": ".github/delivery-automation-registry.json", "impact_class": "evidence_only_metadata"},
+    {"path": "docs/", "impact_class": "documentation_only"},
+    {"path": "tests/", "impact_class": "test_only"},
+    {"path": "schemas/", "impact_class": "schema_or_governance_validator"},
+    {"path": "scripts/delivery_automation_registry.py", "impact_class": "schema_or_governance_validator"},
+    {"path": "scripts/evaluate_evidence_reuse_policy.py", "impact_class": "schema_or_governance_validator"},
+    {"path": "src/ccld_complaints/connectors/", "impact_class": "ingestion_or_source_contract"},
+    {"path": "migrations/", "impact_class": "database_or_migration"},
+    {"path": "src/ccld_complaints/", "impact_class": "application_implementation"},
+    {"path": "SECURITY_AND_PRIVACY.md", "impact_class": "security_or_privacy"},
+    {"path": "scripts/check_no_secrets.py", "impact_class": "security_or_privacy"},
+    {"path": ".github/workflows/", "impact_class": "workflow_or_required_check_contract"},
+    {"path": "Dockerfile", "impact_class": "deployment_or_infrastructure"},
+    {"path": "docker-compose.qnap.yml", "impact_class": "deployment_or_infrastructure"},
+    {"path": "RUNBOOK.md", "impact_class": "deployment_or_infrastructure"}
+  ],
+  "required_check_names": ["validate", "docs-check", "fixtures", "security"],
+  "required_check_workflows": {"validate": ".github/workflows/ci.yml", "docs-check": ".github/workflows/docs-check.yml", "fixtures": ".github/workflows/regression.yml", "security": ".github/workflows/security.yml"},
+  "governed_boundary_disclosures": ["requires disclosure when governed workflow boundaries change", "no branch-protection or ruleset change", "no required-check rename or removal", "no autonomous approval or merge"],
+  "scope": "Slice 1 defines policy decisions; slice 2 integrates PR evidence and PR-body preparation; slice 3 enforces the fixed contract through documentation checks. Generic orchestration, executable operation manifests, autonomous publication, merge, recovery, and Issue #533 implementation remain out of scope. The deferred merged timeline event classifier remains out of scope."
+}
