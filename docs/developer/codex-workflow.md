@@ -643,13 +643,15 @@ an issue. This is an independent read-only inspection surface, not a
 replacement for existing delivery-state snapshots or a merge controller. #533
 retains generic orchestration ownership.
 
-CI validates the current live PR body whenever it runs. The `pull_request`
-workflow includes `opened`, `reopened`, `synchronize`, and `edited`, so a title
-or body edit starts the same read-only validation workflow. GitHub event
-selection cannot distinguish a title edit from a body edit, but the job fetches
-the current live body immediately before validation rather than using stale
-event payload text. Forked PRs retain the workflow's `contents: read` and
-`pull-requests: read` token permissions; no CI write permission is granted.
+CI validates the current live PR body for `opened`, `reopened`, and
+`synchronize` events. A body-only evidence update does not start another
+required validation run: the persisted compact evidence therefore remains bound
+to the completed check set it records. A subsequent code update uses
+`synchronize`, creates fresh required checks, and must satisfy the same live
+validation boundary. Each job fetches the current live body immediately before
+validation rather than using stale event payload text. Forked PRs retain the
+workflow's `contents: read` and `pull-requests: read` token permissions; no CI
+write permission is granted.
 
 A freeform body cannot substitute for the full governed template. Compact
 governed-summary eligibility remains controlled only by the validator.

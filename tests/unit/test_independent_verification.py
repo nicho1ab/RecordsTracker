@@ -327,7 +327,7 @@ def test_live_compact_binding_rejects_false_identity_scope_and_body_claims() -> 
     )
 
 
-def test_live_compact_binding_enforces_exact_latest_required_check_runs() -> None:
+def test_live_compact_binding_rejects_newer_failed_code_validation_runs() -> None:
     verification = _load_module()
     paths = ["docs/developer/codex-workflow.md"]
     body, policy_input = _bound_compact_body(paths)
@@ -955,10 +955,16 @@ def test_ci_jq_programs_declare_all_variable_bindings_with_governed_types() -> N
         assert any(declared.get(name) == binding_type for declared in bindings)
 
 
-def test_ci_runs_validation_for_pull_request_edits_without_write_permissions() -> None:
+def test_pr_body_only_update_keeps_completed_check_evidence_stable() -> None:
+    verification = _load_module()
+    paths = ["docs/developer/codex-workflow.md"]
+    body, policy_input = _bound_compact_body(paths)
+    live = _live_pr_state(policy_input, body)
     workflow = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
 
-    assert "types: [opened, reopened, synchronize, edited]" in workflow
+    assert verification.validate_pr_evidence(ROOT, body, paths, live_pr_state=live).violations == ()
+    assert "types: [opened, reopened, synchronize]" in workflow
+    assert "edited" not in workflow.partition("permissions:")[0]
     assert "contents: read" in workflow
     assert "pull-requests: read" in workflow
     assert "pull-requests: write" not in workflow
