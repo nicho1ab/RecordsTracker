@@ -476,6 +476,59 @@ headings, governed-boundary disclosure, and Issue #504 classification; no static
 body snapshot is a repair contract. Future approved template changes continue
 through the existing template/validator parity checks.
 
+#### DA-030 guarded transport and persistence evidence
+
+The same `open-pr apply` lifecycle is the only supported body-mutation path;
+there is no second transport or repair command. An authorized invocation binds
+the repository and PR number to immutable expected state: open/draft state,
+base and head names and SHAs, complete canonical changed-file-scope hash,
+current normalized live-body hash, and validated candidate normalized-body
+hash. It also requires explicit `body-only` intent and confirmation. A changed
+identity, scope, or body hash stops before mutation.
+
+The one permitted request is constructed as exact UTF-8 JSON with no BOM and
+exactly one top-level key, `body`. The implementation records hashes of the
+request-body bytes, canonical candidate body, and exact JSON payload bytes. It
+uses a temporary byte-safe payload file rather than shell interpolation or a
+multiline command argument, removes that file after the request, and never
+records credentials, headers, environment content, or a full PR body in
+evidence.
+
+Each invocation has a production-enforced mutation budget of zero or one PATCH.
+After that budget is consumed, every remaining operation is read-only; no branch
+may retry, roll back, or hide another PATCH in a helper. The sanitized,
+versioned `pr-body-persistence-attempt-v1` evidence model records immutable
+expected values, hashes, payload-key proof, mutation count, REST and GraphQL
+observations, classifications, production-validator result, source attribution,
+and `globally_atomic: false`. It is distinct from the read-only delivery-state
+snapshot because a body mutation attempt has different privacy and lifecycle
+responsibilities. Store optional evidence only in an ignored path.
+
+Immediately after PATCH, the lifecycle records the REST response, REST refetch,
+and GraphQL representation where available. It then permits at most three
+additional read-only stabilization observations at a one-second interval. The
+count and interval are injectable for deterministic tests, and the defaults are
+intentionally short because PR #615 showed delayed convergence without
+justifying a long unattended delay. REST and GraphQL compare canonical
+normalized text, so LF/CRLF equivalents match while mojibake remains distinct.
+GraphQL unavailability is informational only when REST convergence and
+post-persistence production validation are otherwise proven; a stable REST /
+GraphQL semantic disagreement is not success.
+
+The final machine-readable classifications distinguish no-mutation precondition
+failure, mutation API or response failure, immediate or delayed convergence,
+transient representation disagreement, stable mismatch, changed PR identity,
+unexplained non-candidate body change, post-persistence validation failure, GraphQL
+unavailability, and observation failure. Success requires final candidate-hash
+equality, stable PR identity and scope, and a passing canonical production
+validator. An immediate mismatch is therefore evidence, not an automatic claim
+of permanent corruption; it never authorizes a second mutation or rollback.
+
+This transport/persistence contract is bounded DA-030 work in Issue #616. It
+does not implement Issue #617 grouped lifecycle orchestration, consume any
+authorization automatically, alter issue closure behavior, or change CI
+permissions, required checks, branch protection, or rulesets.
+
 CI validates the current live PR body whenever it runs. The `pull_request`
 workflow includes `opened`, `reopened`, `synchronize`, and `edited`, so a title
 or body edit starts the same read-only validation workflow. GitHub event
