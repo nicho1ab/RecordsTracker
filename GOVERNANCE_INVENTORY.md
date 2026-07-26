@@ -29,8 +29,11 @@
   closure-linkage evidence schema. It records exact declared issue outcomes,
   sanitized evidence, deterministic source availability, and fully paginated
   read-only closing observations for later authorization only. Incomplete,
-  partial, malformed, or unobservable development-link evidence fails closed;
-  no PR-body-only result proves closure safety. Contract input is
+  partial, malformed, or unavailable observable evidence fails closed. A
+  supported-API gap in the development-link closure effect is an explicit
+  residual limitation, requiring exact immediate post-merge issue-state
+  verification and granting no merge authority; no PR-body-only result proves
+  closure safety. Contract input is
   repository-bounded and post-merge collection uses fixed read-only queries for
   exact declared issues only. It does not merge, close, reopen, unlink,
   recover, or grant merge authority.

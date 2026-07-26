@@ -260,6 +260,33 @@ def _readiness(findings: Sequence[dict[str, Any]]) -> str:
     return "READY_FOR_SEPARATE_MERGE_AUTHORIZATION"
 
 
+def _availability_for_error(error: ClosureLinkageError) -> str:
+    """Classify only observable source failures; residual limits are fixed elsewhere."""
+    detail = str(error).casefold()
+    if "pagination" in detail or "page limit" in detail or "partial" in detail:
+        return "partial"
+    if "malformed" in detail or "duplicate" in detail:
+        return "malformed"
+    return "collection_failed"
+
+
+def _post_merge_obligations(
+    repository: str, pr_number: int, contract: Sequence[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """Bind the residual platform limitation to exact post-merge observations."""
+    return [
+        {
+            "repository": repository,
+            "pull_request_number": pr_number,
+            "issue_number": int(entry["issue_number"]),
+            "expected_post_merge_state": entry["expected_post_merge_state"],
+            "immediate_observation_required": True,
+        }
+        for entry in contract
+        if entry["must_remain_open"]
+    ]
+
+
 def _observed_state(number: int, issue: dict[str, Any]) -> dict[str, Any]:
     return {
         "issue_number": number,
@@ -319,15 +346,15 @@ def inspect_pre_merge(
             item.get("number") for item in transport.closing_issues(owner, name, pr_number)
         )
         graphql_availability = "complete"
-    except ClosureLinkageError:
+    except ClosureLinkageError as error:
         graphql_links = []
-        graphql_availability = "incomplete"
+        graphql_availability = _availability_for_error(error)
         findings.append(
             _finding(
                 "CLOSURE_EVIDENCE_INCOMPLETE",
                 None,
                 "graphql_closing_references",
-                "closing-reference pagination or response is incomplete",
+                "closing-reference collection did not complete",
             )
         )
     try:
@@ -335,15 +362,15 @@ def inspect_pre_merge(
             f"repos/{repository}/issues/{pr_number}/timeline?per_page=100"
         )
         timeline_availability = "complete"
-    except ClosureLinkageError:
+    except ClosureLinkageError as error:
         timeline = []
-        timeline_availability = "incomplete"
+        timeline_availability = _availability_for_error(error)
         findings.append(
             _finding(
                 "CLOSURE_EVIDENCE_INCOMPLETE",
                 None,
                 "timeline",
-                "timeline pagination or response is incomplete",
+                "timeline collection did not complete",
             )
         )
     development_links = _numbers(
@@ -351,17 +378,9 @@ def inspect_pre_merge(
         for item in timeline
         if item.get("event") in {"connected", "cross-referenced"}
     )
-    development_effect_available = getattr(transport, "development_link_effect_available", False)
-    development_effect_availability = "complete" if development_effect_available else "incomplete"
-    if development_effect_availability != "complete":
-        findings.append(
-            _finding(
-                "CLOSURE_EVIDENCE_INCOMPLETE",
-                None,
-                "development_link_observability",
-                "development-link closure effect is not completely observable",
-            )
-        )
+    # GitHub exposes links but not a supported read-only closure-effect field.
+    # This fixed residual limitation cannot be supplied by a caller or transport.
+    development_effect_availability = "platform_not_exposed"
 
     discoverable = sorted(set(body_links) | set(graphql_links) | set(development_links))
     declared = {int(entry["issue_number"]): entry for entry in contract}
@@ -434,13 +453,24 @@ def inspect_pre_merge(
                     "exact declared closure authorization observed",
                 )
             )
+        elif number in development_links and (
+            entry["must_remain_open"] or not entry["closure_authorized"]
+        ):
+            findings.append(
+                _finding(
+                    "UNAUTHORIZED_CLOSURE_LINKAGE",
+                    number,
+                    "timeline",
+                    "observable development linkage conflicts with declared open outcome",
+                )
+            )
         elif number in development_links:
             findings.append(
                 _finding(
                     "CLOSURE_EVIDENCE_INCOMPLETE",
                     number,
                     "timeline",
-                    "development linkage is observable but cannot be treated as a closure result",
+                    "observable development linkage requires separate authority evidence",
                 )
             )
         else:
@@ -487,6 +517,19 @@ def inspect_pre_merge(
             "development_link_closure_effect": development_effect_availability,
             "post_merge_issue_states": "not_observed",
         },
+        "residual_platform_limitations": [
+            {
+                "mechanism": "development_link_closure_effect",
+                "availability": "platform_not_exposed",
+                "rationale": (
+                    "GitHub supported read-only APIs expose development links but not their "
+                    "closure effect."
+                ),
+            }
+        ],
+        "post_merge_verification_obligations": _post_merge_obligations(
+            repository, pr_number, contract
+        ),
         "closure_risk_findings": _sorted_findings(findings),
         "post_merge_findings": [],
         "primary_readiness_classification": _readiness(findings),

@@ -601,9 +601,14 @@ The inspector observes normalized PR-body references, fully paginated GraphQL
 closing issues, fully paginated timeline linkage, and issue state/state-reason
 evidence where the APIs expose it. A malformed response, exhausted GraphQL
 page bound, duplicate closing-reference node, partial page result, unavailable
-source, or unobservable development-link closure effect is evidence incomplete
-and fails closed. No-link evidence is ready only when every required source is
-complete. Pre-merge findings are deterministic by code, issue number, and
+observable source, or other collection failure is evidence incomplete and fails
+closed. The GitHub development-link closure effect is instead recorded as an
+explicit `platform_not_exposed` residual: supported read-only APIs expose the
+links, not their closure effect. This does not claim that an unexposed mechanism
+is absent. No-link evidence is ready only when every required observable source
+is complete and each must-remain-open issue has an exact, immediate post-merge
+state-verification obligation. Readiness grants no merge authority. Pre-merge
+findings are deterministic by code, issue number, and
 source; post-merge inspection separately compares declared state, state reason,
 timestamps, closure source, and authorized reopen expectations without taking
 recovery action.

@@ -93,7 +93,7 @@
       "governance_change_classifications": ["stronger_enforcement"],
       "enforcement_levels": ["human_decision"],
       "evidence_completeness": "partial",
-      "prevention_summary": "Read-only closure-linkage inspection binds exact issue outcomes, accepts only repository-bounded contract input, paginates available closing mechanisms, fails closed on partial, malformed, unavailable, or unobservable evidence, and collects and compares exact post-merge state, reason, timestamps, and authorized reopen expectations through fixed read-only queries without merge, closure, reopening, or recovery authority.",
+      "prevention_summary": "Read-only closure-linkage inspection binds exact issue outcomes, accepts only repository-bounded contract input, paginates available closing mechanisms, fails closed on partial, malformed, unavailable, or other incomplete observable evidence, records the unexposed development-link closure effect as an explicit residual limitation, and requires exact immediate post-merge issue-state verification without merge, closure, reopening, or recovery authority.",
       "merged_prevention_prs": [],
       "regression_coverage": ["tests/unit/test_closure_linkage_inspection.py"],
       "documentation_impact": [
@@ -102,7 +102,7 @@
       ],
       "remaining_work": [
         "Merge execution, issue recovery, and merge-controller behavior remain separately authorized work.",
-        "Do not infer closure safety solely from PR-body wording; unavailable development-link evidence, partial pagination, and unknown closure source fail closed."
+        "Do not infer closure safety solely from PR-body wording; incomplete observable evidence, partial pagination, and unknown closure source fail closed, while the unexposed development-link closure effect requires explicit post-merge verification."
       ],
       "related_issues": ["#608", "#617"],
       "supersession": {"supersedes": [], "superseded_by": []},

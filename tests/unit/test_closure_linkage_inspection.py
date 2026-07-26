@@ -50,6 +50,8 @@ class FixtureTransport:
         reopened_at=None,
         graphql_error=False,
         timeline_error=False,
+        graphql_error_message="partial GraphQL response",
+        timeline_error_message="partial timeline response",
         effect_available=False,
         repository_name="nicho1ab/RecordsTracker",
         failed_issue_numbers=(),
@@ -64,6 +66,8 @@ class FixtureTransport:
         self.reopened_at = reopened_at
         self.graphql_error = graphql_error
         self.timeline_error = timeline_error
+        self.graphql_error_message = graphql_error_message
+        self.timeline_error_message = timeline_error_message
         self.development_link_effect_available = effect_available
         self.repository_name = repository_name
         self.failed_issue_numbers = set(failed_issue_numbers)
@@ -94,12 +98,12 @@ class FixtureTransport:
 
     def closing_issues(self, owner, name, number):
         if self.graphql_error:
-            raise INSPECTOR.ClosureLinkageError("partial GraphQL response")
+            raise INSPECTOR.ClosureLinkageError(self.graphql_error_message)
         return [{"number": value} for value in self.closing]
 
     def paginated(self, endpoint):
         if self.timeline_error:
-            raise INSPECTOR.ClosureLinkageError("partial timeline response")
+            raise INSPECTOR.ClosureLinkageError(self.timeline_error_message)
         return [
             {"event": "connected", "source": {"issue": {"number": value}}}
             for value in self.timeline
@@ -141,9 +145,29 @@ def test_complete_evidence_without_closing_reference_is_ready_and_sanitized():
         "pr_body": "complete",
         "graphql_closing_references": "complete",
         "timeline": "complete",
-        "development_link_closure_effect": "complete",
+        "development_link_closure_effect": "platform_not_exposed",
         "post_merge_issue_states": "not_observed",
     }
+    assert evidence["residual_platform_limitations"] == [
+        {
+            "mechanism": "development_link_closure_effect",
+            "availability": "platform_not_exposed",
+            "rationale": (
+                "GitHub supported read-only APIs expose development links but not their "
+                "closure effect."
+            ),
+        }
+    ]
+    assert evidence["post_merge_verification_obligations"] == [
+        {
+            "repository": "nicho1ab/RecordsTracker",
+            "pull_request_number": 615,
+            "issue_number": 608,
+            "expected_post_merge_state": "open",
+            "immediate_observation_required": True,
+        }
+    ]
+    assert "merge" in evidence["prohibited_actions"]
     assert '"body"' not in json.dumps(evidence)
     INSPECTOR.validate_evidence(evidence)
 
@@ -160,20 +184,21 @@ def test_detectable_closing_references_fail_closed(body, closing, code):
     assert code in codes(inspect(body=body, closing=closing)["closure_risk_findings"])
 
 
-def test_development_linkage_is_incomplete_even_when_a_link_is_observed():
+def test_observable_development_linkage_conflicting_with_open_contract_is_not_ready():
     evidence = inspect(timeline=(608,))
-    assert evidence["primary_readiness_classification"] == "EVIDENCE_INCOMPLETE"
-    assert "CLOSURE_EVIDENCE_INCOMPLETE" in codes(evidence["closure_risk_findings"])
+    assert evidence["primary_readiness_classification"] == "NOT_READY"
+    assert "UNAUTHORIZED_CLOSURE_LINKAGE" in codes(evidence["closure_risk_findings"])
     assert (
-        evidence["evidence_source_availability"]["development_link_closure_effect"] == "incomplete"
+        evidence["evidence_source_availability"]["development_link_closure_effect"]
+        == "platform_not_exposed"
     )
 
 
 def test_unavailable_and_partial_transport_sources_are_incomplete_not_ready():
     evidence = inspect(graphql_error=True, timeline_error=True, effect_available=True)
     assert evidence["primary_readiness_classification"] == "EVIDENCE_INCOMPLETE"
-    assert evidence["evidence_source_availability"]["graphql_closing_references"] == "incomplete"
-    assert evidence["evidence_source_availability"]["timeline"] == "incomplete"
+    assert evidence["evidence_source_availability"]["graphql_closing_references"] == "partial"
+    assert evidence["evidence_source_availability"]["timeline"] == "partial"
     assert "CLOSURE_EVIDENCE_INCOMPLETE" in codes(evidence["closure_risk_findings"])
 
 
@@ -360,8 +385,22 @@ def test_pr_615_fixture_regression_contains_sanitized_historical_evidence_only()
         "graphql_issue_numbers": [],
     }
     evidence = inspect(timeline=fixture["observed_development_links"])
-    assert evidence["primary_readiness_classification"] == "EVIDENCE_INCOMPLETE"
+    assert evidence["primary_readiness_classification"] == "NOT_READY"
     assert fixture["later_reopened"] is True
+
+
+def test_malformed_observable_source_remains_evidence_incomplete():
+    evidence = inspect(graphql_error=True, graphql_error_message="malformed GraphQL response")
+    assert evidence["primary_readiness_classification"] == "EVIDENCE_INCOMPLETE"
+    assert evidence["evidence_source_availability"]["graphql_closing_references"] == "malformed"
+
+
+def test_platform_residual_cannot_be_caller_supplied_to_bypass_observable_collection():
+    evidence = inspect(effect_available=True, graphql_error=True)
+    assert evidence["evidence_source_availability"]["development_link_closure_effect"] == (
+        "platform_not_exposed"
+    )
+    assert evidence["primary_readiness_classification"] == "EVIDENCE_INCOMPLETE"
 
 
 def test_read_only_transport_rejects_mutation_shaped_endpoint():

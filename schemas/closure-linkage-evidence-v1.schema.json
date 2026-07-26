@@ -15,6 +15,8 @@
     "observed_timeline_evidence",
     "observed_issue_states",
     "evidence_source_availability",
+    "residual_platform_limitations",
+    "post_merge_verification_obligations",
     "closure_risk_findings",
     "post_merge_findings",
     "primary_readiness_classification",
@@ -67,6 +69,14 @@
         "development_link_closure_effect": {"$ref": "#/$defs/availability"},
         "post_merge_issue_states": {"$ref": "#/$defs/availability"}
       }
+    },
+    "residual_platform_limitations": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/platform_limitation"}
+    },
+    "post_merge_verification_obligations": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/post_merge_obligation"}
     },
     "closure_risk_findings": {
       "type": "array",
@@ -188,7 +198,45 @@
         "issue_number": {"type": ["integer", "null"], "minimum": 1}
       }
     },
-    "availability": {"enum": ["complete", "incomplete", "unavailable", "not_observed"]},
+    "availability": {
+      "enum": [
+        "complete",
+        "collection_failed",
+        "partial",
+        "malformed",
+        "platform_not_exposed",
+        "not_applicable",
+        "not_observed"
+      ]
+    },
+    "platform_limitation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mechanism", "availability", "rationale"],
+      "properties": {
+        "mechanism": {"const": "development_link_closure_effect"},
+        "availability": {"const": "platform_not_exposed"},
+        "rationale": {"type": "string", "minLength": 1, "maxLength": 240}
+      }
+    },
+    "post_merge_obligation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repository",
+        "pull_request_number",
+        "issue_number",
+        "expected_post_merge_state",
+        "immediate_observation_required"
+      ],
+      "properties": {
+        "repository": {"$ref": "#/$defs/repository"},
+        "pull_request_number": {"$ref": "#/$defs/issue_number"},
+        "issue_number": {"$ref": "#/$defs/issue_number"},
+        "expected_post_merge_state": {"enum": ["open", "closed"]},
+        "immediate_observation_required": {"const": true}
+      }
+    },
     "finding": {
       "type": "object",
       "additionalProperties": false,
