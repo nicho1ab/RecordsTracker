@@ -1,0 +1,30 @@
+{
+  "schema_version": "recordstracker.evidence-reuse-validation-impact.v1",
+  "cases": [
+    {"name": "body_only_metadata", "paths": [".github/delivery-automation-registry.json"], "class": "evidence_only_metadata"},
+    {"name": "documentation_only", "paths": ["docs/developer/codex-workflow.md"], "class": "documentation_only"},
+    {"name": "test_only", "paths": ["tests/unit/test_delivery_automation_registry.py"], "class": "test_only"},
+    {"name": "governance_validator", "paths": ["scripts/delivery_automation_registry.py"], "class": "schema_or_governance_validator"},
+    {"name": "application", "paths": ["src/ccld_complaints/source_to_screen_audit.py"], "class": "application_implementation"},
+    {"name": "ingestion", "paths": ["src/ccld_complaints/connectors/base.py"], "class": "ingestion_or_source_contract"},
+    {"name": "database", "paths": ["migrations/versions/20260613_0001_seeded_corpus_import.py"], "class": "database_or_migration"},
+    {"name": "security", "paths": ["scripts/check_no_secrets.py"], "class": "security_or_privacy"},
+    {"name": "workflow", "paths": [".github/workflows/docs-check.yml"], "class": "workflow_or_required_check_contract"},
+    {"name": "infrastructure", "paths": ["Dockerfile"], "class": "deployment_or_infrastructure"},
+    {"name": "docs_and_tests", "paths": ["docs/developer/codex-workflow.md", "tests/unit/test_delivery_automation_registry.py"], "class": "test_only"},
+    {"name": "application_and_security", "paths": ["scripts/check_no_secrets.py", "src/ccld_complaints/source_to_screen_audit.py"], "class": "security_or_privacy"},
+    {"name": "unknown_path", "paths": ["unclassified/file.txt"], "class": "unknown"},
+    {"name": "incomplete_inventory", "paths": ["docs/developer/codex-workflow.md"], "class": "documentation_only"},
+    {"name": "changed_head_invalidation", "paths": ["docs/developer/codex-workflow.md"], "class": "documentation_only"},
+    {"name": "body_dependent_invalidation", "paths": [".github/delivery-automation-registry.json"], "class": "evidence_only_metadata"},
+    {"name": "source_test_retained", "paths": [".github/delivery-automation-registry.json"], "class": "evidence_only_metadata"},
+    {"name": "duplicate_success_runs", "paths": ["docs/developer/codex-workflow.md"], "class": "documentation_only"},
+    {"name": "pending_required_run", "paths": ["docs/developer/codex-workflow.md"], "class": "documentation_only"},
+    {"name": "failed_run_supersedes", "paths": ["docs/developer/codex-workflow.md"], "class": "documentation_only"},
+    {"name": "uncertain_dependency", "paths": ["docs/developer/codex-workflow.md"], "class": "documentation_only"},
+    {"name": "boundary_classification_change", "paths": ["docs/developer/codex-workflow.md"], "class": "documentation_only"},
+    {"name": "required_check_definition_change", "paths": [".github/workflows/docs-check.yml"], "class": "workflow_or_required_check_contract"},
+    {"name": "traversal_path", "paths": ["../outside.py"], "class": "unknown"},
+    {"name": "immutable_reference_preservation", "paths": ["docs/developer/codex-workflow.md"], "class": "documentation_only"}
+  ]
+}

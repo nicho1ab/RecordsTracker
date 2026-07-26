@@ -654,6 +654,35 @@ event payload text. Forked PRs retain the workflow's `contents: read` and
 A freeform body cannot substitute for the full governed template. Compact
 governed-summary eligibility remains controlled only by the validator.
 
+### Governed evidence reuse and validation-impact policy
+
+Issue #617 also owns the canonical slice-1 policy at
+`.github/evidence-reuse-validation-impact-policy.json`, its versioned envelope
+schema at `schemas/evidence-reuse-validation-impact-v1.schema.json`, and the
+repository-local evaluator at `scripts/evaluate_evidence_reuse_policy.py`.
+The evaluator accepts a complete caller-supplied repository-relative inventory
+and returns a deterministic compact decision only; it has no network,
+subprocess, command-generation, mutation, rerun, publication, merge, recovery,
+or cleanup capability.
+
+The policy distinguishes retained, fresh, live, superseded, and invalidated
+evidence; preserves immutable commit, tree, run, job, body, issue, and validator
+references; and fails closed on unknown paths, incomplete inventories, malformed
+or traversal paths, uncertain dependencies, changed required-check definitions,
+or changed governed-boundary classifications. It applies a strict requirement
+union so mixed scope never reduces the most restrictive requirement. It does
+not execute selected validation or required checks. Integration into PR evidence,
+PR-body preparation, and documentation checks remains a later separately
+authorized slice; generic orchestration remains owned by #533. The deferred
+`merged` timeline-event classifier remains out of scope.
+
+The policy retains these boundaries exactly:
+
+- requires disclosure when governed workflow boundaries change
+- no branch-protection or ruleset change
+- no required-check rename or removal
+- no autonomous approval or merge
+
 ## Validation
 
 For a material reviewer-facing redesign, complete the pre-code artifact

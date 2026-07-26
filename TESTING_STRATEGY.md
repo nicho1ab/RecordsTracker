@@ -629,6 +629,13 @@ Validate documentation structure and run manual or automated checks for user-fac
   pre/post-merge state-reason-timestamp checks, and the PR #615/#608
   regression. It has no live API, merge, issue-write, recovery, arbitrary path,
   or PR-body mutation path.
+- Evidence-reuse and validation-impact policy coverage uses sanitized fixtures
+  and deterministic inputs for every supported path class, strict mixed-scope
+  union, freshness and invalidation, body-dependent evidence, exact immutable
+  references, duplicate/pending/failed required-run classification, compact
+  result completeness, path safety, and no mutation or command output. The
+  slice-1 evaluator calculates requirements only; PR-evidence and
+  documentation-check integration remain later separately authorized work.
 - CI retrieves the current live body when it validates a PR. Its pull-request
   `edited` event covers title and body edits because event selection cannot
   distinguish them; the job remains read-only and validates body evidence only.

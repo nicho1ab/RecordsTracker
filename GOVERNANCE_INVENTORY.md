@@ -41,6 +41,15 @@
   repository-bounded and post-merge collection uses fixed read-only queries for
   exact declared issues only. It does not merge, close, reopen, unlink,
   recover, or grant merge authority.
+- Issue #617 slice 1 adds the canonical governed evidence-reuse and
+  validation-impact policy, versioned envelope schema, deterministic local
+  evaluator, and sanitized fixtures. It classifies only complete
+  repository-relative change inventories, evaluates evidence freshness and
+  invalidation, and returns compact read-only requirement decisions. It does
+  not run validation, checks, reruns, publication, merge, recovery, or cleanup;
+  PR-evidence and documentation-check integration remain later slices, generic
+  orchestration remains under #533, and the deferred `merged` timeline-event
+  classifier remains out of scope.
 - Current implementation state: the Python, SQLite, and Datasette proof of
   concept has proven governed ingestion, deterministic extraction, raw source
   preservation, source traceability, local validation and review support, and
