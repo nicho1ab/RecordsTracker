@@ -39,6 +39,9 @@ Capture the focused issue #418 complaint trend and anomaly evidence routes and a
 .PARAMETER Issue419
 Capture the focused issue #419 canonical Compare Facilities views, states, redirects,
 responsive layouts, keyboard focus, and print evidence.
+.PARAMETER Issue502
+Capture the focused issue #502 Home and Find a Facility states, navigation, responsive
+layouts, keyboard focus, and fixture-unavailable directory evidence.
 .PARAMETER Issue498
 Capture the focused RT-SRC-002 local fixture evidence states and presentation scenarios.
 .PARAMETER Issue610
@@ -57,6 +60,8 @@ Capture the focused Issue #610 Complaint Overview print-correction evidence.
 .\scripts\capture-hosted-ui-evidence.ps1 -BaseUrl http://127.0.0.1:8010 -Mode fixture -Issue418
 .EXAMPLE
 .\scripts\capture-hosted-ui-evidence.ps1 -BaseUrl http://127.0.0.1:8010 -Mode fixture -Issue419
+.EXAMPLE
+.\scripts\capture-hosted-ui-evidence.ps1 -BaseUrl http://127.0.0.1:8010 -Mode fixture -Issue502
 .EXAMPLE
 .\scripts\capture-hosted-ui-evidence.ps1 -BaseUrl http://127.0.0.1:8010 -Mode fixture -Issue498
 .EXAMPLE
@@ -102,6 +107,8 @@ param(
 
     [switch]$Issue419,
 
+    [switch]$Issue502,
+
     [switch]$Issue498,
 
     [switch]$Issue610
@@ -111,6 +118,9 @@ $ErrorActionPreference = "Stop"
 
 $evidencePurpose = if ($Issue610) {
     "Focused Issue #610 local fixture evidence for Complaint Overview print pagination on the product-owner-rejected populated route and one unavailable-source comparison state."
+}
+elseif ($Issue502) {
+    "Focused issue #502 local fixture evidence for distinct Home and Find a Facility routes, truthful directory states, contextual next actions, keyboard focus, and responsive reflow."
 }
 elseif ($Issue498) {
     "Focused RT-SRC-002 local fixture evidence for supported, document-only, field-partial, source-unavailable, responsive, focus, and print states."
@@ -596,6 +606,119 @@ function Stop-InteractionAwareBrowserSession {
     $resolvedProfile = [System.IO.Path]::GetFullPath([string]$Session.ProfileDir)
     if ($resolvedProfile.StartsWith($tempRoot, [System.StringComparison]::OrdinalIgnoreCase) -and (Split-Path $resolvedProfile -Leaf) -like "ccld-ui-evidence-*") {
         Remove-Item -LiteralPath $resolvedProfile -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}
+
+function Get-PngDimensions {
+    param([string]$Path)
+    $bytes = [System.IO.File]::ReadAllBytes($Path)
+    $pngSignature = [byte[]](137,80,78,71,13,10,26,10)
+    $hasPngSignature = $bytes.Length -ge 8
+    if ($hasPngSignature) {
+        for ($index = 0; $index -lt $pngSignature.Length; $index++) {
+            if ($bytes[$index] -ne $pngSignature[$index]) { $hasPngSignature = $false; break }
+        }
+    }
+    if ($bytes.Length -lt 24 -or -not $hasPngSignature) {
+        throw "Screenshot is not a complete PNG: $Path"
+    }
+    $width = ([int]$bytes[16] -shl 24) -bor ([int]$bytes[17] -shl 16) -bor ([int]$bytes[18] -shl 8) -bor [int]$bytes[19]
+    $height = ([int]$bytes[20] -shl 24) -bor ([int]$bytes[21] -shl 16) -bor ([int]$bytes[22] -shl 8) -bor [int]$bytes[23]
+    if ($width -le 0 -or $height -le 0) { throw "Screenshot has invalid PNG dimensions: $Path" }
+    return [pscustomobject]@{ width = $width; height = $height }
+}
+
+function Invoke-Issue502BrowserCapture {
+    param([object]$Session, [hashtable]$Route, [string]$Url, [string]$ScreenshotPath, [int]$Width, [int]$Height)
+    $browserState = $null
+    try {
+        Invoke-CdpCommand -Session $Session -Method "Page.enable" | Out-Null
+        Invoke-CdpCommand -Session $Session -Method "Runtime.enable" | Out-Null
+        Invoke-CdpCommand -Session $Session -Method "Emulation.setDeviceMetricsOverride" -Parameters @{ width = $Width; height = $Height; deviceScaleFactor = 1; mobile = $false; screenWidth = $Width; screenHeight = $Height } | Out-Null
+        Invoke-CdpCommand -Session $Session -Method "Emulation.setEmulatedMedia" -Parameters @{ media = "screen" } | Out-Null
+        Invoke-CdpCommand -Session $Session -Method "Page.navigate" -Parameters @{ url = $Url } | Out-Null
+        Wait-CdpCondition -Session $Session -Expression "document.readyState === 'complete'" -Description "Issue #502 DOM readiness"
+        Invoke-CdpEvaluate -Session $Session -AwaitPromise $true -Expression "(async function(){ if (document.fonts && document.fonts.ready) { await document.fonts.ready; } await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))); return true; })()" | Out-Null
+
+        $capturePurpose = if ($Route.ContainsKey("Issue502CapturePurpose")) { [string]$Route.Issue502CapturePurpose } else { "viewport" }
+        $keyboardSelector = if ($Route.ContainsKey("Issue502KeyboardSelector")) { [string]$Route.Issue502KeyboardSelector } else { "" }
+        $keyboardTabPresses = 0
+        if ($keyboardSelector) {
+            Invoke-CdpEvaluate -Session $Session -Expression "(function(){ const skip = document.querySelector('.skip-link'); if (!skip) throw new Error('Issue #502 keyboard capture requires a skip link.'); skip.focus(); return document.activeElement === skip; })()" | Out-Null
+            $reachedKeyboardTarget = $false
+            for ($tabIndex = 1; $tabIndex -le 32; $tabIndex++) {
+                Invoke-CdpKeyPress -Session $Session -Key "Tab" -Code "Tab" -VirtualKeyCode 9
+                $keyboardTabPresses = $tabIndex
+                $activeMatches = [bool](Invoke-CdpEvaluate -Session $Session -Expression "(function(){ const target = document.querySelector('$keyboardSelector'); return !!target && document.activeElement === target; })()")
+                if ($activeMatches) { $reachedKeyboardTarget = $true; break }
+            }
+            if (-not $reachedKeyboardTarget) { throw "Keyboard navigation did not reach '$keyboardSelector' within 32 Tab presses." }
+        }
+
+        $captureStateJson = @{ capturePurpose = $capturePurpose; keyboardSelector = $keyboardSelector } | ConvertTo-Json -Compress
+        $browserState = Invoke-CdpEvaluate -Session $Session -AwaitPromise $true -Expression @"
+(async function () {
+  const contract = $captureStateJson;
+  const rect = (selector) => {
+    const element = document.querySelector(selector);
+    if (!element) return null;
+    const value = element.getBoundingClientRect();
+    return { left: value.left, top: value.top, right: value.right, bottom: value.bottom, width: value.width, height: value.height };
+  };
+  const visible = (selector) => {
+    const element = document.querySelector(selector);
+    if (!element) return false;
+    const style = getComputedStyle(element);
+    return element.getClientRects().length > 0 && style.display !== 'none' && style.visibility !== 'hidden';
+  };
+  const intersectsViewport = (bounds) => !!bounds && bounds.right > 0 && bounds.bottom > 0 && bounds.left < window.innerWidth && bounds.top < window.innerHeight;
+  const required = ['header', 'main', 'footer'];
+  if (location.pathname === '/ccld/facilities') required.push('form.facility-search-form');
+  if (location.search.includes('q=orchard')) required.push('#facility-results', '#facility-results a.button');
+  for (const selector of required) if (!visible(selector)) throw new Error('Required Issue #502 landmark is unavailable: ' + selector);
+  const initialScroll = { x: window.scrollX, y: window.scrollY };
+  if (contract.capturePurpose === 'full-page') window.scrollTo({ left: 0, top: 0, behavior: 'instant' });
+  await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const documentOverflow = document.documentElement.scrollWidth > window.innerWidth + 1 || document.body.scrollWidth > window.innerWidth + 1;
+  if (documentOverflow) throw new Error('Issue #502 capture detected horizontal page overflow.');
+  const active = document.activeElement;
+  const activeBounds = contract.keyboardSelector ? rect(contract.keyboardSelector) : null;
+  const activeStyle = active ? getComputedStyle(active) : null;
+  const keyboardFocusVisible = contract.keyboardSelector ? !!active && active.matches(contract.keyboardSelector) && intersectsViewport(activeBounds) && active.matches(':focus-visible') && ((activeStyle.outlineStyle !== 'none' && parseFloat(activeStyle.outlineWidth) > 0) || (activeStyle.boxShadow && activeStyle.boxShadow !== 'none')) : null;
+  if (contract.keyboardSelector && !keyboardFocusVisible) throw new Error('Keyboard focus target is absent, outside the viewport, or lacks a visible focus indicator.');
+  return {
+    capturePurpose: contract.capturePurpose,
+    initialScroll,
+    finalScroll: { x: window.scrollX, y: window.scrollY },
+    viewport: { innerWidth: window.innerWidth, innerHeight: window.innerHeight, clientWidth: document.documentElement.clientWidth },
+    document: { scrollWidth: document.documentElement.scrollWidth, bodyScrollWidth: document.body.scrollWidth, scrollHeight: document.documentElement.scrollHeight },
+    horizontalOverflow: documentOverflow,
+    focusedElement: active ? { id: active.id || '', selector: contract.keyboardSelector || (active.id ? '#' + active.id : active.tagName.toLowerCase()), accessibleName: contract.keyboardSelector ? (active.getAttribute('aria-label') || active.textContent.trim()) : '', bounds: activeBounds, focusVisible: active.matches(':focus-visible'), outlineStyle: activeStyle.outlineStyle, outlineWidth: activeStyle.outlineWidth, boxShadow: activeStyle.boxShadow } : null,
+    keyboardFocusVisible,
+    landmarks: { header: rect('header'), main: rect('main'), searchForm: rect('form.facility-search-form'), results: rect('#facility-results'), action: rect('#facility-results a.button'), footer: rect('footer') }
+  };
+})()
+"@
+        $browserState | Add-Member -NotePropertyName keyboardTabPresses -NotePropertyValue $keyboardTabPresses
+        $browserState | Add-Member -NotePropertyName captureMetadata -NotePropertyValue @{ capturedAtUtc = (Get-Date).ToUniversalTime().ToString('o'); branch = (& git rev-parse --abbrev-ref HEAD).Trim(); commit = (& git rev-parse HEAD).Trim() }
+        if ($capturePurpose -eq "full-page") {
+            $metrics = Invoke-CdpCommand -Session $Session -Method "Page.getLayoutMetrics"
+            $contentSize = $metrics.result.cssContentSize
+            $screenshot = Invoke-CdpCommand -Session $Session -Method "Page.captureScreenshot" -Parameters @{ format = "png"; fromSurface = $true; captureBeyondViewport = $true; clip = @{ x = 0; y = 0; width = [Math]::Ceiling([double]$contentSize.width); height = [Math]::Ceiling([double]$contentSize.height); scale = 1 } }
+        }
+        else {
+            $screenshot = Invoke-CdpCommand -Session $Session -Method "Page.captureScreenshot" -Parameters @{ format = "png"; fromSurface = $true; captureBeyondViewport = $false }
+        }
+        [System.IO.File]::WriteAllBytes($ScreenshotPath, [Convert]::FromBase64String([string]$screenshot.result.data))
+        $dimensions = Get-PngDimensions -Path $ScreenshotPath
+        if ($capturePurpose -eq "full-page" -and ($dimensions.height -lt $Height -or $dimensions.width -lt $browserState.viewport.clientWidth)) { throw "Full-page screenshot dimensions are smaller than the governed viewport." }
+        if ($capturePurpose -eq "viewport" -and ($dimensions.height -ne $Height -or $dimensions.width -ne $Width)) { throw "Viewport screenshot dimensions do not match the governed viewport." }
+        $browserState | Add-Member -NotePropertyName screenshot -NotePropertyValue @{ width = $dimensions.width; height = $dimensions.height; sha256 = (Get-FileHash -LiteralPath $ScreenshotPath -Algorithm SHA256).Hash }
+        return [pscustomobject]@{ Success = $true; Error = ""; State = $browserState; ScreenshotCreated = (Test-Path -LiteralPath $ScreenshotPath) }
+    }
+    catch {
+        Remove-Item -LiteralPath $ScreenshotPath -Force -ErrorAction SilentlyContinue
+        return [pscustomobject]@{ Success = $false; Error = $_.Exception.Message; State = $browserState; ScreenshotCreated = $false }
     }
 }
 
@@ -1224,16 +1347,15 @@ function Test-RouteAssertions {
         })
         $expectedNavLinks = @(
             "/|Home",
-            "/ccld/facilities|Facilities",
+            "/ccld/facilities|Find a Facility",
             "/ccld/facilities/intelligence|Compare Facilities",
-            "/ccld/records/request|Request Records",
-            "/reviewer|Review",
+            "/reviewer|Complaint Worklist",
             "/feedback|Feedback",
             "/ccld/help|Help"
         )
         $navDefinitionMatches = $navLinks.Count -eq $expectedNavLinks.Count -and (($navLinks -join "`n") -ceq ($expectedNavLinks -join "`n"))
-        if ($navDefinitionMatches) { Add-AssertionResult -Target $Assertions -RouteName $name -Check "authoritative primary navigation" -Status "PASS" -Message "Primary navigation includes the approved Compare Facilities destination in the current seven-link order." }
-        else { Add-AssertionResult -Target $Assertions -RouteName $name -Check "authoritative primary navigation" -Status "FAIL" -Message "Primary navigation differs from the current governed seven-link definition or ordering." }
+        if ($navDefinitionMatches) { Add-AssertionResult -Target $Assertions -RouteName $name -Check "authoritative primary navigation" -Status "PASS" -Message "Primary navigation includes the approved destinations in the current six-link order." }
+        else { Add-AssertionResult -Target $Assertions -RouteName $name -Check "authoritative primary navigation" -Status "FAIL" -Message "Primary navigation differs from the current governed six-link definition or ordering." }
         $feedbackCount = @($navLinks | Where-Object { $_ -ceq "/feedback|Feedback" }).Count
         $jobStatusCount = @($navLinks | Where-Object { $_ -like "/ccld/retrieval/jobs|*" }).Count
         if ($feedbackCount -eq 1 -and $jobStatusCount -eq 0) { Add-AssertionResult -Target $Assertions -RouteName $name -Check "primary navigation product tiers" -Status "PASS" -Message "Feedback appears once and job diagnostics stays out of primary navigation." }
@@ -1633,6 +1755,46 @@ function Test-Issue418RouteAssertions {
     }
 }
 
+function Test-Issue502RouteAssertions {
+    param([hashtable]$Route, [string]$Html, [string]$Text, [System.Collections.ArrayList]$Assertions)
+    if (-not $Route.ContainsKey("Issue502Kind")) { return }
+    $name = [string]$Route.Name
+    $kind = [string]$Route.Issue502Kind
+    $hasApprovedNavigation = @(
+        "Home",
+        "Find a Facility",
+        "Compare Facilities",
+        "Complaint Worklist",
+        "Feedback",
+        "Help"
+    ) | ForEach-Object { $Text.Contains($_) }
+    Add-AssertionResult -Target $Assertions -RouteName $name -Check "issue502 approved navigation" -Status $(if (($hasApprovedNavigation | Where-Object { -not $_ }).Count -eq 0) { "PASS" } else { "FAIL" }) -Message $(if (($hasApprovedNavigation | Where-Object { -not $_ }).Count -eq 0) { "Approved global navigation labels found." } else { "One or more approved global navigation labels are missing." })
+    if ($kind -eq "home") {
+        $homeIsDistinct = $Text.Contains("Review CCLD Facility Records") -and $Text.Contains("Choose a review task") -and -not $Text.Contains("Facility intake")
+        Add-AssertionResult -Target $Assertions -RouteName $name -Check "issue502 distinct Home task launch" -Status $(if ($homeIsDistinct) { "PASS" } else { "FAIL" }) -Message $(if ($homeIsDistinct) { "Home contains task launch content without the facility intake flow." } else { "Home is missing its distinct task launch or still contains facility intake content." })
+    }
+    if ($kind -eq "facility") {
+        $facilityIsDistinct = $Text.Contains("Find a Facility") -and $Text.Contains("Facility search") -and -not $Text.Contains("Reference data details") -and -not $Text.Contains("How to request records with this Facility ID")
+        Add-AssertionResult -Target $Assertions -RouteName $name -Check "issue502 distinct facility discovery" -Status $(if ($facilityIsDistinct) { "PASS" } else { "FAIL" }) -Message $(if ($facilityIsDistinct) { "Find a Facility contains focused discovery without superseded disclosures." } else { "Facility discovery content is missing or includes superseded disclosure content." })
+    }
+    if ($kind -eq "unmatched") {
+        $validContinuation = $Text.Contains("Facility not found in the directory") -and $Text.Contains("Continue with this Facility ID")
+        Add-AssertionResult -Target $Assertions -RouteName $name -Check "issue502 valid unmatched continuation" -Status $(if ($validContinuation) { "PASS" } else { "FAIL" }) -Message $(if ($validContinuation) { "Valid unmatched Facility ID retains a truthful continuation action." } else { "Valid unmatched Facility ID continuation is missing." })
+    }
+    if ($kind -eq "malformed") {
+        $malformedState = $Text.Contains("Check the Facility ID") -and -not $Text.Contains("Continue with this Facility ID")
+        Add-AssertionResult -Target $Assertions -RouteName $name -Check "issue502 malformed identifier recovery" -Status $(if ($malformedState) { "PASS" } else { "FAIL" }) -Message $(if ($malformedState) { "Malformed Facility ID has a distinct recovery state without continuation." } else { "Malformed Facility ID state is unsupported." })
+    }
+    if ($kind -eq "unavailable") {
+        $unavailableState = $Text.Contains("Facility search is unavailable") -and $Text.Contains("Known Facility ID")
+        Add-AssertionResult -Target $Assertions -RouteName $name -Check "issue502 directory unavailable state" -Status $(if ($unavailableState) { "PASS" } else { "FAIL" }) -Message $(if ($unavailableState) { "Directory-unavailable state offers bounded known-ID continuation." } else { "Directory-unavailable state is missing." })
+    }
+    if ($kind -eq "results") {
+        $resultsAreActionable = $Text.Contains("Facility results") -and $Text.Contains("Complaint context") -and ($Text.Contains("Get Records") -or $Text.Contains("Review Facility"))
+        Add-AssertionResult -Target $Assertions -RouteName $name -Check "issue502 selected facility context action" -Status $(if ($resultsAreActionable) { "PASS" } else { "FAIL" }) -Message $(if ($resultsAreActionable) { "Facility results state complaint context and a contextual next action." } else { "Facility result context or action is missing." })
+    }
+}
+
 function Test-Issue419RouteAssertions {
     param([hashtable]$Route, [string]$Html, [string]$Text, [System.Collections.ArrayList]$Assertions)
     if (-not $Route.ContainsKey("Issue419Kind")) { return }
@@ -1772,8 +1934,8 @@ foreach ($entry in $captureEnvOverrides.GetEnumerator()) {
 try {
     Test-AllowedBaseUrl -Value $BaseUrl
     Assert-OutputDir -Path $OutputDir
-    if ($Issue419 -and $Mode -ne "fixture") {
-        Stop-CaptureFail "Issue #419 evidence routes are local fixture/demo-only; use -Mode fixture."
+    if (($Issue419 -or $Issue502) -and $Mode -ne "fixture") {
+        Stop-CaptureFail "Issue #419 and Issue #502 evidence routes are local fixture/demo-only; use -Mode fixture."
     }
     if ($Issue498 -and $Mode -ne "fixture") {
         Stop-CaptureFail "Issue #498 evidence routes are local fixture/demo-only; use -Mode fixture."
@@ -1781,7 +1943,7 @@ try {
     $baseUri = [System.Uri]::new($BaseUrl)
     $normalizedBaseUrl = $baseUri.GetLeftPart([System.UriPartial]::Authority).TrimEnd("/")
     $timestamp = (Get-Date).ToUniversalTime().ToString("yyyyMMdd-HHmmssZ")
-    $packetName = if ($Issue498) { "$timestamp-$Mode-issue-498" } elseif ($Issue419) { "$timestamp-$Mode-issue-419" } elseif ($Issue418) { "$timestamp-$Mode-issue-418" } elseif ($Issue417) { "$timestamp-$Mode-issue-417" } elseif ($Issue416) { "$timestamp-$Mode-issue-416" } elseif ($Issue415) { "$timestamp-$Mode-issue-415" } else { "$timestamp-$Mode" }
+    $packetName = if ($Issue502) { "$timestamp-$Mode-issue-502" } elseif ($Issue498) { "$timestamp-$Mode-issue-498" } elseif ($Issue419) { "$timestamp-$Mode-issue-419" } elseif ($Issue418) { "$timestamp-$Mode-issue-418" } elseif ($Issue417) { "$timestamp-$Mode-issue-417" } elseif ($Issue416) { "$timestamp-$Mode-issue-416" } elseif ($Issue415) { "$timestamp-$Mode-issue-415" } else { "$timestamp-$Mode" }
     $outputRoot = Join-Path $PWD $OutputDir
     $packetDir = Join-Path $outputRoot $packetName
     $zipPath = Join-Path $outputRoot "$packetName.zip"
@@ -1867,6 +2029,20 @@ try {
         @{ Name = "issue-419-legacy-priorities"; Path = "/reviewer/facilities/priorities?min_complaints=1&page_size=10"; Label = "issue-419-16-legacy-priorities-redirect"; ActiveHref = $issue419Base; WorkflowStep = "Review"; Issue419Kind = "legacy-priority"; ViewportWidth = 1440; ViewportHeight = 1200 },
         @{ Name = "issue-419-legacy-trends"; Path = "/reviewer/facilities/trends?time_grain=month&period_count=3"; Label = "issue-419-17-legacy-trends-redirect"; ActiveHref = $issue419Base; WorkflowStep = "Review"; Issue419Kind = "legacy-trends"; ViewportWidth = 1440; ViewportHeight = 1200 }
     )
+    $issue502Routes = @(
+        @{ Name = "issue-502-home"; Path = "/"; Label = "issue-502-01-home"; ActiveHref = "/"; WorkflowStep = "Home"; Issue502Kind = "home"; ViewportWidth = 1440; ViewportHeight = 1200 },
+        @{ Name = "issue-502-home-mobile"; Path = "/"; Label = "issue-502-02-home-mobile"; ActiveHref = "/"; WorkflowStep = "Home"; Issue502Kind = "home"; Issue502CapturePurpose = "full-page"; ViewportWidth = 390; ViewportHeight = 844 },
+        @{ Name = "issue-502-home-keyboard"; Path = "/"; Label = "issue-502-03-home-keyboard"; ActiveHref = "/"; WorkflowStep = "Home"; Issue502Kind = "home"; Issue502CapturePurpose = "full-page"; Issue502KeyboardSelector = 'main a.button[href="/ccld/facilities"]'; Issue502DistinctFrom = "issue-502-home"; ViewportWidth = 1440; ViewportHeight = 1200 },
+        @{ Name = "issue-502-facility-default"; Path = "/ccld/facilities"; Label = "issue-502-04-facility-default"; ActiveHref = "/ccld/facilities"; WorkflowStep = "Facility"; Issue502Kind = "facility"; ViewportWidth = 1440; ViewportHeight = 1200 },
+        @{ Name = "issue-502-facility-results"; Path = "/ccld/facilities?q=orchard#facility-results"; Label = "issue-502-05-facility-results"; ActiveHref = "/ccld/facilities"; WorkflowStep = "Facility"; Issue502Kind = "results"; ViewportWidth = 1440; ViewportHeight = 1200 },
+        @{ Name = "issue-502-valid-unmatched"; Path = "/ccld/facilities?q=123456789#facility-results"; Label = "issue-502-06-valid-unmatched"; ActiveHref = "/ccld/facilities"; WorkflowStep = "Facility"; Issue502Kind = "unmatched"; ViewportWidth = 1440; ViewportHeight = 1200 },
+        @{ Name = "issue-502-malformed"; Path = "/ccld/facilities?q=12345#facility-results"; Label = "issue-502-07-malformed"; ActiveHref = "/ccld/facilities"; WorkflowStep = "Facility"; Issue502Kind = "malformed"; ViewportWidth = 1440; ViewportHeight = 1200 },
+        @{ Name = "issue-502-directory-unavailable"; Path = "/ccld/facilities?evidence_state=facility-search-unavailable"; Label = "issue-502-08-directory-unavailable"; ActiveHref = "/ccld/facilities"; WorkflowStep = "Facility"; Issue502Kind = "unavailable"; ViewportWidth = 1440; ViewportHeight = 1200 },
+        @{ Name = "issue-502-facility-mobile"; Path = "/ccld/facilities?q=orchard"; Label = "issue-502-09-facility-mobile"; ActiveHref = "/ccld/facilities"; WorkflowStep = "Facility"; Issue502Kind = "results"; Issue502CapturePurpose = "full-page"; ViewportWidth = 390; ViewportHeight = 844 },
+        @{ Name = "issue-502-facility-mobile-focused-results"; Path = "/ccld/facilities?q=orchard#facility-results"; Label = "issue-502-09b-facility-mobile-focused-results"; ActiveHref = "/ccld/facilities"; WorkflowStep = "Facility"; Issue502Kind = "results"; ViewportWidth = 390; ViewportHeight = 844 },
+        @{ Name = "issue-502-facility-reflow"; Path = "/ccld/facilities?q=orchard"; Label = "issue-502-10-facility-reflow"; ActiveHref = "/ccld/facilities"; WorkflowStep = "Facility"; Issue502Kind = "results"; Issue502CapturePurpose = "full-page"; ViewportWidth = 720; ViewportHeight = 600 },
+        @{ Name = "issue-502-facility-keyboard"; Path = "/ccld/facilities"; Label = "issue-502-11-facility-keyboard"; ActiveHref = "/ccld/facilities"; WorkflowStep = "Facility"; Issue502Kind = "facility"; Issue502CapturePurpose = "full-page"; Issue502KeyboardSelector = '#facility-search-input'; Issue502DistinctFrom = "issue-502-facility-default"; ViewportWidth = 1440; ViewportHeight = 1200 }
+    )
     $issue498SupportedPath = "/reviewer/records/detail?source_record_key=complaint%3Accld-complaint-32-CR-20240603151515-rt-src-002-supported-fixture"
     $issue498DocumentOnlyPath = "/reviewer/records/detail?source_record_key=complaint%3Accld-complaint-32-CR-20240610181818-rt-src-002-document-only-fixture"
     $issue498FieldPartialPath = "/reviewer/records/detail?source_record_key=complaint%3Accld%3Acomplaint%3A32-CR-20220407124448"
@@ -1888,7 +2064,7 @@ try {
         @{ Name = "issue-610-populated-print"; Path = "/reviewer/records/detail?source_record_key=complaint%3Accld%3Acomplaint%3A32-CR-20220407124448&return_facility_number=157806098&return_start_date=&return_end_date=&return_context_origin=reviewer_worklist&return_lookup_facility_name=&return_q=32-CR-20220407124448&return_source_record_key=complaint%3Accld%3Acomplaint%3A32-CR-20220407124448"; Label = "issue-610-01-populated-print"; ActiveHref = "/reviewer"; WorkflowStep = "Review"; ViewportWidth = 1440; ViewportHeight = 1200; CapturePrint = $true },
         @{ Name = "issue-610-source-unavailable"; Path = $issue498SourceUnavailablePath; Label = "issue-610-02-source-unavailable"; ActiveHref = "/reviewer"; WorkflowStep = "Review"; ViewportWidth = 1440; ViewportHeight = 1200 }
     )
-    $routesToCapture = if ($Issue610) { $issue610Routes } elseif ($Issue498) { $issue498Routes } elseif ($Issue419) { $issue419Routes } elseif ($Issue418) { $issue418Routes } elseif ($Issue417) { $issue417Routes } elseif ($Issue416) { $issue416Routes } elseif ($Issue415) { $issue415Routes } else { $coreRoutes }
+    $routesToCapture = if ($Issue610) { $issue610Routes } elseif ($Issue502) { $issue502Routes } elseif ($Issue498) { $issue498Routes } elseif ($Issue419) { $issue419Routes } elseif ($Issue418) { $issue418Routes } elseif ($Issue417) { $issue417Routes } elseif ($Issue416) { $issue416Routes } elseif ($Issue415) { $issue415Routes } else { $coreRoutes }
 
     $routeResults = [System.Collections.ArrayList]::new()
     $assertions = [System.Collections.ArrayList]::new()
@@ -1896,16 +2072,16 @@ try {
     $routeHtmlByName = @{}
     $screenshotWarnings = @()
     $screenshotToolResolution = if ($IncludeScreenshots) {
-        Resolve-ScreenshotTool -Requested $ScreenshotToolPreference -RequireInteractionAware ([bool]$Issue498)
+        Resolve-ScreenshotTool -Requested $ScreenshotToolPreference -RequireInteractionAware ([bool]($Issue498 -or $Issue502))
     }
     else {
         [pscustomobject]@{ Requested = $ScreenshotToolPreference; Resolved = "none"; ValidationStatus = "screenshots not requested"; Executable = ""; SupportsInteractionAwareCapture = $false; FullPage = $false; Tool = $null; Attempts = @(); Error = "" }
     }
     $resolvedScreenshotTool = $screenshotToolResolution.Tool
     $interactionBrowserSession = $null
-    if ($Issue498 -and $IncludeScreenshots) {
+    if (($Issue498 -or $Issue502) -and $IncludeScreenshots) {
         if ($null -eq $resolvedScreenshotTool) {
-            $screenshotWarnings += "Issue #498 screenshot tool selection failed: $($screenshotToolResolution.Error)"
+                $screenshotWarnings += "Interaction-aware screenshot tool selection failed: $($screenshotToolResolution.Error)"
         }
         else {
             try {
@@ -1928,7 +2104,7 @@ try {
                 $interactionBrowserSession = $browserSessionCandidate
             }
             catch {
-                $screenshotWarnings += "Issue #498 interaction-aware browser startup failed: $($_.Exception.Message)"
+                $screenshotWarnings += "Interaction-aware browser startup failed: $($_.Exception.Message)"
             }
         }
     }
@@ -1947,6 +2123,7 @@ try {
         $supplementalScreenshotPath = ""
         $printPath = ""
         $browserStatePath = ""
+        $screenshotSha256 = ""
         $routeViewportWidth = if ($Route.ContainsKey("ViewportWidth")) { [int]$Route.ViewportWidth } else { $ViewportWidth }
         $routeViewportHeight = if ($Route.ContainsKey("ViewportHeight")) { [int]$Route.ViewportHeight } else { $ViewportHeight }
         $failure = ""
@@ -1992,12 +2169,36 @@ try {
                         }
                     }
                 }
+                elseif ($Issue502) {
+                    if ($null -eq $interactionBrowserSession) {
+                        $shotError = "interaction-aware browser session unavailable"
+                        $script:screenshotWarnings += "$($Route.Name): screenshot failed: $shotError"
+                        $failure = "Issue #502 responsive capture failed: $shotError"
+                    }
+                    else {
+                        $captureResult = Invoke-Issue502BrowserCapture -Session $interactionBrowserSession -Route $Route -Url $url -ScreenshotPath $shotFile -Width $routeViewportWidth -Height $routeViewportHeight
+                        if ($null -ne $captureResult.State) {
+                            $browserStateFile = Join-Path $diagnosticsDir "$($Route.Label)-browser-state.json"
+                            Set-Content -LiteralPath $browserStateFile -Value ($captureResult.State | ConvertTo-Json -Depth 10) -Encoding UTF8
+                            $browserStatePath = ConvertTo-RelativeEvidencePath -Path $browserStateFile -Root $packetDir
+                        }
+                        if (-not $captureResult.Success -or -not $captureResult.ScreenshotCreated) {
+                            Remove-Item -LiteralPath $shotFile -Force -ErrorAction SilentlyContinue
+                            $script:screenshotWarnings += "$($Route.Name): screenshot failed: $($captureResult.Error)"
+                            $failure = "Issue #502 responsive capture failed: $($captureResult.Error)"
+                        }
+                        else {
+                            $screenshotPath = ConvertTo-RelativeEvidencePath -Path $shotFile -Root $packetDir
+                            $screenshotSha256 = [string]$captureResult.State.screenshot.sha256
+                        }
+                    }
+                }
                 elseif ($null -ne $resolvedScreenshotTool) {
                     $shotError = Invoke-RouteScreenshot -Tool $resolvedScreenshotTool -Url $url -ScreenshotPath $shotFile -Width $routeViewportWidth -Height $routeViewportHeight
                     if ($shotError) { $script:screenshotWarnings += "$($Route.Name): $shotError" }
                     elseif (Test-Path -LiteralPath $shotFile) { $screenshotPath = ConvertTo-RelativeEvidencePath -Path $shotFile -Root $packetDir }
                 }
-                if (-not $Issue498 -and $null -ne $resolvedScreenshotTool -and $Route.ContainsKey("CapturePrint") -and [bool]$Route.CapturePrint) {
+                if (-not $Issue498 -and -not $Issue502 -and $null -ne $resolvedScreenshotTool -and $Route.ContainsKey("CapturePrint") -and [bool]$Route.CapturePrint) {
                     $printFile = Join-Path $printDir "$($Route.Label).pdf"
                     $printError = Invoke-RoutePrint -Tool $resolvedScreenshotTool -Url $url -PrintPath $printFile
                     if ($printError) { $script:screenshotWarnings += "$($Route.Name): $printError" }
@@ -2021,11 +2222,14 @@ try {
         if ($Issue419) {
             Test-Issue419RouteAssertions -Route $Route -Html $safeHtml -Text $plainText -Assertions $assertions
         }
+        if ($Issue502) {
+            Test-Issue502RouteAssertions -Route $Route -Html $safeHtml -Text $plainText -Assertions $assertions
+        }
         if ($Issue498) {
             Test-Issue498RouteAssertions -Route $Route -Html $safeHtml -Text $plainText -Assertions $assertions
         }
         if (($response.StatusCode -ne $expectedStatus -or $response.StatusCode -eq 0) -and -not $AllowUnavailable) { $failure = if ($failure) { $failure } else { "Route returned HTTP $($response.StatusCode); expected $expectedStatus." } }
-        [void]$routeResults.Add([pscustomobject]@{ name = $Route.Name; path = $Route.Path; label = $Route.Label; url = $url; viewportWidth = $routeViewportWidth; viewportHeight = $routeViewportHeight; expectedStatus = $expectedStatus; statusCode = $response.StatusCode; title = $title; h1 = $h1; htmlPath = $htmlPath; textPath = $textPath; screenshotPath = $screenshotPath; supplementalScreenshotPath = $supplementalScreenshotPath; printPath = $printPath; browserStatePath = $browserStatePath; failure = $failure })
+        [void]$routeResults.Add([pscustomobject]@{ name = $Route.Name; path = $Route.Path; label = $Route.Label; url = $url; viewportWidth = $routeViewportWidth; viewportHeight = $routeViewportHeight; expectedStatus = $expectedStatus; statusCode = $response.StatusCode; title = $title; h1 = $h1; htmlPath = $htmlPath; textPath = $textPath; screenshotPath = $screenshotPath; screenshotSha256 = $screenshotSha256; supplementalScreenshotPath = $supplementalScreenshotPath; printPath = $printPath; browserStatePath = $browserStatePath; failure = $failure })
         $routeHtmlByName[$Route.Name] = $safeHtml
     }
 
@@ -2036,6 +2240,28 @@ try {
         if ($null -ne $interactionBrowserSession) {
             Stop-InteractionAwareBrowserSession -Session $interactionBrowserSession
             $interactionBrowserSession = $null
+        }
+    }
+
+    if ($Issue502) {
+        $issue502StateRows = @()
+        foreach ($result in $routeResults | Where-Object { $_.browserStatePath }) {
+            $stateFile = Join-Path $packetDir $result.browserStatePath
+            $state = Get-Content -LiteralPath $stateFile -Raw | ConvertFrom-Json
+            $issue502StateRows += [ordered]@{ route = $result.name; label = $result.label; path = $result.path; screenshotPath = $result.screenshotPath; screenshotSha256 = $result.screenshotSha256; capturePurpose = $state.capturePurpose; initialScroll = $state.initialScroll; finalScroll = $state.finalScroll; viewport = $state.viewport; document = $state.document; horizontalOverflow = $state.horizontalOverflow; focusedElement = $state.focusedElement; keyboardFocusVisible = $state.keyboardFocusVisible; landmarks = $state.landmarks; screenshot = $state.screenshot }
+        }
+        $responsiveRows = @($issue502StateRows | Where-Object { $_.route -in @('issue-502-home-mobile', 'issue-502-facility-mobile', 'issue-502-facility-mobile-focused-results', 'issue-502-facility-reflow') })
+        $focusRows = @($issue502StateRows | Where-Object { $_.route -in @('issue-502-home-keyboard', 'issue-502-facility-keyboard') })
+        Set-Content -LiteralPath (Join-Path $diagnosticsDir 'issue-502-responsive-measurements.json') -Value ($responsiveRows | ConvertTo-Json -Depth 10) -Encoding UTF8
+        Set-Content -LiteralPath (Join-Path $diagnosticsDir 'issue-502-focus-state-report.json') -Value ($focusRows | ConvertTo-Json -Depth 10) -Encoding UTF8
+        foreach ($route in $routesToCapture | Where-Object { $_.ContainsKey('Issue502DistinctFrom') }) {
+            $keyboardResult = $routeResults | Where-Object { $_.name -eq $route.Name } | Select-Object -First 1
+            $baselineResult = $routeResults | Where-Object { $_.name -eq $route.Issue502DistinctFrom } | Select-Object -First 1
+            $distinct = $null -ne $keyboardResult -and $null -ne $baselineResult -and $keyboardResult.screenshotSha256 -and $baselineResult.screenshotSha256 -and $keyboardResult.screenshotSha256 -ne $baselineResult.screenshotSha256
+            $distinctStatus = if ($distinct) { 'PASS' } else { 'FAIL' }
+            $distinctMessage = if ($distinct) { "Keyboard interaction produced a distinct screenshot hash from $($route.Issue502DistinctFrom)." } else { "Keyboard screenshot hash did not differ from $($route.Issue502DistinctFrom)." }
+            Add-AssertionResult -Target $assertions -RouteName $route.Name -Check 'Issue #502 keyboard screenshot differs from ordinary route' -Status $distinctStatus -Message $distinctMessage
+            if (-not $distinct -and $null -ne $keyboardResult) { $keyboardResult.failure = "Issue #502 keyboard screenshot did not differ from $($route.Issue502DistinctFrom)." }
         }
     }
 
@@ -2055,7 +2281,7 @@ try {
         }
     }
 
-    if (-not $Issue415 -and -not $Issue416 -and -not $Issue417 -and -not $Issue418 -and -not $Issue419 -and -not $Issue498) {
+    if (-not $Issue415 -and -not $Issue416 -and -not $Issue417 -and -not $Issue418 -and -not $Issue419 -and -not $Issue502 -and -not $Issue498) {
         $jobDetailHref = Get-SafeDynamicHref -Html ([string]$routeHtmlByName["jobs"]) -Pattern 'href\s*=\s*["'']([^"'']*/ccld/retrieval/jobs/detail\?job_id=[A-Za-z0-9_.:%-]+)["'']'
         if ($jobDetailHref) { $dynamicLinks.jobDetail = $jobDetailHref; Capture-Route -Route @{ Name = "job-detail"; Path = $jobDetailHref; Label = "08-job-detail"; WorkflowStep = "Status" } }
         else { Add-AssertionResult -Target $assertions -RouteName "jobs" -Check "dynamic job detail" -Status "WARN" -Message "No safe retrieval job detail link discovered." }
@@ -2067,7 +2293,7 @@ try {
 
     # Capture a supplemental screenshot anchored to the complaint export section from the
     # reliable reviewer queue route. This avoids depending on reviewer-detail availability.
-    if (-not $Issue415 -and -not $Issue416 -and -not $Issue417 -and -not $Issue418 -and -not $Issue419 -and -not $Issue498 -and $IncludeScreenshots -and $null -ne $resolvedScreenshotTool) {
+    if (-not $Issue415 -and -not $Issue416 -and -not $Issue417 -and -not $Issue418 -and -not $Issue419 -and -not $Issue502 -and -not $Issue498 -and $IncludeScreenshots -and $null -ne $resolvedScreenshotTool) {
         $reviewerExportAnchorUrl = (Join-RouteUrl -Base $normalizedBaseUrl -Path "/reviewer") + "#complaint-export-controls"
         $reviewerExportShotFile = Join-Path $screenshotDir "05-reviewer-complaint-exports.png"
         $reviewerExportShotError = Invoke-RouteScreenshot -Tool $resolvedScreenshotTool -Url $reviewerExportAnchorUrl -ScreenshotPath $reviewerExportShotFile
@@ -2332,7 +2558,7 @@ try {
     $gitStatusText = if ($workingTreeClean) { "clean" } else { $gitStatus }
     Set-Content -LiteralPath (Join-Path $diagnosticsDir "git-status.txt") -Value $gitStatusText -Encoding UTF8
     Set-Content -LiteralPath (Join-Path $diagnosticsDir "git-log.txt") -Value ((git log --oneline -n 5 2>$null) -join "`n") -Encoding UTF8
-    $focusedCommandSuffix = if ($Issue498) { " -Issue498" } elseif ($Issue419) { " -Issue419" } elseif ($Issue418) { " -Issue418" } elseif ($Issue417) { " -Issue417" } elseif ($Issue416) { " -Issue416" } elseif ($Issue415) { " -Issue415" } else { "" }
+    $focusedCommandSuffix = if ($Issue502) { " -Issue502" } elseif ($Issue498) { " -Issue498" } elseif ($Issue419) { " -Issue419" } elseif ($Issue418) { " -Issue418" } elseif ($Issue417) { " -Issue417" } elseif ($Issue416) { " -Issue416" } elseif ($Issue415) { " -Issue415" } else { "" }
     Set-Content -LiteralPath (Join-Path $diagnosticsDir "capture-command.txt") -Value "capture-hosted-ui-evidence.ps1 -BaseUrl $normalizedBaseUrl -Mode $Mode -OutputDir $OutputDir -ViewportWidth $ViewportWidth -ViewportHeight $ViewportHeight -TimeoutSeconds $TimeoutSeconds -ScreenshotToolPreference $ScreenshotToolPreference$focusedCommandSuffix" -Encoding UTF8
     Set-Content -LiteralPath (Join-Path $diagnosticsDir "environment-summary.txt") -Value @(
         "mode=$Mode",
@@ -2350,6 +2576,7 @@ try {
         "issue417FocusedCapture=$([bool]$Issue417)",
         "issue418FocusedCapture=$([bool]$Issue418)",
         "issue419FocusedCapture=$([bool]$Issue419)",
+        "issue502FocusedCapture=$([bool]$Issue502)",
         "issue498FocusedCapture=$([bool]$Issue498)",
         "browserZoomControl=not controlled by this script; use ViewportWidth/ViewportHeight for supplemental narrow-width or 200-percent-review approximation only",
         "evidencePurpose=$evidencePurpose"
@@ -2403,6 +2630,7 @@ explicitly says to do so.
         issue417      = if ($Issue417) { Get-EvidenceFileCount -Path $packetDir -Filter "issue-417-*.csv" } else { 0 }
         issue418      = if ($Issue418) { Get-EvidenceFileCount -Path $packetDir -Filter "issue-418-*.csv" } else { 0 }
         issue419      = if ($Issue419) { Get-EvidenceFileCount -Path $packetDir -Filter "issue-419-*.csv" } else { 0 }
+        issue502      = if ($Issue502) { @($routesToCapture).Count } else { 0 }
         issue498      = if ($Issue498) { @($routesToCapture).Count } else { 0 }
     }
     $manifest = [ordered]@{
@@ -2429,6 +2657,7 @@ explicitly says to do so.
         issue417               = [ordered]@{ enabled = [bool]$Issue417; routeCount = @($routesToCapture).Count; countSummaries = @($issue417CountSummaries); zoomLimitation = "True browser zoom is not controlled by this script; reduced viewport captures are supplemental evidence only." }
         issue418               = [ordered]@{ enabled = [bool]$Issue418; routeCount = @($routesToCapture).Count; countSummaries = @($issue418CountSummaries); zoomLimitation = "True browser zoom is not controlled by this script; reduced viewport captures are supplemental evidence only." }
         issue419               = [ordered]@{ enabled = [bool]$Issue419; routeCount = @($routesToCapture).Count; scenarios = @($routesToCapture | ForEach-Object { $_.Name }); controlledVarianceAuthority = "Issue #501 repository-readable controlled variance"; visualAcceptance = "READY FOR EXPLICIT OWNER REVIEW"; uiGates = @($issue419GateResults); zoomLimitation = "The 720-pixel viewport scenario approximates 200-percent reflow; no visual acceptance is inferred from automation."; printArtifact = @($routeResults | Where-Object { $_.printPath } | ForEach-Object { $_.printPath }) }
+        issue502               = [ordered]@{ enabled = [bool]$Issue502; routeCount = @($routesToCapture).Count; scenarios = @($routesToCapture | ForEach-Object { $_.Name }); controlledVarianceAuthority = "Issue #501 repository-readable controlled variance"; visualAcceptance = "READY FOR EXPLICIT OWNER REVIEW"; zoomLimitation = "The 720-pixel viewport scenario approximates 200-percent reflow; no visual acceptance is inferred from automation." }
         issue498               = [ordered]@{ enabled = [bool]$Issue498; routeCount = @($routesToCapture).Count; scenarios = @($routesToCapture | ForEach-Object { $_.Name }); zoomLimitation = "The 720-pixel viewport scenario approximates 200-percent reflow only; exact true browser zoom remains manual visual evidence."; printArtifact = @($routeResults | Where-Object { $_.printPath } | ForEach-Object { $_.printPath }) }
         issue610               = [ordered]@{ enabled = [bool]$Issue610; routeCount = @($routesToCapture).Count; scenarios = @($routesToCapture | ForEach-Object { $_.Name }); printSettings = "Portrait; scale 100%; default margins; headers and footers off; background graphics on."; printArtifact = @($routeResults | Where-Object { $_.printPath } | ForEach-Object { $_.printPath }) }
         git                    = [ordered]@{ branch = $gitBranch; commit = $gitCommit; workingTreeClean = [bool]$workingTreeClean; notice = if ($workingTreeClean) { "" } else { "Working tree was not clean when evidence was captured." } }

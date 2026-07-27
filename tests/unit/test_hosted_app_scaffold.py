@@ -162,7 +162,7 @@ def test_app_shell_labels_placeholder_scope(monkeypatch: MonkeyPatch) -> None:
     normalized_html = " ".join(html.split())
     parser = parse_html_structure(html)
 
-    assert "Skip to main CCLD facility lookup content" in html
+    assert "Skip to main content" in html
     assert '<main id="main-content" class="ds-page-main app-page" tabindex="-1">' in html
     assert "CCLD-only public-record review workspace." not in html
     assert "CCLD RecordsTracker" in html
@@ -174,30 +174,15 @@ def test_app_shell_labels_placeholder_scope(monkeypatch: MonkeyPatch) -> None:
     assert "shell-facility-search" not in html
     assert '<footer class="civic-footer">' in html
     assert parser.tags.count("h1") == 1
-    assert parser.text_for("h1") == "Find a Facility"
+    assert parser.text_for("h1") == "Review CCLD Facility Records"
     assert parser.text_for("h1") != "CCLD RecordsTracker"
     assert html.count('aria-label="Retrieval mode"') == 1
     assert html.count("Review aids only") == 1
+    assert "Choose a review task" in html
     assert "Find a Facility" in html
-    assert "Facility intake" in html
-    assert "Find a facility" in html
-    assert '<form action="/ccld/facilities" method="get" class="facility-search-form">' in html
-    assert 'for="facility-search-input"' in html
-    assert 'placeholder="Name, Facility ID, city, or ZIP"' in html
-    assert "Search CCLD facilities" in html
-    assert 'class="selected-facility-request-form"' in html
-    assert "Continue to Request Records" in html
-    assert "Change selected facility" in html
-    assert (
-        '<summary id="manual-entry-heading">'
-        "Enter a Facility ID directly</summary>"
-    ) in html
-    assert (
-        "Start review by finding the CCLD Facility ID in the preloaded "
-        "facility directory"
-        in html
-    )
-    assert "then carry that selected facility into the request page" in html
+    assert "Compare Facilities" in html
+    assert "Complaint Worklist" in html
+    assert "facility-search-form" not in html
     assert "Review path" not in html
     assert "1. Find the facility" not in html
     assert "2. Request records" not in html
@@ -230,7 +215,7 @@ def test_app_shell_labels_placeholder_scope(monkeypatch: MonkeyPatch) -> None:
     assert_no_buttons_inside_list_items(html)
 
 
-def test_home_orientation_uses_shared_facility_start_experience() -> None:
+def test_home_is_a_distinct_task_oriented_launch_page() -> None:
     html = render_app_shell()
     normalized_html = " ".join(html.split())
 
@@ -241,12 +226,10 @@ def test_home_orientation_uses_shared_facility_start_experience() -> None:
     assert "1. Find the facility" not in normalized_html
     assert "2. Request records" not in normalized_html
     assert "3. Review complaints" not in normalized_html
-    assert "Facility intake" in html
-    assert "Find the Facility ID" in html
-    assert "Search CCLD facilities" in html
-    assert "Continue to Request Records" in html
-    assert "Change selected facility" in html
-    assert "Optional planning views" in html
+    assert "Review CCLD Facility Records" in html
+    assert "Choose a review task" in html
+    assert "facility-search-form" not in html
+    assert "Request Records" not in primary_navigation_markup(html)
     assert "workflow_area=entry-orientation" not in html
     assert "page_path=%2F" not in html
     assert "saved session" not in normalized_html.casefold()
@@ -256,7 +239,7 @@ def test_home_orientation_uses_shared_facility_start_experience() -> None:
     assert_no_buttons_inside_list_items(html)
 
 
-def test_home_and_facility_routes_share_find_facility_start_workflow() -> None:
+def test_home_and_facility_routes_have_distinct_approved_purposes() -> None:
     root_status, root_content_type, root_body = route_response(
         "/",
         page_data_mode="fixture-demo",
@@ -271,17 +254,13 @@ def test_home_and_facility_routes_share_find_facility_start_workflow() -> None:
     assert root_status == 200
     assert facility_status == 200
     assert root_content_type == facility_content_type == "text/html; charset=utf-8"
-    for html in (root_html, facility_html):
-        assert "Find a Facility" in html
-        assert "Facility intake" in html
-        assert "Find the Facility ID" in html
-        assert "Search CCLD facilities" in html
-        assert "Continue to Request Records" in html
-        assert "Change selected facility" in html
-        assert "Review path" not in html
-        assert "1. Find the facility" not in html
-        assert "Open review queue" not in html
-        assert_no_buttons_inside_list_items(html)
+    assert "Review CCLD Facility Records" in root_html
+    assert "facility-search-form" not in root_html
+    assert "Find a Facility" in facility_html
+    assert "facility-search-form" in facility_html
+    assert "Facility intake" not in root_html + facility_html
+    assert_no_buttons_inside_list_items(root_html)
+    assert_no_buttons_inside_list_items(facility_html)
 
 
 def test_default_and_postgres_root_never_render_committed_facility_fixtures(
@@ -295,7 +274,7 @@ def test_default_and_postgres_root_never_render_committed_facility_fixtures(
 
         assert status == 200
         assert content_type == "text/html; charset=utf-8"
-        assert "Facility directory lookup not configured" in html
+        assert "Review CCLD Facility Records" in html
         assert "900000001" not in html
         assert "900000002" not in html
         assert "Synthetic Orchard Child Care" not in html
@@ -349,14 +328,14 @@ def test_guided_attorney_review_workflow_acceptance_route_markers(
     )
     route_specs = (
         (
-            "entry",
-            "/",
-            (
-                "Find a Facility",
-                "Facility intake",
-                "Find the Facility ID",
-                "Search CCLD facilities",
-                "Continue to Request Records",
+                "entry",
+                "/",
+                (
+                    "Find a Facility",
+                    "Review CCLD Facility Records",
+                    "Choose a review task",
+                    "Compare Facilities",
+                    "Complaint Worklist",
             ),
         ),
         (
@@ -430,7 +409,7 @@ def test_required_routes_use_one_governed_shared_shell_and_primary_navigation(
         }
     )
     route_specs = (
-        ("/", "Skip to main CCLD facility lookup content", "/"),
+            ("/", "Skip to main content", "/"),
         (
             "/ccld/facilities",
             "Skip to main CCLD facility lookup content",
@@ -441,10 +420,10 @@ def test_required_routes_use_one_governed_shared_shell_and_primary_navigation(
             "Skip to main reviewer content",
             "/ccld/facilities/intelligence",
         ),
-        (
-            "/ccld/records/request",
-            "Skip to main CCLD request content",
-            "/ccld/records/request",
+            (
+                "/ccld/records/request",
+                "Skip to main CCLD request content",
+                None,
         ),
         ("/reviewer", "Skip to main reviewer content", "/reviewer"),
         ("/feedback", "Skip to main feedback content", "/feedback"),
@@ -452,10 +431,9 @@ def test_required_routes_use_one_governed_shared_shell_and_primary_navigation(
     )
     expected_primary_links = (
         ("/", "Home"),
-        ("/ccld/facilities", "Facilities"),
+        ("/ccld/facilities", "Find a Facility"),
         ("/ccld/facilities/intelligence", "Compare Facilities"),
-        ("/ccld/records/request", "Request Records"),
-        ("/reviewer", "Review"),
+        ("/reviewer", "Complaint Worklist"),
         ("/feedback", "Feedback"),
         ("/ccld/help", "Help"),
     )
@@ -488,8 +466,9 @@ def test_required_routes_use_one_governed_shared_shell_and_primary_navigation(
         assert primary_nav.count('href="/feedback">Feedback</a>') == 1
         assert "Job Status" not in primary_nav
         assert "/ccld/retrieval/jobs" not in primary_nav
-        assert primary_nav.count('aria-current="page"') == 1
-        assert f'aria-current="page" href="{active_href}"' in primary_nav
+        assert primary_nav.count('aria-current="page"') == (0 if active_href is None else 1)
+        if active_href is not None:
+            assert f'aria-current="page" href="{active_href}"' in primary_nav
         assert "a:focus-visible" in html
         assert ".skip-link:focus" in html
         assert "@media (max-width: 760px)" in html
@@ -637,7 +616,7 @@ def test_routes_return_shell_health_and_not_found() -> None:
     assert root_status == 200
     assert root_content_type == "text/html; charset=utf-8"
     assert b"CCLD-only public-record review workspace" not in root_body
-    assert b"Find the Facility ID" in root_body
+    assert b"Review CCLD Facility Records" in root_body
     assert health_status == 200
     assert health_content_type == "application/json; charset=utf-8"
     assert json.loads(health_body)["status"] == "ok"
@@ -1291,16 +1270,16 @@ def test_route_active_nav_highlights_correct_item() -> None:
     # (path, expected_active_href, expected_active_label)
     route_active_specs = (
         ("/", "/", "Home"),
-        ("/ccld/facilities", "/ccld/facilities", "Facilities"),
+        ("/ccld/facilities", "/ccld/facilities", "Find a Facility"),
         (
             "/ccld/facilities/intelligence",
             "/ccld/facilities/intelligence",
             "Compare Facilities",
         ),
-        ("/ccld/facilities/detail", "/ccld/facilities", "Facilities"),
-        ("/ccld/records/request", "/ccld/records/request", "Request Records"),
+        ("/ccld/facilities/detail", "/ccld/facilities", "Find a Facility"),
+        ("/ccld/records/request", None, None),
         ("/ccld/help", "/ccld/help", "Help"),
-        ("/reviewer", "/reviewer", "Review"),
+        ("/reviewer", "/reviewer", "Complaint Worklist"),
         ("/feedback", "/feedback", "Feedback"),
     )
     for path, expected_href, expected_label in route_active_specs:
@@ -1310,18 +1289,13 @@ def test_route_active_nav_highlights_correct_item() -> None:
             page_data_mode="fixture-demo",
         )
         html = body.decode("utf-8")
-        active_marker = f'aria-current="page" href="{expected_href}">{expected_label}'
         assert status == 200, f"Route {path} returned {status}"
-        assert active_marker in html, (
-            f"Route {path}: expected nav item '{expected_label}' ({expected_href}) "
-            f"to be active (aria-current=page), but it was not. "
-            f"Check that active_path is set correctly for this route."
-        )
+        if expected_href is not None:
+            active_marker = f'aria-current="page" href="{expected_href}">{expected_label}'
+            assert active_marker in html
         # Exactly one aria-current="page" in nav
         active_count = primary_navigation_markup(html).count('aria-current="page"')
-        assert active_count == 1, (
-            f"Route {path}: expected exactly 1 aria-current=page in nav, got {active_count}."
-        )
+        assert active_count == (0 if expected_href is None else 1)
 
 
 def test_active_nav_route_prefixes_require_a_path_segment_boundary() -> None:
@@ -1334,7 +1308,7 @@ def test_active_nav_route_prefixes_require_a_path_segment_boundary() -> None:
     )
 
     primary_nav = primary_navigation_markup(html)
-    assert 'aria-current="page" href="/ccld/facilities">Facilities' not in primary_nav
+    assert 'aria-current="page" href="/ccld/facilities">Find a Facility' not in primary_nav
     assert primary_nav.count('aria-current="page"') == 0
 
 
@@ -1544,8 +1518,7 @@ def test_retrieval_job_detail_route_keeps_diagnostics_context_outside_primary_na
     assert 'href="/ccld/retrieval/jobs">Return to job diagnostics</a>' in html
 
 
-def test_reviewer_detail_route_highlights_review_nav() -> None:
-    """/reviewer/records and detail routes must highlight Review in the top nav."""
+def test_reviewer_detail_route_highlights_complaint_worklist_nav() -> None:
     auth_config = load_hosted_auth_runtime_config(
         environ={
             "CCLD_HOSTED_TESTER_AUTH_MODE": "local-dev",
@@ -1560,7 +1533,7 @@ def test_reviewer_detail_route_highlights_review_nav() -> None:
     html = body.decode("utf-8")
 
     assert status == 200
-    assert 'aria-current="page" href="/reviewer">Review' in html
+    assert 'aria-current="page" href="/reviewer">Complaint Worklist' in html
     assert 'aria-current="page" href="/ccld/records/request">Request Records' not in html
     assert 'aria-current="page" href="/ccld/records/request">Retrieve' not in html
 
@@ -1703,7 +1676,7 @@ def test_live_mode_facility_lookup_not_configured_shows_safe_fallback_messaging(
 
     assert "Facility directory lookup is not configured" in html
     assert "Enter a known CCLD Facility ID" in html
-    assert "Open Request Records" in html
+    assert "Known Facility ID" in html
     # Synthetic fixture names must not appear
     assert "Synthetic Orchard" not in html
     assert "Synthetic Valley" not in html

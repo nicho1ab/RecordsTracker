@@ -226,7 +226,7 @@ def test_reviewer_ui_landing_lists_seeded_source_derived_records(
     assert '<header class="civic-header">' in html
     assert '<a class="civic-brand__name" href="/">RecordsTracker</a>' in html
     assert '<nav class="civic-nav" aria-label="Primary navigation">' in html
-    assert 'href="/ccld/facilities">Facilities</a>' in html
+    assert 'href="/ccld/facilities">Find a Facility</a>' in html
     assert '<main id="main-content" class="ds-page-main app-page" tabindex="-1">' in html
     assert '<h1 id="page-heading">Complaint Worklist</h1>' in html
     assert html.count("<h1") == 1

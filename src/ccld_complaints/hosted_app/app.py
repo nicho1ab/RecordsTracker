@@ -54,7 +54,7 @@ from ccld_complaints.hosted_app.ccld_facility_lookup import (
     facility_lookup_result_from_projections,
     facility_reference_from_source_derived_records,
     no_reference_facility_source,
-    render_ccld_facility_lookup_page,
+    render_home_page,
     route_ccld_facility_lookup_response,
     route_ccld_facility_lookup_response_with_source,
 )
@@ -807,10 +807,8 @@ def render_related_facility_context(record: SampleSourceRecord) -> str:
 def render_app_shell(
     reference_source: CcldFacilityReferenceSource | None = None,
 ) -> str:
-    return render_ccld_facility_lookup_page(
-        reference_source=reference_source,
-        active_path="/",
-    )
+    del reference_source
+    return render_home_page()
 
 
 def render_source_record_list(filters: SourceRecordFilters | None = None) -> str:
@@ -1186,6 +1184,14 @@ def route_response(
     }:
         if active_page_data_mode == FIXTURE_DEMO_PAGE_DATA_MODE:
             if parsed_path == CCLD_FACILITY_LOOKUP_PATH:
+                if _first_query_value(
+                    parse_qs(parsed_url.query, keep_blank_values=True),
+                    "evidence_state",
+                ) == "facility-search-unavailable":
+                    return route_ccld_facility_lookup_response_with_source(
+                        path,
+                        no_reference_facility_source(),
+                    )
                 return route_ccld_facility_lookup_response(path)
             if parsed_path == CCLD_FACILITY_SUGGESTIONS_PATH:
                 return route_ccld_facility_lookup_response(path)
@@ -1261,10 +1267,8 @@ def route_response(
                         lookup_result = None
         else:
             facility_reference = _facility_reference_from_context(active_ccld_context)
-        facility_number = _first_query_value(
-            parse_qs(parsed_url.query, keep_blank_values=True),
-            "facility_number",
-        )
+        request_query_values = parse_qs(parsed_url.query, keep_blank_values=True)
+        facility_number = _first_query_value(request_query_values, "facility_number")
         if parsed_path == CCLD_FACILITY_REVIEW_HUB_PATH and facility_number.isdigit():
             try:
                 facility_reference = _projected_facility_reference_for_ids(
@@ -1284,14 +1288,17 @@ def route_response(
         ):
             routed_path = CCLD_FACILITY_REVIEW_HUB_PATH
             facility_number = ""
+        lookup_review_context = _facility_review_context_from_context(
+            active_ccld_context,
+            _first_query_value(request_query_values, "q")
+            if parsed_path == CCLD_FACILITY_LOOKUP_PATH
+            else facility_number,
+            request_query_values,
+        )
         return route_ccld_facility_lookup_response_with_source(
             routed_path,
             facility_reference,
-            _facility_review_context_from_context(
-                active_ccld_context,
-                facility_number,
-                parse_qs(parsed_url.query, keep_blank_values=True),
-            ),
+            lookup_review_context,
             lookup_result=lookup_result,
         )
     if parsed_path.startswith(CCLD_UI_PREFIX):

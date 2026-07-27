@@ -1,6 +1,14 @@
 # Changelog
 
 ## Unreleased
+- Separated Home from facility discovery for Issue #502. Home is now a concise
+  task launch; `/ccld/facilities` is the single facility-search destination;
+  record retrieval is contextual; and global navigation now uses Find a
+  Facility and Complaint Worklist without Request Records. The Facilities page
+  retains supported matching and adds valid-unmatched Facility ID continuation,
+  malformed-ID recovery, and submitted-result focus continuity while removing
+  reviewer-facing manual-entry, reference-detail, planning, and source-load
+  mechanics. Operator diagnostics remain on their existing separate surface.
 - Simplified the Complaint Worklist and Complaint Overview for Issue #610.
   Reviewers now get one compact worklist, one primary complaint action,
   transparent Review next factors, a concise source-first overview, consolidated

@@ -13,10 +13,9 @@ EYEBROW_TEXT = ""
 FAVICON_PATH = "/favicon.ico"
 PRIMARY_NAV_LINKS: tuple[tuple[str, str], ...] = (
     ("Home", "/"),
-    ("Facilities", "/ccld/facilities"),
+    ("Find a Facility", "/ccld/facilities"),
     ("Compare Facilities", "/ccld/facilities/intelligence"),
-    ("Request Records", "/ccld/records/request"),
-    ("Review", "/reviewer"),
+    ("Complaint Worklist", "/reviewer"),
     ("Feedback", "/feedback"),
     ("Help", "/ccld/help"),
 )

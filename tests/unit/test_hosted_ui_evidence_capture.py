@@ -888,6 +888,18 @@ def test_screenshot_tool_auto_resolution_skips_noninteractive_candidate() -> Non
     ][0]["validation"]
 
 
+def test_issue_502_capture_records_complete_responsive_and_keyboard_state() -> None:
+    script = CAPTURE_SCRIPT.read_text(encoding="utf-8")
+
+    assert "function Invoke-Issue502BrowserCapture" in script
+    assert "Issue502CapturePurpose = \"full-page\"" in script
+    assert "Issue502KeyboardSelector" in script
+    assert "Issue502DistinctFrom" in script
+    assert "issue-502-responsive-measurements.json" in script
+    assert "issue-502-focus-state-report.json" in script
+    assert "keyboard screenshot differs from ordinary route" in script
+
+
 def test_explicit_screenshot_tool_failure_does_not_silently_fallback() -> None:
     resolution = run_screenshot_tool_resolution(
         "playwright",

@@ -243,6 +243,28 @@ Figma was updated.
 
 Do not add CI requirements for screenshot capture. Visual comparison screenshots remain outside CI because they depend on workstation browser tooling, but automated local evidence and explicit visual acceptance are still required before a reviewer-facing visual or interaction change can merge.
 
+## Issue #502 evidence scope
+
+Issue #502 captures Home desktop, narrow/mobile, and keyboard-focus states;
+Facilities default, supported search, no-match, valid unmatched Facility ID,
+malformed Facility ID, `Review Facility`, `Get Records`, limited/unavailable
+reference, focus/viewport, back/forward, narrow/mobile, and 200%-reflow states;
+and the shared-shell approved navigation/active states. The capture asserts
+`RT-IA-004`, `RT-NAV-001`, and `RT-LANG-001`, plus `RT-UI-GATE-001` through
+`RT-UI-GATE-009`. Automation can establish `READY FOR EXPLICIT OWNER REVIEW`;
+it never records visual acceptance or a Figma update.
+
+For the 390px mobile, 720px reflow, and keyboard scenarios, Issue #502 uses an
+interaction-aware browser capture. Responsive screenshots are full-page at the
+governed viewport; the focused-results screenshot remains viewport-scoped so
+the results position is visible. The packet records initial and final scroll,
+viewport/client/document widths, horizontal-overflow status, landmarks,
+focused-element geometry, focus-visible styling, and screenshot hashes in
+`diagnostics/issue-502-responsive-measurements.json` and
+`diagnostics/issue-502-focus-state-report.json`. Keyboard screenshots must
+differ from their ordinary route screenshot hashes. This disclosure is required
+when governed workflow boundaries change; it does not grant visual acceptance.
+
 ## Uploading For Review
 
 Upload or summarize the sibling ZIP created by the capture command, or the whole
