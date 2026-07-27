@@ -184,6 +184,25 @@ Before repeating a check, the prompt or report must identify the concrete
 changed input that could produce a different result. Do not repeat checks merely
 for caution, elapsed time, session handoff, or another workflow phase.
 
+Local validation gives fast feedback before a commit or push and should match
+the actual change: documentation-only changes normally use documentation
+validation and `git diff --check`; narrow code changes use affected focused
+tests plus applicable lint, formatting, and type checks; and the complete local
+test suite is reserved for broad, risky, release-level, or troubleshooting
+work, or when the validation-impact policy specifically requires it.
+
+Required GitHub PR checks run against the exact pushed commit in a clean remote
+environment. They can catch uncommitted files, Linux-versus-Windows differences,
+missing dependencies or environment assumptions, repository-wide failures
+outside a narrow local selection, and workflow-specific failures. Focused local
+validation does not replace those checks, and required GitHub checks do not mean
+the complete suite must always run locally first. Do not run the same complete
+suite locally and remotely without a specific reason. Before repeating a full
+suite, identify the changed input or actual failure that invalidates the earlier
+result. A source change after a complete local suite invalidates it only to the
+extent required by the validation-impact policy; do not rerun it merely because
+CI is about to run.
+
 The normal task packages are:
 
 - **Implementation package:** inspect, implement, correct routine failures,
