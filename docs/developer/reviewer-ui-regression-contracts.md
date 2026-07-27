@@ -94,6 +94,17 @@ and print states; and `RT-RC-006` across one canonical worklist plus omitted
 empty or date-only optional sections. Exact-route browser evidence remains part
 of Issue #610 acceptance rather than a substitute for these executable checks.
 
+## Issue #627 return-label regression
+
+Issue #627 corrects the reviewer-detail fallback literal to the canonical
+`Return to Complaint Worklist` label without changing the return-destination
+helper or its retained search, selected-record, facility, date, lookup, and
+origin context. It consumes `RT-RC-001`, `RT-RC-005`, and `RT-ACT-001` through
+the populated detail route and retained-context checks, and strengthens
+`RT-RC-006` by rejecting the deprecated visible `Return to review queue` label
+there. Internal route/context identifiers and historical references remain
+unchanged when they are not reviewer-visible.
+
 ## Bounded historical sample
 
 | Issue | Durable outcome | Prior executable protection | Gap classification | Phase 1 treatment |

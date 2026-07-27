@@ -11591,7 +11591,7 @@ def _render_detail_tertiary_actions(
     queue_href = _ccld_request_href(related_records, return_context)
     return f"""<div class="overview-tertiary-actions" aria-label="Additional reviewer actions">
             <a href="{_escape(feedback_href)}">Report an issue</a>
-            <a href="{_escape(queue_href)}">Return to review queue</a>
+            <a href="{_escape(queue_href)}">Return to Complaint Worklist</a>
           </div>"""
 
 
@@ -11664,13 +11664,8 @@ def _render_detail_context_row(
     return_context: CcldQueueReturnContext,
 ) -> str:
     queue_href = _ccld_request_href(related_records, return_context)
-    return_label = (
-        "Return to Complaint Worklist"
-        if return_context.context_origin == "reviewer_worklist"
-        else "Return to review queue"
-    )
     return f"""<nav class="reviewer-detail-context" aria-label="Review context">
-            <a href="{_escape(queue_href)}">{_escape(return_label)}</a>
+            <a href="{_escape(queue_href)}">Return to Complaint Worklist</a>
         </nav>"""
 
 

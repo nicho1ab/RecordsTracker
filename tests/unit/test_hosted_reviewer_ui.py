@@ -2545,7 +2545,13 @@ def test_reviewer_ui_detail_shows_attorney_tier_and_hides_support_details() -> N
     assert parser.text_for("h1") == "Complaint overview"
     assert "Source-traceable complaint review." not in html
     assert "Signed in as Local Test Reviewer" not in html
-    assert "Return to review queue" in html
+    assert "Return to Complaint Worklist" in html
+    assert "Return to review queue" not in html
+    assert (
+        'href="/ccld/records/request?facility_number=157806098&amp;start_date='
+        "&amp;end_date=&amp;request_context_origin=prefilled_link"
+        "&amp;lookup_facility_name=A.+MIRIAM+JAMISON+CHILDREN%27S+CENTER\""
+    ) in html
     assert "Complaint overview" in html
     assert "Complaint 32-CR-20220407124448" in parser.text_for("main")
     assert "Complaint <span class=\"copyable-value\">32-CR-20220407124448" in html
@@ -2633,7 +2639,7 @@ def test_reviewer_ui_detail_shows_attorney_tier_and_hides_support_details() -> N
 
     assert "CCLD source available" not in html
     assert "Open source report" in html
-    assert "Return to review queue" in html
+    assert "Return to Complaint Worklist" in html
     assert "Return to facility queue" not in html
     assert "Date range: not provided" not in html
     assert "Open next flagged record" not in html
@@ -3192,7 +3198,7 @@ def test_reviewer_ui_complaint_export_section_smoke_regression() -> None:
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
     assert "Complaint overview" in html
-    assert "Return to review queue" in html
+    assert "Return to Complaint Worklist" in html
     assert "Return to facility queue" not in html
     assert "Global complaint exports" not in html
     assert "triage and navigate records" not in normalized_html
@@ -4195,7 +4201,13 @@ def test_reviewer_ui_detail_preserves_direct_queue_request_context() -> None:
     assert "return_start_date" in html
     assert "return_end_date" in html
     assert "Return to facility queue" not in html
-    assert "Return to review queue" in html
+    assert "Return to Complaint Worklist" in html
+    assert "Return to review queue" not in html
+    assert (
+        'href="/ccld/records/request?facility_number=157806098&amp;start_date=2026-01-01'
+        "&amp;end_date=2026-01-31&amp;request_context_origin=manual_entry"
+        "&amp;lookup_facility_name=A.+MIRIAM+JAMISON+CHILDREN%27S+CENTER\""
+    ) in html
     assert "Review packet readiness before copying or printing" not in html
     assert "Open print draft" not in html
     assert "legally sufficient" not in normalized_html.casefold()
@@ -4770,7 +4782,7 @@ def test_reviewer_ui_note_form_uses_existing_workflow_and_shows_read_after_write
     assert 'role="status"' in html
     assert "The note now appears in reviewer-created state below" not in html
     assert "What changed" not in html
-    assert "Return to review queue" in html
+    assert "Return to Complaint Worklist" in html
     assert "workflow_area=save-confirmation" not in html
     assert "Review packet readiness before copying or printing" not in html
     assert f"{REVIEWER_UI_PACKET_PREVIEW_PATH}?facility_number=157806098" not in html
@@ -4896,7 +4908,7 @@ def test_reviewer_ui_status_form_uses_existing_workflow_and_shows_read_after_wri
     assert 'role="status"' in html
     assert "The status now appears in reviewer-created state below" not in html
     assert "What changed" not in html
-    assert "Return to review queue" in html
+    assert "Return to Complaint Worklist" in html
     assert "workflow_area=save-confirmation" not in html
     assert "Review packet readiness before copying or printing" not in html
     assert f"{REVIEWER_UI_PACKET_PREVIEW_PATH}?facility_number=157806098" not in html

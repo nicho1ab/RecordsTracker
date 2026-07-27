@@ -383,7 +383,7 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b"Field-note guidance" in reviewer_detail_body
         or b"Check source" in reviewer_detail_body
         or b"Open source report" not in reviewer_detail_body
-        or b"Return to review queue" not in reviewer_detail_body
+        or b"Return to Complaint Worklist" not in reviewer_detail_body
         or b"32-CR-20220407124448" not in reviewer_detail_body
     ):
         raise RuntimeError("Hosted scaffold reviewer detail did not return usable guidance.")
@@ -448,7 +448,7 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b"Review update saved" not in reviewer_note_body
         or b"Note saved. The source complaint record was not changed."
         not in reviewer_note_body
-        or b"Return to review queue" not in reviewer_note_body
+        or b"Return to Complaint Worklist" not in reviewer_note_body
         or b"Save review update" not in reviewer_note_body
         or b"feedback details" in reviewer_note_body
     ):
@@ -458,7 +458,7 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b"Review update saved" not in reviewer_saved_status_body
         or b"Review status saved as In review."
         not in reviewer_saved_status_body
-        or b"Return to review queue" not in reviewer_saved_status_body
+        or b"Return to Complaint Worklist" not in reviewer_saved_status_body
         or b"Save review update" not in reviewer_saved_status_body
         or b"feedback details" in reviewer_saved_status_body
     ):
