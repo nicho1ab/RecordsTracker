@@ -305,6 +305,20 @@ First-run orientation tests should cover Home, Request Records, Help, queue, and
 feedback surfaces where orientation belongs. They must not require first-run,
 how-to-read, field-note, source-confidence, or feedback-checklist guidance to be
 visible on reviewer detail.
+
+### Issue #502 Home and facility discovery
+
+Focused tests for Home and `/ccld/facilities` must prove separate purposes,
+the approved six-item attorney navigation, one labeled facility input, supported
+name/Facility ID/city/county/ZIP/facility-type matching, retained submitted
+query, and one immediate results region. They must cover no-match, malformed
+Facility ID, valid unmatched Facility ID continuation, unavailable/limited
+reference state, contextual `Review Facility` versus `Get Records` actions,
+and absence of reference counts, fallback mechanics, manual-entry modes, and
+primary-content disclosures. Route-level evidence must cover submitted-result
+focus/viewport continuity, keyboard use, browser back/forward, narrow/mobile,
+and governed 200% reflow. Exact strings and old structural disclosures are not
+durable unless an approved requirement says otherwise.
 Reviewer detail next-record navigation tests should prove return-to-same-queue
 guidance, note/status confirmation next-record wording, queue suggested-next
 wording, and no-assignment/no-claim/no-workflow-state boundaries render while

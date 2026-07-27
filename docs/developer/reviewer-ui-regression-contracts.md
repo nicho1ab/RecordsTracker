@@ -53,6 +53,25 @@ Unavailable actions must still declare a supported action kind and a non-empty
 unavailability reason, and may not expose a usable destination or mutation
 path.
 
+## Issue #502 adoption
+
+Issue #502 consumes `RT-RC-001`, `RT-RC-002`, `RT-RC-005`, and `RT-RC-006`.
+`tests/unit/test_hosted_ccld_facility_lookup.py` now proves the contextual
+facility destination, valid-unmatched Facility ID continuation, malformed-ID
+recovery, one result region, and no reviewer-facing reference diagnostics.
+`tests/unit/test_hosted_app_scaffold.py` proves the distinct Home launch,
+approved six-item navigation, active-route behavior, and contextual absence of
+record retrieval from the global navigation. These are bounded route and
+fixture-mode checks; browser evidence remains the required final proof of
+focus, viewport, back/forward, keyboard, and reflow behavior.
+
+The superseded Home/Facilities shared renderer, manual-entry disclosure,
+reference-details disclosure, optional-planning disclosure, universal
+`Continue to Request Records` action, and former global navigation labels are
+Class 5 or Class 6 presentation artifacts under #504. Facility discovery,
+valid-ID continuation, facility identity, truthful data states, accessible
+focus, and the operator/reviewer tier boundary remain protected outcomes.
+
 ## RT-RC-003 shared help behavior
 
 `render_inline_glossary_term` is the shared glossary and missing-value help

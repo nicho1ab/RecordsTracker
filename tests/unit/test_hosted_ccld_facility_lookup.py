@@ -918,8 +918,8 @@ def test_configured_missing_full_csv_falls_back_with_guidance(
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
     assert "Limited reference list" in html
-    assert "Configured full CCLD facility reference CSV was not found" in html
-    assert "Using tiny fixture fallback." in html
+    assert "Configured full CCLD facility reference CSV was not found" not in html
+    assert "Using tiny fixture fallback." not in html
     assert "Synthetic Orchard Child Care" in html
     assert_no_secret_html(html)
 
@@ -941,9 +941,8 @@ def test_configured_malformed_full_csv_falls_back_with_guidance(
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
     assert "Limited reference list" in html
-    assert "could not be loaded" in html
-    assert "Facility Number" in html
-    assert "Using tiny fixture fallback." in html
+    assert "could not be loaded" not in html
+    assert "Using tiny fixture fallback." not in html
     assert "Synthetic Orchard Child Care" in html
     assert_no_secret_html(html)
 
@@ -1003,16 +1002,12 @@ def test_ccld_facility_lookup_page_shows_empty_search_guidance() -> None:
     assert "Find a Facility" in html
     assert "Skip to main CCLD facility lookup content" in html
     assert '<main id="main-content" class="ds-page-main app-page" tabindex="-1">' in html
-    assert "Find a facility" in html
-    assert "Start review by finding the CCLD Facility ID" in html
-    assert "preloaded facility directory" in html
-    assert "Lookup or manual entry?" not in html
-    assert "<summary>When to use lookup vs. manual entry</summary>" in html
-    assert "Use facility lookup when you know a facility name" in html
-    assert "facility type, program type, or status code" not in html
-    assert "Use manual entry when you already know the digit Facility ID" in html
-    assert "Lookup rows are public facility-directory data" in html
-    assert "for facility lookup assistance before Request Records" in html
+    assert "Search public CCLD facility information" in html
+    for obsolete in (
+        "Facility intake", "Find the Facility ID", "When to use lookup vs. manual entry",
+        "Enter a Facility ID directly", "Reference data details", "Optional planning views",
+    ):
+        assert obsolete not in html
     assert "operator reference workflow" not in lowered_visible_text
     assert "CCLD_FACILITY_REFERENCE_CSV" not in html
     assert "local reference" not in lowered_visible_text
@@ -1023,18 +1018,10 @@ def test_ccld_facility_lookup_page_shows_empty_search_guidance() -> None:
     assert "Use this number" not in visible_text
     assert 'for="facility-search-input"' in html
     form_index = html.index(
-        f'<form action="{CCLD_FACILITY_LOOKUP_PATH}" method="get" class="facility-search-form">'
+        f'<form action="{CCLD_FACILITY_LOOKUP_PATH}#facility-results" '
+        'method="get" class="facility-search-form">'
     )
-    disclosure_index = html.index("<summary>When to use lookup vs. manual entry</summary>")
-    pre_form_html = html[:form_index]
-    assert form_index < disclosure_index
-    assert "Use facility lookup when you know a facility name" not in pre_form_html
-    assert (
-        "Use manual entry when you already know the digit Facility ID"
-        not in pre_form_html
-    )
-    assert "Lookup rows are public facility-directory data" not in pre_form_html
-    _assert_collapsed_disclosure(html, "When to use lookup vs. manual entry")
+    assert form_index < html.index('id="facility-reference-json"')
     assert "facility-suggestion-list" in html
     assert "suggestion-status-licensed" in html
     assert "suggestion-status-closed" in html
@@ -1043,17 +1030,7 @@ def test_ccld_facility_lookup_page_shows_empty_search_guidance() -> None:
     assert "overflow-wrap: anywhere;" in html
     assert "Search CCLD facilities" in html
     _assert_primary_button(html, "Search CCLD facilities")
-    assert any(
-        "button-secondary" in classes
-        for classes in _button_classes(html, "Change selected facility")
-    )
-    assert 'class="selected-facility-request-form"' in html
-    assert 'name="facility_number"' in html
-    assert 'name="request_context_origin" value="facility_lookup"' in html
-    assert 'name="lookup_facility_name"' in html
-    assert 'id="lookup_start_date" name="start_date" type="date"' in html
-    assert 'id="lookup_end_date" name="end_date" type="date"' in html
-    assert "Continue to Request Records" in html
+    assert 'class="selected-facility-request-form"' not in html
     assert "Search by name, Facility ID, city, county, ZIP" in (
         normalized_html
     )
@@ -1061,9 +1038,6 @@ def test_ccld_facility_lookup_page_shows_empty_search_guidance() -> None:
     assert "program type, or status code" not in normalized_html
     assert "Keyboard flow: type a search, use arrow keys or Tab" not in html
     assert "selected facility link to continue to the request page" not in html
-    assert "Enter a Facility ID directly" in html
-    assert "Open Request Records" in html
-    assert "Lookup rows are public facility-directory data" in html
     assert_no_secret_html(html)
 
 
@@ -1083,21 +1057,15 @@ def test_ccld_facility_lookup_page_renders_results_and_use_link() -> None:
     assert content_type == "text/html; charset=utf-8"
     assert "Facility matches" in html
     assert "Facility results" in html
-    assert (
-        "Choose a facility to carry its Facility ID and name into Request Records"
-        in html
-    )
-    assert "Date controls appear as soon as a facility is selected" in html
-    assert 'id="lookup_start_date" name="start_date" type="date"' in html
-    assert 'id="lookup_end_date" name="end_date" type="date"' in html
-    assert "Continue to Request Records" in html
+    assert "Choose a facility to review available complaint records or get records" in html
+    assert "Get Records" in html
     assert "Showing 1 of 1 matching facility." in normalized_html
-    assert "Continue to Request Records" in html
-    assert "View Facility Overview" in html
+    assert "Continue to Request Records" not in html
+    assert "View Facility Overview" not in html
     assert "More actions" not in html
     assert "Open Facility Overview when loaded context is available" not in html
-    assert f"{CCLD_FACILITY_REVIEW_HUB_PATH}?facility_number=900000001" in html
-    assert "Find a facility" in html
+    assert f"{CCLD_FACILITY_REVIEW_HUB_PATH}?facility_number=900000001" not in html
+    assert "Search facilities" in html
     assert request_href in html
     assert "request_context_origin=facility_lookup" in html
     assert "lookup_facility_name=Synthetic+Orchard+Child+Care" in html
@@ -1108,8 +1076,6 @@ def test_ccld_facility_lookup_page_renders_results_and_use_link() -> None:
     assert "Los Angeles" in html
     assert "90001" in html
     assert "Child Care Center" in html
-    assert "Capacity" in html
-    assert "24" in html
     assert "Status" in html
     assert "Licensed" in html
     assert "Facility number" not in html
@@ -1145,14 +1111,9 @@ def test_facility_result_card_shows_available_overview_after_primary_action() ->
 
     html = facility_lookup._render_result_card(record, index=1)
 
-    request_index = html.index("Continue to Request Records")
-    overview_index = html.index("View Facility Overview")
-    assert request_index < overview_index
-    assert 'class="button button-secondary"' in html
-    assert f"{CCLD_FACILITY_REVIEW_HUB_PATH}?facility_number=001234567" in html
-    assert "More actions" not in html
-    assert "Open Facility Overview when loaded context is available" not in html
-    assert "<details class=\"secondary-actions\">" not in html
+    assert "Get Records" in html
+    assert "Review Facility" not in html
+    assert "Directory details" not in html
     assert '<a class="button"' in html
     assert_no_secret_html(html)
 
@@ -1174,10 +1135,8 @@ def test_facility_result_card_omits_overview_when_no_facility_id_is_available() 
 
     html = facility_lookup._render_result_card(record, index=1)
 
-    assert "Continue to Request Records" in html
-    assert "View Facility Overview" not in html
-    assert "More actions" not in html
-    assert "Open Facility Overview when loaded context is available" not in html
+    assert "Get Records" in html
+    assert "Review Facility" not in html
     assert 'aria-label="Actions for facility "' in html
     assert_no_secret_html(html)
 
@@ -1840,7 +1799,7 @@ def test_legacy_licensing_activity_route_redirects_with_search_and_cues() -> Non
     assert b"Continue to Compare Facilities" in body
 
 
-def test_ccld_facility_lookup_page_uses_one_canonical_compare_facilities_action() -> None:
+def test_ccld_facility_lookup_page_keeps_compare_facilities_in_global_navigation_only() -> None:
     status, _content_type, body = route_response(
         CCLD_FACILITY_LOOKUP_PATH,
         page_data_mode="fixture-demo",
@@ -1848,20 +1807,13 @@ def test_ccld_facility_lookup_page_uses_one_canonical_compare_facilities_action(
     html = body.decode("utf-8")
     visible_text = _visible_text(html)
     lowered_visible_text = visible_text.casefold()
-    normalized_html = " ".join(html.split())
 
     assert status == 200
-    assert "Optional planning views" in html
-    assert "Open optional planning views" in html
-    assert "Optional: review-priority and intelligence" not in html
-    assert visible_text.count("Compare Facilities") == 2
+    assert "Optional planning views" not in html
+    assert "Open optional planning views" not in html
+    assert visible_text.count("Compare Facilities") == 1
     assert CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH in html
     assert CCLD_FACILITY_REVIEW_PRIORITY_PATH not in html
-    assert (
-        "Optional planning views provide supplemental facility-review context when available"
-        in normalized_html
-    )
-    assert "not required for Request Records or review" in normalized_html
     assert "uploaded public summary CSVs" not in visible_text
     assert "public summary CSVs" not in visible_text
     assert "CCLD_FACILITY_REFERENCE_CSV" not in html
@@ -2190,13 +2142,86 @@ def test_ccld_facility_lookup_page_shows_no_match_guidance() -> None:
 
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
-    assert "No facility-directory results matched" in html
+    assert "No facilities match this search" in html
     assert "Try a shorter name, Facility ID, city, county, ZIP" in (
         normalized_html
     )
-    assert "facility type, or program type" in normalized_html
-    assert "Open Request Records" in html
+    assert "facility type" in normalized_html
+    assert "Continue with this Facility ID" not in html
     assert_no_secret_html(html)
+
+
+def test_valid_unmatched_facility_id_keeps_the_id_and_offers_continuation() -> None:
+    status, _content_type, body = route_response(
+        f"{CCLD_FACILITY_LOOKUP_PATH}?q=123456789",
+        page_data_mode="fixture-demo",
+    )
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert "Facility not found in the directory" in html
+    assert "123456789" in html
+    assert "Continue with this Facility ID" in html
+    assert "invalid Facility ID" not in html
+    assert "Reference data details" not in html
+
+
+def test_malformed_facility_id_has_a_distinct_recoverable_message() -> None:
+    status, _content_type, body = route_response(
+        f"{CCLD_FACILITY_LOOKUP_PATH}?q=12345",
+        page_data_mode="fixture-demo",
+    )
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert "Check the Facility ID" in html
+    assert "not a valid Facility ID" in html
+    assert "Continue with this Facility ID" not in html
+
+
+def test_selected_facility_actions_follow_complaint_context() -> None:
+    record = CcldFacilityLookupRecord(
+        facility_number="123456789",
+        facility_name="Context Facility",
+        city="Sacramento",
+        state="CA",
+        county="Sacramento",
+        zip_code="95814",
+        facility_type="Child Care Center",
+        program_type="",
+        capacity="",
+        status="Licensed",
+        closed_date="",
+    )
+
+    no_context = facility_lookup._render_result_card(record, index=1)
+    available_context = facility_lookup._render_result_card(
+        record,
+        index=1,
+        review_context=CcldFacilityReviewContext(
+            loaded_complaint_record_count=1,
+            start_date="2026-01-01",
+            end_date="2026-01-31",
+            coverage_status="complete",
+        ),
+    )
+    incomplete_context = facility_lookup._render_result_card(
+        record,
+        index=1,
+        review_context=CcldFacilityReviewContext(
+            loaded_complaint_record_count=1,
+            start_date="2026-01-01",
+            end_date="2026-01-31",
+            coverage_status="partial",
+        ),
+    )
+
+    assert "Get Records" in no_context
+    assert "Review Facility" not in no_context
+    assert "Review Facility" in available_context
+    assert f"{CCLD_FACILITY_REVIEW_HUB_PATH}?facility_number=123456789" in available_context
+    assert "Complaint context is incomplete" in incomplete_context
+    assert "Get Additional Records" in incomplete_context
 
 
 def test_ccld_facility_lookup_selection_prefills_request_form_without_mutation() -> None:
@@ -2303,8 +2328,7 @@ def test_ccld_facility_lookup_page_combobox_embeds_reference_json() -> None:
     assert_no_secret_html(html)
 
 
-def test_ccld_facility_lookup_page_reference_details_are_collapsed() -> None:
-    """Reference source technical details must appear in a collapsed <details> element."""
+def test_ccld_facility_lookup_page_excludes_reference_details_from_reviewer_flow() -> None:
     status, content_type, body = route_response(
         CCLD_FACILITY_LOOKUP_PATH,
         page_data_mode="fixture-demo",
@@ -2314,12 +2338,8 @@ def test_ccld_facility_lookup_page_reference_details_are_collapsed() -> None:
     lowered_visible_text = visible_text.casefold()
 
     assert status == 200
-    assert "Reference data details" in html
-    assert "Reference data is lookup assistance only and may not include every facility" in html
-    assert "<details" in html
-    _assert_collapsed_disclosure(html, "Reference data details")
-    # Internal labels must NOT appear prominently (may appear inside collapsed details)
-    assert "Facility reference source</h2>" not in html  # old prominent section heading gone
+    assert "Reference data details" not in html
+    assert "Facility reference source</h2>" not in html
     assert "CCLD_FACILITY_REFERENCE_CSV" not in html
     assert "local reference" not in lowered_visible_text
     assert "operator reference workflow" not in lowered_visible_text
@@ -2366,7 +2386,7 @@ def test_ccld_facility_lookup_page_no_internal_paths_in_primary_ui() -> None:
 
 
 def test_ccld_facility_lookup_result_card_review_action_has_descriptive_label() -> None:
-    """Each result card's use button has a descriptive accessible label."""
+    """Each result card exposes a descriptive contextual action."""
     status, content_type, body = route_response(
         f"{CCLD_FACILITY_LOOKUP_PATH}?q=orchard",
         page_data_mode="fixture-demo",
@@ -2375,8 +2395,8 @@ def test_ccld_facility_lookup_result_card_review_action_has_descriptive_label() 
 
     assert status == 200
     assert (
-        'aria-label="Use facility 900000001 (Synthetic Orchard Child Care) in Request Records"'
-        in html
+        'aria-label="Get records for Synthetic Orchard Child Care '
+        '(Facility ID 900000001)"' in html
     )
     assert_no_secret_html(html)
 
@@ -2386,10 +2406,8 @@ def test_live_mode_facility_lookup_page_no_reference_shows_not_configured_messag
     html = render_ccld_facility_lookup_page(reference_source=no_reference_facility_source())
 
     assert "Enter a known CCLD Facility ID" in html
-    # Manual entry is the primary path
-    assert "Enter a Facility ID directly" in html
-    assert "Open Request Records" in html
-    assert f'href="{CCLD_RECORD_REQUEST_PATH}"' in html
+    assert "Facility search is unavailable" in html
+    assert "Known Facility ID" in html
     # No synthetic fixture facility names
     assert "Synthetic Orchard" not in html
     assert "Synthetic Valley" not in html
@@ -2417,9 +2435,8 @@ def test_live_mode_facility_lookup_page_empty_postgres_source_shows_not_configur
     html = render_ccld_facility_lookup_page(reference_source=empty_postgres_source)
 
     assert "Enter a known CCLD Facility ID" in html
-    # Manual entry is the primary path
-    assert "Enter a Facility ID directly" in html
-    assert "Open Request Records" in html
+    assert "Facility search is unavailable" in html
+    assert "Known Facility ID" in html
     # No synthetic fixture facility names
     assert "Synthetic Orchard" not in html
     assert "Synthetic Valley" not in html
@@ -2454,6 +2471,21 @@ def test_fixture_demo_mode_facility_lookup_page_still_shows_tiny_fixture_suggest
     assert "900000001" in html
     # facility-reference-json is present in fixture-demo mode (has real fixture data)
     assert "facility-reference-json" in html
+    assert_no_secret_html(html)
+
+
+def test_fixture_demo_mode_can_capture_directory_unavailable_evidence_state() -> None:
+    status, content_type, body = route_response(
+        f"{CCLD_FACILITY_LOOKUP_PATH}?evidence_state=facility-search-unavailable",
+        page_data_mode="fixture-demo",
+    )
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert "Facility search is unavailable" in html
+    assert "Known Facility ID" in html
+    assert "facility-reference-json" not in html
     assert_no_secret_html(html)
 
 

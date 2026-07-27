@@ -14,8 +14,12 @@ Local port to bind. Defaults to 8003 for live, 8010 for fixture, and 8000 for sc
 Evidence output root. Defaults to data/processed/ui-evidence.
 .PARAMETER KillExistingPortProcess
 Stop any process listening on the chosen local port before launch.
+.PARAMETER Issue502
+Capture the focused Issue #502 Home and Find a Facility evidence packet.
 .EXAMPLE
 .\scripts\run-and-capture-hosted-ui-evidence.ps1 -Mode fixture -Port 8010 -KillExistingPortProcess
+.EXAMPLE
+.\scripts\run-and-capture-hosted-ui-evidence.ps1 -Mode fixture -Port 8010 -Issue502
 #>
 param(
     [ValidateSet("live", "fixture", "scaffold")]
@@ -25,7 +29,9 @@ param(
 
     [string]$OutputDir = "data/processed/ui-evidence",
 
-    [switch]$KillExistingPortProcess
+    [switch]$KillExistingPortProcess,
+
+    [switch]$Issue502
 )
 
 $ErrorActionPreference = "Stop"
@@ -87,7 +93,13 @@ Write-Host "URL to open: $baseUrl/"
 Write-Host "Started process ID: $($process.Id)"
 Write-Host "Stop command: Stop-Process -Id $($process.Id)"
 
-& .\scripts\capture-hosted-ui-evidence.ps1 -BaseUrl $baseUrl -Mode $Mode -OutputDir $OutputDir
+$captureArguments = @{
+    BaseUrl = $baseUrl
+    Mode = $Mode
+    OutputDir = $OutputDir
+}
+if ($Issue502) { $captureArguments.Issue502 = $true }
+& .\scripts\capture-hosted-ui-evidence.ps1 @captureArguments
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "Evidence capture complete for $Mode mode at $baseUrl/."

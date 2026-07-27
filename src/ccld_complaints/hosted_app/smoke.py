@@ -207,15 +207,15 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         raise RuntimeError("Hosted scaffold health check did not return ok.")
     if root_status != 200 or b"CCLD-only public-record review workspace" in root_body:
         raise RuntimeError("Hosted scaffold app shell returned removed workspace intro text.")
-    if b"Facility intake" not in root_body:
-        raise RuntimeError("Hosted scaffold app shell did not return facility intake label.")
-    if b"Skip to main CCLD facility lookup content" not in root_body:
+    if b"Review CCLD Facility Records" not in root_body:
+        raise RuntimeError("Hosted scaffold app shell did not return the Home task launch.")
+    if b"Skip to main content" not in root_body:
         raise RuntimeError("Hosted scaffold app shell did not return skip navigation.")
     if (
-        b"Find the Facility ID"
+        b"Choose a review task"
         not in root_body
     ):
-        raise RuntimeError("Hosted scaffold app shell did not return review session orientation.")
+        raise RuntimeError("Hosted scaffold app shell did not return approved task choices.")
     if (
         records_status != 200
         or b"Fixture/sample source record list" not in records_body
@@ -335,7 +335,7 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         raise RuntimeError("Hosted scaffold mock retrieval detail did not return safe status.")
     if (
         ccld_facilities_status != 200
-        or b"Find a facility" not in ccld_facilities_body
+        or b"Find a Facility" not in ccld_facilities_body
         or b"Skip to main CCLD facility lookup content" not in ccld_facilities_body
     ):
         raise RuntimeError("Hosted scaffold CCLD facility lookup did not return results.")

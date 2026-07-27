@@ -69,6 +69,7 @@ DEFAULT_FULL_CCLD_FACILITY_REFERENCE_PATH = Path(
 CCLD_FACILITY_REFERENCE_CSV_ENV = "CCLD_FACILITY_REFERENCE_CSV"
 MAX_FACILITY_LOOKUP_RESULTS = 25
 MAX_FACILITY_PRIORITY_RESULTS = 100
+_VALID_FACILITY_ID = re.compile(r"^\d{9}$")
 _PROGRAM_FACILITY_REQUIRED_COLUMNS = (
     "Facility Number",
     "Facility Name",
@@ -311,7 +312,10 @@ _FACILITY_COMBOBOX_JS = r"""(function(){
       if(of_)of_.value='facility_lookup';
       if(lf)lf.value=f.n;
     }else{
-      si.value=f.n;
+      // A selected suggestion is a submitted facility search, not a second
+      // manual-entry mode. The response owns the results focus target.
+      window.location.href='/ccld/facilities?q='+encodeURIComponent(f.num)+'#facility-results';
+      return;
     }
     updateSubmitState();
     setCard(f);
@@ -866,6 +870,7 @@ def route_ccld_facility_lookup_response_with_source(
             query,
             reference_source,
             lookup_result=lookup_result,
+            review_context=review_context,
         ),
     )
 
@@ -874,6 +879,7 @@ def render_ccld_facility_lookup_page(
     query: str = "",
     reference_source: CcldFacilityReferenceSource | None = None,
     lookup_result: CcldFacilityLookupResult | None = None,
+    review_context: CcldFacilityReviewContext | None = None,
     active_path: str = CCLD_FACILITY_LOOKUP_PATH,
 ) -> str:
     reference_source = project_ccld_facility_reference_source(
@@ -888,69 +894,39 @@ def render_ccld_facility_lookup_page(
             reference_source=reference_source,
         )
     )
-    limited_note = _limited_reference_note(reference_source)
-    lookup_unavailable = _is_lookup_unavailable(reference_source)
-    if lookup_unavailable:
-        hero_value = (
-            "Enter a known CCLD Facility ID, then continue to Request Records to choose a complaint date range."
-        )
-        primary_action_section = f"""    <section class="workflow-panel" aria-labelledby="facility-manual-entry-primary-heading">
-      <h2 id="facility-manual-entry-primary-heading">Enter a Facility ID directly</h2>
-      <p>Use manual entry when lookup is unavailable or when you already know the digit Facility ID.</p>
-      {render_action_group(primary=ActionItem("Open Request Records", CCLD_RECORD_REQUEST_PATH), aria_label="Known facility number actions")}
-    </section>"""
-        lookup_section_label = "Facility directory search (not configured)"
-        lookup_section_intro = f"""    <section class="quiet-section" aria-labelledby="facility-start-guidance-heading">
-      <h2 id="facility-start-guidance-heading">{_escape(lookup_section_label)}</h2>
-      <p>Use Request Records to enter a known Facility ID directly.</p>
-      <p>Lookup rows are public facility-directory data for finding the Facility ID before Request Records.</p>
-    </section>"""
-    else:
-        hero_value = (
-            "Start review by finding the CCLD Facility ID in the preloaded facility directory, "
-            "then carry that selected facility into the request page to choose a complaint date range."
-        )
-        primary_action_section = ""
-        lookup_section_intro = ""
-    optional_planning_actions = render_action_group(
-        secondary=(
-            ActionItem(
-                "Compare Facilities",
-                CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH,
-            ),
-        ),
-        aria_label="Optional planning view actions",
-    )
-    manual_entry_section = "" if lookup_unavailable else f"""    <details class="technical-details">
-      <summary id="manual-entry-heading">Enter a Facility ID directly</summary>
-      <p>If you already know the CCLD Facility ID, type it on Request Records.</p>
-      {render_action_group(secondary=(ActionItem("Open Request Records", CCLD_RECORD_REQUEST_PATH),), aria_label="Manual entry actions")}
-    </details>"""
     return _page(
         title="Find a Facility",
         heading="Find a Facility",
         active_path=active_path,
-        main=f"""    <section class="hero-card attorney-hero" aria-labelledby="facility-lookup-scope-heading">
+        main=f"""    <section class="facility-discovery-intro" aria-label="Facility search purpose">
+      <p>Search public CCLD facility information, then choose the facility you want to review.</p>
+    </section>
+    {_render_facility_combobox_section(reference_source, query, _limited_reference_note(reference_source))}
+    {_render_lookup_results(result, review_context=review_context)}""",
+    )
+
+
+def render_home_page() -> str:
+    """Render the approved task launch without duplicating facility discovery."""
+    return _page(
+        title="Review CCLD Facility Records",
+        heading="Review CCLD Facility Records",
+        active_path="/",
+        main=f"""    <section class="hero-card attorney-hero" aria-labelledby="home-purpose-heading">
       <div>
-        <p class="launch-kicker">Facility intake</p>
-        <h2 id="facility-lookup-scope-heading">Find a facility</h2>
-        <p class="launch-value">{_escape(hero_value)}</p>
+        <h2 id="home-purpose-heading">Choose a review task</h2>
+        <p class="launch-value">Choose a task to find a facility, compare loaded public records, or continue complaint review.</p>
+        {render_action_group(
+            primary=ActionItem("Find a Facility", CCLD_FACILITY_LOOKUP_PATH),
+            secondary=(
+                ActionItem("Compare Facilities", CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH),
+                ActionItem("Complaint Worklist", "/reviewer"),
+            ),
+            aria_label="Primary review tasks",
+        )}
       </div>
     </section>
-{primary_action_section}
-{lookup_section_intro}
-    {_render_facility_combobox_section(reference_source, query, limited_note)}
-{manual_entry_section}
-    {_render_lookup_results(result)}
-        <section class="quiet-section" aria-labelledby="facility-priority-link-heading">
-            <h2 id="facility-priority-link-heading">Optional planning views</h2>
-            <p>Optional planning views provide supplemental facility-review context when available. They are not required for Request Records or review.</p>
-            <details>
-                <summary>Open optional planning views</summary>
-                {optional_planning_actions}
-            </details>
-        </section>
-    {_render_reference_details_section(reference_source)}""",
+    <p class="helper-text">RecordsTracker supports review of public CCLD records. It does not make legal or facility-wide conclusions.</p>""",
     )
 
 
@@ -1499,13 +1475,11 @@ def _render_facility_combobox_section(
         if limited_note
         else ""
     )
-    selected_card = _render_facility_selected_card_html(mode="facility")
     return f"""    <section class="workflow-panel" aria-labelledby="facility-combobox-heading" id="facility-selector-wrap" data-facility-mode="facility"{suggest_attr}>
-            <p class="stage-kicker">Facility lookup</p>
-            <h2 id="facility-combobox-heading">Find the Facility ID</h2>
-            <label for="facility-search-input">Facility</label>
+            <h2 id="facility-combobox-heading">Search facilities</h2>
+            <label for="facility-search-input">Facility search</label>
             <p id="facility-search-hint" class="helper-text">Search by name, Facility ID, city, county, ZIP, or facility type.</p>
-            <form action="{CCLD_FACILITY_LOOKUP_PATH}" method="get" class="facility-search-form">
+            <form action="{CCLD_FACILITY_LOOKUP_PATH}#facility-results" method="get" class="facility-search-form">
                 <div class="facility-combobox-outer" id="facility-combobox-outer">
                     <input id="facility-search-input" name="q" type="search" autocomplete="off"
                         placeholder="Name, Facility ID, city, or ZIP"
@@ -1517,13 +1491,7 @@ def _render_facility_combobox_section(
                     <button type="submit">Search CCLD facilities</button>
                 </div>
             </form>
-            <details class="technical-details">
-                <summary>When to use lookup vs. manual entry</summary>
-                <p>Use facility lookup when you know a facility name, city, county, ZIP, or facility type but not the exact Facility ID. Use manual entry when you already know the digit Facility ID.</p>
-                <p>Lookup rows are public facility-directory data for facility lookup assistance before Request Records.</p>
-            </details>
 {limited_note_markup}
-{selected_card}
             <script type="application/json" id="facility-reference-json">{json_data}</script>
             <script>{_FACILITY_COMBOBOX_JS}</script>
     </section>"""
@@ -1544,19 +1512,18 @@ def _render_facility_combobox_section_unavailable(
         else ""
     )
     return f"""    <section class="workflow-panel" aria-labelledby="facility-combobox-heading">
-            <p class="stage-kicker">Facility lookup</p>
-            <h2 id="facility-combobox-heading">Find the Facility ID</h2>
-            <label for="facility-search-input">Search facility directory (not configured)</label>
-            <p id="facility-search-hint" class="helper-text">Enter a known CCLD Facility ID on Request Records instead. Directory lookup is optional and does not affect Request Records or review.</p>
-            <form action="{CCLD_FACILITY_LOOKUP_PATH}" method="get" class="facility-search-form">
+            <h2 id="facility-combobox-heading">Facility search is unavailable</h2>
+            <label for="facility-search-input">Known Facility ID</label>
+            <p id="facility-search-hint" class="helper-text">You can continue if you already know a valid nine-digit Facility ID.</p>
+            <form action="{CCLD_FACILITY_LOOKUP_PATH}#facility-results" method="get" class="facility-search-form">
                 <div>
-                    <input id="facility-search-input" name="q" type="search" autocomplete="off"
-                        placeholder="Facility name or number"
+                    <input id="facility-search-input" name="q" type="search" autocomplete="off" inputmode="numeric"
+                        placeholder="Nine-digit Facility ID"
                         aria-describedby="facility-search-hint"
                         value="{_escape(current_query)}">
                 </div>
                 <div class="form-actions action-group" aria-label="Facility search actions">
-                    <button type="submit" class="button-secondary">Search facility directory</button>
+                    <button type="submit">Continue</button>
                 </div>
             </form>
 {limited_note_markup}
@@ -1650,19 +1617,44 @@ def _render_reference_details_section(source: CcldFacilityReferenceSource) -> st
     </details>"""
 
 
-def _render_lookup_results(result: CcldFacilityLookupResult) -> str:
+def _render_lookup_results(
+    result: CcldFacilityLookupResult,
+    *,
+    review_context: CcldFacilityReviewContext | None = None,
+) -> str:
     if result.empty_search:
         return ""
+    if _looks_like_malformed_facility_id(result.query):
+        return f"""    <section id="facility-results" class="empty-state-card" aria-labelledby="facility-results-heading" tabindex="-1">
+      <h2 id="facility-results-heading" role="status">Check the Facility ID</h2>
+      <p><strong>{_escape(result.query)}</strong> is not a valid Facility ID. Enter all nine digits, or search by facility name, city, county, ZIP, or facility type.</p>
+    </section>{_results_focus_script()}"""
     if not result.returned_records:
+        unmatched_action = (
+            render_action_group(
+                primary=ActionItem(
+                    "Continue with this Facility ID",
+                    _facility_request_href_for_values(facility_number=result.query),
+                    f"Continue with Facility ID {result.query}",
+                ),
+                aria_label="Facility ID continuation",
+            )
+            if _is_valid_facility_id(result.query)
+            else ""
+        )
+        message = (
+            "Facility not found in the directory. You can continue with this valid Facility ID even though no directory match is available."
+            if _is_valid_facility_id(result.query)
+            else f"No facilities match this search. The current directory returned no matches for <strong>{_escape(result.query)}</strong>."
+        )
         return f"""    <section class="empty-state-card" aria-labelledby="facility-results-heading">
-      <h2 id="facility-results-heading">Facility results</h2>
-        <p>No facility-directory results matched <strong>{_escape(result.query)}</strong>.</p>
-        <p>Try a shorter name, Facility ID, city, county, ZIP, facility type, or program type. You can also enter
-      a Facility ID directly on Request Records.</p>
-    {render_action_group(secondary=(ActionItem("Open Request Records", CCLD_RECORD_REQUEST_PATH),), aria_label="No-match recovery actions")}
-    </section>"""
+      <h2 id="facility-results-heading" role="status" tabindex="-1">{"Facility not found in the directory" if _is_valid_facility_id(result.query) else "No facilities match this search"}</h2>
+        <p>{message}</p>
+        <p>Try a shorter name, Facility ID, city, county, ZIP, or facility type.</p>
+    {unmatched_action}
+    </section>{_results_focus_script()}"""
     cards = "\n".join(
-        _render_result_card(record, index=index)
+        _render_result_card(record, index=index, review_context=review_context)
         for index, record in enumerate(result.returned_records, start=1)
     )
     if result.has_more_matches:
@@ -1671,29 +1663,34 @@ def _render_lookup_results(result: CcldFacilityLookupResult) -> str:
     else:
         more_guidance = f"""      <p class="helper-text">Showing {len(result.returned_records)} of
       {result.total_match_count} matching facilit{"y" if result.total_match_count == 1 else "ies"}.</p>"""
-    return f"""    <section aria-labelledby="facility-results-heading">
-        <h2 id="facility-results-heading">Facility results</h2>
-        <p>Choose a facility to carry its Facility ID and name into Request Records. Date controls appear as soon as a facility is selected.</p>
+    return f"""    <section id="facility-results" aria-labelledby="facility-results-heading" tabindex="-1">
+        <h2 id="facility-results-heading" role="status">Facility results</h2>
+        <p>Choose a facility to review available complaint records or get records for this facility.</p>
 {more_guidance}
             <div class="result-list" aria-label="Facility matches">
 {cards}
             </div>
-    </section>"""
+    </section>{_results_focus_script()}"""
 
 
-def _render_result_card(record: CcldFacilityLookupRecord, *, index: int) -> str:
-        request_href = _facility_request_href(record)
-        facility_name = _facility_record_field(
-            record,
-            FacilityProjectionField.FACILITY_NAME,
-        )
-        overview_action = ""
-        if record.facility_number.strip():
-            hub_href = _facility_hub_href(record.facility_number)
-            overview_action = f'''\n                        <a class="button button-secondary" href="{_escape(hub_href)}"
-                           aria-label="View Facility Overview for {_escape(record.facility_number)} ({_escape(facility_name)})">View Facility Overview</a>'''
-        heading_id = f"facility-{_escape(record.facility_number)}-{index}-heading"
-        return f"""        <article class="result-card" aria-labelledby="{heading_id}">
+def _render_result_card(
+    record: CcldFacilityLookupRecord,
+    *,
+    index: int,
+    review_context: CcldFacilityReviewContext | None = None,
+) -> str:
+    request_href = _facility_request_href(record)
+    facility_name = _facility_record_field(
+        record,
+        FacilityProjectionField.FACILITY_NAME,
+    )
+    context_status, primary_action = _facility_context_action(
+        record,
+        review_context,
+        request_href,
+    )
+    heading_id = f"facility-{_escape(record.facility_number)}-{index}-heading"
+    return f"""        <article class="result-card" aria-labelledby="{heading_id}">
                     <div>
                         <h3 id="{heading_id}">{_escape(facility_name)}</h3>
                         <dl class="summary-list">
@@ -1705,17 +1702,77 @@ def _render_result_card(record: CcldFacilityLookupRecord, *, index: int) -> str:
                             <dd>{_escape(_display_value(_display_location(record)))}</dd>
                             <dt>Status</dt>
                             <dd>{_escape(_facility_record_field(record, FacilityProjectionField.STATUS))}</dd>
-                        </dl>{_render_facility_conflict_note(record, (FacilityProjectionField.FACILITY_NAME, FacilityProjectionField.FACILITY_TYPE, FacilityProjectionField.STATUS))}
-                        <details class="secondary-actions reference-details-section">
-                            <summary>Directory details</summary>
-                            {_render_facility_directory_details(record)}
-                        </details>
+                        </dl>
+                        <p class="helper-text">{_escape(context_status)}</p>{_render_facility_conflict_note(record, (FacilityProjectionField.FACILITY_NAME, FacilityProjectionField.FACILITY_TYPE, FacilityProjectionField.STATUS))}
                     </div>
                     <div class="form-actions action-group" aria-label="Actions for facility {_escape(record.facility_number)}">
-                        <a class="button" href="{_escape(request_href)}" aria-label="Use facility {_escape(record.facility_number)} ({_escape(facility_name)}) in Request Records">Continue to Request Records</a>
-{overview_action}
+                        <a class="button" href="{_escape(primary_action.href)}" aria-label="{_escape(primary_action.aria_label or primary_action.label)}">{_escape(primary_action.label)}</a>
                     </div>
                 </article>"""
+
+
+def _facility_context_action(
+    record: CcldFacilityLookupRecord,
+    review_context: CcldFacilityReviewContext | None,
+    request_href: str,
+) -> tuple[str, ActionItem]:
+    accessible_name = _facility_accessible_name(record)
+    get_records = ActionItem(
+        "Get Records",
+        request_href,
+        f"Get records for {accessible_name}",
+    )
+    if not review_context or not review_context.has_loaded_context:
+        return "Complaint context unavailable. Get records to begin review.", get_records
+    if not review_context.has_date_context:
+        return (
+            "Complaint context is available; choose a date range to refine it.",
+            ActionItem("Choose Date Range", request_href, f"Choose date range for {accessible_name}"),
+        )
+    if review_context.coverage_status.casefold() in {"partial", "incomplete"}:
+        return (
+            "Complaint context is incomplete; get additional records before relying on it.",
+            ActionItem("Get Additional Records", request_href, f"Get additional records for {accessible_name}"),
+        )
+    if review_context.coverage_status.casefold() in {"unavailable", "failed", "error"}:
+        return (
+            "Complaint context may be stale or unavailable; update records before review.",
+            ActionItem("Update Records", request_href, f"Update records for {accessible_name}"),
+        )
+    return (
+        "Complaint context is available for review.",
+        ActionItem(
+            "Review Facility",
+            _facility_hub_href(record.facility_number),
+            f"Review Facility {accessible_name}",
+        ),
+    )
+
+
+def _is_valid_facility_id(value: str) -> bool:
+    return bool(_VALID_FACILITY_ID.fullmatch(value.strip()))
+
+
+def _looks_like_malformed_facility_id(value: str) -> bool:
+    compact = value.replace(" ", "")
+    return bool(compact) and compact.isdigit() and not _is_valid_facility_id(compact)
+
+
+def _facility_accessible_name(record: CcldFacilityLookupRecord) -> str:
+    name = _facility_record_field(record, FacilityProjectionField.FACILITY_NAME)
+    return f"{name} (Facility ID {record.facility_number})"
+
+
+def _results_focus_script() -> str:
+    return """<script>
+(function () {
+  if (window.location.hash !== '#facility-results') return;
+  var target = document.getElementById('facility-results') || document.getElementById('facility-results-heading');
+  if (!target) return;
+  target.scrollIntoView();
+  target.focus();
+}());
+</script>"""
 
 
 def _render_facility_directory_details(
@@ -2948,7 +3005,11 @@ def _page(
                 title=title,
                 heading=heading,
                 main=main,
-                skip_label="Skip to main CCLD facility lookup content",
+                skip_label=(
+                    "Skip to main content"
+                    if active_path == "/"
+                    else "Skip to main CCLD facility lookup content"
+                ),
                 active_path=active_path,
                 step_id="start" if active_path == "/" else "facility",
                 next_action="Find a facility",

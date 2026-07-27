@@ -270,3 +270,21 @@ is a release blocker.
   390 px, and the governed 720 px 200% approximation. Print hides navigation and
   interactive filters while retaining the comparison evidence and its text
   meaning.
+
+## Home and facility discovery
+
+- Home and `/ccld/facilities` have distinct H1s and purposes. Home provides
+  task destinations; it does not embed a second facility-search form.
+- Facility discovery provides one explicitly labeled search input. Its helper
+  text names the supported search dimensions; placeholder text is not the only
+  instruction.
+- A submitted search retains the query and targets the results region. The
+  server-rendered results target is focusable, has an announced heading/count,
+  and is the viewport target for full-page search submission. Ordinary
+  autocomplete typing must not move focus.
+- Valid unmatched and malformed Facility ID states use distinct visible text,
+  recovery actions, and accessible names. The unmatched state keeps the entered
+  public ID visible without claiming that the facility is invalid or absent.
+- The six-item attorney navigation remains ordered and keyboard reachable at
+  desktop, narrow, mobile, and governed 200% reflow states. Contextual record
+  retrieval has no misleading primary-navigation active state.
