@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import re
 import sys
 from html.parser import HTMLParser
 from pathlib import Path
@@ -209,6 +210,42 @@ def test_representative_reviewer_actions_reach_real_routes_and_mutation_feedback
                 ),
             },
         )
+    finally:
+        context.engine.dispose()
+
+
+def test_complaint_overview_print_allows_large_content_to_flow_without_orphaning() -> None:
+    """Keep the print contract focused on readable pagination, not page count."""
+
+    context = build_local_test_reviewer_ui_context()
+    assert context.engine is not None
+    try:
+        status, _content_type, body = route_response(
+            f"{REVIEWER_UI_DETAIL_PATH}?source_record_key={quote(COMPLAINT_KEY)}",
+            reviewer_ui_context=context,
+        )
+        html = body.decode("utf-8")
+        assert status == 200
+
+        print_css = re.search(r"@media print \{(?P<rules>.*?)\n    \}", html, re.DOTALL)
+        assert print_css is not None
+        rules = print_css.group("rules")
+        assert re.search(
+            r"\.reviewer-detail-page\.detail-shell\s*\{\s*display: block;",
+            rules,
+        )
+        assert re.search(
+            r"\.complaint-overview-card\s*\{.*?break-inside: auto;.*?page-break-inside: auto;",
+            rules,
+            re.DOTALL,
+        )
+        assert re.search(
+            r"\.reviewer-detail-page h2\s*\{.*?break-after: avoid-page;",
+            rules,
+            re.DOTALL,
+        )
+        assert ".overview-source-action" in rules
+        assert ".review-update-form" in rules
     finally:
         context.engine.dispose()
 

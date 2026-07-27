@@ -269,6 +269,10 @@ evidence`, node `64:2`. Acceptance must prove all of the following:
 - Print tests and `Print state` evidence prove the supported claim, bounded
   evidence, reviewer-safe source status, and readable original-source URL print;
   navigation, interactive, copy, and reviewer-created controls do not.
+- Complaint Overview print contracts also require the first meaningful section
+  to flow beneath its heading when space is available. Large overview content
+  may paginate; tests must reject an oversized non-splittable container that
+  strands the heading or creates an avoidable near-empty final page.
 - Privacy and tier tests prove that the reviewer output contains no raw SHA-256,
   raw path, connector metadata, source document ID, database ID, extraction-
   audit table, full narrative, raw field dump, legal conclusion, source-

@@ -41,6 +41,8 @@ Capture the focused issue #419 canonical Compare Facilities views, states, redir
 responsive layouts, keyboard focus, and print evidence.
 .PARAMETER Issue498
 Capture the focused RT-SRC-002 local fixture evidence states and presentation scenarios.
+.PARAMETER Issue610
+Capture the focused Issue #610 Complaint Overview print-correction evidence.
 .EXAMPLE
 .\scripts\capture-hosted-ui-evidence.ps1 -BaseUrl http://127.0.0.1:8003 -Mode live
 .EXAMPLE
@@ -57,6 +59,8 @@ Capture the focused RT-SRC-002 local fixture evidence states and presentation sc
 .\scripts\capture-hosted-ui-evidence.ps1 -BaseUrl http://127.0.0.1:8010 -Mode fixture -Issue419
 .EXAMPLE
 .\scripts\capture-hosted-ui-evidence.ps1 -BaseUrl http://127.0.0.1:8010 -Mode fixture -Issue498
+.EXAMPLE
+.\scripts\capture-hosted-ui-evidence.ps1 -BaseUrl http://127.0.0.1:8010 -Mode fixture -Issue610
 .NOTES
 Run from the repository root. Generated packets capture local hosted UI route,
 text, assertion, accessibility, and screenshot evidence for reviewer inspection.
@@ -98,12 +102,17 @@ param(
 
     [switch]$Issue419,
 
-    [switch]$Issue498
+    [switch]$Issue498,
+
+    [switch]$Issue610
 )
 
 $ErrorActionPreference = "Stop"
 
-$evidencePurpose = if ($Issue498) {
+$evidencePurpose = if ($Issue610) {
+    "Focused Issue #610 local fixture evidence for Complaint Overview print pagination on the product-owner-rejected populated route and one unavailable-source comparison state."
+}
+elseif ($Issue498) {
     "Focused RT-SRC-002 local fixture evidence for supported, document-only, field-partial, source-unavailable, responsive, focus, and print states."
 }
 elseif ($Issue419) {
@@ -1875,7 +1884,11 @@ try {
         @{ Name = "rt-src-002-print"; Path = "$issue498SupportedPath#first-investigation-evidence"; Label = "rt-src-002-10-print"; ActiveHref = "/reviewer"; WorkflowStep = "Review"; Issue498State = "supported"; Issue498Kind = "print"; ViewportWidth = 1440; ViewportHeight = 1200; CapturePrint = $true },
         @{ Name = "rt-src-002-focus-return"; Path = $issue498SupportedPath; Label = "rt-src-002-11-focus-return"; ActiveHref = "/reviewer"; WorkflowStep = "Review"; Issue498State = "supported"; Issue498Kind = "focus-return"; ViewportWidth = 1440; ViewportHeight = 1200 }
     )
-    $routesToCapture = if ($Issue498) { $issue498Routes } elseif ($Issue419) { $issue419Routes } elseif ($Issue418) { $issue418Routes } elseif ($Issue417) { $issue417Routes } elseif ($Issue416) { $issue416Routes } elseif ($Issue415) { $issue415Routes } else { $coreRoutes }
+    $issue610Routes = @(
+        @{ Name = "issue-610-populated-print"; Path = "/reviewer/records/detail?source_record_key=complaint%3Accld%3Acomplaint%3A32-CR-20220407124448&return_facility_number=157806098&return_start_date=&return_end_date=&return_context_origin=reviewer_worklist&return_lookup_facility_name=&return_q=32-CR-20220407124448&return_source_record_key=complaint%3Accld%3Acomplaint%3A32-CR-20220407124448"; Label = "issue-610-01-populated-print"; ActiveHref = "/reviewer"; WorkflowStep = "Review"; ViewportWidth = 1440; ViewportHeight = 1200; CapturePrint = $true },
+        @{ Name = "issue-610-source-unavailable"; Path = $issue498SourceUnavailablePath; Label = "issue-610-02-source-unavailable"; ActiveHref = "/reviewer"; WorkflowStep = "Review"; ViewportWidth = 1440; ViewportHeight = 1200 }
+    )
+    $routesToCapture = if ($Issue610) { $issue610Routes } elseif ($Issue498) { $issue498Routes } elseif ($Issue419) { $issue419Routes } elseif ($Issue418) { $issue418Routes } elseif ($Issue417) { $issue417Routes } elseif ($Issue416) { $issue416Routes } elseif ($Issue415) { $issue415Routes } else { $coreRoutes }
 
     $routeResults = [System.Collections.ArrayList]::new()
     $assertions = [System.Collections.ArrayList]::new()
@@ -2417,6 +2430,7 @@ explicitly says to do so.
         issue418               = [ordered]@{ enabled = [bool]$Issue418; routeCount = @($routesToCapture).Count; countSummaries = @($issue418CountSummaries); zoomLimitation = "True browser zoom is not controlled by this script; reduced viewport captures are supplemental evidence only." }
         issue419               = [ordered]@{ enabled = [bool]$Issue419; routeCount = @($routesToCapture).Count; scenarios = @($routesToCapture | ForEach-Object { $_.Name }); controlledVarianceAuthority = "Issue #501 repository-readable controlled variance"; visualAcceptance = "READY FOR EXPLICIT OWNER REVIEW"; uiGates = @($issue419GateResults); zoomLimitation = "The 720-pixel viewport scenario approximates 200-percent reflow; no visual acceptance is inferred from automation."; printArtifact = @($routeResults | Where-Object { $_.printPath } | ForEach-Object { $_.printPath }) }
         issue498               = [ordered]@{ enabled = [bool]$Issue498; routeCount = @($routesToCapture).Count; scenarios = @($routesToCapture | ForEach-Object { $_.Name }); zoomLimitation = "The 720-pixel viewport scenario approximates 200-percent reflow only; exact true browser zoom remains manual visual evidence."; printArtifact = @($routeResults | Where-Object { $_.printPath } | ForEach-Object { $_.printPath }) }
+        issue610               = [ordered]@{ enabled = [bool]$Issue610; routeCount = @($routesToCapture).Count; scenarios = @($routesToCapture | ForEach-Object { $_.Name }); printSettings = "Portrait; scale 100%; default margins; headers and footers off; background graphics on."; printArtifact = @($routeResults | Where-Object { $_.printPath } | ForEach-Object { $_.printPath }) }
         git                    = [ordered]@{ branch = $gitBranch; commit = $gitCommit; workingTreeClean = [bool]$workingTreeClean; notice = if ($workingTreeClean) { "" } else { "Working tree was not clean when evidence was captured." } }
         output                 = [ordered]@{ packetDirectory = ConvertTo-RelativeEvidencePath -Path $packetDir -Root $PWD; zipPacket = ConvertTo-RelativeEvidencePath -Path $zipPath -Root $PWD; manifest = "manifest.json"; fileIndex = "file-index.json"; routeStatusCsv = "route-status.csv"; routeAssertionsCsv = "route-assertions.csv"; textMarkers = "route-text-markers.txt"; counts = $outputCounts }
         evidencePurpose        = $evidencePurpose

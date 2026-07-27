@@ -3635,7 +3635,6 @@ SHARED_CSS = r"""
         color: #000;
       }
       .review-worklist-row,
-      .complaint-overview-card,
       .review-update-feedback {
         background: #fff !important;
         border-color: #000 !important;
@@ -3649,6 +3648,20 @@ SHARED_CSS = r"""
       }
       .overview-layout {
         display: block;
+      }
+      .reviewer-detail-page.detail-shell {
+        display: block;
+      }
+      .complaint-overview-card {
+        background: #fff !important;
+        border-color: #000 !important;
+        box-shadow: none !important;
+        break-inside: auto;
+        page-break-inside: auto;
+      }
+      .reviewer-detail-page h2 {
+        break-after: avoid-page;
+        page-break-after: avoid;
       }
       .overview-side-panel {
         background: #fff !important;
