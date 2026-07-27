@@ -1,0 +1,118 @@
+{
+  "schema_version": "recordstracker.delivery-automation-registry.v1",
+  "title": "Delivery-automation failure and prevention registry",
+  "purpose": "Records authoritative delivery-automation failures and durable prevention evidence without granting autonomous governance authority.",
+  "owner_issue": "#617",
+  "highest_assigned_id": 31,
+  "historical_gaps": [
+    {
+      "start_id": 1,
+      "end_id": 28,
+      "status": "unavailable",
+      "reason": "No authoritative repository evidence was found during the #617 readiness audit."
+    }
+  ],
+  "records": [
+    {
+      "id": "DA-029",
+      "title": "PR-body validation parity",
+      "failure_pattern": "Local, CI, and live PR-body validation disagreed for equivalent published evidence.",
+      "evidence_references": [
+        {"kind": "issue", "reference": "#616"},
+        {"kind": "pull_request", "reference": "#618"},
+        {"kind": "repository_path", "reference": "tests/fixtures/pr_body_validation/pr-615-full-template.md"}
+      ],
+      "owner_issue": "#616",
+      "lifecycle_status": "prevented",
+      "prevention_state": "prevention_complete",
+      "governance_change_classifications": [
+        "inconsistency_correction",
+        "stronger_enforcement"
+      ],
+      "enforcement_levels": ["validation", "workflow_gate"],
+      "evidence_completeness": "complete",
+      "prevention_summary": "Canonical normalization, one production validation path, canonical changed scope, unresolved-instruction detection, and local/CI/live parity.",
+      "merged_prevention_prs": ["#618"],
+      "regression_coverage": [
+        "tests/unit/test_independent_verification.py",
+        "tests/unit/test_pr_body_validation_parity.py"
+      ],
+      "documentation_impact": [
+        "docs/developer/codex-workflow.md#pull-request-evidence-preflight",
+        "TESTING_STRATEGY.md"
+      ],
+      "remaining_work": [],
+      "related_issues": ["#608", "#616", "#617"],
+      "supersession": {"supersedes": [], "superseded_by": []},
+      "retirement": {"status": "not_applicable", "rationale": null},
+      "temporary_exception": null
+    },
+    {
+      "id": "DA-030",
+      "title": "PR-body transport and persistence integrity",
+      "failure_pattern": "PR-body Unicode transport or persistence representations corrupted content or caused a premature permanent-mismatch classification.",
+      "evidence_references": [
+        {"kind": "issue", "reference": "#616"},
+        {"kind": "pull_request", "reference": "#619"},
+        {"kind": "repository_path", "reference": "tests/unit/test_pr_body_persistence_integrity.py"}
+      ],
+      "owner_issue": "#616",
+      "lifecycle_status": "prevented",
+      "prevention_state": "prevention_complete",
+      "governance_change_classifications": [
+        "inconsistency_correction",
+        "stronger_enforcement"
+      ],
+      "enforcement_levels": ["guarded_mutation", "validation"],
+      "evidence_completeness": "complete",
+      "prevention_summary": "Exact UTF-8 body-only payloads, immutable preconditions, a zero-or-one PATCH budget, bounded read-only stabilization, typed outcomes, and post-persistence validation without retry or rollback.",
+      "merged_prevention_prs": ["#619"],
+      "regression_coverage": ["tests/unit/test_pr_body_persistence_integrity.py"],
+      "documentation_impact": [
+        "docs/developer/codex-workflow.md#da-030-guarded-transport-and-persistence-evidence",
+        "TESTING_STRATEGY.md"
+      ],
+      "remaining_work": [],
+      "related_issues": ["#608", "#616", "#617"],
+      "supersession": {"supersedes": [], "superseded_by": []},
+      "retirement": {"status": "not_applicable", "rationale": null},
+      "temporary_exception": null
+    },
+    {
+      "id": "DA-031",
+      "title": "Unexpected issue closure through development linkage",
+      "failure_pattern": "GitHub development linkage closed a parent or continuation issue after a bounded PR merge although PR-body wording did not state that the issue was resolved.",
+      "evidence_references": [
+        {"kind": "issue", "reference": "#608"},
+        {"kind": "issue", "reference": "#617"},
+        {"kind": "pull_request", "reference": "#615"}
+      ],
+      "owner_issue": "#617",
+      "lifecycle_status": "active",
+      "prevention_state": "in_progress",
+      "governance_change_classifications": ["stronger_enforcement"],
+      "enforcement_levels": ["human_decision"],
+      "evidence_completeness": "partial",
+      "prevention_summary": "Read-only closure-linkage inspection binds exact issue outcomes, accepts only repository-bounded contract input, distinguishes informational timeline cross-references from explicit closing semantics, fails closed on partial, malformed, unavailable, or other incomplete observable evidence, records the unexposed development-link closure effect as an explicit residual limitation, and requires exact immediate post-merge issue-state verification without merge, closure, reopening, or recovery authority.",
+      "merged_prevention_prs": [],
+      "regression_coverage": ["tests/unit/test_closure_linkage_inspection.py"],
+      "documentation_impact": [
+        "docs/developer/codex-workflow.md#da-031-read-only-closure-linkage-inspection",
+        "TESTING_STRATEGY.md"
+      ],
+      "remaining_work": [
+        "Merge execution, issue recovery, and merge-controller behavior remain separately authorized work.",
+        "Do not infer closure safety solely from PR-body wording; incomplete observable evidence, partial pagination, unknown timeline events, and unknown closure sources fail closed, while informational cross-references remain relationship evidence and the unexposed development-link closure effect requires explicit post-merge verification."
+      ],
+      "related_issues": ["#608", "#617"],
+      "supersession": {"supersedes": [], "superseded_by": []},
+      "retirement": {"status": "not_applicable", "rationale": null},
+      "temporary_exception": null
+    }
+  ],
+  "privacy_and_evidence_limits": [
+    "Store public issue and pull-request identifiers, repository-relative paths, and concise evidence summaries only.",
+    "Do not store credentials, authorization headers, environment contents, private hosts, full PR bodies, or private evidence payloads."
+  ],
+  "globally_atomic": false
+}

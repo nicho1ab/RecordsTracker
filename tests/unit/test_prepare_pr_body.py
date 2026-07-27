@@ -21,6 +21,15 @@ def _load_module() -> ModuleType:
     return module
 
 
+def _load_module_from_path(name: str, path: Path) -> ModuleType:
+    spec = importlib.util.spec_from_file_location(name, path)
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
 def _completed_body() -> str:
     template = (ROOT / ".github/PULL_REQUEST_TEMPLATE.md").read_text(encoding="utf-8")
     replacements = (
@@ -103,6 +112,131 @@ def test_render_copies_the_authoritative_template(tmp_path: Path) -> None:
     assert output.read_text(encoding="utf-8") == template
 
 
+def test_compact_policy_preparation_is_deterministic_and_independently_valid() -> None:
+    prepare = _load_module()
+    verification = _load_module_from_path(
+        "independent_verification_for_compact_policy",
+        ROOT / "scripts" / "check_independent_verification.py",
+    )
+    paths = ["docs/developer/codex-workflow.md"]
+    scope_hash = prepare.changed_scope_sha256(paths)
+    identity = {
+        "repository": "nicho1ab/RecordsTracker",
+        "pull_request_number": 617,
+        "base_ref": "main",
+        "base_sha": "a" * 40,
+        "head_ref": "codex/test",
+        "head_sha": "a" * 40,
+        "tree_sha": "c" * 40,
+        "changed_file_inventory_hash": scope_hash,
+        "pr_body_hash": "d" * 64,
+        "policy_version": "1.0.3",
+        "schema_version": "recordstracker.evidence-reuse-validation-impact.v1",
+        "validator_version": "evaluator-v1",
+        "governed_boundary_classification": ["Repository governance"],
+        "dependency_state_digest": "d" * 64,
+    }
+    policy_input = {
+        "kind": "input",
+        "schema_version": "recordstracker.evidence-reuse-validation-impact.v1",
+        "repository_state": identity,
+        "changed_file_inventory": {"complete": True, "paths": paths},
+        "dependency_state": {"status": "known", "digest": "d" * 64},
+        "evidence": [],
+        "required_check_runs": [
+            {
+                "check_name": check,
+                "run_id": number,
+                "job_id": number + 10,
+                "status": "success",
+                "conclusion": "success",
+                "head_sha": "a" * 40,
+                "tree_sha": "c" * 40,
+                "changed_file_inventory_hash": scope_hash,
+                "pr_body_hash": "d" * 64,
+            }
+            for number, check in enumerate(("validate", "docs-check", "fixtures", "security"), 1)
+        ],
+    }
+    completed = _completed_body()
+    start = completed.index("## Validation impact and evidence delta")
+    end = completed.index("## UI and accessibility evidence", start)
+    prefix = completed[:start]
+    suffix = completed[end:]
+    first = prepare.render_compact_policy_evidence(
+        policy_input,
+        delta="Documentation delta.",
+        validation_newly_performed=["focused"],
+        live_evidence_recollected=["required checks"],
+        body_prefix=prefix,
+        body_suffix=suffix,
+    )
+    assert first == prepare.render_compact_policy_evidence(
+        policy_input,
+        delta="Documentation delta.",
+        validation_newly_performed=["focused"],
+        live_evidence_recollected=["required checks"],
+        body_prefix=prefix,
+        body_suffix=suffix,
+    )
+    assert "command" not in first.lower()
+    body = prefix + first + suffix
+    envelope = json.loads(first.split("```json\n", 1)[1].split("\n```", 1)[0])
+    assert envelope["policy_input"]["repository_state"]["pr_body_hash"] == (
+        verification.canonical_compact_body_sha256(body)
+    )
+    live = {
+        **{
+            field: envelope["policy_input"]["repository_state"][field]
+            for field in (
+                "repository",
+                "pull_request_number",
+                "base_ref",
+                "base_sha",
+                "head_ref",
+                "head_sha",
+            )
+        },
+        "body": body,
+        "changed_file_inventory_complete": True,
+        "required_check_runs_complete": True,
+        "workflow_metadata_complete": True,
+        "workflow_metadata_pagination_complete": True,
+        "workflow_metadata": [
+            {"repository": identity["repository"], "id": 1, "path": path}
+            for path in (
+                ".github/workflows/ci.yml",
+                ".github/workflows/docs-check.yml",
+                ".github/workflows/regression.yml",
+                ".github/workflows/security.yml",
+            )
+        ],
+        "required_check_runs": [
+            {
+                field: run[field]
+                for field in ("check_name", "run_id", "job_id", "status", "conclusion", "head_sha")
+            }
+            | {
+                "repository": envelope["policy_input"]["repository_state"]["repository"],
+                "event": "pull_request",
+                "pull_request_numbers": [
+                    envelope["policy_input"]["repository_state"]["pull_request_number"]
+                ],
+                "job_run_id": run["run_id"],
+                "workflow_id": 1,
+                "workflow_path": {
+                    "validate": ".github/workflows/ci.yml",
+                    "docs-check": ".github/workflows/docs-check.yml",
+                    "fixtures": ".github/workflows/regression.yml",
+                    "security": ".github/workflows/security.yml",
+                }[run["check_name"]],
+            }
+            for run in envelope["policy_input"]["required_check_runs"]
+        ],
+    }
+    assert verification.validate_pr_evidence(ROOT, body, paths, live_pr_state=live).violations == ()
+
+
 def test_preflight_uses_validator_rules_and_actionable_failures(tmp_path: Path, capsys) -> None:
     prepare = _load_module()
     body = tmp_path / "body.md"
@@ -110,12 +244,15 @@ def test_preflight_uses_validator_rules_and_actionable_failures(tmp_path: Path, 
     body.write_text(_completed_body(), encoding="utf-8")
     changed.write_text(".github/workflows/ci.yml\n", encoding="utf-8")
 
-    assert prepare.preflight_body(
-        body_path=body,
-        changed_files_path=changed,
-        base="origin/main",
-        repo_root=ROOT,
-    ) == 1
+    assert (
+        prepare.preflight_body(
+            body_path=body,
+            changed_files_path=changed,
+            base="origin/main",
+            repo_root=ROOT,
+        )
+        == 1
+    )
     failure_message = (
         "Required GitHub workflows and checks: changes require Concern - review required"
     )
@@ -130,12 +267,15 @@ def test_preflight_uses_validator_rules_and_actionable_failures(tmp_path: Path, 
         ),
         encoding="utf-8",
     )
-    assert prepare.preflight_body(
-        body_path=body,
-        changed_files_path=changed,
-        base="origin/main",
-        repo_root=ROOT,
-    ) == 0
+    assert (
+        prepare.preflight_body(
+            body_path=body,
+            changed_files_path=changed,
+            base="origin/main",
+            repo_root=ROOT,
+        )
+        == 0
+    )
     assert "Independent verification passed." in capsys.readouterr().out
 
 
@@ -202,12 +342,37 @@ class FakeTransport:
     def changed_files(self, _repository: str, _number: int) -> tuple[str, ...]:
         return self.changed_files_value
 
-    def update_body(self, repository: str, number: int, body: str) -> None:
+    def update_body(self, repository: str, number: int, body: str) -> dict[str, object]:
         self.update_calls.append((repository, number, body))
+        return {"body": body}
 
 
 def _fetch(prepare: ModuleType, transport: FakeTransport, body: str):
     return prepare.fetch_open_pull_request(transport, "nicho1ab/RecordsTracker", "#613")
+
+
+def _preconditions(
+    prepare: ModuleType,
+    current: str,
+    proposal: str,
+    *,
+    body_hash: str | None = None,
+    changed_files: tuple[str, ...] = ("scripts/prepare_pr_body.py",),
+) -> object:
+    return prepare.MutationPreconditions(
+        repository="nicho1ab/RecordsTracker",
+        number=613,
+        state="open",
+        draft=False,
+        base="main",
+        base_sha="base-sha",
+        head="repair",
+        head_sha="head-sha",
+        scope_sha256=prepare.changed_scope_sha256(changed_files),
+        body_sha256=body_hash or prepare.body_sha256(current),
+        candidate_sha256=prepare.body_sha256(proposal),
+        authorization="body-only",
+    )
 
 
 def test_fetches_live_body_paginated_files_and_pr_identity() -> None:
@@ -302,17 +467,17 @@ def test_invalid_proposal_cannot_update_open_pr() -> None:
     prepare = _load_module()
     transport = FakeTransport([_completed_body()])
 
-    with pytest.raises(prepare.ProposalValidationError, match="missing governing issue reference"):
-        prepare.apply_open_pull_request_repair(
-            transport=transport,
-            repo_root=ROOT,
-            repository="nicho1ab/RecordsTracker",
-            reference="613",
-            proposal="# Pull Request Evidence\n",
-            expected_body_sha256=prepare.body_sha256(_completed_body()),
-            confirmed=True,
-        )
+    attempt = prepare.apply_open_pull_request_repair(
+        transport=transport,
+        repo_root=ROOT,
+        repository="nicho1ab/RecordsTracker",
+        reference="613",
+        proposal="# Pull Request Evidence\n",
+        preconditions=_preconditions(prepare, _completed_body(), "# Pull Request Evidence\n"),
+        confirmed=True,
+    )
 
+    assert attempt.outcome is prepare.PersistenceOutcome.NO_MUTATION_PRECONDITION_FAILED
     assert transport.update_calls == []
 
 
@@ -329,7 +494,7 @@ def test_apply_requires_explicit_confirmation_before_mutation() -> None:
             repository="nicho1ab/RecordsTracker",
             reference="613",
             proposal=proposal,
-            expected_body_sha256=prepare.body_sha256(current),
+            preconditions=_preconditions(prepare, current, proposal),
             confirmed=False,
         )
 
@@ -342,17 +507,18 @@ def test_apply_updates_only_body_then_refetches_and_revalidates() -> None:
     proposal = current.replace("Preflight catches", "Open PR repair catches")
     transport = FakeTransport([current, current, proposal])
 
-    changed = prepare.apply_open_pull_request_repair(
+    attempt = prepare.apply_open_pull_request_repair(
         transport=transport,
         repo_root=ROOT,
         repository="nicho1ab/RecordsTracker",
         reference="613",
         proposal=proposal,
-        expected_body_sha256=prepare.body_sha256(current),
+        preconditions=_preconditions(prepare, current, proposal),
         confirmed=True,
     )
 
-    assert changed is True
+    assert attempt.outcome is prepare.PersistenceOutcome.IMMEDIATE_CONVERGENCE
+    assert attempt.mutation_count == 1
     assert transport.update_calls == [("nicho1ab/RecordsTracker", 613, proposal)]
 
 
@@ -361,18 +527,16 @@ def test_apply_is_idempotent_when_transport_normalized_bodies_match() -> None:
     current = _completed_body()
     transport = FakeTransport([current.replace("\n", "\r\n")])
 
-    assert (
-        prepare.apply_open_pull_request_repair(
-            transport=transport,
-            repo_root=ROOT,
-            repository="nicho1ab/RecordsTracker",
-            reference="613",
-            proposal=current,
-            expected_body_sha256=None,
-            confirmed=False,
-        )
-        is False
+    attempt = prepare.apply_open_pull_request_repair(
+        transport=transport,
+        repo_root=ROOT,
+        repository="nicho1ab/RecordsTracker",
+        reference="613",
+        proposal=current,
+        preconditions=_preconditions(prepare, current, current),
+        confirmed=False,
     )
+    assert attempt.outcome is prepare.PersistenceOutcome.NO_MUTATION_ALREADY_CONVERGED
     assert transport.update_calls == []
 
 
@@ -383,17 +547,17 @@ def test_apply_rejects_a_concurrent_live_body_change() -> None:
     changed_elsewhere = current.replace("Preflight catches", "Another editor catches")
     transport = FakeTransport([current, changed_elsewhere])
 
-    with pytest.raises(prepare.ConcurrentBodyUpdateError, match="changed after preview"):
-        prepare.apply_open_pull_request_repair(
-            transport=transport,
-            repo_root=ROOT,
-            repository="nicho1ab/RecordsTracker",
-            reference="613",
-            proposal=proposal,
-            expected_body_sha256=prepare.body_sha256(current),
-            confirmed=True,
-        )
+    attempt = prepare.apply_open_pull_request_repair(
+        transport=transport,
+        repo_root=ROOT,
+        repository="nicho1ab/RecordsTracker",
+        reference="613",
+        proposal=proposal,
+        preconditions=_preconditions(prepare, current, proposal),
+        confirmed=True,
+    )
 
+    assert attempt.outcome is prepare.PersistenceOutcome.NO_MUTATION_PRECONDITION_FAILED
     assert transport.update_calls == []
 
 
@@ -403,17 +567,18 @@ def test_apply_rejects_an_incorrect_expected_body_hash() -> None:
     proposal = current.replace("Preflight catches", "Open PR repair catches")
     transport = FakeTransport([current, current])
 
-    with pytest.raises(prepare.ConcurrentBodyUpdateError, match="changed after preview"):
-        prepare.apply_open_pull_request_repair(
-            transport=transport,
-            repo_root=ROOT,
-            repository="nicho1ab/RecordsTracker",
-            reference="613",
-            proposal=proposal,
-            expected_body_sha256="0" * 64,
-            confirmed=True,
-        )
+    attempt = prepare.apply_open_pull_request_repair(
+        transport=transport,
+        repo_root=ROOT,
+        repository="nicho1ab/RecordsTracker",
+        reference="613",
+        proposal=proposal,
+        preconditions=_preconditions(prepare, current, proposal, body_hash="0" * 64),
+        confirmed=True,
+    )
 
+    assert transport.update_calls == []
+    assert attempt.outcome is prepare.PersistenceOutcome.NO_MUTATION_PRECONDITION_FAILED
     assert transport.update_calls == []
 
 
@@ -424,16 +589,17 @@ def test_apply_reports_persistence_mismatch_after_refetch() -> None:
     persisted_different = current.replace("Preflight catches", "Different valid body catches")
     transport = FakeTransport([current, current, persisted_different])
 
-    with pytest.raises(prepare.PersistenceMismatchError, match="materially different"):
-        prepare.apply_open_pull_request_repair(
-            transport=transport,
-            repo_root=ROOT,
-            repository="nicho1ab/RecordsTracker",
-            reference="613",
-            proposal=proposal,
-            expected_body_sha256=prepare.body_sha256(current),
-            confirmed=True,
-        )
+    attempt = prepare.apply_open_pull_request_repair(
+        transport=transport,
+        repo_root=ROOT,
+        repository="nicho1ab/RecordsTracker",
+        reference="613",
+        proposal=proposal,
+        preconditions=_preconditions(prepare, current, proposal),
+        confirmed=True,
+        sleeper=lambda _seconds: None,
+    )
+    assert attempt.outcome is prepare.PersistenceOutcome.STABLE_PERSISTENCE_MISMATCH
 
 
 def test_apply_reports_invalid_persisted_body_after_update() -> None:
@@ -442,18 +608,19 @@ def test_apply_reports_invalid_persisted_body_after_update() -> None:
     proposal = current.replace("Preflight catches", "Open PR repair catches")
     transport = FakeTransport([current, current, "# Pull Request Evidence\n"])
 
-    with pytest.raises(prepare.ProposalValidationError, match="missing governing issue reference"):
-        prepare.apply_open_pull_request_repair(
-            transport=transport,
-            repo_root=ROOT,
-            repository="nicho1ab/RecordsTracker",
-            reference="613",
-            proposal=proposal,
-            expected_body_sha256=prepare.body_sha256(current),
-            confirmed=True,
-        )
+    attempt = prepare.apply_open_pull_request_repair(
+        transport=transport,
+        repo_root=ROOT,
+        repository="nicho1ab/RecordsTracker",
+        reference="613",
+        proposal=proposal,
+        preconditions=_preconditions(prepare, current, proposal),
+        confirmed=True,
+        sleeper=lambda _seconds: None,
+    )
 
     assert transport.update_calls == [("nicho1ab/RecordsTracker", 613, proposal)]
+    assert attempt.outcome is prepare.PersistenceOutcome.STABLE_PERSISTENCE_MISMATCH
 
 
 def test_github_read_and_update_failures_are_classified() -> None:
@@ -487,9 +654,7 @@ def test_missing_closed_and_wrong_repository_references_fail_safely() -> None:
             return {"state": "closed", "body": ""}
 
     with pytest.raises(prepare.PullRequestStateError, match="not open"):
-        prepare.fetch_open_pull_request(
-            ClosedTransport([""]), "nicho1ab/RecordsTracker", "613"
-        )
+        prepare.fetch_open_pull_request(ClosedTransport([""]), "nicho1ab/RecordsTracker", "613")
 
     class WrongRepositoryTransport(FakeTransport):
         def repository(self, _repository: str) -> str:
@@ -510,15 +675,16 @@ def test_body_transport_preserves_multiline_unicode_quotes_and_markdown() -> Non
     )
     transport = FakeTransport([body.replace("\n", "\r\n"), body.replace("\n", "\r\n"), body])
 
-    assert prepare.apply_open_pull_request_repair(
+    attempt = prepare.apply_open_pull_request_repair(
         transport=transport,
         repo_root=ROOT,
         repository="nicho1ab/RecordsTracker",
         reference="https://github.com/nicho1ab/RecordsTracker/pull/613",
         proposal=body,
-        expected_body_sha256=prepare.body_sha256(body),
+        preconditions=_preconditions(prepare, body.replace("\n", "\r\n"), body),
         confirmed=True,
-    ) is False
+    )
+    assert attempt.outcome is prepare.PersistenceOutcome.NO_MUTATION_ALREADY_CONVERGED
     assert transport.update_calls == []
 
 

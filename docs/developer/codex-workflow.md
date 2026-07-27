@@ -170,6 +170,68 @@ or data-contract authority is unresolved, branch or file overlap is uncertain,
 or implementation could materially affect architecture, security, privacy,
 schemas, ingestion, deployment, or source traceability.
 
+### Evidence, packages, and reassessment
+
+A successful check or verified fact remains accepted until a named input
+changes. Moving to another prompt, phase, or session does not invalidate it.
+Source or test changes invalidate affected test results; a new commit
+invalidates prior head-specific CI results; a PR-body edit invalidates prior
+verification of that body; changed workflow or verification code invalidates
+results produced under the old rule; and a new superseding failed required run
+invalidates the previously accepted required-run state.
+
+Before repeating a check, the prompt or report must identify the concrete
+changed input that could produce a different result. Do not repeat checks merely
+for caution, elapsed time, session handoff, or another workflow phase.
+
+Local validation gives fast feedback before a commit or push and should match
+the actual change: documentation-only changes normally use documentation
+validation and `git diff --check`; narrow code changes use affected focused
+tests plus applicable lint, formatting, and type checks; and the complete local
+test suite is reserved for broad, risky, release-level, or troubleshooting
+work, or when the validation-impact policy specifically requires it.
+
+Required GitHub PR checks run against the exact pushed commit in a clean remote
+environment. They can catch uncommitted files, Linux-versus-Windows differences,
+missing dependencies or environment assumptions, repository-wide failures
+outside a narrow local selection, and workflow-specific failures. Focused local
+validation does not replace those checks, and required GitHub checks do not mean
+the complete suite must always run locally first. Do not run the same complete
+suite locally and remotely without a specific reason. Before repeating a full
+suite, identify the changed input or actual failure that invalidates the earlier
+result. A source change after a complete local suite invalidates it only to the
+extent required by the validation-impact policy; do not rerun it merely because
+CI is about to run.
+
+The normal task packages are:
+
+- **Implementation package:** inspect, implement, correct routine failures,
+  validate, commit, push, monitor CI, and finalize the PR when authorized.
+- **Review package:** one focused review that reuses unchanged accepted
+  evidence.
+- **Completion package:** merge, synchronize `main`, update the issue, and
+  report completion when separately authorized.
+
+Pending CI, routine lint fixes, ordinary in-scope test corrections,
+PR-description updates, refetching, and verification of the just-saved
+artifact normally remain within the active package. Stop a package only for a
+material repository mismatch, scope expansion, unavailable permission,
+destructive-risk decision, multiple legitimate designs requiring user choice,
+or a failure that cannot safely be corrected within the granted authority.
+
+Reassess and consolidate the workflow when actual prompts exceed the estimate
+by two; the same defect class needs two continuation prompts; a prior accepted
+result is about to be repeated without an invalidating change; the user is
+relaying more intermediate results rather than fewer; or the process becomes
+longer than the implementation work.
+
+Report failures with the exact failing message, step, log excerpt, or rejected
+GitHub rule before proposing alternate commands or workflow paths. A summary
+such as "branch policy blocked it" is insufficient when the exact failure is
+available. Lead reports with what changed, what passed, what failed, why it
+failed, what remains, and whether the user must decide anything. Use specialized
+terms only where their exact technical meaning is necessary.
+
 ## Phase transitions
 
 The preferred sequence is:
@@ -283,6 +345,58 @@ only that exact persistent branch and updating only its matching remote with
 scoped authorization. Broad force-push authority is prohibited, and no reset or
 rewrite is allowed when unique branch content exists.
 
+### Read-only delivery-state snapshots
+
+`scripts/delivery_state.py snapshot` produces a versioned JSON record of the
+current local Git and live GitHub state for a bounded issue worktree. It is a
+read-only inspection tool: it does not fetch, change refs, create or realign
+worktrees, inspect stash contents, stage, commit, publish, edit a PR, rerun a
+check, merge, close an issue, deploy, or mutate production data.
+
+The committed schema is `schemas/delivery-state-snapshot-v1.schema.json`.
+Snapshots identify their local-Git and GitHub sources, collection times,
+expected-versus-observed immutable identifiers, and the fact that Git and
+GitHub do not provide one globally atomic read. A changed critical identifier
+is reported as instability rather than hidden by a stale success result.
+
+Historical merged or closed PRs that reuse a branch name at a different head
+SHA are informational. A live GitHub ref is authoritative for remote-branch
+existence; a local `origin/<branch>` ref may therefore be stale and is also
+informational when no live branch or ownership conflict exists. An exact-head
+open PR is an idempotent reuse state. A closed or merged PR at the exact current
+head is a blocking historical-publication condition until an authorized review
+establishes its disposition; creating another PR would otherwise be duplicate
+or inconsistent.
+
+Expected PR base branch/SHA and head branch/SHA are compared separately and
+fail closed. Required-check records retain both their observed and expected
+head SHAs; successful evidence from another head is marked stale and cannot
+satisfy the current-head check requirement.
+
+The snapshot records only durable delivery facts: repository and SHA identity,
+worktree and protected-stash metadata, changed scope, PR/check linkage, source
+attribution, and typed findings. Human-readable wording and command layout are
+supersedable. It does not decide product correctness, visual acceptance,
+deployment, issue closure, or production-data operations, and it never grants
+mutation authority.
+
+Use a fixed `--at` value only for deterministic fixture evidence. An explicitly
+requested output path is refused when it already exists unless safe replacement
+is deliberately requested; live snapshots belong under ignored evidence storage
+rather than tracked source paths. The PowerShell invocation remains one line:
+
+```powershell
+python scripts/delivery_state.py snapshot --issue <number> --expected-main-sha <sha> --protected-stash <sha>
+```
+
+Findings use `INFORMATIONAL_DISCREPANCY`, `RECOVERABLE_AUTOMATION_FAILURE`,
+`AUTHORIZATION_BLOCKER`, `DEPENDENCY_BLOCKER`,
+`MATERIAL_IMPLEMENTATION_BLOCKER`, `DESTRUCTIVE_ACTION_BLOCKER`, and
+`GOVERNED_BOUNDARY_REVIEW_REQUIRED`. Informational history does not fail the
+command; actual blockers and execution failures do. Future dependency or
+lifecycle integration must retain this schema and read-only boundary rather
+than creating a parallel governance path.
+
 ## Acceptance-evidence lifecycle
 
 Before removing a disposable worktree that contains the only acceptance-evidence
@@ -361,6 +475,19 @@ GitHub checks or human review. Reviewer-facing work must also identify affected,
 added, updated, superseded, or specifically not-applicable entries in
 `docs/developer/reviewer-ui-regression-contracts.md`.
 
+All PR-body paths use the validator's one canonical boundary before template
+mode detection or any evidence parsing. It converts CRLF and lone CR to LF,
+preserves Unicode, Markdown, substantive whitespace, and trailing-newline
+state, and never repairs mojibake. The same canonical UTF-8 normalized body
+representation supplies validation and body hashes; changed-file scope is
+complete, slash-normalized, and deduplicated in first-seen order. Local
+preflight, CI body-file validation, and open-PR live JSON validation therefore
+return the same decision and ordered violations for equivalent body and scope.
+An unresolved non-comment instruction such as `Not run - <reason>` fails with
+an actionable violation; a truthful completed `Not run - reason` explanation
+remains valid. This contract does not replace DA-030 transport-persistence
+work, add automatic retry, or add rollback.
+
 ### Open-PR body lifecycle
 
 The same repository-owned command supports an already-open PR without creating
@@ -411,16 +538,352 @@ headings, governed-boundary disclosure, and Issue #504 classification; no static
 body snapshot is a repair contract. Future approved template changes continue
 through the existing template/validator parity checks.
 
-CI validates the current live PR body whenever it runs. The `pull_request`
-workflow includes `opened`, `reopened`, `synchronize`, and `edited`, so a title
-or body edit starts the same read-only validation workflow. GitHub event
-selection cannot distinguish a title edit from a body edit, but the job fetches
-the current live body immediately before validation rather than using stale
-event payload text. Forked PRs retain the workflow's `contents: read` and
-`pull-requests: read` token permissions; no CI write permission is granted.
+#### DA-030 guarded transport and persistence evidence
+
+The same `open-pr apply` lifecycle is the only supported body-mutation path;
+there is no second transport or repair command. An authorized invocation binds
+the repository and PR number to immutable expected state: open/draft state,
+base and head names and SHAs, complete canonical changed-file-scope hash,
+current normalized live-body hash, and validated candidate normalized-body
+hash. It also requires explicit `body-only` intent and confirmation. A changed
+identity, scope, or body hash stops before mutation.
+
+The one permitted request is constructed as exact UTF-8 JSON with no BOM and
+exactly one top-level key, `body`. The implementation records hashes of the
+request-body bytes, canonical candidate body, and exact JSON payload bytes. It
+uses a temporary byte-safe payload file rather than shell interpolation or a
+multiline command argument, removes that file after the request, and never
+records credentials, headers, environment content, or a full PR body in
+evidence.
+
+Each invocation has a production-enforced mutation budget of zero or one PATCH.
+After that budget is consumed, every remaining operation is read-only; no branch
+may retry, roll back, or hide another PATCH in a helper. The sanitized,
+versioned `pr-body-persistence-attempt-v1` evidence model records immutable
+expected values, hashes, payload-key proof, mutation count, REST and GraphQL
+observations, classifications, production-validator result, source attribution,
+and `globally_atomic: false`. It is distinct from the read-only delivery-state
+snapshot because a body mutation attempt has different privacy and lifecycle
+responsibilities. Store optional evidence only in an ignored path.
+
+Immediately after PATCH, the lifecycle records the REST response, REST refetch,
+and GraphQL representation where available. It then permits at most three
+additional read-only stabilization observations at a one-second interval. The
+count and interval are injectable for deterministic tests, and the defaults are
+intentionally short because PR #615 showed delayed convergence without
+justifying a long unattended delay. REST and GraphQL compare canonical
+normalized text, so LF/CRLF equivalents match while mojibake remains distinct.
+GraphQL unavailability is informational only when REST convergence and
+post-persistence production validation are otherwise proven; a stable REST /
+GraphQL semantic disagreement is not success.
+
+The final machine-readable classifications distinguish no-mutation precondition
+failure, mutation API or response failure, immediate or delayed convergence,
+transient representation disagreement, stable mismatch, changed PR identity,
+unexplained non-candidate body change, post-persistence validation failure, GraphQL
+unavailability, and observation failure. Success requires final candidate-hash
+equality, stable PR identity and scope, and a passing canonical production
+validator. An immediate mismatch is therefore evidence, not an automatic claim
+of permanent corruption; it never authorizes a second mutation or rollback.
+
+This transport/persistence contract is bounded DA-030 work in Issue #616. It
+does not implement Issue #617 grouped lifecycle orchestration, consume any
+authorization automatically, alter issue closure behavior, or change CI
+permissions, required checks, branch protection, or rulesets.
+
+## Delivery-automation failure and prevention registry
+
+Issue #617 owns the repository's canonical delivery-automation failure and
+prevention registry. The machine-readable source is
+`.github/delivery-automation-registry.json`, its versioned local schema is
+`schemas/delivery-automation-registry-v1.schema.json`, and the offline
+validator is `scripts/delivery_automation_registry.py`. The validator is part
+of the existing documentation-validation path; it does not contact GitHub or
+mutate the registry, repository, issues, pull requests, checks, or worktrees.
+
+Each stable `DA-NNN` identifier is unique, uppercase, numerically ordered, and
+never silently renumbered or reused. A declared historical gap is a truthful
+absence of authoritative evidence, not an empty failure record. DA-001 through
+DA-028 are explicitly unavailable because the #617 readiness audit found no
+authoritative repository evidence; only DA-029 through DA-031 are seeded.
+
+Records identify their owner issue, lifecycle status, prevention state,
+governance-change classification, enforcement level, evidence completeness,
+regression coverage, documentation impact, remaining work, and any
+supersession, retirement, or temporary exception. Lifecycle values distinguish
+identified, active, prevention-in-progress, prevented, superseded, retired,
+exception-active, and review-required records. Governance changes are classified
+as clarification, inconsistency correction, stronger enforcement, relaxed
+enforcement, supersession, temporary exception, or obsolete-control removal.
+Enforcement levels are documentation only, validation, guarded mutation,
+workflow gate, and human decision; none grants autonomous execution.
+
+Conditional workflow-learning capture is the registry's purpose, but this
+foundation does not yet require automatic capture or implement an autonomous
+governance engine. A preventable failure correction must retain its evidence,
+identify its owner, link regression coverage and documentation impact, and
+declare parity when the same contract has more than one enforcement path.
+
+A temporary exception requires an owner, reason, scope, creation reference,
+current status, replacement or exit criteria, and either an expiration date or
+mandatory review trigger. It cannot silently relax a required check or an
+authorization boundary. Superseded records remain historically traceable;
+retirement requires a rationale, and obsolete-control removal must name its
+replacement or explain why none is required. Registry evidence is limited to
+public issue and pull-request identifiers, repository-relative paths, and
+concise summaries. It excludes credentials, headers, environment content,
+private hosts, full PR bodies, and private evidence payloads.
+
+DA-031 remains active: future work must inspect development links and closing
+references, bind closure authorization to exact issue numbers, verify
+post-merge issue state, and record closure source. This registry foundation does
+not implement a merge controller, issue closure, recovery mutation, grouped
+RL-PREPARE or RL-MERGE execution, deployment, or production-data behavior.
+
+### DA-031 read-only closure-linkage inspection
+
+`scripts/closure_linkage_inspection.py` is a dedicated read-only inspector, not
+a delivery-state snapshot or merge controller. It requires exact issue-outcome
+declarations: repository, issue number, declared role, expected pre- and
+post-merge state, explicit closure and reopen authorization, authority
+reference, rationale, and must-remain-open status. Roles are declared evidence,
+not autonomous semantic conclusions.
+
+The versioned evidence schema rejects unknown fields and requires repository and
+pull-request identity, normalized references, sanitized timeline facts,
+observed issue state/reason/timestamps, source availability, deterministic
+findings, prohibited actions, attribution, and explicit non-atomic status. It
+does not retain a full PR body, credentials, private host details, environment
+contents, or a recovery instruction. Contract role values are
+`completed_target`, `parent`, `continuation`, `related`,
+`historical_evidence`, and `unknown`; their outcome declarations remain exact
+evidence rather than autonomous semantic conclusions.
+
+The inspector observes normalized PR-body references, fully paginated GraphQL
+closing issues, fully paginated timeline linkage, and issue state/state-reason
+evidence where the APIs expose it. A malformed response, exhausted GraphQL
+page bound, duplicate closing-reference node, partial page result, unavailable
+observable source, or other collection failure is evidence incomplete and fails
+closed. The GitHub development-link closure effect is instead recorded as an
+explicit `platform_not_exposed` residual: supported read-only APIs expose the
+links, not their closure effect. This does not claim that an unexposed mechanism
+is absent. No-link evidence is ready only when every required observable source
+is complete and each must-remain-open issue has an exact, immediate post-merge
+state-verification obligation. Readiness grants no merge authority. Pre-merge
+findings are deterministic by code, issue number, and
+source; post-merge inspection separately compares declared state, state reason,
+timestamps, closure source, and authorized reopen expectations without taking
+recovery action.
+
+Timeline cross-references are relationship evidence, not closure evidence. An
+informational `cross-referenced` event remains visible with its exact related
+issue, but does not grant closure or reopen authority and does not block a
+must-remain-open outcome. Blocking linkage requires explicit closing semantics
+from a recognized PR-body keyword, GraphQL closing reference, API-exposed
+closing development link, or attributable post-merge close event. Unknown or
+malformed timeline events fail closed; the hidden development-link closure
+effect remains the separate `platform_not_exposed` residual.
+
+GitHub `committed` timeline events are separately retained as non-linkage
+operational metadata only when the documented event shape supplies a valid
+commit SHA and author timestamp without a linkage semantic. They grant neither
+closure nor reopen authority, identify no related issue, and do not affect
+readiness. A malformed or linkage-shaped `committed` event remains fail-closed.
+
+Its production CLI accepts only an existing repository-relative contract path:
+normalization, containment, and symlink resolution must all remain beneath the
+verified repository root. It has no caller-supplied schema, evidence, output,
+endpoint, HTTP method, GraphQL text, or field-selection path. Canonical schema
+validation stays repository-fixed. Optional post-merge collection first
+revalidates the fixed repository and pull request, then reads only issue
+numbers declared by the exact outcome contract through internally constructed
+read-only endpoints; partial collection is evidence incomplete.
+
+It reports ready for separate merge authorization, not ready, or evidence
+incomplete; it never merges, closes, reopens, unlinks, repairs, or rolls back
+an issue. This is an independent read-only inspection surface, not a
+replacement for existing delivery-state snapshots or a merge controller. #533
+retains generic orchestration ownership.
+
+CI runs the code, documentation, workflow-contract, and security checks for
+`opened`, `reopened`, and `synchronize` events. Compact PR-body verification
+runs for `opened` and `reopened`; it is deferred for `synchronize` because the
+new successful check set does not exist until that run completes. A body-only
+evidence update does not start another required validation run, so the
+persisted compact evidence remains bound to the completed check set it records.
+A subsequent code update uses `synchronize`, creates fresh required checks,
+and must pass those checks before its compact body is regenerated and verified
+against the same completed evidence. Forked PRs retain the workflow's
+`contents: read` and `pull-requests: read` token permissions; no CI write
+permission is granted.
 
 A freeform body cannot substitute for the full governed template. Compact
 governed-summary eligibility remains controlled only by the validator.
+
+### Governed evidence reuse and validation-impact policy
+
+Issue #617 also owns the canonical slice-1 policy at
+`.github/evidence-reuse-validation-impact-policy.json`, its versioned envelope
+schema at `schemas/evidence-reuse-validation-impact-v1.schema.json`, and the
+repository-local evaluator at `scripts/evaluate_evidence_reuse_policy.py`.
+The supported policy version is `1.0.3`; the supported schema version is
+`recordstracker.evidence-reuse-validation-impact.v1`.
+The evaluator accepts a complete caller-supplied repository-relative inventory
+and returns a deterministic compact decision only; it has no network,
+subprocess, command-generation, mutation, rerun, publication, merge, recovery,
+or cleanup capability.
+
+The policy distinguishes retained, fresh, live, superseded, and invalidated
+evidence; preserves immutable commit, tree, run, job, body, issue, and validator
+references; and fails closed on unknown paths, incomplete inventories, malformed
+or traversal paths, uncertain dependencies, changed required-check definitions,
+or changed governed-boundary classifications. It applies a strict requirement
+union so mixed scope never reduces the most restrictive requirement. It does
+not execute selected validation or required checks. Slice 2 integrates the
+fixed evaluator with PR evidence validation and PR-body preparation: a declared
+`Validation impact and evidence delta` JSON envelope is independently
+reconstructed from the complete changed-file inventory and must match the
+compact result exactly. The live PR verifier additionally obtains authoritative live PR state:
+repository, number, base and head names and SHAs, persisted body,
+complete changed-file inventory, and the complete required-check run/job set for
+the exact head. Each accepted job must come from the expected repository's
+`pull_request` event, the repository-governed workflow path for its required
+check, and GitHub-provided association with the current PR. The repository's
+read-only, pagination-complete workflow metadata must bind each governed
+workflow path to exactly one authoritative workflow ID, and the run must report
+that same ID; display names and a positive integer alone cannot satisfy this
+binding. Missing, unrelated, ambiguous, conflicting, or incomplete workflow
+metadata fails closed;
+non-PR runs cannot satisfy or supersede a required check. Compact declarations
+must match that state; missing or partial live state fails closed. Exactly one
+populated compact declaration is permitted across the complete body; blank
+template placeholders do not declare compact mode, and malformed, repeated, or
+unpaired declarations fail closed before JSON extraction. The compact parser
+accepts exactly one JSON envelope, rejects duplicate JSON keys at every nesting
+level and ambiguous fences, and is shared by preparation, hashing, and
+verification. Its non-self-referential canonical body hash normalizes line
+endings and replaces only governed current-PR `pr_body_hash` values with `null`
+before deterministic JSON rendering and SHA-256 hashing. Preparation and live
+verification use that same canonical body hash. Exact run/job identity ties
+block unless their normalized authoritative records are byte-equivalent; such
+equivalent duplicates are collapsed deterministically. The envelope is
+deterministic, ASCII-safe, read-only, and records the decision, delta, identity, inventory, requirements, evidence
+reuse/recollection/supersession/invalidation, live obligations, blockers, and
+mutation boundary. Legacy full-template and governed-summary evidence remains
+valid when no compact envelope is declared; a compact envelope mixed with the
+legacy governed-summary form fails closed. Documentation-check integration
+is slice 3; generic orchestration remains owned by #533. The deferred `merged`
+timeline-event classifier remains out of scope.
+
+Issue #617 implementation status: slice_1=policy-schema-evaluator; slice_2=PR-preparation-and-independent-verification; slice_3=documentation-checks; state=local-unmerged-unaccepted; issue_533_execution_authority=absent.
+
+The policy retains these boundaries exactly:
+
+- requires disclosure when governed workflow boundaries change
+- no branch-protection or ruleset change
+- no required-check rename or removal
+- no autonomous approval or merge
+
+### Documentation-contract enforcement
+
+`scripts/check_docs.py` verifies the fixed canonical policy, schema, evaluator,
+PR-template, PR-body preparation, independent-verification, and documentation
+contract without network access or policy-selected test execution. It rejects a
+missing or unsupported version, a changed fixed path, compact-field drift,
+missing #533 ownership boundary, missing governed phrase, a contradictory
+current #617 status claim, an #533 authority transfer, or a claim that
+classification grants autonomous lifecycle authority. This is documentation
+enforcement only: it does not publish, retry, merge, recover, clean up, write
+issues, or execute the selected validation plan.
+
+## Validation-impact matrix
+
+The matrix is validated against the executable policy. Every row still requires
+live GitHub evidence and terminal required checks; `yes` and `no` are policy
+decisions, not execution authority.
+
+| Impact class | Focused validation | Full suite | Documentation validation | Live GitHub evidence | Body regeneration | Independent review | Primary invalidation triggers |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| evidence_only_metadata | evidence_metadata | no | no | yes | yes | no | changed body, scope, or identity |
+| documentation_only | documentation, whitespace | no | yes | yes | no | no | changed scope or documentation contract |
+| test_only | affected_regression, owning_test_collection | no | no | yes | no | yes | changed head, scope, fixture, or collection dependency |
+| schema_or_governance_validator | schema_or_governance_validator | yes | yes | yes | no | yes | changed schema, policy, validator, or workflow contract |
+| application_implementation | affected_application | yes | no | yes | no | yes | changed implementation, head, or scope |
+| ingestion_or_source_contract | source_contract | yes | no | yes | no | yes | changed connector or source-contract dependency |
+| database_or_migration | schema_or_migration | yes | no | yes | no | yes | changed migration, schema, or data boundary |
+| security_or_privacy | security_or_privacy | yes | no | yes | no | yes | changed security or privacy control |
+| workflow_or_required_check_contract | workflow_contract | yes | no | yes | no | yes | changed workflow, check, or governed boundary |
+| deployment_or_infrastructure | infrastructure | yes | no | yes | no | yes | changed deployment or infrastructure boundary |
+| unknown | none | no | no | yes | no | yes | unknown path or dependency uncertainty |
+
+## Evidence-reuse examples
+
+- **Body-only edit:** source tests remain retained when their declared inputs
+  exclude the body; body-dependent evidence is invalidated; the required check
+  triggered by the platform is observed to terminal state. The body must not
+  claim source tests were rerun unless they were actually run.
+- **Duplicate successful run:** one exact-input run is authoritative and the
+  others remain immutable retained references.
+- **Newer pending run:** a newer pending required run remains visible and
+  blocks readiness.
+- **Newer failed run:** a newer failed required run supersedes earlier successful readiness evidence.
+- **Documentation-only change:** documentation and whitespace validation are
+  required; no local full suite is required unless executable documentation
+  machinery or governance validation changed.
+- **Test-only deterministic isolation correction:** the affected regression and
+  owning collection are required; unrelated implementation evidence may remain
+  retained only when declared dependencies permit it.
+- **Unknown changed path:** classification fails closed.
+- **Governed-boundary change:** prior boundary review is invalidated and
+  disclosure is required.
+
+## Worktree lifecycle definitions
+
+- **Active:** assigned work is in progress on its bounded branch and worktree.
+- **Parked:** work is intentionally paused while its branch and evidence remain.
+- **Retained after merge:** a merged branch/worktree remains available for
+  evidence or a separately authorized follow-up.
+- **Blocked:** a stated dependency or authority boundary prevents progress.
+- **Safe to remove:** a human has independently confirmed the worktree is no
+  longer needed and separately authorized removal.
+- **Preserved for evidence:** the worktree or branch remains because it is part
+  of the reviewable evidence record.
+
+A state classification grants no cleanup authority. There is no automatic
+worktree removal, automatic branch deletion, stash mutation, pruning, or broad
+cleanup.
+
+## Publication guidance
+
+Use a maximum of three routine comments: review-ready evidence; a correction or
+material blocker update only when necessary; and merge-completion evidence.
+This guidance is not enforced through autonomous publication. Exceptions
+require documented rationale, comment count alone does not determine readiness,
+and failed or safety-relevant evidence must not be omitted to meet the limit.
+
+## Issue #617 and #533 ownership boundary
+
+#617 owns:
+
+- policy;
+- schema;
+- deterministic classification;
+- read-only validation;
+- compact evidence formatting;
+- documentation enforcement.
+
+#533 owns unless explicitly reassigned:
+
+- executable operation manifests;
+- workflow reruns;
+- autonomous publication;
+- merge execution controllers;
+- issue writes;
+- recovery;
+- generic orchestration;
+- lifecycle control.
+
+This documentation creates no executable #533 behavior. The deferred `merged` timeline-event classifier remains out of scope.
 
 ## Validation
 

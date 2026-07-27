@@ -10,7 +10,11 @@
 6. Render and preflight the governed pull-request evidence body with
    `scripts/prepare_pr_body.py`; do not substitute a freeform body when the
    full template applies.
-7. Open a pull request.
+7. Use `scripts/delivery_state.py snapshot` for a read-only record of current
+   immutable delivery facts, ownership history, freshness, worktree state, and
+   protected stash metadata when lifecycle prechecks would otherwise repeat
+   Git and GitHub facts.
+8. Open a pull request.
 
 For an already-open pull request, use the governed body validate, preview, and
 explicitly authorized body-only repair lifecycle in

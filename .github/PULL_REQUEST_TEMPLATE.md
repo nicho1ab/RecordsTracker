@@ -23,8 +23,8 @@ the required GitHub checks.
 
 ## Validation and failure classification
 
-List each exact command that was run. Use `Not run - <reason>` instead of
-implying that unrun validation passed.
+List each exact command that was run. For unrun validation, record `Not run -`
+followed by a truthful specific reason instead of implying that it passed.
 
 | Exact command | Result | Failure classification, if applicable |
 | --- | --- | --- |
@@ -34,6 +34,32 @@ implying that unrun validation passed.
 - Pre-existing failures: <!-- None, or command and evidence that it predates this change -->
 - Environmental failures: <!-- None, or command and environment limitation -->
 - Tests intentionally not run and why:
+
+## Validation impact and evidence delta
+
+Use the canonical governed evidence-reuse and validation-impact policy when it
+applies. Keep the delta concise; do not repeat unchanged project history.
+Record the fixed-policy compact envelope with exact base/head identity, complete
+inventory count and digest, impact classes, requirements, retained/recollected/
+superseded/invalidated evidence, live obligations, blockers, required-check
+state, and authorized/unauthorized mutations. This section is optional during
+the documented legacy transition, but a declared envelope must be complete and
+independently reproducible.
+
+- Decision:
+- Delta:
+- Policy version:
+- Validation newly performed:
+- Retained evidence reused:
+- Live evidence recollected:
+- Superseded evidence:
+- Invalidated evidence:
+- Required-check state:
+- Blockers:
+- Governed-boundary disclosures:
+- Authorized mutations:
+- Unauthorized mutations:
+- Compact evidence envelope:
 
 ## UI and accessibility evidence (when applicable)
 

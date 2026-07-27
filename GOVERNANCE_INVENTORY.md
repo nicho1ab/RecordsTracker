@@ -16,6 +16,55 @@
   acceptance-evidence lifecycle policy in `docs/developer/codex-workflow.md`.
   It preserves separate human authorization for merge, deployment, and closure;
   evidence remains ignored and untracked unless a separate contract requires it.
+- Issue #617 owns the canonical delivery-automation failure and prevention
+  registry: `.github/delivery-automation-registry.json`, its versioned schema,
+  the offline `scripts/delivery_automation_registry.py` validator, and the
+  lifecycle authority in `docs/developer/codex-workflow.md`. The initial
+  registry records only DA-029, DA-030, and DA-031; DA-001 through DA-028 remain
+  explicit unavailable historical gaps. Documentation validation runs the
+  validator without adding a required check, changing workflow permissions, or
+  granting autonomous approval, merge, issue closure, deployment, or
+  production-data authority.
+- DA-031 adds `scripts/closure_linkage_inspection.py` and a versioned
+  closure-linkage evidence schema. It records exact declared issue outcomes,
+  sanitized evidence, deterministic source availability, and fully paginated
+  read-only closing observations for later authorization only. Incomplete,
+  partial, malformed, or unavailable observable evidence fails closed. A
+  supported-API gap in the development-link closure effect is an explicit
+  residual limitation, requiring exact immediate post-merge issue-state
+  verification and granting no merge authority; no PR-body-only result proves
+  closure safety. Informational timeline cross-references remain relationship
+  evidence only; explicit closing semantics are required before linkage blocks
+  a must-remain-open issue. Documented GitHub committed events are non-linkage
+  operational metadata only with their required fields; unknown or malformed
+  timeline events fail closed. Contract input is
+  repository-bounded and post-merge collection uses fixed read-only queries for
+  exact declared issues only. It does not merge, close, reopen, unlink,
+  recover, or grant merge authority.
+- Issue #617 slice 1 adds the canonical governed evidence-reuse and
+  validation-impact policy, versioned envelope schema, deterministic local
+  evaluator, and sanitized fixtures. It classifies only complete
+  repository-relative change inventories, evaluates evidence freshness and
+  invalidation, and returns compact read-only requirement decisions. It does
+  not run validation, checks, reruns, publication, merge, recovery, or cleanup;
+  PR-evidence and documentation-check integration remain later slices, generic
+  orchestration remains under #533, and the deferred `merged` timeline-event
+  classifier remains out of scope.
+- Issue #617 slice 2 integrates that fixed policy with the existing PR evidence
+  validator, PR-body preparation path, and template. Declared compact policy
+  evidence is independently reconstructed from complete supplied scope and
+  fails closed when contradictory, incomplete, unsafe, or stale. Legacy PR
+  evidence remains supported only when it does not declare the compact envelope;
+  no historical evidence is silently reinterpreted as fresh. This adds no
+  workflow, check, publication, merge, issue, recovery, or #533 orchestration
+  behavior.
+- Issue #617 slice 3 makes the evidence-policy contract repository-wide through
+  deterministic documentation validation. The fixed policy, schema, evaluator,
+  template, preparation, independent verification, impact matrix, examples,
+  lifecycle language, publication guidance, and #617/#533 boundary must remain
+  synchronized. All three local implementation slices are complete, but the
+  work remains active, in progress, and partial until review, publication, and
+  merge are separately accepted; this grants no #533 execution authority.
 - Current implementation state: the Python, SQLite, and Datasette proof of
   concept has proven governed ingestion, deterministic extraction, raw source
   preservation, source traceability, local validation and review support, and

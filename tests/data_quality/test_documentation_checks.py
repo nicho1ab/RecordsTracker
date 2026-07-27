@@ -13,19 +13,19 @@ class CheckDocsModule(Protocol):
 
     def find_missing_required_content(self) -> list[str]: ...
 
-    def find_codex_workflow_contract_violations(
-        self, root: Path = Path(".")
-    ) -> list[str]: ...
+    def find_codex_workflow_contract_violations(self, root: Path = Path(".")) -> list[str]: ...
 
     def find_pull_request_template_contract_violations(
         self, root: Path = Path(".")
     ) -> list[str]: ...
 
-    def find_forbidden_content(self) -> list[str]: ...
-
-    def find_stale_roadmap_priorities(
+    def find_evidence_policy_documentation_contract_violations(
         self, root: Path = Path(".")
     ) -> list[str]: ...
+
+    def find_forbidden_content(self) -> list[str]: ...
+
+    def find_stale_roadmap_priorities(self, root: Path = Path(".")) -> list[str]: ...
 
     def find_user_specific_repository_paths(
         self, root: Path = Path("."), tracked_files: list[str] | None = None
@@ -39,9 +39,7 @@ class CheckDocsModule(Protocol):
         self, root: Path = Path(".")
     ) -> list[str]: ...
 
-    def find_anti_fossilization_contract_violations(
-        self, root: Path = Path(".")
-    ) -> list[str]: ...
+    def find_anti_fossilization_contract_violations(self, root: Path = Path(".")) -> list[str]: ...
 
 
 def _load_check_docs_module() -> CheckDocsModule:
@@ -177,9 +175,7 @@ def _copy_reviewer_ui_governance_files(tmp_path: Path) -> None:
         shutil.copyfile(relative_path, target)
 
 
-@pytest.mark.parametrize(
-    ("relative_path", "heading"), REVIEWER_UI_GOVERNANCE_SECTIONS.items()
-)
+@pytest.mark.parametrize(("relative_path", "heading"), REVIEWER_UI_GOVERNANCE_SECTIONS.items())
 def test_reviewer_ui_governance_requires_each_authoritative_section(
     tmp_path: Path, relative_path: str, heading: str
 ) -> None:
@@ -212,8 +208,7 @@ def test_reviewer_ui_governance_rejects_missing_enforcement_gate(
     path = tmp_path / "docs/developer/ui-evidence-review.md"
     lines = path.read_text(encoding="utf-8").splitlines()
     path.write_text(
-        "\n".join(line for line in lines if not line.startswith(f"| `{gate_id}` |"))
-        + "\n",
+        "\n".join(line for line in lines if not line.startswith(f"| `{gate_id}` |")) + "\n",
         encoding="utf-8",
     )
 
@@ -294,13 +289,8 @@ def test_attorney_information_architecture_requires_authoritative_sections(
         encoding="utf-8",
     )
 
-    violations = check_docs.find_attorney_information_architecture_contract_violations(
-        tmp_path
-    )
-    assert (
-        f"{relative_path}: expected exactly one section heading: ## {heading}"
-        in violations
-    )
+    violations = check_docs.find_attorney_information_architecture_contract_violations(tmp_path)
+    assert f"{relative_path}: expected exactly one section heading: ## {heading}" in violations
 
 
 def test_attorney_information_architecture_requires_canonical_route_dispositions(
@@ -319,12 +309,9 @@ def test_attorney_information_architecture_requires_canonical_route_dispositions
         encoding="utf-8",
     )
 
-    violations = check_docs.find_attorney_information_architecture_contract_violations(
-        tmp_path
-    )
+    violations = check_docs.find_attorney_information_architecture_contract_violations(tmp_path)
     assert (
-        "/ccld/facilities/review-priority: expected disposition merge, found retain"
-        in violations
+        "/ccld/facilities/review-priority: expected disposition merge, found retain" in violations
     )
 
 
@@ -337,17 +324,14 @@ def test_attorney_information_architecture_requires_navigation_order(
     content = path.read_text(encoding="utf-8")
     path.write_text(
         content.replace(
-            "Home, Find a Facility, Compare Facilities,\nComplaint Worklist, "
-            "Feedback, Help",
+            "Home, Find a Facility, Compare Facilities,\nComplaint Worklist, Feedback, Help",
             "Home, Find a Facility, Complaint Worklist, Feedback, Help",
             1,
         ),
         encoding="utf-8",
     )
 
-    violations = check_docs.find_attorney_information_architecture_contract_violations(
-        tmp_path
-    )
+    violations = check_docs.find_attorney_information_architecture_contract_violations(tmp_path)
     assert any("attorney navigation order must be exactly" in item for item in violations)
 
 
@@ -363,9 +347,7 @@ def test_attorney_information_architecture_requires_design_requirement_ids(
         encoding="utf-8",
     )
 
-    violations = check_docs.find_attorney_information_architecture_contract_violations(
-        tmp_path
-    )
+    violations = check_docs.find_attorney_information_architecture_contract_violations(tmp_path)
     assert "approved design register must define exactly one RT-NAV-001" in violations
 
 
@@ -404,10 +386,7 @@ def test_anti_fossilization_contract_requires_all_seven_classes(
 ) -> None:
     check_docs = _load_check_docs_module()
     _copy_anti_fossilization_files(tmp_path)
-    path = (
-        tmp_path
-        / "docs/product/records-tracker-reviewer-redesign-artifact-governance.md"
-    )
+    path = tmp_path / "docs/product/records-tracker-reviewer-redesign-artifact-governance.md"
     content = path.read_text(encoding="utf-8")
     path.write_text(
         content.replace(
@@ -419,10 +398,7 @@ def test_anti_fossilization_contract_requires_all_seven_classes(
     )
 
     violations = check_docs.find_anti_fossilization_contract_violations(tmp_path)
-    assert any(
-        "anti-fossilization class model must be exactly" in item
-        for item in violations
-    )
+    assert any("anti-fossilization class model must be exactly" in item for item in violations)
 
 
 def test_anti_fossilization_contract_requires_class_treatment(
@@ -430,10 +406,7 @@ def test_anti_fossilization_contract_requires_class_treatment(
 ) -> None:
     check_docs = _load_check_docs_module()
     _copy_anti_fossilization_files(tmp_path)
-    path = (
-        tmp_path
-        / "docs/product/records-tracker-reviewer-redesign-artifact-governance.md"
-    )
+    path = tmp_path / "docs/product/records-tracker-reviewer-redesign-artifact-governance.md"
     content = path.read_text(encoding="utf-8")
     path.write_text(
         content.replace(
@@ -477,10 +450,7 @@ def test_anti_fossilization_contract_requires_dependent_issue_findings(
 ) -> None:
     check_docs = _load_check_docs_module()
     _copy_anti_fossilization_files(tmp_path)
-    path = (
-        tmp_path
-        / "docs/product/records-tracker-reviewer-redesign-artifact-governance.md"
-    )
+    path = tmp_path / "docs/product/records-tracker-reviewer-redesign-artifact-governance.md"
     content = path.read_text(encoding="utf-8")
     path.write_text(content.replace("#503 Help", "Help follow-up", 1), encoding="utf-8")
 
@@ -492,6 +462,271 @@ def test_pull_request_template_contract_is_complete() -> None:
     check_docs = _load_check_docs_module()
 
     assert check_docs.find_pull_request_template_contract_violations() == []
+
+
+EVIDENCE_POLICY_CONTRACT_FILES = (
+    ".github/evidence-reuse-validation-impact-policy.json",
+    ".github/PULL_REQUEST_TEMPLATE.md",
+    "schemas/evidence-reuse-validation-impact-v1.schema.json",
+    "scripts/evaluate_evidence_reuse_policy.py",
+    "scripts/check_independent_verification.py",
+    "scripts/prepare_pr_body.py",
+    "docs/developer/codex-workflow.md",
+    "TESTING_STRATEGY.md",
+)
+
+
+def _copy_evidence_policy_contract_files(tmp_path: Path) -> None:
+    for relative_path in EVIDENCE_POLICY_CONTRACT_FILES:
+        target = tmp_path / relative_path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(relative_path, target)
+
+
+def test_evidence_policy_documentation_contract_is_complete() -> None:
+    check_docs = _load_check_docs_module()
+
+    assert check_docs.find_evidence_policy_documentation_contract_violations() == []
+
+
+@pytest.mark.parametrize(
+    "relative_path",
+    [
+        ".github/evidence-reuse-validation-impact-policy.json",
+        "schemas/evidence-reuse-validation-impact-v1.schema.json",
+        "scripts/evaluate_evidence_reuse_policy.py",
+    ],
+)
+def test_evidence_policy_documentation_contract_requires_fixed_files(
+    tmp_path: Path, relative_path: str
+) -> None:
+    check_docs = _load_check_docs_module()
+    _copy_evidence_policy_contract_files(tmp_path)
+    (tmp_path / relative_path).unlink()
+
+    assert (
+        f"missing evidence-policy contract file: {relative_path}"
+        in check_docs.find_evidence_policy_documentation_contract_violations(tmp_path)
+    )
+
+
+@pytest.mark.parametrize(
+    ("relative_path", "source", "replacement", "expected"),
+    [
+        (
+            ".github/evidence-reuse-validation-impact-policy.json",
+            '"policy_version": "1.0.3"',
+            '"policy_version": "2.0.0"',
+            "evidence policy version is unsupported",
+        ),
+        (
+            "schemas/evidence-reuse-validation-impact-v1.schema.json",
+            "recordstracker.evidence-reuse-validation-impact.v1",
+            "recordstracker.evidence-reuse-validation-impact.v9",
+            "evidence schema version does not match evaluator support",
+        ),
+        (
+            "scripts/evaluate_evidence_reuse_policy.py",
+            'SCHEMA_PATH = ROOT / "schemas" / "evidence-reuse-validation-impact-v1.schema.json"',
+            'SCHEMA_PATH = ROOT / "schemas" / "unexpected.json"',
+            "evidence evaluator fixed canonical path is incorrect",
+        ),
+    ],
+)
+def test_evidence_policy_documentation_contract_rejects_version_and_path_drift(
+    tmp_path: Path, relative_path: str, source: str, replacement: str, expected: str
+) -> None:
+    check_docs = _load_check_docs_module()
+    _copy_evidence_policy_contract_files(tmp_path)
+    path = tmp_path / relative_path
+    content = path.read_text(encoding="utf-8").replace(source, replacement, 1)
+    path.write_text(content, encoding="utf-8")
+
+    assert expected in check_docs.find_evidence_policy_documentation_contract_violations(tmp_path)
+
+
+@pytest.mark.parametrize(
+    ("relative_path", "marker", "expected"),
+    [
+        (
+            ".github/PULL_REQUEST_TEMPLATE.md",
+            "- Invalidated evidence:",
+            "PR template compact evidence field drift: - Invalidated evidence:",
+        ),
+        (
+            "scripts/prepare_pr_body.py",
+            "verification.bind_compact_policy_body_hash(",
+            "PR-body preparation policy contract drift",
+        ),
+        (
+            "scripts/check_independent_verification.py",
+            '"evidence_invalidated"',
+            "independent verification compact field drift: evidence_invalidated",
+        ),
+    ],
+)
+def test_evidence_policy_documentation_contract_rejects_component_field_drift(
+    tmp_path: Path, relative_path: str, marker: str, expected: str
+) -> None:
+    check_docs = _load_check_docs_module()
+    _copy_evidence_policy_contract_files(tmp_path)
+    path = tmp_path / relative_path
+    path.write_text(path.read_text(encoding="utf-8").replace(marker, "", 1), encoding="utf-8")
+
+    assert expected in check_docs.find_evidence_policy_documentation_contract_violations(tmp_path)
+
+
+@pytest.mark.parametrize(
+    "marker",
+    [
+        "#533 owns unless explicitly reassigned:",
+        "requires disclosure when governed workflow boundaries change",
+        "The deferred `merged` timeline-event classifier remains out of scope.",
+        "source tests remain retained",
+        "blocks readiness",
+        "classification fails closed.",
+        "A state classification grants no cleanup authority.",
+        "maximum of three routine comments",
+        "failed or safety-relevant evidence must not be omitted",
+    ],
+)
+def test_evidence_policy_documentation_contract_requires_examples_and_boundaries(
+    tmp_path: Path, marker: str
+) -> None:
+    check_docs = _load_check_docs_module()
+    _copy_evidence_policy_contract_files(tmp_path)
+    path = tmp_path / "docs/developer/codex-workflow.md"
+    path.write_text(path.read_text(encoding="utf-8").replace(marker, "", 1), encoding="utf-8")
+
+    assert (
+        f"evidence-policy documentation missing marker: {marker}"
+        in check_docs.find_evidence_policy_documentation_contract_violations(tmp_path)
+    )
+
+
+def test_evidence_policy_documentation_contract_rejects_autonomous_lifecycle_claim(
+    tmp_path: Path,
+) -> None:
+    check_docs = _load_check_docs_module()
+    _copy_evidence_policy_contract_files(tmp_path)
+    path = tmp_path / "docs/developer/codex-workflow.md"
+    path.write_text(
+        path.read_text(encoding="utf-8").replace(
+            "The evaluator accepts a complete caller-supplied repository-relative inventory",
+            "This policy authorizes autonomous merge. The evaluator accepts a complete "
+            "caller-supplied repository-relative inventory",
+            1,
+        ),
+        encoding="utf-8",
+    )
+
+    assert "evidence-policy documentation claims autonomous lifecycle authority" in (
+        check_docs.find_evidence_policy_documentation_contract_violations(tmp_path)
+    )
+
+
+def test_evidence_policy_documentation_contract_rejects_stale_slice_status(
+    tmp_path: Path,
+) -> None:
+    check_docs = _load_check_docs_module()
+    _copy_evidence_policy_contract_files(tmp_path)
+    path = tmp_path / "TESTING_STRATEGY.md"
+    path.write_text(
+        path.read_text(encoding="utf-8").replace(
+            check_docs.EVIDENCE_IMPLEMENTATION_STATUS,
+            "The slice-1 evaluator calculates requirements only; PR-evidence and "
+            "documentation-check integration remain later separately authorized work.",
+            1,
+        ),
+        encoding="utf-8",
+    )
+
+    violations = check_docs.find_evidence_policy_documentation_contract_violations(tmp_path)
+    assert "evidence-policy implementation status missing: TESTING_STRATEGY.md" in violations
+    assert (
+        "evidence-policy implementation status contradicts integration: TESTING_STRATEGY.md"
+        in violations
+    )
+
+
+@pytest.mark.parametrize(
+    "claim",
+    [
+        "Issue #617 is merged.",
+        "Issue #617 is accepted and complete.",
+        "These slices are completed and prevented the defect.",
+        "The current work is fully implemented, deployed, and production-ready.",
+        "Issue #617 is closed.",
+    ],
+)
+def test_evidence_policy_documentation_contract_rejects_untruthful_current_status(
+    tmp_path: Path, claim: str
+) -> None:
+    check_docs = _load_check_docs_module()
+    _copy_evidence_policy_contract_files(tmp_path)
+    path = tmp_path / "TESTING_STRATEGY.md"
+    path.write_text(path.read_text(encoding="utf-8") + "\n" + claim + "\n", encoding="utf-8")
+
+    assert any(
+        "makes an untruthful current claim" in violation
+        for violation in check_docs.find_evidence_policy_documentation_contract_violations(tmp_path)
+    )
+
+
+def test_evidence_policy_documentation_contract_rejects_authority_transfer_but_allows_history(
+    tmp_path: Path,
+) -> None:
+    check_docs = _load_check_docs_module()
+    _copy_evidence_policy_contract_files(tmp_path)
+    path = tmp_path / "docs/developer/codex-workflow.md"
+    path.write_text(
+        path.read_text(encoding="utf-8")
+        + "\n#533 execution authority has moved to #617.\n"
+        + "Issue #616 merged historically; no autonomous merge is authorized.\n",
+        encoding="utf-8",
+    )
+
+    violations = check_docs.find_evidence_policy_documentation_contract_violations(tmp_path)
+    assert (
+        "evidence-policy documentation transfers #533 authority: docs/developer/codex-workflow.md"
+        in violations
+    )
+
+
+def test_evidence_policy_documentation_matrix_matches_executable_policy(tmp_path: Path) -> None:
+    check_docs = _load_check_docs_module()
+    _copy_evidence_policy_contract_files(tmp_path)
+    path = tmp_path / "docs/developer/codex-workflow.md"
+    content = path.read_text(encoding="utf-8")
+    path.write_text(
+        content.replace(
+            "| documentation_only | documentation, whitespace | no | yes |",
+            "| documentation_only | documentation, whitespace | yes | yes |",
+            1,
+        ),
+        encoding="utf-8",
+    )
+
+    assert "evidence-policy matrix drift: documentation_only" in (
+        check_docs.find_evidence_policy_documentation_contract_violations(tmp_path)
+    )
+
+
+def test_evidence_policy_documentation_contract_errors_are_deterministic(
+    tmp_path: Path,
+) -> None:
+    check_docs = _load_check_docs_module()
+    _copy_evidence_policy_contract_files(tmp_path)
+    path = tmp_path / "docs/developer/codex-workflow.md"
+    path.write_text(
+        path.read_text(encoding="utf-8")
+        .replace("#533 owns unless explicitly reassigned:", "", 1)
+        .replace("maximum of three routine comments", "", 1),
+        encoding="utf-8",
+    )
+
+    violations = check_docs.find_evidence_policy_documentation_contract_violations(tmp_path)
+    assert violations == sorted(violations)
 
 
 def _write_pull_request_template(tmp_path: Path, content: str) -> None:
@@ -587,9 +822,7 @@ def test_pull_request_template_requires_each_failure_classification(
         '"all tests passed" does not satisfy this review.',
     ],
 )
-def test_pull_request_template_requires_each_governed_boundary(
-    tmp_path: Path, marker: str
-) -> None:
+def test_pull_request_template_requires_each_governed_boundary(tmp_path: Path, marker: str) -> None:
     check_docs = _load_check_docs_module()
     content = Path(".github/PULL_REQUEST_TEMPLATE.md").read_text(encoding="utf-8")
     _write_pull_request_template(tmp_path, content.replace(marker, "", 1))
@@ -625,18 +858,16 @@ def test_user_specific_repository_path_variants_are_rejected(
     tmp_path: Path, separator: str
 ) -> None:
     check_docs = _load_check_docs_module()
-    prohibited_prefix = separator.join(
-        ["C:", "Users", "AnDrE", "OneDrive", "Desktop", "Repos", ""]
-    )
+    prohibited_prefix = separator.join(["C:", "Users", "AnDrE", "OneDrive", "Desktop", "Repos", ""])
     document = tmp_path / "example.md"
     document.write_text(
         f"Run from {prohibited_prefix}RecordsTracker{separator}scripts.\n",
         encoding="utf-8",
     )
 
-    assert check_docs.find_user_specific_repository_paths(
-        tmp_path, [document.name]
-    ) == ["example.md:1"]
+    assert check_docs.find_user_specific_repository_paths(tmp_path, [document.name]) == [
+        "example.md:1"
+    ]
 
 
 def test_repository_path_check_ignores_untracked_and_unrelated_windows_paths(
@@ -649,14 +880,10 @@ def test_repository_path_check_ignores_untracked_and_unrelated_windows_paths(
         encoding="utf-8",
     )
     untracked = tmp_path / "generated.txt"
-    prohibited_prefix = "\\".join(
-        ["C:", "Users", "andre", "OneDrive", "Desktop", "Repos", ""]
-    )
+    prohibited_prefix = "\\".join(["C:", "Users", "andre", "OneDrive", "Desktop", "Repos", ""])
     untracked.write_text(prohibited_prefix + "generated", encoding="utf-8")
 
-    assert check_docs.find_user_specific_repository_paths(
-        tmp_path, [tracked.name]
-    ) == []
+    assert check_docs.find_user_specific_repository_paths(tmp_path, [tracked.name]) == []
 
 
 def test_completed_review_grouping_priority_is_rejected(tmp_path: Path) -> None:
@@ -675,8 +902,5 @@ def test_completed_review_grouping_priority_is_rejected(tmp_path: Path) -> None:
         encoding="utf-8",
     )
 
-    expected = (
-        "ROADMAP.md: Group review workflows by user task rather than by "
-        "implementation table"
-    )
+    expected = "ROADMAP.md: Group review workflows by user task rather than by implementation table"
     assert check_docs.find_stale_roadmap_priorities(tmp_path) == [expected]
