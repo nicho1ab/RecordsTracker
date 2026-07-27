@@ -194,25 +194,34 @@ rows, source-derived rows are not mutated, and existing read routes plus
 workflow detail output show the status after write.
 Hosted reviewer UI shell tests must prove browser-accessible local/test landing
 and detail pages return usable semantic HTML over the seeded fixture corpus,
-list-level reviewer-created note/status indicators and latest reviewer-created
-timestamp are visible, plain-language detail record summaries are visible,
-sensitive narrative fields remain bounded, note/status forms delegate to the
-existing workflow actions, concise note/status saved confirmations include
-next-step links, read-after-write reviewer-created state appears in the page,
-and focused CCLD return/next-record navigation is
-visible, unauthenticated, disabled or revoked, role-denied, and out-of-scope
-contexts are blocked with visible next steps, no-match search, missing-record,
-and invalid note/status form states show clear accessible guidance,
+one compact worklist representation exposes one primary review action per
+complaint, saved reviewer-created state appears only when it exists, the
+transparent Review next explanation remains bounded to reviewer progress and
+source-supported factors, plain-language detail record summaries are visible,
+and sensitive narrative fields remain bounded. Combined review-update forms
+must delegate to the existing status and note workflow services in one
+transaction, roll back both writes when either write fails, return accessible
+same-page success or error feedback with focus, show the latest actor
+attribution after a successful write, and preserve read-after-write state.
+Focused worklist return navigation must preserve the search query and selected
+complaint focus. Unauthenticated, disabled or revoked, role-denied, and
+out-of-scope contexts are blocked with visible next steps; no-match search,
+missing-record, no-op review-update, and invalid status/note states show clear
+accessible guidance;
 source-derived rows are not mutated by UI actions,
 reviewer-created state and audit rows are created only through the existing
 services, and HTML does not expose secrets, tokens, cookies, private headers,
 raw provider claims, private URLs, hosted URLs, credentials, or unnecessary
 sensitive narrative content. Reviewer detail tests should prove the
-reviewer-facing tier includes complaint identity, facility identity once near the
-top, source narrative, compact complaint/investigation timeline, finding and
-allegation summary, review-flag badges as the primary flag expression,
-reviewer-created state/actions when useful, copy affordances for core values,
-and MM/DD/YYYY date display without changing stored values.
+reviewer-facing tier includes complaint identity, one facility-identity region
+near the top, meaningful source narrative when present, a compact
+complaint/investigation timeline, finding and non-empty allegation summaries,
+review-flag badges as the primary flag expression, reviewer-created
+state/actions when useful, copy affordances for core values, and MM/DD/YYYY date
+display without changing stored values. Date-only strings must not be promoted
+as narrative, empty optional sections must be omitted, and facility identity
+coverage must distinguish complete, partial, unavailable, and explicit
+reference-conflict states without duplicating missing-value help.
 Reviewer detail tests must also prove source traceability internals are not
 visible in the reviewer-facing tier: no traceability detail section, raw
 SHA-256, connector metadata, source artifact identity, field-level traceability,
@@ -282,9 +291,11 @@ The seeded exact route for that evidence is:
 
 `/reviewer/records/detail?source_record_key=complaint%3Accld%3Acomplaint%3A32-CR-20220407124448`
 
-Reviewer note/status confirmation tests should cover concise return-to-queue,
-next-record, unchanged-source-derived-record, read-after-write, and no-mutation
-behavior without requiring help/checklist/feedback bridge copy on the detail
+Reviewer update confirmation tests should cover search-aware return to the
+Complaint Worklist, selected-record focus restoration, atomic status-plus-note
+success and rollback, latest-actor attribution, unchanged source-derived
+records, read-after-write state, validation feedback, and authorization
+feedback without requiring help/checklist/feedback bridge copy on the detail
 page.
 First-run orientation tests should cover Home, Request Records, Help, queue, and
 feedback surfaces where orientation belongs. They must not require first-run,

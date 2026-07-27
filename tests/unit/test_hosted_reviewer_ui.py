@@ -77,6 +77,7 @@ from ccld_complaints.hosted_app.reviewer_ui import (
     REVIEWER_UI_STATUS_PATH,
     REVIEWER_UI_SUBSTANTIATED_EXPORT_PATH,
     REVIEWER_UI_SUBSTANTIATED_TRIAGE_PATH,
+    REVIEWER_UI_UPDATE_PATH,
     _complaint_export_status_counts,
     complaint_export_attachment_filename,
     reviewer_ui_context_for_connection,
@@ -210,7 +211,7 @@ def test_reviewer_ui_landing_lists_seeded_source_derived_records(
     normalized_html = " ".join(html.split()).casefold()
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
-    assert "Complaint records ready for review" in html
+    assert "Complaint Worklist" in html
     assert "Source-traceable complaint review." not in html
     assert "Signed in as Local Test Reviewer" not in html
     assert "function ensureCopyStatus(button)" in html
@@ -227,18 +228,18 @@ def test_reviewer_ui_landing_lists_seeded_source_derived_records(
     assert '<nav class="civic-nav" aria-label="Primary navigation">' in html
     assert 'href="/ccld/facilities">Facilities</a>' in html
     assert '<main id="main-content" class="ds-page-main app-page" tabindex="-1">' in html
-    assert '<h1 id="page-heading">Complaint records ready for review</h1>' in html
+    assert '<h1 id="page-heading">Complaint Worklist</h1>' in html
+    assert html.count("<h1") == 1
     assert "Technical runtime details" not in html
     assert "reviewer UI shell" not in html
     assert "fixture actor context" not in normalized_html
     assert "seeded corpus scope" not in normalized_html
     assert "Attorney workflow" not in html
     assert "Current step:" not in html
-    assert '<section class="worklist-intro" aria-labelledby="worklist-intro-heading">' in html
-    assert "Choose the next complaint to review" in html
-    assert "Search records" in html
-    assert html.count("Search records") == 1
-    assert '<label class="sr-only" for="q">Queue search</label>' in html
+    assert '<p class="worklist-intro">' in html
+    assert "Review loaded complaints using their source-derived context" in html
+    assert "Find a complaint" in html
+    assert '<label class="sr-only" for="q">Search complaint worklist</label>' in html
     assert 'class="compact-search-form" role="search"' in html
     assert 'list="queue-search-suggestions"' in html
     assert '<datalist id="queue-search-suggestions">' in html
@@ -247,19 +248,18 @@ def test_reviewer_ui_landing_lists_seeded_source_derived_records(
         "157806098",
         "A. MIRIAM JAMISON CHILDREN&#x27;S CENTER",
         "Unsubstantiated",
-        "No status",
-        "No note",
     ):
         assert suggestion in html
+    assert ">No status</span>" not in html
+    assert ">No note</span>" not in html
     assert "Missing first activity" not in html
     assert "Missing source date" not in html
     assert "Source unavailable" not in html
     assert "Check source" not in html
-    assert "Complaint worklist" in html
+    assert "Complaints" in html
     assert "Showing 1 of 1 matching complaint record." in html
     assert "The matching record is shown within the current 100-record limit." in html
-    assert '<div class="dense-section-header">' in html
-    assert '<ol class="review-worklist" aria-label="Complaint records ready for review">' in html
+    assert '<ol class="review-worklist" aria-label="Complaint worklist">' in html
     assert 'class="result-list dense-card-grid"' not in html
     assert 'class="review-worklist-row is-suggested"' in html
     work_item_start = html.index('class="review-worklist-row is-suggested"')
@@ -272,26 +272,24 @@ def test_reviewer_ui_landing_lists_seeded_source_derived_records(
     ):
         assert f'data-worklist-field="{field_name}"' in work_item_html
     assert 'aria-label="Key complaint dates"' in work_item_html
-    assert 'aria-label="Reviewer and source status"' in work_item_html
+    assert 'aria-label="Saved reviewer state and source action"' in work_item_html
     assert "Review next" in work_item_html
-    assert "No reviewer status has been saved." in work_item_html
+    assert "unfinished complaints appear before completed work" in work_item_html
+    assert "source context:" in work_item_html
     assert "A. MIRIAM JAMISON CHILDREN&#x27;S CENTER" in work_item_html
     assert "Facility ID" in work_item_html
     assert 'aria-label="Copy complaint/control number"' in work_item_html
     assert 'aria-label="Copy Facility ID"' in work_item_html
-    assert "Finding / resolution" in work_item_html
+    assert "Complaint number" in work_item_html
+    assert "Finding" in work_item_html
     assert "Unsubstantiated" in work_item_html
-    assert "Review flags" in work_item_html
-    assert "No review flags" in work_item_html
-    assert "Reviewer status" in work_item_html
-    assert "No status" in work_item_html
-    assert "Note" in work_item_html
-    assert "No note" in work_item_html
-    assert "CCLD source available" in work_item_html
+    assert "No review flags" not in work_item_html
+    assert "Review status" not in work_item_html
+    assert "No status" not in work_item_html
+    assert "No note" not in work_item_html
+    assert "Open source report" in work_item_html
     assert 'class="inline-glossary-term"' in work_item_html
-    assert 'class="review-chip badge-info badge-info--status"' in work_item_html
-    assert 'class="review-chip badge-info badge-info--note"' in work_item_html
-    assert 'class="review-chip source-chip"' in work_item_html
+    assert 'class="review-chip source-chip"' not in work_item_html
     assert (
         'Review complaint <span class="sr-only">32-CR-20220407124448</span>'
         in work_item_html
@@ -299,24 +297,21 @@ def test_reviewer_ui_landing_lists_seeded_source_derived_records(
     assert work_item_html.count('href="/reviewer/records/detail?') == 1
     assert "grid-template-areas: \"identity dates outcome state action\";" in html
     assert 'grid-template-areas: "identity" "dates" "outcome" "state" "action";' in html
-    assert 'class="technical-details dense-table-details"' in html
+    assert 'class="technical-details dense-table-details"' not in html
     assert 'class="technical-details diagnostic-details"' not in html
     assert "Keyboard flow: search filters this queue" not in html
     assert "About these results" in html
-    assert "Show table view" in html
+    assert "Show table view" not in html
     assert "Exports" in html
     _assert_collapsed_disclosure(html, "About these results")
-    _assert_collapsed_disclosure(html, "Show table view")
     _assert_collapsed_disclosure(html, "Exports")
     _assert_collapsed_disclosure(html, "Facility exports")
     assert "Public records stay separate from saved notes/status" not in normalized_html
     assert "Queue status summary" not in html
     section_order = [
-        "Choose the next complaint to review",
-        "Search records",
-        "Complaint worklist",
+        "Find a complaint",
+        "Complaints",
         "About these results",
-        "Show table view",
         "Exports",
     ]
     previous_index = -1
@@ -354,12 +349,11 @@ def test_reviewer_ui_landing_lists_seeded_source_derived_records(
         "source document/report marker",
     ):
         assert removed not in html
-    assert "Complaint received date" in html
     assert "Visit" in html
     assert "Report" in html
-    assert "No status" in html
-    assert "No note" in html
-    assert "CCLD source available" in html
+    assert "No status" not in html
+    assert "No note" not in html
+    assert "CCLD source available" not in html
     assert "04/07/2022" in html
     assert "08/24/2022" in html
     assert "2022-04-07" not in html
@@ -2373,10 +2367,10 @@ def test_reviewer_ui_landing_shows_reviewer_created_state_indicators() -> None:
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
     assert "Reviewed" in html
-    assert "1 note" in html
-    assert "Note added" in html
+    assert "1 saved note" in html
+    assert 'class="worklist-state"' in html
     assert "Facility case brief" not in html
-    assert "Reviewer status" in html
+    assert "Review status" in html
     assert "Queue status summary" not in html
     assert "reviewer-created" not in " ".join(html.split()).casefold()
     assert_no_secret_html(html)
@@ -2554,14 +2548,12 @@ def test_reviewer_ui_detail_shows_attorney_tier_and_hides_support_details() -> N
     assert "Return to review queue" in html
     assert "Complaint overview" in html
     assert "Complaint 32-CR-20220407124448" in parser.text_for("main")
-    assert (
-        "Complaint 32-CR-20220407124448 &middot; "
-        in html
-    )
+    assert "Complaint <span class=\"copyable-value\">32-CR-20220407124448" in html
+    assert "&middot;" in html
     assert ">Finding<" in html
     assert ">Unsubstantiated<" in html
     assert "Facility 157806098" not in parser.text_for("main")
-    assert "Complaint/control number" in html
+    assert "What happened" in html
     assert "A. MIRIAM JAMISON CHILDREN&#x27;S CENTER" in html
     assert "Facility ID" in html
     assert "Facility/license" not in html
@@ -2571,9 +2563,13 @@ def test_reviewer_ui_detail_shows_attorney_tier_and_hides_support_details() -> N
     assert 'class="top-fact-strip"' in html
     assert 'class="compact-fact compact-fact--license"' in html
     assert 'class="compact-fact compact-fact--name"' in html
-    assert 'class="compact-fact compact-fact--type"' in html
-    assert 'class="compact-fact compact-fact--status"' in html
-    assert 'class="compact-fact compact-fact--county"' in html
+    assert 'class="compact-fact compact-fact--type"' not in html
+    assert 'class="compact-fact compact-fact--status"' not in html
+    assert 'class="compact-fact compact-fact--county"' not in html
+    assert '<p class="facility-identity-state"><strong>Identity coverage:</strong>' in html
+    assert "Facility type" in html
+    assert "Facility status" in html
+    assert "County" in html
     assert "grid-template-columns: minmax(7.5rem, 0.8fr) minmax(18rem, 2.3fr)" in html
     assert "border-right: 1px solid var(--line-soft);" in html
     assert "-webkit-line-clamp: 2" in html
@@ -2616,10 +2612,10 @@ def test_reviewer_ui_detail_shows_attorney_tier_and_hides_support_details() -> N
     assert "reviewer-panel-context" not in html
     ordered_sections = [
         "Complaint overview",
-        "Why this may need closer review",
+        "What happened",
         "Source narrative",
         "Key dates",
-        "Status and note",
+        "Review update",
         "Allegations and findings",
     ]
     previous_index = -1
@@ -2627,42 +2623,40 @@ def test_reviewer_ui_detail_shows_attorney_tier_and_hides_support_details() -> N
         section_index = html.index(section)
         assert section_index > previous_index
         previous_index = section_index
-    assert f'action="{REVIEWER_UI_NOTE_PATH}"' in html
-    assert f'action="{REVIEWER_UI_STATUS_PATH}"' in html
+    assert f'action="{REVIEWER_UI_UPDATE_PATH}"' in html
+    assert f'action="{REVIEWER_UI_NOTE_PATH}"' not in html
+    assert f'action="{REVIEWER_UI_STATUS_PATH}"' not in html
+    assert html.count("Save review update") == 1
     assert "name=\"source_record_key\"" in html
-    assert "Save note" in html
-    assert "Save status" in html
+    assert "Save note" not in html
+    assert "Save status" not in html
 
-    assert "CCLD source available" in html
-    review_cues_start = html.index('class="overview-review-cues"')
-    review_cues_end = html.index('class="overview-source-narrative"', review_cues_start)
-    review_cues_html = html[review_cues_start:review_cues_end]
-    assert "CCLD source available" not in review_cues_html
-    assert "Open CCLD source record" in html
+    assert "CCLD source available" not in html
+    assert "Open source report" in html
     assert "Return to review queue" in html
     assert "Return to facility queue" not in html
     assert "Date range: not provided" not in html
     assert "Open next flagged record" not in html
-    assert html.index("Open CCLD source record") < html.index("Status and note")
+    assert html.index("Open source report") < html.index("Review update")
     review_panel_start = html.index('id="review-actions-heading"')
     review_panel_end = html.index('class="overview-tertiary-actions"', review_panel_start)
     review_panel_html = html[review_panel_start:review_panel_end]
-    assert "Status and note" in review_panel_html
-    assert "Current status" in review_panel_html
-    assert "Current note" in review_panel_html
+    assert "Review update" in review_panel_html
+    assert "Current status" not in review_panel_html
+    assert "Notes" not in review_panel_html
     assert "Review status" in review_panel_html
-    assert "Reviewer note" in review_panel_html
+    assert "Add a note" in review_panel_html
     assert "No status selected" in review_panel_html
     assert (
-        '<option value="" disabled selected="selected">No status selected</option>'
+        '<option value="" selected="selected">No status selected</option>'
         in review_panel_html
     )
     assert '<h3 id="status-form-heading">Status</h3>' not in review_panel_html
     assert '<h3 id="note-form-heading">Note</h3>' not in review_panel_html
-    assert "Save status" in review_panel_html
-    assert "Save note" in review_panel_html
-    assert "Status helps track review progress." in review_panel_html
-    assert "Notes do not change the complaint record." in review_panel_html
+    assert "Save review update" in review_panel_html
+    assert "Save status" not in review_panel_html
+    assert "Save note" not in review_panel_html
+    assert "Save only reviewer-created progress or context." in review_panel_html
     assert "Return to review queue" not in review_panel_html
     assert "Return to facility queue" not in review_panel_html
     assert "Open next flagged record" not in review_panel_html
@@ -2676,14 +2670,12 @@ def test_reviewer_ui_detail_shows_attorney_tier_and_hides_support_details() -> N
     assert "Save status or a note only when it helps this review" not in html
     assert "Source-derived fields stay unchanged." not in html
 
-    assert "Why this may need closer review" in html
+    assert "Review factors" not in html
     assert "Review the badge list above as screening cues only" not in html
-    assert "No status" in html
-    assert "No note" in html
-    assert 'class="review-chip badge-info badge-info--status"' in html
-    assert 'class="review-chip badge-info badge-info--note"' in html
-    assert 'class="review-chip__marker review-chip__marker--status"' in html
-    assert 'class="review-chip__marker review-chip__marker--note"' in html
+    assert ">No status</span>" not in html
+    assert ">No note</span>" not in html
+    assert 'class="review-chip badge-info badge-info--status"' not in html
+    assert 'class="review-chip badge-info badge-info--note"' not in html
     assert 'class="review-chip badge-attention badge-info--status"' not in html
     assert 'class="review-chip badge-attention badge-info--note"' not in html
     assert "No source warning badges" not in html
@@ -4249,7 +4241,8 @@ def test_reviewer_ui_detail_shows_serious_review_cue_count_when_present() -> Non
 
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
-    assert "staff misconduct concern" not in html
+    assert html.count("staff misconduct concern") == 1
+    assert "What happened" in html
     assert "Serious review cue records:" not in html
     assert "review_cue=serious" not in html
     assert "Related facility activity" not in html
@@ -4305,8 +4298,10 @@ def test_reviewer_ui_detail_links_signal_only_facility_context_without_mutation(
     assert "Start complaint request if needed" not in html
     assert f"{REVIEWER_UI_PACKET_PREVIEW_PATH}?facility_number=157806098" not in html
     assert f"{REVIEWER_UI_PACKET_DRAFT_PATH}?facility_number=157806098" not in html
-    assert "review badges" in normalized_html
-    assert "status and note" in normalized_html
+    assert "review update" in normalized_html
+    assert "no active review badges" not in normalized_html
+    assert "Identity coverage:" in html
+    assert "Blank in source" in html
     assert "reviewer-created note/status" not in normalized_html
     assert "review" in normalized_html
     assert "verified complaint" not in normalized_html
@@ -4328,11 +4323,19 @@ def test_reviewer_ui_detail_distinguishes_directory_backed_facility_context(
 ) -> None:
     facility_csv = tmp_path / "facility-reference.csv"
     signals_csv = tmp_path / "missing-signals.csv"
-    _write_chhs_facility_directory_csv(facility_csv, facility_numbers=("157806098",))
+    _write_chhs_facility_directory_csv(
+        facility_csv,
+        facility_numbers=("157806098",),
+        facility_name="A. MIRIAM JAMISON CHILDREN'S CENTER",
+    )
     monkeypatch.setenv(CCLD_FACILITY_REFERENCE_CSV_ENV, str(facility_csv))
     monkeypatch.setenv(FACILITY_REVIEW_SIGNALS_CSVS_ENV, str(signals_csv))
 
     with _seeded_connection() as connection:
+        _insert_current_facility_reference(
+            connection,
+            facility_name="A. MIRIAM JAMISON CHILDREN'S CENTER",
+        )
         status, content_type, body = route_response(
             f"{REVIEWER_UI_DETAIL_PATH}?source_record_key={quote(COMPLAINT_KEY)}"
             "&facility_number=157806098&request_context_origin=facility_lookup",
@@ -4349,7 +4352,42 @@ def test_reviewer_ui_detail_distinguishes_directory_backed_facility_context(
     assert f"{CCLD_FACILITY_REVIEW_HUB_PATH}?facility_number=157806098" not in html
     assert "Open facility hub" not in html
     assert "signal-only facility hub" not in html
+    assert "Identity coverage:" not in html
+    for fact_class in ("license", "name", "type", "status", "county"):
+        assert f"compact-fact--{fact_class}" in html
+    assert '<p class="helper-text facility-identity-conflict">' not in html
     assert_no_secret_html(html)
+
+
+def test_reviewer_ui_detail_explains_conflicting_current_and_complaint_identity(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    facility_csv = tmp_path / "facility-reference.csv"
+    _write_chhs_facility_directory_csv(
+        facility_csv,
+        facility_numbers=("157806098",),
+    )
+    monkeypatch.setenv(CCLD_FACILITY_REFERENCE_CSV_ENV, str(facility_csv))
+
+    with _seeded_connection() as connection:
+        _insert_current_facility_reference(
+            connection,
+            facility_name="Resolved Current Facility Name",
+        )
+        status, _content_type, body = route_response(
+            f"{REVIEWER_UI_DETAIL_PATH}?source_record_key={quote(COMPLAINT_KEY)}",
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+
+    html = body.decode("utf-8")
+    assert status == 200
+    assert "Resolved Current Facility Name" in html
+    assert "facility-identity-conflict" in html
+    assert "Source records differ for name" in html
+    assert "complaint-time value remains preserved" in html
+    assert_no_secret_html(html)
+
 
 def test_reviewer_ui_detail_shows_manual_context_when_facility_hub_unavailable(
     monkeypatch: pytest.MonkeyPatch,
@@ -4528,6 +4566,63 @@ def test_reviewer_detail_renders_historical_report_observations_with_safe_states
     assert_no_secret_html(html)
 
 
+def test_reviewer_detail_omits_date_only_narrative_and_empty_optional_sections() -> None:
+    with _seeded_connection() as connection:
+        rows = connection.execute(
+            select(
+                hosted_source_derived_records.c.source_record_key,
+                hosted_source_derived_records.c.entity_type,
+                hosted_source_derived_records.c.original_values,
+            )
+        ).mappings().all()
+        for row in rows:
+            if row["entity_type"] not in {"complaint", "allegation", "event"}:
+                continue
+            values = dict(row["original_values"])
+            for key in tuple(values):
+                normalized_key = key.casefold().replace("_", " ")
+                if any(
+                    marker in normalized_key
+                    for marker in ("citation", "deficien", "poc", "plan of correction")
+                ):
+                    values[key] = None
+            for field_name in reviewer_ui._NARRATIVE_FIELD_NAMES:  # noqa: SLF001
+                values[field_name] = "Complaint received 04/07/2022; report 08/24/2022"
+            if row["entity_type"] == "allegation":
+                values["allegation_category"] = "04/07/2022"
+                values["allegation_text"] = "Report date 08/24/2022"
+            if row["entity_type"] == "complaint":
+                values.update(
+                    agency_name=None,
+                    complaint_report_contact=None,
+                    investigation_findings_narrative=None,
+                    deficiency_texts=[],
+                )
+            connection.execute(
+                update(hosted_source_derived_records)
+                .where(
+                    hosted_source_derived_records.c.source_record_key
+                    == row["source_record_key"]
+                )
+                .values(original_values=values)
+            )
+        status, content_type, body = route_response(
+            f"{REVIEWER_UI_DETAIL_PATH}?source_record_key={quote(COMPLAINT_KEY)}",
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+
+    html = body.decode("utf-8")
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert "Source narrative" not in html
+    assert "Historical complaint-report information" not in html
+    assert "Allegations and findings" not in html
+    assert "Citations, deficiencies, and Plan of Correction" not in html
+    assert "No source narrative excerpt" not in html
+    assert "Allegation details are not loaded" not in html
+    assert_no_secret_html(html)
+
+
 def test_reviewer_matrix_export_preserves_blank_null_undated_and_malformed_states() -> None:
     with _seeded_connection() as connection:
         complaint_values = connection.execute(
@@ -4620,7 +4715,8 @@ def test_reviewer_ui_detail_render_is_non_mutating() -> None:
     assert "investigation findings" in html
     assert "Complaint/report 32-CR-20220407124448" in html
     assert "Open original source" in html
-    assert "Status and note" in html
+    assert "Review update" in html
+    assert html.count("Save review update") == 1
     assert "Field-note guidance" not in html
     assert "feedback item for this record" not in html
     assert_no_secret_html(html)
@@ -4669,29 +4765,24 @@ def test_reviewer_ui_note_form_uses_existing_workflow_and_shows_read_after_write
         "audit_events": 1,
         "reset_reload_planning_metadata": 0,
     }
-    assert "Notes/status saved" in html
-    assert "Note saved for this record." in html
+    assert "Review update saved" in html
+    assert "Note saved. The source complaint record was not changed." in html
+    assert 'role="status"' in html
     assert "The note now appears in reviewer-created state below" not in html
-    assert "What changed" in html
-    assert "Note: added" in html
-    assert "What did not change" in html
-    assert "Source-derived complaint fields" in html
-    assert "Public source link and source context" in html
-    assert "Public-source records" in html
-    assert "Next" in html
-    assert "Return to facility queue" in html
-    assert "Open next flagged record" in html
+    assert "What changed" not in html
+    assert "Return to review queue" in html
     assert "workflow_area=save-confirmation" not in html
     assert "Review packet readiness before copying or printing" not in html
     assert f"{REVIEWER_UI_PACKET_PREVIEW_PATH}?facility_number=157806098" not in html
     assert "Open print draft" not in html
     assert f"{REVIEWER_UI_PACKET_DRAFT_PATH}?facility_number=157806098" not in html
-    assert "Return to the same facility queue or open the next flagged record" in html
+    assert "Return to the same facility queue or open the next flagged record" not in html
     assert "submit the request again" not in html
     assert "feedback details" not in html
     assert "157806098" in html
-    assert "08/01/2022 to 08/31/2022" in html
-    assert "return_facility_number=157806098" in html
+    assert 'name="return_facility_number" value="157806098"' in html
+    assert 'name="return_start_date" value="2022-08-01"' in html
+    assert 'name="return_end_date" value="2022-08-31"' in html
     assert "Review saved notes and statuses below" not in html
     assert "Review source traceability before export." in html
     assert "reviewer_note_scaffold" not in html
@@ -4800,29 +4891,21 @@ def test_reviewer_ui_status_form_uses_existing_workflow_and_shows_read_after_wri
         "audit_events": 1,
         "reset_reload_planning_metadata": 0,
     }
-    assert "Notes/status saved" in html
-    assert "Status saved for this record." in html
+    assert "Review update saved" in html
+    assert "Review status saved as Needs follow-up." in html
+    assert 'role="status"' in html
     assert "The status now appears in reviewer-created state below" not in html
-    assert "Complaint fields remain unchanged, and no correction decision was submitted." in html
-    assert "What changed" in html
-    assert "Status: Needs follow-up" in html
-    assert "What did not change" in html
-    assert "Source-derived complaint fields" in html
-    assert "Public source link and source context" in html
-    assert "Public-source records" in html
-    assert "Correction workflow state" in html
-    assert "Next" in html
-    assert "Return to facility queue" in html
-    assert "Open next flagged record" in html
+    assert "What changed" not in html
+    assert "Return to review queue" in html
     assert "workflow_area=save-confirmation" not in html
     assert "Review packet readiness before copying or printing" not in html
     assert f"{REVIEWER_UI_PACKET_PREVIEW_PATH}?facility_number=157806098" not in html
     assert "Open print draft" not in html
     assert f"{REVIEWER_UI_PACKET_DRAFT_PATH}?facility_number=157806098" not in html
-    assert "Return to the same facility queue or open the next flagged record" in html
+    assert "Return to the same facility queue or open the next flagged record" not in html
     assert "submit the request again" not in html
     assert "feedback details" not in html
-    assert "return_facility_number=157806098" in html
+    assert 'name="return_facility_number" value="157806098"' in html
     assert "Review saved notes and statuses below" not in html
     assert "reviewer_status_scaffold" not in html
     assert "Needs follow-up" in html
@@ -4841,6 +4924,153 @@ def test_reviewer_ui_status_form_uses_existing_workflow_and_shows_read_after_wri
         "source_record_key",
     ]
     assert_no_secret_html(html)
+
+
+def test_reviewer_ui_combined_review_update_is_audited_and_returns_to_worklist_focus() -> None:
+    with _seeded_connection() as connection:
+        before_source_rows = _source_rows(connection)
+        status, content_type, body = route_response(
+            REVIEWER_UI_UPDATE_PATH,
+            method="POST",
+            request_body=_form_bytes(
+                {
+                    "source_record_key": COMPLAINT_KEY,
+                    "reviewer_status": "in_review",
+                    "note_text": "Checked the public report link and finding.",
+                    "return_context_origin": "reviewer_worklist",
+                    "return_q": "32-CR",
+                    "return_source_record_key": COMPLAINT_KEY,
+                }
+            ),
+            reviewer_ui_context=reviewer_ui_context_for_connection(
+                connection,
+                actor=_actor(
+                    roles=("tester_reviewer",),
+                    provider_subject="fixture-ui-combined-reviewer",
+                    display_name="Fixture Combined Reviewer",
+                ),
+            ),
+        )
+        after_source_rows = _source_rows(connection)
+        state_rows = connection.execute(
+            select(hosted_reviewer_created_state)
+        ).mappings().all()
+        audit_rows = connection.execute(select(hosted_audit_events)).mappings().all()
+        return_path = (
+            f"/reviewer/records?q=32-CR#record-{quote(COMPLAINT_KEY)}"
+        )
+        return_status, _return_type, return_body = route_response(
+            return_path,
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+
+    html = body.decode("utf-8")
+    return_html = return_body.decode("utf-8")
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert before_source_rows == after_source_rows
+    assert len(state_rows) == len(audit_rows) == 2
+    assert {
+        row["state_payload"]["payload_kind"] for row in state_rows
+    } == {"reviewer_note_scaffold", "reviewer_status_scaffold"}
+    assert "Review update saved" in html
+    assert "Saved status as In review and note." in html
+    assert 'role="status"' in html
+    assert 'tabindex="-1"' in html
+    assert '<option value="in_review" selected="selected">In review</option>' in html
+    assert "1 saved note" in html
+    assert "Fixture Combined Reviewer (tester)" in html
+    assert (
+        return_path in html
+    )
+    assert return_status == 200
+    assert f'id="record-{COMPLAINT_KEY}"' in return_html
+    assert "decodeURIComponent(window.location.hash.slice(1))" in return_html
+    assert_no_secret_html(html)
+
+
+def test_reviewer_ui_combined_review_update_noop_stays_on_detail_without_write() -> None:
+    with _seeded_connection() as connection:
+        status, _content_type, body = route_response(
+            REVIEWER_UI_UPDATE_PATH,
+            method="POST",
+            request_body=_form_bytes({"source_record_key": COMPLAINT_KEY}),
+            reviewer_ui_context=reviewer_ui_context_for_connection(
+                connection,
+                actor=_actor(roles=("tester_reviewer",)),
+            ),
+        )
+        counts = _table_counts(connection)
+
+    html = body.decode("utf-8")
+    assert status == 400
+    assert counts["reviewer_created_state"] == counts["audit_events"] == 0
+    assert "Review update not saved" in html
+    assert "Nothing was saved." in html
+    assert 'role="alert"' in html
+    assert "feedback.focus()" in html
+    assert f'action="{REVIEWER_UI_UPDATE_PATH}"' in html
+    assert_no_secret_html(html)
+
+
+def test_reviewer_ui_combined_review_update_rolls_back_status_when_note_is_blocked() -> None:
+    with _seeded_connection() as connection:
+        before_source_rows = _source_rows(connection)
+        status, _content_type, body = route_response(
+            REVIEWER_UI_UPDATE_PATH,
+            method="POST",
+            request_body=_form_bytes(
+                {
+                    "source_record_key": COMPLAINT_KEY,
+                    "reviewer_status": "blocked",
+                    "note_text": "A token was pasted here.",
+                }
+            ),
+            reviewer_ui_context=reviewer_ui_context_for_connection(
+                connection,
+                actor=_actor(roles=("tester_reviewer",)),
+            ),
+        )
+        after_source_rows = _source_rows(connection)
+        counts = _table_counts(connection)
+
+    html = body.decode("utf-8")
+    assert status == 400
+    assert before_source_rows == after_source_rows
+    assert counts["reviewer_created_state"] == counts["audit_events"] == 0
+    assert "No status or note from this submission was added" in html
+    assert '<option value="blocked" selected="selected">Blocked</option>' in html
+    assert "token" not in html.casefold()
+    assert_no_secret_html(html)
+
+
+def test_reviewer_ui_combined_review_update_denied_write_stays_on_readable_detail() -> None:
+    with _seeded_connection() as connection:
+        status, _content_type, body = route_response(
+            REVIEWER_UI_UPDATE_PATH,
+            method="POST",
+            request_body=_form_bytes(
+                {
+                    "source_record_key": COMPLAINT_KEY,
+                    "reviewer_status": "in_review",
+                }
+            ),
+            reviewer_ui_context=reviewer_ui_context_for_connection(
+                connection,
+                actor=_actor(roles=("read_only_tester",)),
+            ),
+        )
+        counts = _table_counts(connection)
+
+    html = body.decode("utf-8")
+    assert status == 403
+    assert counts["reviewer_created_state"] == counts["audit_events"] == 0
+    assert "Review update not saved" in html
+    assert 'role="alert"' in html
+    assert "Complaint overview" in html
+    assert "source complaint record was unchanged" in html
+    assert_no_secret_html(html)
+
 
 def test_reviewer_ui_invalid_status_submission_has_clear_error_without_mutation() -> None:
     with _seeded_connection() as connection:
@@ -4956,7 +5186,7 @@ def test_reviewer_ui_note_status_writes_are_visible_on_list_after_write() -> Non
     }
     assert "Blocked" in status_html
     assert "Blocked" in list_html
-    assert "1 note" in list_html
+    assert "1 saved note" in list_html
     assert "Blocked" in list_html
     assert "No reviewer-created note/status yet" not in list_html
     assert_no_secret_html(list_html)
@@ -5082,7 +5312,7 @@ def test_reviewer_ui_default_route_context_is_browser_accessible() -> None:
 
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
-    assert "Complaint records ready for review" in html
+    assert "Complaint Worklist" in html
     assert "32-CR-20220407124448" in html
     assert_no_secret_html(html)
 
@@ -6149,6 +6379,7 @@ def _write_chhs_facility_directory_csv(
     path: Path,
     *,
     facility_numbers: tuple[str, ...],
+    facility_name: str | None = None,
 ) -> None:
     fieldnames = (
         "FAC_NBR",
@@ -6165,7 +6396,7 @@ def _write_chhs_facility_directory_csv(
     rows = [
         {
             "FAC_NBR": facility_number,
-            "NAME": f"Fixture Facility {facility_number}",
+            "NAME": facility_name or f"Fixture Facility {facility_number}",
             "PROGRAM_TYPE": "CHILD CARE",
             "STATUS": "LICENSED",
             "CAPACITY": "48",

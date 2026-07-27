@@ -949,16 +949,16 @@ def test_ccld_record_request_queue_filters_by_existing_reviewer_status() -> None
 
     assert note_status == 200
     assert status_status == 200
-    assert "Note saved for this record." in note_html
-    assert "Status saved for this record." in status_html
-    assert "Notes/status saved" in note_html
-    assert "Notes/status saved" in status_html
-    assert "Return to facility queue" in note_html
-    assert "Return to facility queue" in status_html
-    assert "Open next flagged record" in note_html
-    assert "Open next flagged record" in status_html
-    assert "Saved notes and statuses" in note_html
-    assert "Saved notes and statuses" in status_html
+    assert "Review update saved" in note_html
+    assert "Review update saved" in status_html
+    assert "Note saved. The source complaint record was not changed." in note_html
+    assert "Review status saved as Reviewed." in status_html
+    assert "Return to review queue" in note_html
+    assert "Return to review queue" in status_html
+    assert "Save review update" in note_html
+    assert "Save review update" in status_html
+    assert "Fixture Queue Reviewer (tester)" in note_html
+    assert "Fixture Queue Reviewer (tester)" in status_html
     assert reviewed_status == 200
     assert '<div class="dense-section-header">' in reviewed_html
     assert 'class="technical-details dense-table-details"' in reviewed_html

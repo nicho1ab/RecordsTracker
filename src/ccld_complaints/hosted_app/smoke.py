@@ -360,17 +360,18 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         raise RuntimeError("Hosted scaffold feedback page did not return safe form state.")
     if (
         reviewer_status != 200
-        or b"Complaint records ready for review" not in reviewer_body
-        or b"Complaint worklist" not in reviewer_body
+        or b"Complaint Worklist" not in reviewer_body
+        or b"Complaints" not in reviewer_body
+        or b"Review complaint" not in reviewer_body
         or b"Skip to main reviewer content" not in reviewer_body
     ):
         raise RuntimeError("Hosted scaffold reviewer UI shell did not return the seeded list.")
     if (
         reviewer_detail_status != 200
         or b"Complaint overview" not in reviewer_detail_body
-        or b"Why this may need closer review" not in reviewer_detail_body
+        or b"What happened" not in reviewer_detail_body
         or b"inline-glossary-term" not in reviewer_detail_body
-            or b"Status and note" not in reviewer_detail_body
+        or b"Review update" not in reviewer_detail_body
         or b"Key dates" not in reviewer_detail_body
         or b"Allegations and findings" not in reviewer_detail_body
         or b"Reviewer-created notes and status history" in reviewer_detail_body
@@ -381,7 +382,7 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         or b"How to read this record" in reviewer_detail_body
         or b"Field-note guidance" in reviewer_detail_body
         or b"Check source" in reviewer_detail_body
-        or b"Open CCLD source record" not in reviewer_detail_body
+        or b"Open source report" not in reviewer_detail_body
         or b"Return to review queue" not in reviewer_detail_body
         or b"32-CR-20220407124448" not in reviewer_detail_body
     ):
@@ -444,25 +445,21 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
         )
     if (
         reviewer_note_status != 200
-        or b"Notes/status saved" not in reviewer_note_body
-        or b"Note saved for this record." not in reviewer_note_body
-        or b"What changed" not in reviewer_note_body
-        or b"What did not change" not in reviewer_note_body
-        or b"Return to facility queue" not in reviewer_note_body
-        or b"Open next flagged record" not in reviewer_note_body
-        or b"Saved notes and statuses" not in reviewer_note_body
+        or b"Review update saved" not in reviewer_note_body
+        or b"Note saved. The source complaint record was not changed."
+        not in reviewer_note_body
+        or b"Return to review queue" not in reviewer_note_body
+        or b"Save review update" not in reviewer_note_body
         or b"feedback details" in reviewer_note_body
     ):
         raise RuntimeError("Hosted scaffold reviewer note did not return confirmation.")
     if (
         reviewer_saved_status != 200
-        or b"Notes/status saved" not in reviewer_saved_status_body
-        or b"Status saved for this record." not in reviewer_saved_status_body
-        or b"What changed" not in reviewer_saved_status_body
-        or b"What did not change" not in reviewer_saved_status_body
-        or b"Return to facility queue" not in reviewer_saved_status_body
-        or b"Open next flagged record" not in reviewer_saved_status_body
-        or b"Saved notes and statuses" not in reviewer_saved_status_body
+        or b"Review update saved" not in reviewer_saved_status_body
+        or b"Review status saved as In review."
+        not in reviewer_saved_status_body
+        or b"Return to review queue" not in reviewer_saved_status_body
+        or b"Save review update" not in reviewer_saved_status_body
         or b"feedback details" in reviewer_saved_status_body
     ):
         raise RuntimeError("Hosted scaffold reviewer status did not return confirmation.")

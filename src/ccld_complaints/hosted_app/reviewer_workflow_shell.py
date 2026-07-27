@@ -408,6 +408,37 @@ def _associated_reviewer_created_state_summary_payload(
 ) -> dict[str, Any]:
     records = _record_list(associated_state, "reviewer_created_state")
     created_at_values = [_record_string(record, "created_at") for record in records]
+    latest_record = (
+        max(
+            records,
+            key=lambda record: (
+                _record_string(record, "created_at"),
+                _record_string(record, "reviewer_state_id"),
+            ),
+        )
+        if records
+        else None
+    )
+    status_records = [
+        record
+        for record in records
+        if _optional_record_string(
+            _record_object(record, "state_payload"),
+            "reviewer_status",
+        )
+        is not None
+    ]
+    latest_status_record = (
+        max(
+            status_records,
+            key=lambda record: (
+                _record_string(record, "created_at"),
+                _record_string(record, "reviewer_state_id"),
+            ),
+        )
+        if status_records
+        else None
+    )
     return {
         "summary_source": REVIEWER_CREATED_STATE_API_PREFIX,
         "has_reviewer_created_state": len(records) > 0,
@@ -442,6 +473,19 @@ def _associated_reviewer_created_state_summary_payload(
             }
         ),
         "latest_created_at": max(created_at_values) if created_at_values else None,
+        "latest_status": (
+            _record_string(
+                _record_object(latest_status_record, "state_payload"),
+                "reviewer_status",
+            )
+            if latest_status_record is not None
+            else None
+        ),
+        "latest_actor_attribution_label": (
+            _actor_attribution_label(latest_record)
+            if latest_record is not None
+            else None
+        ),
         "actor_attribution_labels": sorted(
             {_actor_attribution_label(record) for record in records}
         ),

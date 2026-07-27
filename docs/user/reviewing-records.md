@@ -32,14 +32,38 @@ how many matching complaints are shown and whether the current 100-record bound
 omits additional matching records; it is not a public-source completeness
 claim.
 
-Each worklist row shows the complaint number, facility name and Facility ID,
-complaint/visit/report dates, finding or resolution, review-flag badges,
-reviewer status, note presence, CCLD-source availability, and one **Review
-complaint** action. The **Review next** cue explains the existing reviewer-state
-reason for starting with that row. It does not assign or claim the complaint,
-create a legal priority score, or change the governed query order. At narrow
-widths and browser zoom, the same labeled values stack vertically so the
-primary review action remains reachable without horizontal scrolling.
+Each worklist row leads with the complaint subject, facility, relevant dates,
+and finding. The complaint control number is secondary. Saved reviewer status
+and note presence appear only when they exist, while the public-source action
+is either **Open source report** or an explicit unavailable state. There is one
+worklist representation and one **Review complaint** action for each complaint.
+The **Review next** cue explains the reviewer-progress ordering together with
+any source-supported review factors. It does not assign or claim the complaint,
+create a legal priority score, make a legal conclusion, or replace source
+review. At narrow widths and browser zoom, the same labeled values stack
+vertically so the primary review action remains reachable without horizontal
+scrolling.
+
+## Complaint Overview
+
+Complaint Overview leads with **What happened**: the complaint subject, finding,
+relevant dates, and public-source action. It shows source narrative and
+allegations only when they contain meaningful information; a date by itself is
+not treated as narrative, and empty optional sections are omitted.
+
+Facility identity appears once near the top. Available identity facts remain
+source-derived, while missing facts are consolidated under one **Identity
+coverage** explanation using the shared missing-value glossary. If a current
+governed facility reference conflicts with complaint-era source identity, the
+page explains the conflict instead of silently replacing either value.
+
+Use the single review-update form to save a status and, when useful, a note
+together. Accessible success or error feedback stays on Complaint Overview,
+successful state shows the latest reviewer attribution, and an unsuccessful
+combined update does not leave a partial status or note. Reviewer-created state
+and audit history remain separate from source-derived complaint facts. Returning
+to Complaint Worklist preserves the search query and restores focus to the
+complaint that was open.
 
 In the hosted reviewer workflow, use `/reviewer/records/serious-topics` to filter loaded complaint records by governed serious-review themes. Treat `Source category` rows as official source-derived categories and `Keyword-assisted cue` rows as separate review prompts when the source category is missing or unknown. Do not summarize keyword cues as findings or verified events.
 

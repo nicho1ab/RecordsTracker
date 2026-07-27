@@ -13,7 +13,7 @@ from ccld_complaints.hosted_app.reviewer_ui import (
     CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH,
     REVIEWER_UI_DETAIL_PATH,
     REVIEWER_UI_FACILITY_PRIORITIES_PATH,
-    REVIEWER_UI_STATUS_PATH,
+    REVIEWER_UI_UPDATE_PATH,
     build_local_test_reviewer_ui_context,
 )
 
@@ -27,7 +27,10 @@ sys.modules[SPEC.name] = CONTRACTS
 SPEC.loader.exec_module(CONTRACTS)
 assert_continuity = CONTRACTS.assert_continuity
 assert_destinations = CONTRACTS.assert_destinations
+assert_actions = CONTRACTS.assert_actions
+assert_facility_identity = CONTRACTS.assert_facility_identity
 assert_help_surface = CONTRACTS.assert_help_surface
+assert_result_structure = CONTRACTS.assert_result_structure
 
 COMPLAINT_KEY = "complaint:ccld:complaint:32-CR-20220407124448"
 
@@ -64,9 +67,9 @@ def test_representative_reviewer_actions_reach_real_routes_and_mutation_feedback
         search_path = "/reviewer/records?q=32-CR"
         detail_path = (
             f"{REVIEWER_UI_DETAIL_PATH}?source_record_key={quote(COMPLAINT_KEY)}"
-            "&return_facility_number=157806098"
-            "&return_start_date=2022-08-01"
-            "&return_end_date=2022-08-31"
+            "&return_context_origin=reviewer_worklist"
+            "&return_q=32-CR"
+            f"&return_source_record_key={quote(COMPLAINT_KEY)}"
         )
         facility_path = f"{REVIEWER_UI_FACILITY_PRIORITIES_PATH}?facility=157806098"
 
@@ -83,26 +86,28 @@ def test_representative_reviewer_actions_reach_real_routes_and_mutation_feedback
             reviewer_ui_context=context,
         )
         success_status, _success_type, success_body = route_response(
-            REVIEWER_UI_STATUS_PATH,
+            REVIEWER_UI_UPDATE_PATH,
             method="POST",
             request_body=_form_bytes(
                 {
                     "source_record_key": COMPLAINT_KEY,
                     "reviewer_status": "needs_follow_up",
-                    "return_facility_number": "157806098",
-                    "return_start_date": "2022-08-01",
-                    "return_end_date": "2022-08-31",
+                    "note_text": "Check the linked source report.",
+                    "return_context_origin": "reviewer_worklist",
+                    "return_q": "32-CR",
+                    "return_source_record_key": COMPLAINT_KEY,
                 }
             ),
             reviewer_ui_context=context,
         )
         failure_status, _failure_type, failure_body = route_response(
-            REVIEWER_UI_STATUS_PATH,
+            REVIEWER_UI_UPDATE_PATH,
             method="POST",
             request_body=_form_bytes(
                 {
                     "source_record_key": COMPLAINT_KEY,
                     "reviewer_status": "not-a-status",
+                    "note_text": "This note must roll back with the invalid status.",
                 }
             ),
             reviewer_ui_context=context,
@@ -137,31 +142,70 @@ def test_representative_reviewer_actions_reach_real_routes_and_mutation_feedback
         failure_html = failure_body.decode("utf-8")
         assert 'value="32-CR"' in search_html
         assert "32-CR-20220407124448" in search_html
+        worklist_row_count = search_html.count('class="review-worklist-row')
+        assert worklist_row_count >= 1
+        assert search_html.count('<ol class="review-worklist"') == 1
+        assert (
+            search_html.count(
+                '<a class="button" href="/reviewer/records/detail?'
+            )
+            == worklist_row_count
+        )
+        assert "Show table view" not in search_html
+        assert_result_structure(
+            [
+                {
+                    "representation_id": "complaint-worklist",
+                    "section_id": "reviewer-list-heading",
+                    "rows": (COMPLAINT_KEY,),
+                }
+            ],
+            [{"section_id": "reviewer-list-heading", "empty": False}],
+        )
+        assert_actions(
+            [
+                {
+                    "action_id": "review-complaint",
+                    "order": 1,
+                    "visible": True,
+                    "keyboard": True,
+                    "left": 0,
+                    "right": 1,
+                }
+            ]
+        )
         assert "Complaint overview" in detail_html
-        assert "Return to review queue" in detail_html
-        assert "Status saved for this record." in success_html
-        assert "Return to facility queue" in success_html
-        assert "Reviewer status was not saved" in failure_html
-        assert "Return to selected record detail" in failure_html
+        assert "Return to Complaint Worklist" in detail_html
+        assert_facility_identity(
+            [
+                {
+                    "facility_id": "157806098",
+                    "name": "A. MIRIAM JAMISON CHILDREN'S CENTER",
+                }
+            ]
+        )
+        assert "Saved status as Needs follow-up and note." in success_html
+        assert 'role="status"' in success_html
+        assert "Return to Complaint Worklist" in success_html
+        assert "Review update was not saved" in failure_html
+        assert "No status or note from this submission was added" in failure_html
+        assert 'role="alert"' in failure_html
 
         assert_continuity(
             {
-                "selection": "157806098",
-                "focus": "return to facility queue",
-                "context": "2022-08-01..2022-08-31",
+                "selection": COMPLAINT_KEY,
+                "focus": "complaint worklist record",
+                "context": "q=32-CR",
             },
             {
-                "selection": "157806098" if "157806098" in success_html else None,
+                "selection": COMPLAINT_KEY if COMPLAINT_KEY in success_html else None,
                 "focus": (
-                    "return to facility queue"
-                    if "Return to facility queue" in success_html
+                    "complaint worklist record"
+                    if f"#record-{quote(COMPLAINT_KEY)}" in success_html
                     else None
                 ),
                 "context": (
-                    "2022-08-01..2022-08-31"
-                    if "return_start_date=2022-08-01" in success_html
-                    and "return_end_date=2022-08-31" in success_html
-                    else None
+                    "q=32-CR" if "q=32-CR" in success_html else None
                 ),
             },
         )
@@ -184,17 +228,8 @@ def test_rt_rc_003_representative_routes_use_one_shared_accessible_help_contract
 
         intelligence_html = intelligence_body.decode("utf-8")
         detail_html = detail_body.decode("utf-8")
-        detail_section_start = detail_html.index(
-            'class="detail-card historical-complaint-report"'
-        )
-        detail_section = detail_html[
-            detail_section_start : detail_html.index(
-                '<p class="helper-text">These are historical complaint-report observations.',
-                detail_section_start,
-            )
-        ]
         intelligence_terms = _glossary_terms(intelligence_html)
-        detail_terms = _glossary_terms(detail_section)
+        detail_terms = _glossary_terms(detail_html)
 
         assert intelligence_status == detail_status == 200
         assert any(
@@ -203,7 +238,8 @@ def test_rt_rc_003_representative_routes_use_one_shared_accessible_help_contract
         )
         assert "CCLD finding term" not in intelligence_html
         assert len(detail_terms) >= 4
-        assert len({term.get("data-term-id") for term in detail_terms}) == len(detail_terms)
+        assert all(term.get("data-definition") for term in detail_terms)
+        assert "var count = definitionCounts[baseId] || 0" in detail_html
 
         all_terms = intelligence_terms + detail_terms
         assert_help_surface(

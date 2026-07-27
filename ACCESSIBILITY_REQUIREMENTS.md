@@ -155,7 +155,22 @@ Accessibility requirements apply to:
 	visible keyboard-flow guidance near the workflow indicator or primary form
 	controls so testers can move from Home, Facility Lookup, Record Request,
 	Review Queue, Reviewer Detail, Note/Status actions, Packet Preview/Draft,
-	Feedback, and Help without relying on color, layout, or pointer-only cues.
+  Feedback, and Help without relying on color, layout, or pointer-only cues.
+- The Complaint Worklist must expose one semantic result list and one
+  `Review complaint` action per result. Complaint subject, facility identity,
+  dates, finding, saved reviewer state when present, the source action or
+  unavailable label, and the `Review next` explanation must retain logical
+  reading order at desktop, narrow, mobile, and 200% zoom widths.
+- Complaint Overview review updates use one labeled form for status and an
+  optional note. Submitting changes the button text to `Saving…`; returned
+  success uses `role="status"`, returned validation or authorization failure
+  uses `role="alert"`, and focus moves to that server-rendered feedback.
+  Returning to a searched worklist restores the selected complaint card as the
+  focus target without requiring pointer input.
+- Consolidated facility identity states and conflict explanations use visible
+  text plus the shared #606 glossary behavior. Missing reviewer status, missing
+  notes, and unavailable source links must not appear as badges that imply the
+  complaint itself merits closer review.
 
 ### Color and contrast
 
