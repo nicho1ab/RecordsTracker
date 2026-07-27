@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+- Simplified the Complaint Worklist and Complaint Overview for Issue #610.
+  Reviewers now get one compact worklist, one primary complaint action,
+  transparent Review next factors, a concise source-first overview, consolidated
+  facility-identity coverage, and one atomic status-plus-optional-note update
+  with same-page accessible feedback and search-aware return context.
 - Unified reviewer glossary and missing-value help under one collision-safe
   behavior for Issue #606. Hover, focus, click, and tap share one viewport-aware
   definition window with predictable Escape, blur, outside dismissal, and focus

@@ -373,8 +373,8 @@ def test_guided_attorney_review_workflow_acceptance_route_markers(
             "prioritized records",
             "/reviewer",
             (
-                "Complaint records ready for review",
-                "Complaint worklist",
+                "Complaint Worklist",
+                "Complaints",
                 "Review complaint",
             ),
         ),
@@ -553,7 +553,7 @@ def test_shared_shell_uses_approved_civic_ledger_foundation() -> None:
     assert "grid-template-columns: repeat(7, minmax(5rem, auto))" in html
     facts_bar_css = (
         ".top-fact-strip {\n"
-        "      background: #F8FAFB;\n"
+        "      background: var(--ds-surface-muted);\n"
         "      border: 1px solid var(--line-soft);\n"
         "      border-radius: 8px;\n"
         "      display: grid;"

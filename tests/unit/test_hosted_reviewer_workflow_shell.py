@@ -203,6 +203,8 @@ def test_reviewer_workflow_shell_fetches_authenticated_detail() -> None:
         "payload_kinds_present": [],
         "reviewer_statuses_present": [],
         "latest_created_at": created.created_at,
+        "latest_status": None,
+        "latest_actor_attribution_label": "Fixture Read Only Tester (tester)",
         "actor_attribution_labels": ["Fixture Read Only Tester (tester)"],
         "actor_categories_present": ["tester"],
         "safety": {
@@ -249,6 +251,8 @@ def test_reviewer_workflow_shell_detail_includes_empty_associated_state() -> Non
         "payload_kinds_present": [],
         "reviewer_statuses_present": [],
         "latest_created_at": None,
+        "latest_status": None,
+        "latest_actor_attribution_label": None,
         "actor_attribution_labels": [],
         "actor_categories_present": [],
         "safety": {
@@ -315,6 +319,8 @@ def test_reviewer_workflow_shell_detail_summarizes_multiple_associated_state_row
         "payload_kinds_present": [],
         "reviewer_statuses_present": [],
         "latest_created_at": max(first.created_at, second.created_at),
+        "latest_status": None,
+        "latest_actor_attribution_label": "Fixture Admin Reviewer (admin)",
         "actor_attribution_labels": [
             "Fixture Active Reviewer (tester)",
             "Fixture Admin Reviewer (admin)",
@@ -430,6 +436,8 @@ def test_reviewer_workflow_shell_detail_shows_created_reviewer_note() -> None:
         "payload_kinds_present": ["reviewer_note_scaffold"],
         "reviewer_statuses_present": [],
         "latest_created_at": note.created_at,
+        "latest_status": None,
+        "latest_actor_attribution_label": "Fixture Note Reviewer (tester)",
         "actor_attribution_labels": ["Fixture Note Reviewer (tester)"],
         "actor_categories_present": ["tester"],
         "safety": {

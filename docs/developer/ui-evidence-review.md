@@ -198,6 +198,12 @@ Capture evidence from another terminal:
 
 Fixture/mock mode uses committed fixtures and does not make live CCLD calls.
 
+For the bounded Issue #610 Complaint Overview print correction, use the focused
+fixture capture. It records the populated product-owner-rejected route with a
+headers-off PDF and one source-unavailable comparison state; review every PDF
+page for readable flow, no orphaned top content, no avoidable near-empty page,
+and no clipped or visible interactive controls.
+
 Focused issue #416 fixture evidence uses the same route set and assertions:
 
 ```powershell

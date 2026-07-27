@@ -121,25 +121,36 @@ The browser-accessible hosted reviewer UI is a server-rendered HTML surface at
 `/reviewer` and `/reviewer/records`. Its landing page uses one compact,
 single-column, responsive complaint worklist: matching and bounded-result
 context plus search appear before the records, and each row presents complaint
-and facility identity, key dates, finding, review-flag badges, reviewer status,
-note presence, CCLD-source availability, and one record-specific action. A
-single `Review next` cue uses the existing reviewer-state ordering without
-changing governed query order. Local testers can open detail, inspect the
-attorney-tier source context, add a reviewer note, set a reviewer status, and
-see read-after-write reviewer-created state. Empty, invalid-form, and blocked
+context first, facility identity, key dates, finding, source-supported
+review-flag badges, saved reviewer status or note presence only when it exists,
+a concise source action or truthful unavailable state, and one `Review
+complaint` action. Complaint control number is secondary metadata. A single
+`Review next` cue explains reviewer-progress ordering and the visible
+source-supported factors without assigning, scoring, or changing governed query
+order. Local testers can open detail, inspect the attorney-tier source context,
+and save status and an optional note through one review-update form. Empty,
+invalid-form, and blocked
 states should give clear next steps such as clearing search, returning to the
 reviewer list, selecting a record, or retrying valid note/status input.
-Narrative
-source fields are hidden in the browser shell. It must keep source-derived values visibly separate
+The full complaint set must not also be rendered as a duplicate table.
+Narrative source fields are hidden on the worklist. It must keep source-derived values visibly separate
 from reviewer-created notes/statuses, keep local/test limitations visible, use
 semantic headings, tables, labels, and accessible buttons, avoid color-only
 meaning, and avoid unsupported legal, facility-wide, completeness, harm, abuse,
 neglect, liability, or rights-deprivation conclusions.
 Reviewer detail pages must stay in the reviewer-facing tier. They should orient
 attorneys with complaint identity, facility identity once near the top, a concise
-source narrative, a compact complaint/investigation timeline, finding/allegation
-summary, review-flag badges, reviewer-created state/actions when useful, and a
+source narrative only when meaningful narrative exists, a compact
+complaint/investigation timeline, finding and non-empty allegation content,
+source-supported review-flag badges, reviewer-created state/actions when useful,
+and a
 small set of next actions for the current record.
+Repeated facility missing values are consolidated into one governed identity
+state, and current-versus-complaint identity conflicts require an explicit
+explanation. Empty historical, allegation, citation, deficiency, and Plan of
+Correction sections are omitted; a meaningful governed zero or unavailable
+state remains visible when it affects a review decision. Repeated dates are not
+relabeled as narrative.
 Reviewer detail must not expose Help, support, operator, source-mechanics, or
 developer-debug content just because older tests or docs expected it. Source
 traceability internals, source-derived value-check tables, full source-derived
@@ -169,11 +180,13 @@ Help, packet preparation, or future correction-focused surfaces unless the
 current record task directly needs a concise cue. It must not imply that a
 correction workflow, correction status, correction persistence, correction
 decision, export change, or official public-source fact has been implemented.
-Reviewer note/status confirmations should make the return path clear: saved
-notes/statuses are reviewer-created state, source-derived fields are unchanged,
-and the reviewer can return to the facility queue or open the next flagged
-record. They should not become a long Help, feedback, packet, or operator
-handoff surface.
+Reviewer review-update feedback stays on the selected detail page, moves focus
+to a concise status or alert, attributes the latest saved reviewer state, and
+keeps the saved status and note separate from source-derived fields. When both
+values are submitted, the existing reviewer-state and audit services succeed
+or roll back together. Returning to the Complaint Worklist preserves the search
+and focuses the selected complaint. Feedback must not become a long Help,
+packet, operator, or issue-report handoff surface.
 The `/feedback` route is now the first real tester feedback workflow. It should
 use an accessible feedback type dropdown, multiline description field, clear
 validation, safe unconfigured state, and safe success/failure messages. GitHub

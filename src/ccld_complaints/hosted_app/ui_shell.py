@@ -1527,8 +1527,8 @@ SHARED_CSS = r"""
       padding: 0.72rem 0.85rem;
     }
     .review-worklist-row.is-suggested {
-      border-left: 4px solid var(--teal);
-      box-shadow: 0 5px 14px rgb(13 110 110 / 9%);
+      border-left: 4px solid var(--ds-nav-active-border);
+      box-shadow: var(--shadow);
       padding-left: 0.7rem;
     }
     .worklist-identity {
@@ -1536,8 +1536,9 @@ SHARED_CSS = r"""
       min-width: 0;
     }
     .worklist-identity h3 {
-      font-family: var(--ds-font-mono);
-      font-size: 1rem;
+      font-family: var(--ds-font-ui);
+      font-size: 1.02rem;
+      line-height: 1.35;
       margin: 0.08rem 0 0.2rem;
       overflow-wrap: anywhere;
     }
@@ -1551,8 +1552,8 @@ SHARED_CSS = r"""
       margin: 0 0 0.2rem;
     }
     .worklist-review-next > span {
-      background: var(--ds-primary-soft);
-      border: 1px solid #75B9B9;
+      background: var(--ds-attention-soft);
+      border: 1px solid var(--ds-nav-active-border);
       border-radius: 999px;
       color: var(--ds-primary);
       font-weight: 900;
@@ -1567,6 +1568,11 @@ SHARED_CSS = r"""
       color: var(--muted);
       font-size: 0.84rem;
       margin: 0;
+    }
+    .worklist-control-number {
+      color: var(--muted);
+      font-size: 0.82rem;
+      margin: 0.2rem 0 0;
     }
     .worklist-field-label {
       color: var(--muted);
@@ -1619,7 +1625,7 @@ SHARED_CSS = r"""
       padding: 0.2rem 0.42rem;
     }
     .worklist-source {
-      color: #286A5B;
+      color: var(--ds-link);
       font-weight: 700;
     }
     .worklist-action {
@@ -1771,9 +1777,9 @@ SHARED_CSS = r"""
       margin: -0.25rem 0 0.35rem;
     }
     .complaint-overview-card {
-      border-color: #C9DCE0;
-      border-top: 3px solid var(--teal);
-      box-shadow: var(--shadow-strong);
+      border-color: var(--line);
+      border-top: 3px solid var(--ds-primary);
+      box-shadow: none;
       padding: 0;
       overflow: visible;
     }
@@ -1828,7 +1834,7 @@ SHARED_CSS = r"""
       box-shadow: 0 1px 2px rgb(23 33 43 / 8%);
     }
     .overview-side-panel {
-      background: #F8FBFB;
+      background: var(--ds-surface-muted);
       border-left: 1px solid var(--line-soft);
       border-radius: 0 0 8px 0;
       display: grid;
@@ -1859,7 +1865,7 @@ SHARED_CSS = r"""
       gap: 0.45rem;
     }
     .overview-source-narrative blockquote {
-      border-left: 3px solid #16B8AC;
+      border-left: 3px solid var(--ds-nav-active-border);
       color: var(--ink);
       font-size: 0.98rem;
       font-weight: 500;
@@ -1890,7 +1896,7 @@ SHARED_CSS = r"""
       margin-bottom: 0.35rem;
     }
     .top-fact-strip {
-      background: #F8FAFB;
+      background: var(--ds-surface-muted);
       border: 1px solid var(--line-soft);
       border-radius: 8px;
       display: grid;
@@ -1948,6 +1954,14 @@ SHARED_CSS = r"""
       color: var(--ink);
       font-size: 0.9rem;
       padding: 0;
+    }
+    .facility-identity-state,
+    .facility-identity-conflict {
+      background: var(--ds-attention-soft);
+      border-left: 3px solid var(--ds-nav-active-border);
+      color: var(--ink);
+      margin: 0;
+      padding: 0.48rem 0.62rem;
     }
     .reviewer-brief-card .launch-value {
       font-size: 0.98rem;
@@ -2066,6 +2080,10 @@ SHARED_CSS = r"""
     .review-status-panel form p {
       margin: 0.28rem 0;
     }
+    .review-update-form {
+      display: grid;
+      gap: 0.3rem;
+    }
     .review-status-panel select,
     .review-status-panel textarea,
     .review-status-panel button {
@@ -2077,6 +2095,28 @@ SHARED_CSS = r"""
     .review-status-panel h3 {
       font-size: 0.98rem;
       margin-bottom: 0.35rem;
+    }
+    .review-update-feedback {
+      background: var(--ds-surface);
+      border: 1px solid var(--line);
+      border-left: 4px solid var(--ds-success);
+      border-radius: 4px;
+      padding: 0.75rem 0.9rem;
+    }
+    .review-update-feedback.is-error {
+      background: var(--ds-danger-soft);
+      border-left-color: var(--ds-danger);
+    }
+    .review-update-feedback h2,
+    .review-update-feedback p {
+      margin: 0;
+    }
+    .review-update-feedback h2 {
+      font-size: 1rem;
+    }
+    .review-update-feedback:focus {
+      outline: 3px solid var(--ds-focus);
+      outline-offset: 2px;
     }
     .quick-review-section h2 {
       font-size: 1rem;
@@ -3565,7 +3605,9 @@ SHARED_CSS = r"""
       .copy-icon-button, .copy-text-control, .facility-intelligence-sort,
       .facility-pagination, .facility-row-actions, .facility-status-form,
       .compare-facilities-views,
-      .intelligence-filters, .compact-filter-panel {
+      .intelligence-filters, .compact-filter-panel,
+      .worklist-controls, .worklist-action, .overview-source-action,
+      .overview-tertiary-actions, .review-update-form {
         display: none !important;
       }
       .shell {
@@ -3591,6 +3633,40 @@ SHARED_CSS = r"""
       .badge, .review-chip {
         border-color: #000;
         color: #000;
+      }
+      .review-worklist-row,
+      .review-update-feedback {
+        background: #fff !important;
+        border-color: #000 !important;
+        box-shadow: none !important;
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+      .review-worklist-row {
+        display: block;
+        margin-bottom: 0.75rem;
+      }
+      .overview-layout {
+        display: block;
+      }
+      .reviewer-detail-page.detail-shell {
+        display: block;
+      }
+      .complaint-overview-card {
+        background: #fff !important;
+        border-color: #000 !important;
+        box-shadow: none !important;
+        break-inside: auto;
+        page-break-inside: auto;
+      }
+      .reviewer-detail-page h2 {
+        break-after: avoid-page;
+        page-break-after: avoid;
+      }
+      .overview-side-panel {
+        background: #fff !important;
+        border-left: 0;
+        border-top: 1px solid #000;
       }
       .civic-ledger-page .intelligence-scope,
       .civic-ledger-page .intelligence-filters,

@@ -171,6 +171,7 @@ def test_capture_script_declares_parameters_routes_and_outputs() -> None:
         "Issue418",
         "Issue419",
         "Issue498",
+        "Issue610",
         "manifest.json",
         "file-index.json",
         "route-status.csv",
@@ -272,6 +273,7 @@ def test_capture_script_declares_parameters_routes_and_outputs() -> None:
     assert "-Issue418" in script
     assert "-Issue419" in script
     assert "-Issue498" in script
+    assert "-Issue610" in script
     for issue_415_route in (
         "/reviewer/records/substantiated?facility=107207198",
         "/reviewer/records/substantiated?facility_type=FOSTER%20FAMILY%20AGENCY",
@@ -410,6 +412,12 @@ def test_capture_script_declares_parameters_routes_and_outputs() -> None:
         "Invoke-Issue498BrowserCapture",
     ):
         assert issue_498_contract in script
+    for issue_610_contract in (
+        "issue-610-populated-print",
+        "issue-610-source-unavailable",
+        "headers and footers off",
+    ):
+        assert issue_610_contract in script
     for fixture_key in (
         "ccld-complaint-32-CR-20240603151515-rt-src-002-supported-fixture",
         "ccld-complaint-32-CR-20240610181818-rt-src-002-document-only-fixture",
