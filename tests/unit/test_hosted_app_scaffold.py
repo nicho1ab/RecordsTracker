@@ -342,10 +342,10 @@ def test_guided_attorney_review_workflow_acceptance_route_markers(
             "facility review",
             "/ccld/facilities/detail?facility_number=900000001",
             (
-                "Primary facility facts",
-                "Review summary",
-                "Review next",
-                "Start complaint request",
+                "Facility identity",
+                "Records needed for review",
+                "Get Records",
+                "Back to Find a Facility",
             ),
         ),
         (

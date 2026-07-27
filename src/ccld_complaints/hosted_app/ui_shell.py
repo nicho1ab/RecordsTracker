@@ -3459,6 +3459,105 @@ SHARED_CSS = r"""
       color: #f3d77d;
       font-weight: 500;
     }
+    .facility-identity-grid,
+    .complaint-source-facts,
+    .reviewer-state-panel .summary-list {
+      margin-bottom: 0;
+    }
+    .facility-overview-context {
+      background: var(--ds-surface-info);
+      border-left: 4px solid var(--ds-link);
+      padding: 0.75rem 0.75rem 0.75rem 2rem;
+    }
+    .facility-inventory-filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      margin: 0.85rem 0 1rem;
+    }
+    .facility-inventory-filter {
+      color: var(--ds-link);
+      text-decoration: none;
+    }
+    .facility-inventory-filter > span {
+      background: var(--ds-surface-info);
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 800;
+      min-width: 1.45rem;
+      padding: 0.1rem 0.35rem;
+      text-align: center;
+    }
+    .facility-inventory-filter.is-active {
+      background: var(--ds-link);
+      border-color: var(--ds-link);
+      color: #ffffff;
+      font-weight: 800;
+    }
+    .facility-inventory-filter.is-active > span {
+      background: #ffffff;
+      color: var(--ds-link);
+    }
+    .facility-inventory-list {
+      display: grid;
+      gap: 1rem;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    .facility-inventory-item {
+      background: #ffffff;
+      border: 1px solid var(--line);
+      border-radius: var(--ds-radius-lg);
+      box-shadow: var(--shadow);
+      min-width: 0;
+      padding: 1.1rem;
+    }
+    .facility-inventory-item.is-recommended {
+      border-left: 5px solid var(--amber);
+    }
+    .facility-inventory-item h3 {
+      margin-bottom: 0.35rem;
+      overflow-wrap: anywhere;
+    }
+    .complaint-identity,
+    .recommended-record-label {
+      margin-bottom: 0.7rem;
+    }
+    .status-pill--attention {
+      background: var(--amber-soft);
+      border: 1px solid #d7a529;
+      border-radius: 999px;
+      color: var(--amber);
+      display: inline-flex;
+      font-size: 0.78rem;
+      font-weight: 800;
+      margin-right: 0.35rem;
+      padding: 0.2rem 0.5rem;
+    }
+    .reviewer-state-panel {
+      background: var(--ds-surface-muted);
+      border-left: 4px solid var(--line);
+      margin-top: 0.75rem;
+      padding: 0.75rem;
+    }
+    .reviewer-state-panel h4 {
+      margin-bottom: 0.55rem;
+    }
+    .facility-overview-limits,
+    .facility-activity-summary {
+      border-top: 1px solid var(--line-soft);
+      padding-top: 1rem;
+    }
+    .facility-overview-empty {
+      border-left: 5px solid var(--amber);
+    }
+    .status-banner--attention {
+      background: var(--amber-soft);
+      border-left: 4px solid #d7a529;
+      color: var(--ink);
+      padding: 0.7rem;
+    }
     @media (max-width: 1100px) {
       .civic-header__inner {
         grid-template-columns: minmax(12rem, 1fr) auto;
@@ -3587,6 +3686,11 @@ SHARED_CSS = r"""
         gap: 1rem;
         justify-content: space-between;
       }
+      .facility-identity-grid,
+      .complaint-source-facts,
+      .reviewer-state-panel .summary-list {
+        grid-template-columns: minmax(7.5rem, 10rem) minmax(0, 1fr);
+      }
       .civic-footer__inner {
         align-items: start;
         display: grid;
@@ -3607,6 +3711,11 @@ SHARED_CSS = r"""
       .intelligence-filters, .compact-filter-panel,
       .worklist-controls, .worklist-action, .overview-source-action,
       .overview-tertiary-actions, .review-update-form {
+        display: none !important;
+      }
+      .facility-inventory-filters,
+      .facility-inventory-actions,
+      .facility-overview-empty .action-group {
         display: none !important;
       }
       .shell {
@@ -3683,6 +3792,29 @@ SHARED_CSS = r"""
       }
       .civic-ledger-page .facility-inventory-context {
         position: static !important;
+      }
+      .facility-inventory-item,
+      .facility-overview-summary,
+      .facility-activity-summary,
+      .facility-overview-limits,
+      .hero-card {
+        background: #fff !important;
+        border-color: #000 !important;
+        box-shadow: none !important;
+      }
+      .facility-inventory-item {
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+      .facility-inventory-list {
+        display: block;
+      }
+      .facility-inventory-item + .facility-inventory-item {
+        margin-top: 0.75rem;
+      }
+      .reviewer-state-panel {
+        background: #fff !important;
+        border-color: #000 !important;
       }
     }
     @media (max-width: 760px) {

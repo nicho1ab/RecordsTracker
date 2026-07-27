@@ -384,6 +384,42 @@ def test_capture_script_declares_parameters_routes_and_outputs() -> None:
         "Issue #501 repository-readable controlled variance",
     ):
         assert issue_419_contract in script
+    for issue_420_scenario in (
+        "issue-420-populated-desktop",
+        "issue-420-source-unavailable-filter",
+        "issue-420-reviewer-state-filter",
+        "issue-420-narrow-desktop",
+        "issue-420-mobile",
+        "issue-420-reflow",
+        "issue-420-keyboard-filter",
+        "issue-420-filtered-empty",
+        "issue-420-zero-complaint",
+        "issue-420-missing-identity-values",
+        "issue-420-partial-coverage",
+        "issue-420-print",
+    ):
+        assert issue_420_scenario in script
+    for issue_420_contract in (
+        "issue420 Facility Overview heading",
+        "issue420 reviewer-tier safety",
+        "issue420 no primary disclosure stack",
+        "issue420 canonical complaint inventory",
+        "issue420 source and reviewer state separation",
+        "issue420 single primary next action",
+        "issue420 filter and reconciliation contract",
+        "issue420 complaint return continuity",
+        "issue420 compact empty state",
+        "issue420 responsive contract",
+        "issue420 keyboard focus contract",
+        "issue420 missing identity consolidation",
+        "issue420 partial and stale transparency",
+        "issue420 print contract",
+        "issue-420-approved-versus-rendered.csv",
+        "issue-420-source-reconciliation.csv",
+        "issue-420-ui-gates.csv",
+        "READY FOR EXPLICIT OWNER REVIEW",
+    ):
+        assert issue_420_contract in script
     for issue_498_scenario in (
         "rt-src-002-supported-closed",
         "rt-src-002-supported-open",

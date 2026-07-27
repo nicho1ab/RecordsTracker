@@ -34,10 +34,10 @@ from ccld_complaints.hosted_app.ccld_facility_lookup import (
     CCLD_FACILITY_REVIEW_PRIORITY_PATH,
     CCLD_FACILITY_SUGGESTIONS_PATH,
     CCLD_RECORD_REQUEST_PATH,
+    CcldFacilityComplaintContext,
     CcldFacilityLookupRecord,
     CcldFacilityReferenceSource,
     CcldFacilityReviewContext,
-    CcldReviewNextRecommendation,
     load_active_ccld_facility_reference,
     load_ccld_facility_reference,
     no_reference_facility_source,
@@ -122,22 +122,30 @@ def test_source_derived_facility_lookup_preserves_integer_capacity() -> None:
 
 
 @pytest.mark.parametrize(
-    ("capacity", "capacity_present", "closed_date", "closed_present", "expected"),
+    (
+        "capacity",
+        "capacity_present",
+        "closed_date",
+        "closed_present",
+        "expected_capacity",
+        "is_unavailable",
+    ),
     [
-        ("0", True, "2026-07-13", True, ("0", "07/13/2026")),
-        ("many", True, "not-a-date", True, ("Invalid source value", "Invalid source value")),
-        ("", True, "", True, ("Blank in source", "Blank in source")),
-        (cast(str, None), True, cast(str, None), True, ("No value recorded", "Date not listed")),
-        ("Unavailable", True, "Undated", True, ("Source unavailable", "Date not listed")),
-        ("", False, "", False, ("Not listed in source", "Date not listed")),
+        ("0", True, "2026-07-13", True, "0", False),
+        ("many", True, "not-a-date", True, "Invalid source value", False),
+        ("", True, "", True, "", True),
+        (cast(str, None), True, cast(str, None), True, "", True),
+        ("Unavailable", True, "Undated", True, "", True),
+        ("", False, "", False, "", True),
     ],
 )
-def test_facility_directory_values_use_governed_value_states(
+def test_facility_overview_consolidates_unavailable_identity_values(
     capacity: str,
     capacity_present: bool,
     closed_date: str,
     closed_present: bool,
-    expected: tuple[str, str],
+    expected_capacity: str,
+    is_unavailable: bool,
 ) -> None:
     record = CcldFacilityLookupRecord(
         facility_number="157806098",
@@ -155,16 +163,17 @@ def test_facility_directory_values_use_governed_value_states(
         closed_date_source_present=closed_present,
     )
 
-    html = (
-        facility_lookup._render_facility_identity_and_core_facts(  # noqa: SLF001
-            record,
-            CcldFacilityReviewContext(),
-        )
-        + facility_lookup._render_secondary_facility_facts(record)  # noqa: SLF001
+    html = facility_lookup._render_facility_identity_and_core_facts(  # noqa: SLF001
+        record,
+        CcldFacilityReviewContext(),
     )
 
-    assert expected[0] in html
-    assert expected[1] in html
+    if is_unavailable:
+        assert "Unavailable facility facts" in html
+        assert "Capacity" in html
+    else:
+        assert f"<dd>{expected_capacity}</dd>" in html
+    assert "Closed date" not in html
     assert "not-a-date" not in html
     assert "present_blank" not in html
     assert "source_unavailable" not in html
@@ -1153,33 +1162,19 @@ def test_ccld_facility_review_hub_renders_safe_directory_context() -> None:
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
     assert "Facility Overview" in html
-    assert "Primary facility facts" in html
     assert "Synthetic Orchard Child Care" in html
     assert visible_text.count("Synthetic Orchard Child Care") == 1
     assert visible_text.count("900000001") == 1
-    assert "More facility facts" in html
-    _assert_collapsed_disclosure(html, "More facility facts")
-    assert html.index("Review summary") < html.index("Review next")
-    assert html.index("Review next") < html.index("Additional review signals")
-    assert html.index("Additional review signals") < html.index("Next actions")
-    assert html.index("Next actions") < html.index("More facility facts")
-    terms = _definition_terms(html)
-    for term in (
-        "Facility ID",
-        "Facility type",
-        "Status",
-        "Address",
-        "County",
-        "Capacity",
-        "Program type",
-        "Regional office",
-        "Closed date",
-    ):
-        assert terms.count(term) == 1
+    assert 'aria-label="Facility identity"' in html
+    assert "More facility facts" not in html
+    assert "<details" not in html
     assert "directory field" not in html
     assert "900000001" in html
     assert "Child Care Center" in html
-    assert "100 Example Way, Sample City, CA 90001" in html
+    assert "100 Example Way" in html
+    assert "Sample City" in html
+    assert "CA" in html
+    assert "90001" in html
     assert "Los Angeles" in html
     assert "24" in html
     assert "Licensed" in html
@@ -1189,28 +1184,24 @@ def test_ccld_facility_review_hub_renders_safe_directory_context() -> None:
     assert 'data-copy-status hidden aria-live="polite" aria-atomic="true"' in html
     assert "data-copy-control-bound" in html
     assert "showCopyStatus(button, 'Copy unavailable')" in html
-    assert "Facility pattern review summary" not in html
-    assert "No loaded complaint records are currently available" in html
-    assert "not a public-source completeness conclusion" in normalized_html
-    assert "Request or load records for this facility" in html
-    assert html.count("CCLD source availability") == 1
-    assert "No loaded complaint record is available for source review." in html
-    assert "Review next" in html
-    assert "No loaded records have review-next signals in this context." in html
-    assert "does not imply source completeness or absence of problems" in normalized_html
-    assert "Packet readiness" not in html
+    assert "Records needed for review" in html
     assert "No complaint records are loaded for this facility." in html
-    assert "Choose a date range to request or show complaint records." in html
-    assert "Start complaint request" in html
-    assert "Back to search" in html
+    assert "This is not a verified zero." in html
+    assert html.count('class="empty-state-card facility-overview-empty"') == 1
+    assert "Review summary" not in html
+    assert "Review next" not in html
+    assert "Additional review signals" not in html
+    assert "Next actions" not in html
+    assert "Packet readiness" not in html
+    assert "Get Records" in html
+    assert "Back to Find a Facility" in html
     assert f"{CCLD_RECORD_REQUEST_PATH}?facility_number=900000001" in html
-    assert terms.count("Facility ID") == 1
     assert "FAC_DO_DESC" not in html
     assert "RES_STREET_ADDR" not in html
     assert "source_record_key" not in html
     assert "raw_sha256" not in html
     assert "connector" not in html.casefold()
-    assert 'aria-label="Facility Overview actions"' in html
+    assert 'aria-label="Facility complaint record actions"' in html
     assert "Opening this page leaves source-derived records" not in normalized_html
     assert "Example Licensee" not in html
     assert "555-0101" not in html
@@ -1257,15 +1248,17 @@ def test_ccld_facility_review_hub_known_loaded_preloaded_example_renders(
     assert "434417302" in html
     assert "DAY CARE CENTER" in html
     assert "Santa Clara" in html
-    assert "77 REVIEW WAY, SAN JOSE, CA 95112" in html
-    assert "San Jose Regional Office" in html
-    assert "Status</dt>" in html
+    assert "77 REVIEW WAY" in html
+    assert "SAN JOSE" in html
+    assert "95112" in html
+    assert "San Jose Regional Office" not in html
+    assert "License status</dt>" in html
     assert "<dd>Source code 3 — label not verified</dd>" in html
     assert "<dd>3</dd>" not in html
     assert "RES_STREET_ADDR" not in html
     assert "FAC_DO_DESC" not in html
-    assert _definition_terms(html).count("Address") == 1
-    assert _definition_terms(html).count("Regional office") == 1
+    assert _definition_terms(html).count("Facility type") == 1
+    assert "Records needed for review" in html
     assert_no_secret_html(html)
 
 
@@ -1361,62 +1354,77 @@ def test_ccld_facility_review_hub_renders_signal_only_context_without_mutation(
                 )
             ),
         )
+        filtered_status, filtered_content_type, filtered_body = route_response(
+            (
+                f"{CCLD_FACILITY_REVIEW_HUB_PATH}?facility_number=157806098"
+                "&start_date=2099-01-01&end_date=2099-12-31"
+            ),
+            page_data_mode="fixture-demo",
+            ccld_record_request_ui_context=ccld_record_request_context_for_reviewer_context(
+                reviewer_ui_context_for_connection(
+                    connection,
+                    actor=_actor(roles=("tester_reviewer",)),
+                )
+            ),
+        )
         after_source_rows = _source_rows(connection)
         after_counts = _table_counts(connection)
 
     html = body.decode("utf-8")
+    filtered_html = filtered_body.decode("utf-8")
     normalized_html = " ".join(html.split()).casefold()
 
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
+    assert filtered_status == 200
+    assert filtered_content_type == "text/html; charset=utf-8"
     assert before_source_rows == after_source_rows
     assert before_counts == after_counts == _empty_reviewer_counts()
     assert "Facility Overview" in html
     assert "signal-only facility hub" not in html
     assert "Facility-directory record not available" in html
-    assert "Supported public licensing and visit observations are available" in html
     assert "A. MIRIAM JAMISON CHILDREN&#x27;S CENTER" in html
     assert "157806098" in html
-    assert "TEMPORARY SHELTER CARE FACILITY" not in html
-    assert "KERN" not in html
-    assert "LICENSED" not in html
+    assert "TEMPORARY SHELTER CARE FACILITY" in html
+    assert "KERN" in html
+    assert "LICENSED" in html
     assert "05/04/2026" in html
-    assert "43 total; 0 inspection; 12 complaint; 31 other" in html
+    assert "43 total; 12 complaint-related; 0 inspection; 31 other" in html
     assert "Complaint visit activity present review cue" not in html
     assert "Citation indicator present review cue" not in html
     assert "POC indicator present review cue" not in html
     assert "Review summary" in html
-    assert "reconciles deduplicated loaded complaint records" in html
-    assert "1</a></strong><span>Deduplicated complaints" in html
-    assert "1</a></strong><span>CCLD reports available" in html
-    assert "0</a></strong><span>Complaint records with review flags" in html
-    assert "Relevant complaint received date range" in html
+    assert "Counts reconcile to the one complaint inventory below" in html
+    assert ">1</a></strong><span>Deduplicated complaints" in html
+    assert ">1</a></strong><span>Original reports available" in html
+    assert "1 Records with review flags" in _visible_text(html)
+    assert "Complaint received date; 04/07/2022 to 04/07/2022" in html
     assert "04/07/2022" in html
-    assert "Unsubstantiated: 1 exact complaint record(s)" in html
+    assert "Finding: Unsubstantiated" in html
     assert "Source coverage" in html
-    assert "Available:" in html
-    assert "Not started: 1 complaint record(s)" in html
-    assert "0 notes" in html
+    assert "Available for the loaded corpus" in html
+    assert "Status: Not started" in html
+    assert "0 notes across 0 complaint records." in html
     assert "Review next" in html
-    assert "stable source-derived record identity provides the deterministic tie order" in html
-    assert "Open recommended complaint 32-CR-20220407124448" in html
+    assert "stable source-derived record identity for deterministic order" in html
+    assert "Review complaint 32-CR-20220407124448" in html
     assert "/reviewer/records/detail?source%5Frecord%5Fkey=" in html
-    assert "Exact contributing complaints" in html
-    assert "Open complaint record 32-CR-20220407124448" in html
+    assert "Canonical record inventory" in html
+    assert html.count("Review complaint 32-CR-20220407124448") == 1
     assert 'aria-label="Copy complaint or control number"' in html
     assert 'aria-label="Copy original CCLD report URL"' in html
-    assert "2 citation value(s); 1 Type A value(s); 1 Type B value(s)" in html
-    assert "Request records" in html
-    assert f"{CCLD_RECORD_REQUEST_PATH}?facility_number=157806098" in html
+    assert "2 total;" in html
+    assert "Type A" in html
+    assert "Type B" in html
     assert "Open facility review priority list" not in html
     assert "Coverage and interpretation limits" in html
     assert "local/test" not in normalized_html
     assert (
-        "supported public licensing and visit observations are available"
+        "separate supported public observations"
         in normalized_html
     )
-    assert "Signal-only hub actions" not in html
-    assert _definition_terms(html).count("Facility ID") == 1
+    assert "Additional review signals" not in html
+    assert "<details" not in html
     assert "FAC_DO_DESC" not in html
     assert "RES_STREET_ADDR" not in html
     assert "verified complaint" not in normalized_html
@@ -1427,6 +1435,14 @@ def test_ccld_facility_review_hub_renders_signal_only_context_without_mutation(
     assert "Do Not Display" not in html
     assert "555-0199" not in html
     assert "1 Private Fixture Way" not in html
+    assert "Facility Overview not found" not in filtered_html
+    assert "A. MIRIAM JAMISON CHILDREN&#x27;S CENTER" in filtered_html
+    assert "TEMPORARY SHELTER CARE FACILITY" in filtered_html
+    assert "No loaded complaints match the current facility review filters." in filtered_html
+    assert "No complaint records match the active facility filters." not in filtered_html
+    assert filtered_html.count('class="empty-state-card facility-overview-empty"') == 1
+    assert "Review summary" not in filtered_html
+    assert 'id="facility-complaint-inventory"' not in filtered_html
     assert_no_secret_html(html)
 
 
@@ -1480,33 +1496,30 @@ def test_ccld_facility_review_hub_shows_loaded_complaint_context_without_mutatio
     assert before_counts == after_counts == _empty_reviewer_counts()
     assert "A. MIRIAM JAMISON CHILDREN&#x27;S CENTER" in html
     assert "Review summary" in html
-    assert "reconciles deduplicated loaded complaint records" in html
-    assert "1</a></strong><span>Deduplicated complaints" in html
-    assert "1</a></strong><span>CCLD reports available" in html
-    assert "0</a></strong><span>Complaint records with review flags" in html
-    assert "Relevant complaint received date range" in html
+    assert "Counts reconcile to the one complaint inventory below" in html
+    assert ">1</a></strong><span>Deduplicated complaints" in html
+    assert ">1</a></strong><span>Original reports available" in html
+    assert "1 Records with review flags" in _visible_text(html)
+    assert "Complaint received date; 04/07/2022 to 04/07/2022" in html
     assert "04/07/2022" in html
-    assert "Finding" in _definition_terms(html)
-    assert "Serious-review category" in _definition_terms(html)
     assert "Source coverage" in _definition_terms(html)
-    assert "Unsubstantiated: 1 exact complaint record(s)" in html
-    assert "Reviewer-created status counts" in html
-    assert "Not started: 1 complaint record(s)" in html
-    assert "Reviewer-created note count" in html
-    assert "0 notes" in html
+    assert "Finding: Unsubstantiated" in html
+    assert "Status: Not started" in html
+    assert "Reviewer-created notes" in html
+    assert "0 notes across 0 complaint records." in html
     assert "32-CR-20220407124448" in html
     assert "Packet readiness" not in html
     assert "Review next" in html
-    assert "stable source-derived record identity provides the deterministic tie order" in html
-    assert "Open recommended complaint 32-CR-20220407124448" in html
+    assert "stable source-derived record identity for deterministic order" in html
+    assert "Review complaint 32-CR-20220407124448" in html
     assert "/reviewer/records/detail?source%5Frecord%5Fkey=" in html
-    assert "Exact contributing complaints" in html
-    assert "Open complaint record 32-CR-20220407124448" in html
-    assert "Open original CCLD report for 32-CR-20220407124448" in html
-    assert "Request records" in html
+    assert "Canonical record inventory" in html
+    assert html.count('class="facility-inventory-item is-recommended"') == 1
+    assert "Open original CCLD report" in html
+    assert 'aria-label="Filter the complaint inventory"' in html
+    assert "<details" not in html
     assert "Coverage and interpretation limits" in html
     assert "Selected facility identity" not in html
-    assert _definition_terms(html).count("Facility ID") == 1
     assert _definition_terms(html).count("Facility type") == 1
     assert "flag-badge" not in html
     assert "source_record_key" not in html
@@ -1516,7 +1529,7 @@ def test_ccld_facility_review_hub_shows_loaded_complaint_context_without_mutatio
     assert_no_secret_html(html)
 
 
-def test_ccld_facility_review_hub_review_next_cautious_reason_rows() -> None:
+def test_ccld_facility_review_hub_has_one_deterministic_primary_next_action() -> None:
     source = CcldFacilityReferenceSource(
         source_kind="test_reference",
         label="Test facility reference",
@@ -1548,19 +1561,33 @@ def test_ccld_facility_review_hub_review_next_cautious_reason_rows() -> None:
         recent_activity_date="2026-01-31",
         reviewer_status_counts=(("needs_follow_up", 1), ("reviewed", 1)),
         reviewer_note_record_count=1,
-        review_next_recommendations=(
-            CcldReviewNextRecommendation(
-                label="32-CR-REVIEW-NEXT",
-                finding_status_cue="Finding: Substantiated; reviewer status: Needs follow-up",
-                date_label="Recent activity 01/31/2026",
+        coverage_status="complete",
+        complaints=(
+            CcldFacilityComplaintContext(
+                source_record_key="complaint:ccld:complaint:next",
+                stable_complaint_id="complaint-next",
+                complaint_control_number="32-CR-REVIEW-NEXT",
+                subject="Complaint",
+                activity_date="2026-01-31",
+                finding="Substantiated",
                 detail_href="/reviewer/records/detail?source%5Frecord%5Fkey=encoded-record",
-                reasons=(
-                    "Reviewer-created status is Needs follow-up, not reviewed.",
-                    "Source-derived finding is substantiated.",
-                    "Type A citation cue loaded; verify wording in the source record.",
-                    "POC cue loaded; verify completion wording in the source record.",
-                    "Source traceability available for detail review.",
-                ),
+                source_url_href="https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports?facNum=900000001",
+                strongest_delay_days=90,
+                source_available=True,
+                reviewer_status="needs_follow_up",
+                reviewer_note_count=1,
+            ),
+            CcldFacilityComplaintContext(
+                source_record_key="complaint:ccld:complaint:later",
+                stable_complaint_id="complaint-later",
+                complaint_control_number="32-CR-LATER",
+                subject="Complaint",
+                activity_date="2026-01-01",
+                finding="Unsubstantiated",
+                detail_href="/reviewer/records/detail?source%5Frecord%5Fkey=later",
+                source_url_href="https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports?facNum=900000001",
+                source_available=True,
+                reviewer_status="reviewed",
             ),
         ),
     )
@@ -1574,13 +1601,11 @@ def test_ccld_facility_review_hub_review_next_cautious_reason_rows() -> None:
 
     assert "Review next" in html
     assert "32-CR-REVIEW-NEXT" in html
-    assert "Finding: Substantiated; reviewer status: Needs follow-up" in html
-    assert "Recent activity 01/31/2026" in html
-    assert "Reviewer-created status is Needs follow-up, not reviewed." in html
-    assert "Source-derived finding is substantiated." in html
-    assert "Type A citation cue loaded; verify wording in the source record." in html
-    assert "POC cue loaded; verify completion wording in the source record." in html
-    assert "Source traceability available for detail review." not in html
+    assert "Recommended because it has the most recent supported" in html
+    assert html.count('class="button" href="/reviewer/records/detail?') == 1
+    assert html.count('class="facility-inventory-item is-recommended"') == 1
+    assert html.count("32-CR-REVIEW-NEXT") > 1
+    assert "32-CR-LATER" in html
     assert (
         'href="/reviewer/records/detail?source%5Frecord%5Fkey=encoded-record"'
         in html
@@ -1590,11 +1615,11 @@ def test_ccld_facility_review_hub_review_next_cautious_reason_rows() -> None:
     assert "import_batch" not in html
     assert "audit_id" not in html
     assert "verified complaint" not in normalized_html
-    assert "source completeness" not in normalized_html
+    assert "does not establish source completeness" in normalized_html
     assert_no_secret_html(html)
 
 
-def test_ccld_facility_overview_renders_supported_public_licensing_observations(
+def test_ccld_facility_overview_zero_complaint_state_keeps_one_action(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
@@ -1663,34 +1688,21 @@ def test_ccld_facility_overview_renders_supported_public_licensing_observations(
 
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
-    assert "Additional review signals" in html
-    assert "Facility signal highlights" in html
+    assert "Records needed for review" in html
+    assert html.count('class="empty-state-card facility-overview-empty"') == 1
+    assert "Get Records" in html
+    assert "Back to Find a Facility" in html
+    assert "Licensing and visit activity" not in html
+    assert "Additional review signals" not in html
+    assert "Facility signal highlights" not in html
     assert "Uploaded summary field details" not in html
-    assert 'class="technical-details dense-table-details"' not in html
-    assert 'class="technical-details diagnostic-details"' not in html
-    assert "How to use these signals" not in html
-    assert html.count("CCLD source availability") == 1
-    assert (
-        "supported public licensing, visit, citation, and Plan of Correction "
-        "counts and dates are review observations only"
-        in normalized_html
-    )
+    assert "<details" not in html
     assert "ChildCareCenters06072026.csv" not in html
     assert "loaded June 7, 2026" not in html
     assert _definition_terms(html).count("Facility type") == 1
-    assert _definition_terms(html).count("Status") == 1
-    assert _definition_terms(html).count("Capacity") == 1
-    assert _definition_terms(html).count("County") == 1
-    assert _definition_terms(html).count("Regional office") == 1
-    assert _definition_terms(html).count("Closed date") == 1
-    assert "05/04/2026" in html
-    assert "43 total; 0 inspection; 12 complaint; 31 other" in html
-    assert "2 citation value(s); 1 Type A value(s); 2 Type B value(s)" in html
-    assert "POC date indicators" in html
-    assert "Complaint-related visit activity" in html
-    assert "Citation activity" in html
-    assert "Plan of Correction activity" in html
-    assert "Recent visit activity" in html
+    assert "05/04/2026" not in html
+    assert "43 total" not in html
+    assert "Citation activity" not in html
     assert "verified complaint" not in normalized_html.casefold()
     assert "facility has no complaints" not in normalized_html.casefold()
     assert "source complete." not in normalized_html.casefold()
