@@ -43,6 +43,17 @@ records or exposing private row contents.
 
 Validate connector output against JSON schemas and the source connector contract.
 
+Reviewer-facing regression contracts are registered in
+`docs/developer/reviewer-ui-regression-contracts.md` and implemented through
+the reusable assertions in `tests/unit/reviewer_ui_contracts.py`. Changes name
+affected, added, updated, superseded, or not-applicable contracts in the
+governed PR body. Focused tests should exercise representative fixture
+relationships and actual route or mutation outcomes instead of relying only on
+links, literal text, or complete markup. Approved presentation changes update
+or retire presentation-bound assertions through the registry's Issue #504
+classification rule while preserving durable accessibility, destination,
+identity, source, reviewer-state, and security invariants.
+
 ### Data quality tests
 
 Validate internal consistency, including required fields, valid date order, allowed finding values, duplicate source URLs, and hash presence.

@@ -6,6 +6,7 @@ from __future__ import annotations
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from types import MappingProxyType
+from urllib.parse import parse_qs, urlparse
 
 SUPPORTED_ACTION_KINDS = frozenset({"get", "external", "mutation"})
 PROHIBITED_INFORMATION_TIER_TERMS = frozenset(
@@ -48,6 +49,119 @@ def _required_text(value: object, description: str) -> str:
     return value
 
 
+def _required_mapping(
+    value: object,
+    description: str,
+    record_label: str,
+) -> Mapping[str, object]:
+    if not isinstance(value, Mapping):
+        raise ReviewerContractError(f"{record_label}: {description} is required")
+    return value
+
+
+def assert_fixture_integrity(
+    records: Sequence[Mapping[str, object]],
+    *,
+    reviewer_states: Sequence[Mapping[str, object]] = (),
+    route_references: Sequence[Mapping[str, object]] = (),
+) -> None:
+    """Prove reviewer-visible fixture relationships and route references agree."""
+
+    facility_ids: set[str] = set()
+    complaint_ids: set[str] = set()
+    document_ids: set[str] = set()
+    source_record_keys: set[str] = set()
+    for index, record in enumerate(records):
+        record_label = f"fixture record {index}"
+        facility = _required_mapping(record.get("facility"), "facility", record_label)
+        document = _required_mapping(record.get("source_document"), "source document", record_label)
+        complaint = _required_mapping(record.get("complaint"), "complaint", record_label)
+        facility_id = _required_text(facility.get("facility_id"), f"{record_label} facility ID")
+        facility_number = _required_text(
+            facility.get("external_facility_number"),
+            f"{record_label} external facility number",
+        )
+        document_id = _required_text(document.get("document_id"), f"{record_label} document ID")
+        complaint_id = _required_text(complaint.get("complaint_id"), f"{record_label} complaint ID")
+        complaint_label = f"complaint {complaint_id}"
+
+        if document.get("facility_id") != facility_id:
+            raise ReviewerContractError(
+                f"{complaint_label}: source document {document_id} facility_id "
+                f"{document.get('facility_id')!r} does not match facility {facility_id!r}"
+            )
+        if complaint.get("facility_id") != facility_id:
+            raise ReviewerContractError(
+                f"{complaint_label}: complaint facility_id "
+                f"{complaint.get('facility_id')!r} does not match facility {facility_id!r}"
+            )
+        if complaint.get("document_id") != document_id:
+            raise ReviewerContractError(
+                f"{complaint_label}: complaint document_id "
+                f"{complaint.get('document_id')!r} does not match source document "
+                f"{document_id!r}"
+            )
+
+        source_url = _required_text(document.get("source_url"), f"{complaint_label} source URL")
+        source_query = parse_qs(urlparse(source_url).query)
+        report_index = str(document.get("report_index"))
+        if source_query.get("facNum") != [facility_number]:
+            raise ReviewerContractError(
+                f"{complaint_label}: source URL facility reference does not match "
+                f"facility {facility_number!r}"
+            )
+        if source_query.get("inx") != [report_index]:
+            raise ReviewerContractError(
+                f"{complaint_label}: source URL document index does not match "
+                f"report_index {report_index!r}"
+            )
+
+        facility_ids.add(facility_id)
+        document_ids.add(document_id)
+        complaint_ids.add(complaint_id)
+        source_record_keys.add(f"complaint:{complaint_id}")
+
+    for index, state in enumerate(reviewer_states):
+        state_label = _required_text(
+            state.get("state_id", f"reviewer-state-{index}"),
+            f"reviewer state {index} ID",
+        )
+        source_record_key = _required_text(
+            state.get("source_record_key"),
+            f"reviewer state {state_label} source_record_key",
+        )
+        if source_record_key not in source_record_keys:
+            raise ReviewerContractError(
+                f"reviewer state {state_label}: source_record_key "
+                f"{source_record_key!r} does not reference a fixture complaint"
+            )
+
+    known_references = {
+        "facility_id": facility_ids,
+        "complaint_id": complaint_ids,
+        "document_id": document_ids,
+        "source_record_key": source_record_keys,
+    }
+    for index, route in enumerate(route_references):
+        route_label = _required_text(
+            route.get("route_id", f"route-{index}"), f"route reference {index} ID"
+        )
+        destination = _required_text(
+            route.get("destination"), f"route reference {route_label} destination"
+        )
+        if not destination.startswith("/"):
+            raise ReviewerContractError(
+                f"route reference {route_label}: destination must be an internal path"
+            )
+        for relationship, known_values in known_references.items():
+            value = route.get(relationship)
+            if value is not None and str(value) not in known_values:
+                raise ReviewerContractError(
+                    f"route reference {route_label}: {relationship} {value!r} "
+                    "does not reference a fixture record"
+                )
+
+
 def _validated_information_exception(exception: InformationTierException) -> frozenset[str]:
     exception_id = _required_text(exception.exception_id, "information-tier exception ID")
     _required_text(exception.reason, "information-tier exception reason")
@@ -76,8 +190,14 @@ def assert_destinations(actions: Iterable[Mapping[str, object]], get: Callable[[
         state = action.get("state", "available")
         if state == "unavailable":
             _required_text(action.get("unavailable_reason"), "unavailable action reason")
-            if action.get("destination") or action.get("mutation_path") or action.get("usable") is True:
-                raise ReviewerContractError("unavailable action exposes a usable destination or mutation path")
+            if (
+                action.get("destination")
+                or action.get("mutation_path")
+                or action.get("usable") is True
+            ):
+                raise ReviewerContractError(
+                    "unavailable action exposes a usable destination or mutation path"
+                )
             if kind == "external" and not action.get("provenance"):
                 raise ReviewerContractError("unavailable external action lacks governed provenance")
             continue
@@ -96,15 +216,21 @@ def assert_destinations(actions: Iterable[Mapping[str, object]], get: Callable[[
             raise ReviewerContractError("internal action destination is unusable")
 
 
-def assert_information_tier(text: str, *, exception: InformationTierException | None = None) -> None:
-    allowed_terms = frozenset() if exception is None else _validated_information_exception(exception)
+def assert_information_tier(
+    text: str, *, exception: InformationTierException | None = None
+) -> None:
+    allowed_terms = (
+        frozenset() if exception is None else _validated_information_exception(exception)
+    )
     lowered = text.casefold()
     for phrase in PROHIBITED_INFORMATION_TIER_TERMS:
         if phrase in lowered and phrase not in allowed_terms:
             raise ReviewerContractError(f"reviewer information tier exposes {phrase}")
 
 
-def assert_help_surface(surfaces: Sequence[Mapping[str, object]], *, escape_supported: bool) -> None:
+def assert_help_surface(
+    surfaces: Sequence[Mapping[str, object]], *, escape_supported: bool
+) -> None:
     active = [surface for surface in surfaces if surface.get("active")]
     if len(active) > 1 or (active and not active[0].get("focus")):
         raise ReviewerContractError("help surface collision or accessibility state")
@@ -147,7 +273,9 @@ def assert_continuity(before: Mapping[str, object], after: Mapping[str, object])
 
 def assert_actions(actions: Sequence[Mapping[str, object]]) -> None:
     ordered = sorted(actions, key=lambda action: int(str(action["order"])))
-    if list(actions) != ordered or any(not action.get("visible") or not action.get("keyboard") for action in actions):
+    if list(actions) != ordered or any(
+        not action.get("visible") or not action.get("keyboard") for action in actions
+    ):
         raise ReviewerContractError("action visibility, order, or keyboard contract failed")
     for left, right in zip(ordered, ordered[1:], strict=False):
         tolerance = float(str(left.get("overlap_tolerance", 0)))
@@ -155,7 +283,9 @@ def assert_actions(actions: Sequence[Mapping[str, object]]) -> None:
             raise ReviewerContractError("actions overlap")
 
 
-def assert_result_structure(representations: Sequence[Mapping[str, object]], sections: Sequence[Mapping[str, object]]) -> None:
+def assert_result_structure(
+    representations: Sequence[Mapping[str, object]], sections: Sequence[Mapping[str, object]]
+) -> None:
     seen: dict[tuple[object, ...], str] = {}
     for representation in representations:
         raw_rows = representation.get("rows", ())
@@ -171,7 +301,9 @@ def assert_result_structure(representations: Sequence[Mapping[str, object]], sec
                 or exception.duplicate_of_id != seen[rows]
                 or exception.section_id != representation.get("section_id")
             ):
-                raise ReviewerContractError("duplication exception does not match the duplicated representation")
+                raise ReviewerContractError(
+                    "duplication exception does not match the duplicated representation"
+                )
         else:
             if not representation_id:
                 raise ReviewerContractError("representation ID is required")
