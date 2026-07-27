@@ -192,8 +192,7 @@ def render_inline_glossary_term(term: str, definition: str, term_id: str) -> str
     escaped_term_id = html.escape(term_id, quote=True)
     return (
         f'<dfn class="inline-glossary-term" tabindex="0" role="term" '
-        f'aria-description="{escaped_definition}" '
-        f'title="{escaped_definition}" data-definition="{escaped_definition}" '
+        f'data-definition="{escaped_definition}" '
         f'data-term-id="{escaped_term_id}">{escaped_term}</dfn>'
     )
 
@@ -408,44 +407,37 @@ INLINE_GLOSSARY_SCRIPT = """<script>
   'use strict';
   var viewportPadding = 8;
   var triggerGap = 8;
+  var activeTerm = null;
+  var pinnedTerm = null;
 
   function definitionFor(term) {
-    var sibling = term.nextElementSibling;
-    if (sibling && sibling.classList.contains('inline-glossary-definition')) {
-      return sibling;
-    }
-    var definitionId = term.getAttribute('aria-describedby');
+    var definitionId = term.getAttribute('data-glossary-definition-id');
     return definitionId ? document.getElementById(definitionId) : null;
   }
 
   function createDefinitions() {
+    var definitionCounts = {};
     document.querySelectorAll('.inline-glossary-term').forEach(function (term) {
       var definitionText = term.getAttribute('data-definition');
       var termId = term.getAttribute('data-term-id');
       if (!definitionText || !termId || definitionFor(term)) return;
+      var safeTermId = termId.replace(/[^A-Za-z0-9_-]+/g, '-');
+      var baseId = 'inline-glossary-definition-' + safeTermId;
+      var count = definitionCounts[baseId] || 0;
+      var definitionId = count === 0 ? baseId : baseId + '-' + count;
+      while (document.getElementById(definitionId)) {
+        count += 1;
+        definitionId = baseId + '-' + count;
+      }
+      definitionCounts[baseId] = count + 1;
       var definition = document.createElement('span');
       definition.className = 'inline-glossary-definition';
-      definition.id = 'inline-glossary-definition-' + termId;
+      definition.id = definitionId;
       definition.setAttribute('role', 'tooltip');
       definition.textContent = definitionText;
       document.body.appendChild(definition);
-      term.setAttribute('aria-describedby', definition.id);
-    });
-  }
-
-  function assignUniqueDefinitionIds() {
-    var definitionCounts = {};
-    document.querySelectorAll('.inline-glossary-term').forEach(function (term) {
-      var definition = definitionFor(term);
-      if (!definition || !definition.id) return;
-      var baseId = definition.id;
-      var count = definitionCounts[baseId] || 0;
-      definitionCounts[baseId] = count + 1;
-      if (count > 0) {
-        var uniqueId = baseId + '-' + count;
-        definition.id = uniqueId;
-        term.setAttribute('aria-describedby', uniqueId);
-      }
+      term.setAttribute('data-glossary-definition-id', definitionId);
+      term.setAttribute('aria-describedby', definitionId);
     });
   }
 
@@ -458,6 +450,8 @@ INLINE_GLOSSARY_SCRIPT = """<script>
       definition.style.maxHeight = '';
       definition.style.top = '';
     }
+    if (activeTerm === term) activeTerm = null;
+    if (pinnedTerm === term) pinnedTerm = null;
   }
 
   function position(term, definition) {
@@ -473,16 +467,26 @@ INLINE_GLOSSARY_SCRIPT = """<script>
       Math.max(trigger.left, viewportPadding),
       Math.max(viewportPadding, window.innerWidth - popup.width - viewportPadding)
     );
+    var desiredTop = showBelow
+      ? trigger.bottom + triggerGap
+      : trigger.top - popup.height - triggerGap;
+    var maximumTop = Math.max(
+      viewportPadding,
+      window.innerHeight - popup.height - viewportPadding
+    );
     definition.style.left = left + 'px';
-    definition.style.top = (showBelow ? trigger.bottom + triggerGap : trigger.top - popup.height - triggerGap) + 'px';
+    definition.style.top = Math.min(
+      Math.max(desiredTop, viewportPadding),
+      maximumTop
+    ) + 'px';
   }
 
-  function show(term) {
+  function show(term, pin) {
     var definition = definitionFor(term);
     if (!definition) return;
-    document.querySelectorAll('.inline-glossary-term.is-glossary-definition-visible').forEach(function (other) {
-      if (other !== term) hide(other);
-    });
+    if (activeTerm && activeTerm !== term) hide(activeTerm);
+    activeTerm = term;
+    pinnedTerm = pin ? term : null;
     term.removeAttribute('data-glossary-dismissed');
     term.classList.add('is-glossary-definition-visible');
     definition.classList.add('is-visible');
@@ -490,33 +494,49 @@ INLINE_GLOSSARY_SCRIPT = """<script>
   }
 
   createDefinitions();
-  assignUniqueDefinitionIds();
   document.querySelectorAll('.inline-glossary-term').forEach(function (term) {
-    term.addEventListener('pointerenter', function () { show(term); });
-    term.addEventListener('pointerleave', function () {
-      if (document.activeElement !== term) hide(term);
+    term.addEventListener('pointerenter', function (event) {
+      if (event.pointerType === 'touch') return;
+      if (activeTerm && activeTerm !== term && document.activeElement === activeTerm) return;
+      show(term, false);
     });
-    term.addEventListener('focusin', function () { show(term); });
+    term.addEventListener('pointerleave', function () {
+      if (document.activeElement !== term && pinnedTerm !== term) hide(term);
+    });
+    term.addEventListener('focusin', function () { show(term, pinnedTerm === term); });
     term.addEventListener('focusout', function () { hide(term); });
+    term.addEventListener('click', function () {
+      var shouldClose = activeTerm === term && pinnedTerm === term;
+      term.focus({preventScroll: true});
+      if (shouldClose) {
+        hide(term);
+      } else {
+        show(term, true);
+      }
+    });
     term.addEventListener('keydown', function (event) {
-      if (event.key === 'Escape') {
+      if (event.key === 'Escape' && activeTerm === term) {
+        event.preventDefault();
         term.setAttribute('data-glossary-dismissed', 'true');
         hide(term);
+        term.focus({preventScroll: true});
       }
     });
   });
 
+  document.addEventListener('pointerdown', function (event) {
+    if (!activeTerm || activeTerm.contains(event.target)) return;
+    hide(activeTerm);
+  });
   window.addEventListener('resize', function () {
-    document.querySelectorAll('.inline-glossary-term.is-glossary-definition-visible').forEach(function (term) {
-      var definition = definitionFor(term);
-      if (definition) position(term, definition);
-    });
+    if (!activeTerm) return;
+    var definition = definitionFor(activeTerm);
+    if (definition) position(activeTerm, definition);
   });
   window.addEventListener('scroll', function () {
-    document.querySelectorAll('.inline-glossary-term.is-glossary-definition-visible').forEach(function (term) {
-      var definition = definitionFor(term);
-      if (definition) position(term, definition);
-    });
+    if (!activeTerm) return;
+    var definition = definitionFor(activeTerm);
+    if (definition) position(activeTerm, definition);
   }, true);
 }());
 </script>"""
@@ -2140,6 +2160,7 @@ SHARED_CSS = r"""
       background: #ffffff;
       border: 1px solid var(--line);
       border-radius: 6px;
+      box-sizing: border-box;
       box-shadow: var(--shadow-strong);
       color: var(--ink);
       display: block;
@@ -2154,7 +2175,7 @@ SHARED_CSS = r"""
       text-transform: none;
       visibility: hidden;
       width: max-content;
-      z-index: 2;
+      z-index: 300;
     }
     .inline-glossary-definition.is-visible {
       visibility: visible;

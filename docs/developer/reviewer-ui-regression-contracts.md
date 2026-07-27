@@ -19,7 +19,7 @@ Status vocabulary:
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | `RT-RC-001` | Partially enforced | A reviewer action reaches a usable authorized destination with supported context; destination and authorization integrity remain protected. | Link label, placement, icon, and action-group layout. | #608; adopt in #419, #420, #502, #503, #610 | Complaint detail, facility-priority review, retained-search return, source action, and reviewer-status states. | `tests/unit/reviewer_ui_contracts.py::assert_destinations`; `tests/unit/test_reviewer_ui_contract_routes.py`. | Additional dependent-route and browser adoption. | Update with an approved route replacement; supersede/retire only with replacement redirect/context evidence. |
 | `RT-RC-002` | Partially enforced | Reviewer routes exclude operator controls, runtime commands, and raw diagnostics from the attorney tier. | Page grouping, wording, and control styling. | #608; adopt in #502, #503, #610 | Representative safe reviewer fixture. | `assert_information_tier` and foundation test. | Route-specific browser evidence. | Update only with a governed information-tier decision; never retire the tier boundary. |
-| `RT-RC-003` | Partially enforced | One help treatment is active per dense reviewer context without overlapping announcements or focus traps. | Trigger wording, icon, placement, and help panel layout. | #608; adopt in #606 | Representative help-surface state. | `assert_help_surface` and foundation test. | #606 component/browser adoption. | Retire obsolete presentation assertions only through #504 classification and an approved replacement. |
+| `RT-RC-003` | Enforced | One help treatment is active per dense reviewer context; pointer, keyboard, and touch access do not create duplicate native or ARIA descriptions; dismissal, focus restoration, adjacent triggers, and viewport containment remain predictable. | Trigger wording, icon, above/below placement, and help panel layout. | #608; consumed and extended by #606 | Shared glossary component, Compare Facilities, and Complaint Overview repeated missing-value states. | `assert_help_surface`; foundation, shared-shell component, and representative real-route tests. | No gap in the bounded component/route contract; a future approved visual redesign supplies its own replacement visual evidence. | Retire obsolete presentation assertions only through #504 classification and an approved replacement. |
 | `RT-RC-004` | Partially enforced | Facility identity remains consistent within a current tested state; explicit historical, conflict, and unavailable states remain distinguishable. | Identity wording and card/table arrangement. | #608; adopt in #419, #420 | Seeded fixture and representative cross-surface identity state. | `assert_facility_identity`; fixture-integrity test; `test_hosted_reviewer_ui.py::test_core_facility_surfaces_share_projected_identity_without_mutation`. | Browser return-context evidence. | Update with governed identity change; supersede only with explicit state mapping; retain source/data protections. |
 | `RT-RC-005` | Partially enforced | GET state changes preserve selection, focus, and meaningful context; required actions remain visible, ordered, keyboard-operable, and non-overlapping. | Control type, visual order, and responsive layout. | #608; adopt in #419, #502, #503, #610 | Retained search, complaint return context, mutation feedback, and representative action-group state. | `assert_continuity`; `assert_actions`; foundation and real-route tests. | Governed browser viewport/zoom adoption. | Update with approved interaction change; supersede with replacement browser evidence; retire only after equivalent continuity protection. |
 | `RT-RC-006` | Partially enforced | Fixture isolation, valid facility/complaint/document/source-index/reviewer-state/route relationships, non-duplicated results, and consolidated empty states remain protected. | Fixture naming, test-data arrangement, and presentation layout. | #608; adopt in #420, #502, #503, #607, #610 | Seeded complaint, source document, facility, reviewer-state, route, populated, and empty states. | `assert_fixture_integrity`; `assert_result_structure`; foundation tests; source-evidence fixture-isolation test. | Additional dependent-route and browser adoption. | Update builders and relationship checks together; registry exceptions must be explicit; retire only with approved equivalent separation. |
@@ -53,6 +53,35 @@ Unavailable actions must still declare a supported action kind and a non-empty
 unavailability reason, and may not expose a usable destination or mutation
 path.
 
+## RT-RC-003 shared help behavior
+
+`render_inline_glossary_term` is the shared glossary and missing-value help
+component. Reviewer missing-value presentations consume it through
+`_presentation_markup`; they do not create a second missing-value component.
+Current representative consumers are Compare Facilities and the Complaint
+Overview historical complaint-report section.
+
+The component opens on non-touch pointer entry or keyboard focus and supports
+click or tap without requiring hover. Only one definition window may be active.
+Pointer leave, blur, outside pointer interaction, and Escape dismiss it; Escape
+keeps or restores focus on the term. Activating an adjacent term closes the
+prior definition first. The window is attached to the document body, repositions
+above or below the term, stays within viewport edges, and scrolls internally
+when available height is constrained.
+
+Each term has one custom `role="tooltip"` description connected by one unique
+`aria-describedby` relationship. A term must not also emit a native `title` or
+`aria-description`; the tooltip is not an `aria-live` region. Trigger copy,
+dotted-underline styling, precise above/below choice, dimensions, and panel
+layout remain supersedable when an approved presentation preserves the contract.
+
+Future reviewer changes using glossary or missing-value help declare
+`RT-RC-003` affected in the governed PR body and add the smallest shared
+component plus representative-route coverage. Issue #610 still owns broader
+Complaint Worklist and Complaint Overview hierarchy, duplication, terminology,
+source-state, reviewer-state, and complaint-action changes; #606 changed none
+of those areas.
+
 ## Bounded historical sample
 
 | Issue | Durable outcome | Prior executable protection | Gap classification | Phase 1 treatment |
@@ -61,11 +90,11 @@ path.
 | #419 | Reviewers retain filters and context while moving from cross-facility results to usable complaint and facility destinations. | Focused route tests existed for individual surfaces. | Route-limited. | Representative real-route and continuity coverage addresses the shared category; full #419 adoption remains deferred. |
 | #522 | The same governed Facility ID resolves consistently across reviewer and facility surfaces. | A cross-surface identity test already exercises actual responses. | Durable executable protection existed. | Reused unchanged under `RT-RC-004`; fixture relationship checks strengthen its inputs. |
 | #605 | Complaint, source, facility, and reviewer-status actions never expose broken fixture targets or unusable destinations. | Earlier checks did not jointly prove fixture relationships and actual outcomes. | Fixture-incomplete and shallow. | `assert_fixture_integrity` plus representative real requests/mutation feedback addresses the failure category without reimplementing #605. |
-| #606 | One understandable help treatment remains active without collision, duplicate announcement, or focus loss. | Existing checks covered isolated markup and behavior fragments. | Route-limited and presentation-bound. | `RT-RC-003` supplies the shared behavior contract; component/browser adoption remains deferred to #606. |
+| #606 | One understandable help treatment remains active without collision, duplicate announcement, or focus loss. | Existing checks covered isolated markup and behavior fragments. | Route-limited and presentation-bound. | `RT-RC-003` now supplies the shared behavior contract, shared-shell component coverage, and representative Compare Facilities and Complaint Overview route adoption. |
 
 ## Deferred Issue #608 phases
 
-Phase 1 does not complete dependent-route adoption, governed browser focus and
-viewport evidence, or the substantive UI fixes in #605, #606, #502, #419,
+Phase 1 does not complete remaining dependent-route adoption, governed browser
+focus and viewport evidence, or the substantive UI fixes in #605, #502, #419,
 #420, #503, #607, or #610. Those phases consume this registry and helper layer
 without creating separate contract systems.

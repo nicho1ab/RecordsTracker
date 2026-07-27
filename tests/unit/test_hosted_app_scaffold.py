@@ -1339,7 +1339,12 @@ def test_active_nav_route_prefixes_require_a_path_segment_boundary() -> None:
 
 
 def test_shared_inline_glossary_renderer_and_shell_behavior_are_collision_safe() -> None:
-    glossary_markup = render_inline_glossary_term(
+    first_term = render_inline_glossary_term(
+        "Finding",
+        "The outcome or status shown in a public complaint record.",
+        "test-finding",
+    )
+    second_term = render_inline_glossary_term(
         "Finding",
         "The outcome or status shown in a public complaint record.",
         "test-finding",
@@ -1347,23 +1352,32 @@ def test_shared_inline_glossary_renderer_and_shell_behavior_are_collision_safe()
     html = render_page_shell(
         title="Glossary test",
         heading="Glossary test",
-        main=f"<p>{glossary_markup}</p>",
+        main=f"<p>{first_term} {second_term}</p>",
         skip_label="Skip glossary test",
     )
 
-    assert '<dfn class="inline-glossary-term" tabindex="0" role="term"' in html
-    assert 'data-term-id="test-finding">Finding</dfn>' in html
+    assert html.count('<dfn class="inline-glossary-term" tabindex="0" role="term"') == 2
+    assert html.count('data-term-id="test-finding">Finding</dfn>') == 2
+    assert "aria-description=" not in first_term
+    assert "title=" not in first_term
     assert "function createDefinitions()" in html
     assert "document.body.appendChild(definition)" in html
-    assert "term.setAttribute('aria-describedby', definition.id)" in html
-    assert "assignUniqueDefinitionIds" in html
-    assert "term.setAttribute('aria-describedby', uniqueId)" in html
+    assert "while (document.getElementById(definitionId))" in html
+    assert "term.setAttribute('data-glossary-definition-id', definitionId)" in html
+    assert "term.setAttribute('aria-describedby', definitionId)" in html
+    assert "var activeTerm = null" in html
+    assert "var pinnedTerm = null" in html
     assert "border-bottom: 1px dotted currentColor" in html
     assert "pointerenter" in html
+    assert "event.pointerType === 'touch'" in html
     assert "focusin" in html
     assert "focusout" in html
+    assert "term.addEventListener('click'" in html
+    assert "document.addEventListener('pointerdown'" in html
     assert "event.key === 'Escape'" in html
+    assert "term.focus({preventScroll: true})" in html
     assert "position: fixed" in html
+    assert "box-sizing: border-box" in html
     assert "overflow-y: auto" in html
     assert "window.addEventListener('resize'" in html
 

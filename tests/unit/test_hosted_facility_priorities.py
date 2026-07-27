@@ -627,6 +627,8 @@ def test_facility_intelligence_accessible_structure_and_safe_language() -> None:
     assert "<details" not in html
     assert "No substantiated count" not in html
     assert "Review public records" in html
+    assert 'data-term-id="intelligence-substantiated">Substantiated</dfn>' in html
+    assert "CCLD finding term" not in html
     assert "Facilities" in html
     assert "Request Records" in html
     assert "Feedback" in html

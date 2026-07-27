@@ -204,27 +204,74 @@ def test_information_tier_exceptions_are_narrow_and_governed():
 
 
 def test_help_surface_requires_explicit_valid_announcement_evidence():
+    active_focus_surface = {
+        "active": True,
+        "trigger": "focus",
+        "focus": True,
+        "announcements": 1,
+        "accessible_descriptions": 1,
+        "native_title": False,
+        "aria_description": False,
+        "within_viewport": True,
+        "overlaps_trigger": False,
+        "escape_dismisses": True,
+        "blur_dismisses": True,
+        "outside_dismisses": True,
+        "focus_restored": True,
+    }
+    for trigger in ("focus", "click", "tap"):
+        assert_help_surface(
+            [active_focus_surface | {"trigger": trigger}],
+            escape_supported=True,
+        )
     assert_help_surface(
-        [{"active": True, "focus": True, "announcements": 1, "escape_dismisses": True}],
+        [
+            active_focus_surface | {"active": False},
+            active_focus_surface | {"trigger": "hover", "focus": False, "announcements": 0},
+        ],
         escape_supported=True,
     )
-    for surface in (
-        {"active": True, "focus": True, "announcements": 0},
-        {"active": True, "focus": True, "announcements": 2},
-        {"active": True, "focus": True},
-        {"active": True, "focus": True, "announcements": "1"},
-        {"active": True, "focus": True, "announcements": True},
+    for update in (
+        {"announcements": 0},
+        {"announcements": 2},
+        {"announcements": "1"},
+        {"announcements": True},
+        {"trigger": "keyboard"},
+        {"focus": False},
+        {"accessible_descriptions": 2},
+        {"native_title": True},
+        {"aria_description": True},
+        {"within_viewport": False},
+        {"overlaps_trigger": True},
+        {"blur_dismisses": False},
+        {"outside_dismisses": False},
+        {"focus_restored": False},
     ):
         with pytest.raises(ReviewerContractError):
-            assert_help_surface([surface], escape_supported=False)
+            assert_help_surface([active_focus_surface | update], escape_supported=True)
+    with pytest.raises(ReviewerContractError):
+        assert_help_surface(
+            [active_focus_surface, active_focus_surface | {"trigger": "click"}],
+            escape_supported=True,
+        )
     assert_help_surface(
         [
             {
                 "active": True,
+                "trigger": "focus",
                 "focus": True,
                 "announcement_mode": "not-required",
                 "help_type": "static-inline-definition",
                 "announcements": 0,
+                "accessible_descriptions": 1,
+                "native_title": False,
+                "aria_description": False,
+                "within_viewport": True,
+                "overlaps_trigger": False,
+                "escape_dismisses": False,
+                "blur_dismisses": False,
+                "outside_dismisses": False,
+                "focus_restored": False,
             }
         ],
         escape_supported=False,
@@ -234,10 +281,20 @@ def test_help_surface_requires_explicit_valid_announcement_evidence():
             [
                 {
                     "active": True,
+                    "trigger": "focus",
                     "focus": True,
                     "announcement_mode": "not-required",
                     "help_type": "tooltip",
                     "announcements": 0,
+                    "accessible_descriptions": 1,
+                    "native_title": False,
+                    "aria_description": False,
+                    "within_viewport": True,
+                    "overlaps_trigger": False,
+                    "escape_dismisses": False,
+                    "blur_dismisses": True,
+                    "outside_dismisses": True,
+                    "focus_restored": False,
                 }
             ],
             escape_supported=False,
@@ -320,7 +377,24 @@ def test_tier_help_identity_continuity_responsive_and_structure_contracts():
         assert_facility_identity([{"facility_id": "1", "name": ""}])
     with pytest.raises(ReviewerContractError):
         assert_help_surface(
-            [{"active": True, "focus": False, "announcements": 1}], escape_supported=False
+            [
+                {
+                    "active": True,
+                    "trigger": "focus",
+                    "focus": False,
+                    "announcements": 1,
+                    "accessible_descriptions": 1,
+                    "native_title": False,
+                    "aria_description": False,
+                    "within_viewport": True,
+                    "overlaps_trigger": False,
+                    "escape_dismisses": False,
+                    "blur_dismisses": True,
+                    "outside_dismisses": True,
+                    "focus_restored": False,
+                }
+            ],
+            escape_supported=False,
         )
     with pytest.raises(ReviewerContractError):
         assert_actions([{"order": 1, "visible": False, "keyboard": True, "left": 0, "right": 10}])

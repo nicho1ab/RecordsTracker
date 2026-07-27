@@ -2173,7 +2173,7 @@ def _render_facility_intelligence(
           <p>Ordered by governed priority factors. Exact reasons appear in each row.</p>
         </section>
         {_render_facility_intelligence_filters(filters, filter_options)}
-        <p class="intelligence-glossary-line">{_glossary_term('Substantiated', 'A finding label shown in a public CCLD complaint record.', 'intelligence-substantiated')} <span>CCLD finding term</span></p>
+        <p class="intelligence-glossary-line">{_glossary_term('Substantiated', 'A finding label shown in a public CCLD complaint record.', 'intelligence-substantiated')}</p>
         {status_markup}
         {status_feedback}
 {result_markup}
