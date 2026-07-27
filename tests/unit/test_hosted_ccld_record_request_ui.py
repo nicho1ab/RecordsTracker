@@ -953,8 +953,8 @@ def test_ccld_record_request_queue_filters_by_existing_reviewer_status() -> None
     assert "Review update saved" in status_html
     assert "Note saved. The source complaint record was not changed." in note_html
     assert "Review status saved as Reviewed." in status_html
-    assert "Return to review queue" in note_html
-    assert "Return to review queue" in status_html
+    assert "Return to Complaint Worklist" in note_html
+    assert "Return to Complaint Worklist" in status_html
     assert "Save review update" in note_html
     assert "Save review update" in status_html
     assert "Fixture Queue Reviewer (tester)" in note_html
