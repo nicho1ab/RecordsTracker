@@ -170,6 +170,49 @@ or data-contract authority is unresolved, branch or file overlap is uncertain,
 or implementation could materially affect architecture, security, privacy,
 schemas, ingestion, deployment, or source traceability.
 
+### Evidence, packages, and reassessment
+
+A successful check or verified fact remains accepted until a named input
+changes. Moving to another prompt, phase, or session does not invalidate it.
+Source or test changes invalidate affected test results; a new commit
+invalidates prior head-specific CI results; a PR-body edit invalidates prior
+verification of that body; changed workflow or verification code invalidates
+results produced under the old rule; and a new superseding failed required run
+invalidates the previously accepted required-run state.
+
+Before repeating a check, the prompt or report must identify the concrete
+changed input that could produce a different result. Do not repeat checks merely
+for caution, elapsed time, session handoff, or another workflow phase.
+
+The normal task packages are:
+
+- **Implementation package:** inspect, implement, correct routine failures,
+  validate, commit, push, monitor CI, and finalize the PR when authorized.
+- **Review package:** one focused review that reuses unchanged accepted
+  evidence.
+- **Completion package:** merge, synchronize `main`, update the issue, and
+  report completion when separately authorized.
+
+Pending CI, routine lint fixes, ordinary in-scope test corrections,
+PR-description updates, refetching, and verification of the just-saved
+artifact normally remain within the active package. Stop a package only for a
+material repository mismatch, scope expansion, unavailable permission,
+destructive-risk decision, multiple legitimate designs requiring user choice,
+or a failure that cannot safely be corrected within the granted authority.
+
+Reassess and consolidate the workflow when actual prompts exceed the estimate
+by two; the same defect class needs two continuation prompts; a prior accepted
+result is about to be repeated without an invalidating change; the user is
+relaying more intermediate results rather than fewer; or the process becomes
+longer than the implementation work.
+
+Report failures with the exact failing message, step, log excerpt, or rejected
+GitHub rule before proposing alternate commands or workflow paths. A summary
+such as "branch policy blocked it" is insufficient when the exact failure is
+available. Lead reports with what changed, what passed, what failed, why it
+failed, what remains, and whether the user must decide anything. Use specialized
+terms only where their exact technical meaning is necessary.
+
 ## Phase transitions
 
 The preferred sequence is:
