@@ -609,6 +609,119 @@ function Stop-InteractionAwareBrowserSession {
     }
 }
 
+function Get-PngDimensions {
+    param([string]$Path)
+    $bytes = [System.IO.File]::ReadAllBytes($Path)
+    $pngSignature = [byte[]](137,80,78,71,13,10,26,10)
+    $hasPngSignature = $bytes.Length -ge 8
+    if ($hasPngSignature) {
+        for ($index = 0; $index -lt $pngSignature.Length; $index++) {
+            if ($bytes[$index] -ne $pngSignature[$index]) { $hasPngSignature = $false; break }
+        }
+    }
+    if ($bytes.Length -lt 24 -or -not $hasPngSignature) {
+        throw "Screenshot is not a complete PNG: $Path"
+    }
+    $width = ([int]$bytes[16] -shl 24) -bor ([int]$bytes[17] -shl 16) -bor ([int]$bytes[18] -shl 8) -bor [int]$bytes[19]
+    $height = ([int]$bytes[20] -shl 24) -bor ([int]$bytes[21] -shl 16) -bor ([int]$bytes[22] -shl 8) -bor [int]$bytes[23]
+    if ($width -le 0 -or $height -le 0) { throw "Screenshot has invalid PNG dimensions: $Path" }
+    return [pscustomobject]@{ width = $width; height = $height }
+}
+
+function Invoke-Issue502BrowserCapture {
+    param([object]$Session, [hashtable]$Route, [string]$Url, [string]$ScreenshotPath, [int]$Width, [int]$Height)
+    $browserState = $null
+    try {
+        Invoke-CdpCommand -Session $Session -Method "Page.enable" | Out-Null
+        Invoke-CdpCommand -Session $Session -Method "Runtime.enable" | Out-Null
+        Invoke-CdpCommand -Session $Session -Method "Emulation.setDeviceMetricsOverride" -Parameters @{ width = $Width; height = $Height; deviceScaleFactor = 1; mobile = $false; screenWidth = $Width; screenHeight = $Height } | Out-Null
+        Invoke-CdpCommand -Session $Session -Method "Emulation.setEmulatedMedia" -Parameters @{ media = "screen" } | Out-Null
+        Invoke-CdpCommand -Session $Session -Method "Page.navigate" -Parameters @{ url = $Url } | Out-Null
+        Wait-CdpCondition -Session $Session -Expression "document.readyState === 'complete'" -Description "Issue #502 DOM readiness"
+        Invoke-CdpEvaluate -Session $Session -AwaitPromise $true -Expression "(async function(){ if (document.fonts && document.fonts.ready) { await document.fonts.ready; } await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))); return true; })()" | Out-Null
+
+        $capturePurpose = if ($Route.ContainsKey("Issue502CapturePurpose")) { [string]$Route.Issue502CapturePurpose } else { "viewport" }
+        $keyboardSelector = if ($Route.ContainsKey("Issue502KeyboardSelector")) { [string]$Route.Issue502KeyboardSelector } else { "" }
+        $keyboardTabPresses = 0
+        if ($keyboardSelector) {
+            Invoke-CdpEvaluate -Session $Session -Expression "(function(){ const skip = document.querySelector('.skip-link'); if (!skip) throw new Error('Issue #502 keyboard capture requires a skip link.'); skip.focus(); return document.activeElement === skip; })()" | Out-Null
+            $reachedKeyboardTarget = $false
+            for ($tabIndex = 1; $tabIndex -le 32; $tabIndex++) {
+                Invoke-CdpKeyPress -Session $Session -Key "Tab" -Code "Tab" -VirtualKeyCode 9
+                $keyboardTabPresses = $tabIndex
+                $activeMatches = [bool](Invoke-CdpEvaluate -Session $Session -Expression "(function(){ const target = document.querySelector('$keyboardSelector'); return !!target && document.activeElement === target; })()")
+                if ($activeMatches) { $reachedKeyboardTarget = $true; break }
+            }
+            if (-not $reachedKeyboardTarget) { throw "Keyboard navigation did not reach '$keyboardSelector' within 32 Tab presses." }
+        }
+
+        $captureStateJson = @{ capturePurpose = $capturePurpose; keyboardSelector = $keyboardSelector } | ConvertTo-Json -Compress
+        $browserState = Invoke-CdpEvaluate -Session $Session -AwaitPromise $true -Expression @"
+(async function () {
+  const contract = $captureStateJson;
+  const rect = (selector) => {
+    const element = document.querySelector(selector);
+    if (!element) return null;
+    const value = element.getBoundingClientRect();
+    return { left: value.left, top: value.top, right: value.right, bottom: value.bottom, width: value.width, height: value.height };
+  };
+  const visible = (selector) => {
+    const element = document.querySelector(selector);
+    if (!element) return false;
+    const style = getComputedStyle(element);
+    return element.getClientRects().length > 0 && style.display !== 'none' && style.visibility !== 'hidden';
+  };
+  const intersectsViewport = (bounds) => !!bounds && bounds.right > 0 && bounds.bottom > 0 && bounds.left < window.innerWidth && bounds.top < window.innerHeight;
+  const required = ['header', 'main', 'footer'];
+  if (location.pathname === '/ccld/facilities') required.push('form.facility-search-form');
+  if (location.search.includes('q=orchard')) required.push('#facility-results', '#facility-results a.button');
+  for (const selector of required) if (!visible(selector)) throw new Error('Required Issue #502 landmark is unavailable: ' + selector);
+  const initialScroll = { x: window.scrollX, y: window.scrollY };
+  if (contract.capturePurpose === 'full-page') window.scrollTo({ left: 0, top: 0, behavior: 'instant' });
+  await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const documentOverflow = document.documentElement.scrollWidth > window.innerWidth + 1 || document.body.scrollWidth > window.innerWidth + 1;
+  if (documentOverflow) throw new Error('Issue #502 capture detected horizontal page overflow.');
+  const active = document.activeElement;
+  const activeBounds = contract.keyboardSelector ? rect(contract.keyboardSelector) : null;
+  const activeStyle = active ? getComputedStyle(active) : null;
+  const keyboardFocusVisible = contract.keyboardSelector ? !!active && active.matches(contract.keyboardSelector) && intersectsViewport(activeBounds) && active.matches(':focus-visible') && ((activeStyle.outlineStyle !== 'none' && parseFloat(activeStyle.outlineWidth) > 0) || (activeStyle.boxShadow && activeStyle.boxShadow !== 'none')) : null;
+  if (contract.keyboardSelector && !keyboardFocusVisible) throw new Error('Keyboard focus target is absent, outside the viewport, or lacks a visible focus indicator.');
+  return {
+    capturePurpose: contract.capturePurpose,
+    initialScroll,
+    finalScroll: { x: window.scrollX, y: window.scrollY },
+    viewport: { innerWidth: window.innerWidth, innerHeight: window.innerHeight, clientWidth: document.documentElement.clientWidth },
+    document: { scrollWidth: document.documentElement.scrollWidth, bodyScrollWidth: document.body.scrollWidth, scrollHeight: document.documentElement.scrollHeight },
+    horizontalOverflow: documentOverflow,
+    focusedElement: active ? { id: active.id || '', selector: contract.keyboardSelector || (active.id ? '#' + active.id : active.tagName.toLowerCase()), accessibleName: contract.keyboardSelector ? (active.getAttribute('aria-label') || active.textContent.trim()) : '', bounds: activeBounds, focusVisible: active.matches(':focus-visible'), outlineStyle: activeStyle.outlineStyle, outlineWidth: activeStyle.outlineWidth, boxShadow: activeStyle.boxShadow } : null,
+    keyboardFocusVisible,
+    landmarks: { header: rect('header'), main: rect('main'), searchForm: rect('form.facility-search-form'), results: rect('#facility-results'), action: rect('#facility-results a.button'), footer: rect('footer') }
+  };
+})()
+"@
+        $browserState | Add-Member -NotePropertyName keyboardTabPresses -NotePropertyValue $keyboardTabPresses
+        $browserState | Add-Member -NotePropertyName captureMetadata -NotePropertyValue @{ capturedAtUtc = (Get-Date).ToUniversalTime().ToString('o'); branch = (& git rev-parse --abbrev-ref HEAD).Trim(); commit = (& git rev-parse HEAD).Trim() }
+        if ($capturePurpose -eq "full-page") {
+            $metrics = Invoke-CdpCommand -Session $Session -Method "Page.getLayoutMetrics"
+            $contentSize = $metrics.result.cssContentSize
+            $screenshot = Invoke-CdpCommand -Session $Session -Method "Page.captureScreenshot" -Parameters @{ format = "png"; fromSurface = $true; captureBeyondViewport = $true; clip = @{ x = 0; y = 0; width = [Math]::Ceiling([double]$contentSize.width); height = [Math]::Ceiling([double]$contentSize.height); scale = 1 } }
+        }
+        else {
+            $screenshot = Invoke-CdpCommand -Session $Session -Method "Page.captureScreenshot" -Parameters @{ format = "png"; fromSurface = $true; captureBeyondViewport = $false }
+        }
+        [System.IO.File]::WriteAllBytes($ScreenshotPath, [Convert]::FromBase64String([string]$screenshot.result.data))
+        $dimensions = Get-PngDimensions -Path $ScreenshotPath
+        if ($capturePurpose -eq "full-page" -and ($dimensions.height -lt $Height -or $dimensions.width -lt $browserState.viewport.clientWidth)) { throw "Full-page screenshot dimensions are smaller than the governed viewport." }
+        if ($capturePurpose -eq "viewport" -and ($dimensions.height -ne $Height -or $dimensions.width -ne $Width)) { throw "Viewport screenshot dimensions do not match the governed viewport." }
+        $browserState | Add-Member -NotePropertyName screenshot -NotePropertyValue @{ width = $dimensions.width; height = $dimensions.height; sha256 = (Get-FileHash -LiteralPath $ScreenshotPath -Algorithm SHA256).Hash }
+        return [pscustomobject]@{ Success = $true; Error = ""; State = $browserState; ScreenshotCreated = (Test-Path -LiteralPath $ScreenshotPath) }
+    }
+    catch {
+        Remove-Item -LiteralPath $ScreenshotPath -Force -ErrorAction SilentlyContinue
+        return [pscustomobject]@{ Success = $false; Error = $_.Exception.Message; State = $browserState; ScreenshotCreated = $false }
+    }
+}
+
 function Get-Issue498ScenarioContract {
     param([hashtable]$Route)
     $state = [string]$Route.Issue498State
@@ -1918,16 +2031,17 @@ try {
     )
     $issue502Routes = @(
         @{ Name = "issue-502-home"; Path = "/"; Label = "issue-502-01-home"; ActiveHref = "/"; WorkflowStep = "Home"; Issue502Kind = "home"; ViewportWidth = 1440; ViewportHeight = 1200 },
-        @{ Name = "issue-502-home-mobile"; Path = "/"; Label = "issue-502-02-home-mobile"; ActiveHref = "/"; WorkflowStep = "Home"; Issue502Kind = "home"; ViewportWidth = 390; ViewportHeight = 844 },
-        @{ Name = "issue-502-home-keyboard"; Path = "/#main-content"; Label = "issue-502-03-home-keyboard"; ActiveHref = "/"; WorkflowStep = "Home"; Issue502Kind = "home"; ViewportWidth = 1440; ViewportHeight = 1200 },
+        @{ Name = "issue-502-home-mobile"; Path = "/"; Label = "issue-502-02-home-mobile"; ActiveHref = "/"; WorkflowStep = "Home"; Issue502Kind = "home"; Issue502CapturePurpose = "full-page"; ViewportWidth = 390; ViewportHeight = 844 },
+        @{ Name = "issue-502-home-keyboard"; Path = "/"; Label = "issue-502-03-home-keyboard"; ActiveHref = "/"; WorkflowStep = "Home"; Issue502Kind = "home"; Issue502CapturePurpose = "full-page"; Issue502KeyboardSelector = 'main a.button[href="/ccld/facilities"]'; Issue502DistinctFrom = "issue-502-home"; ViewportWidth = 1440; ViewportHeight = 1200 },
         @{ Name = "issue-502-facility-default"; Path = "/ccld/facilities"; Label = "issue-502-04-facility-default"; ActiveHref = "/ccld/facilities"; WorkflowStep = "Facility"; Issue502Kind = "facility"; ViewportWidth = 1440; ViewportHeight = 1200 },
         @{ Name = "issue-502-facility-results"; Path = "/ccld/facilities?q=orchard#facility-results"; Label = "issue-502-05-facility-results"; ActiveHref = "/ccld/facilities"; WorkflowStep = "Facility"; Issue502Kind = "results"; ViewportWidth = 1440; ViewportHeight = 1200 },
         @{ Name = "issue-502-valid-unmatched"; Path = "/ccld/facilities?q=123456789#facility-results"; Label = "issue-502-06-valid-unmatched"; ActiveHref = "/ccld/facilities"; WorkflowStep = "Facility"; Issue502Kind = "unmatched"; ViewportWidth = 1440; ViewportHeight = 1200 },
         @{ Name = "issue-502-malformed"; Path = "/ccld/facilities?q=12345#facility-results"; Label = "issue-502-07-malformed"; ActiveHref = "/ccld/facilities"; WorkflowStep = "Facility"; Issue502Kind = "malformed"; ViewportWidth = 1440; ViewportHeight = 1200 },
         @{ Name = "issue-502-directory-unavailable"; Path = "/ccld/facilities?evidence_state=facility-search-unavailable"; Label = "issue-502-08-directory-unavailable"; ActiveHref = "/ccld/facilities"; WorkflowStep = "Facility"; Issue502Kind = "unavailable"; ViewportWidth = 1440; ViewportHeight = 1200 },
-        @{ Name = "issue-502-facility-mobile"; Path = "/ccld/facilities?q=orchard#facility-results"; Label = "issue-502-09-facility-mobile"; ActiveHref = "/ccld/facilities"; WorkflowStep = "Facility"; Issue502Kind = "results"; ViewportWidth = 390; ViewportHeight = 844 },
-        @{ Name = "issue-502-facility-reflow"; Path = "/ccld/facilities?q=orchard#facility-results"; Label = "issue-502-10-facility-reflow"; ActiveHref = "/ccld/facilities"; WorkflowStep = "Facility"; Issue502Kind = "results"; ViewportWidth = 720; ViewportHeight = 600 },
-        @{ Name = "issue-502-facility-keyboard"; Path = "/ccld/facilities?q=orchard#facility-results"; Label = "issue-502-11-facility-keyboard"; ActiveHref = "/ccld/facilities"; WorkflowStep = "Facility"; Issue502Kind = "results"; ViewportWidth = 1440; ViewportHeight = 1200 }
+        @{ Name = "issue-502-facility-mobile"; Path = "/ccld/facilities?q=orchard"; Label = "issue-502-09-facility-mobile"; ActiveHref = "/ccld/facilities"; WorkflowStep = "Facility"; Issue502Kind = "results"; Issue502CapturePurpose = "full-page"; ViewportWidth = 390; ViewportHeight = 844 },
+        @{ Name = "issue-502-facility-mobile-focused-results"; Path = "/ccld/facilities?q=orchard#facility-results"; Label = "issue-502-09b-facility-mobile-focused-results"; ActiveHref = "/ccld/facilities"; WorkflowStep = "Facility"; Issue502Kind = "results"; ViewportWidth = 390; ViewportHeight = 844 },
+        @{ Name = "issue-502-facility-reflow"; Path = "/ccld/facilities?q=orchard"; Label = "issue-502-10-facility-reflow"; ActiveHref = "/ccld/facilities"; WorkflowStep = "Facility"; Issue502Kind = "results"; Issue502CapturePurpose = "full-page"; ViewportWidth = 720; ViewportHeight = 600 },
+        @{ Name = "issue-502-facility-keyboard"; Path = "/ccld/facilities"; Label = "issue-502-11-facility-keyboard"; ActiveHref = "/ccld/facilities"; WorkflowStep = "Facility"; Issue502Kind = "facility"; Issue502CapturePurpose = "full-page"; Issue502KeyboardSelector = '#facility-search-input'; Issue502DistinctFrom = "issue-502-facility-default"; ViewportWidth = 1440; ViewportHeight = 1200 }
     )
     $issue498SupportedPath = "/reviewer/records/detail?source_record_key=complaint%3Accld-complaint-32-CR-20240603151515-rt-src-002-supported-fixture"
     $issue498DocumentOnlyPath = "/reviewer/records/detail?source_record_key=complaint%3Accld-complaint-32-CR-20240610181818-rt-src-002-document-only-fixture"
@@ -1958,16 +2072,16 @@ try {
     $routeHtmlByName = @{}
     $screenshotWarnings = @()
     $screenshotToolResolution = if ($IncludeScreenshots) {
-        Resolve-ScreenshotTool -Requested $ScreenshotToolPreference -RequireInteractionAware ([bool]$Issue498)
+        Resolve-ScreenshotTool -Requested $ScreenshotToolPreference -RequireInteractionAware ([bool]($Issue498 -or $Issue502))
     }
     else {
         [pscustomobject]@{ Requested = $ScreenshotToolPreference; Resolved = "none"; ValidationStatus = "screenshots not requested"; Executable = ""; SupportsInteractionAwareCapture = $false; FullPage = $false; Tool = $null; Attempts = @(); Error = "" }
     }
     $resolvedScreenshotTool = $screenshotToolResolution.Tool
     $interactionBrowserSession = $null
-    if ($Issue498 -and $IncludeScreenshots) {
+    if (($Issue498 -or $Issue502) -and $IncludeScreenshots) {
         if ($null -eq $resolvedScreenshotTool) {
-            $screenshotWarnings += "Issue #498 screenshot tool selection failed: $($screenshotToolResolution.Error)"
+                $screenshotWarnings += "Interaction-aware screenshot tool selection failed: $($screenshotToolResolution.Error)"
         }
         else {
             try {
@@ -1990,7 +2104,7 @@ try {
                 $interactionBrowserSession = $browserSessionCandidate
             }
             catch {
-                $screenshotWarnings += "Issue #498 interaction-aware browser startup failed: $($_.Exception.Message)"
+                $screenshotWarnings += "Interaction-aware browser startup failed: $($_.Exception.Message)"
             }
         }
     }
@@ -2009,6 +2123,7 @@ try {
         $supplementalScreenshotPath = ""
         $printPath = ""
         $browserStatePath = ""
+        $screenshotSha256 = ""
         $routeViewportWidth = if ($Route.ContainsKey("ViewportWidth")) { [int]$Route.ViewportWidth } else { $ViewportWidth }
         $routeViewportHeight = if ($Route.ContainsKey("ViewportHeight")) { [int]$Route.ViewportHeight } else { $ViewportHeight }
         $failure = ""
@@ -2054,12 +2169,36 @@ try {
                         }
                     }
                 }
+                elseif ($Issue502) {
+                    if ($null -eq $interactionBrowserSession) {
+                        $shotError = "interaction-aware browser session unavailable"
+                        $script:screenshotWarnings += "$($Route.Name): screenshot failed: $shotError"
+                        $failure = "Issue #502 responsive capture failed: $shotError"
+                    }
+                    else {
+                        $captureResult = Invoke-Issue502BrowserCapture -Session $interactionBrowserSession -Route $Route -Url $url -ScreenshotPath $shotFile -Width $routeViewportWidth -Height $routeViewportHeight
+                        if ($null -ne $captureResult.State) {
+                            $browserStateFile = Join-Path $diagnosticsDir "$($Route.Label)-browser-state.json"
+                            Set-Content -LiteralPath $browserStateFile -Value ($captureResult.State | ConvertTo-Json -Depth 10) -Encoding UTF8
+                            $browserStatePath = ConvertTo-RelativeEvidencePath -Path $browserStateFile -Root $packetDir
+                        }
+                        if (-not $captureResult.Success -or -not $captureResult.ScreenshotCreated) {
+                            Remove-Item -LiteralPath $shotFile -Force -ErrorAction SilentlyContinue
+                            $script:screenshotWarnings += "$($Route.Name): screenshot failed: $($captureResult.Error)"
+                            $failure = "Issue #502 responsive capture failed: $($captureResult.Error)"
+                        }
+                        else {
+                            $screenshotPath = ConvertTo-RelativeEvidencePath -Path $shotFile -Root $packetDir
+                            $screenshotSha256 = [string]$captureResult.State.screenshot.sha256
+                        }
+                    }
+                }
                 elseif ($null -ne $resolvedScreenshotTool) {
                     $shotError = Invoke-RouteScreenshot -Tool $resolvedScreenshotTool -Url $url -ScreenshotPath $shotFile -Width $routeViewportWidth -Height $routeViewportHeight
                     if ($shotError) { $script:screenshotWarnings += "$($Route.Name): $shotError" }
                     elseif (Test-Path -LiteralPath $shotFile) { $screenshotPath = ConvertTo-RelativeEvidencePath -Path $shotFile -Root $packetDir }
                 }
-                if (-not $Issue498 -and $null -ne $resolvedScreenshotTool -and $Route.ContainsKey("CapturePrint") -and [bool]$Route.CapturePrint) {
+                if (-not $Issue498 -and -not $Issue502 -and $null -ne $resolvedScreenshotTool -and $Route.ContainsKey("CapturePrint") -and [bool]$Route.CapturePrint) {
                     $printFile = Join-Path $printDir "$($Route.Label).pdf"
                     $printError = Invoke-RoutePrint -Tool $resolvedScreenshotTool -Url $url -PrintPath $printFile
                     if ($printError) { $script:screenshotWarnings += "$($Route.Name): $printError" }
@@ -2090,7 +2229,7 @@ try {
             Test-Issue498RouteAssertions -Route $Route -Html $safeHtml -Text $plainText -Assertions $assertions
         }
         if (($response.StatusCode -ne $expectedStatus -or $response.StatusCode -eq 0) -and -not $AllowUnavailable) { $failure = if ($failure) { $failure } else { "Route returned HTTP $($response.StatusCode); expected $expectedStatus." } }
-        [void]$routeResults.Add([pscustomobject]@{ name = $Route.Name; path = $Route.Path; label = $Route.Label; url = $url; viewportWidth = $routeViewportWidth; viewportHeight = $routeViewportHeight; expectedStatus = $expectedStatus; statusCode = $response.StatusCode; title = $title; h1 = $h1; htmlPath = $htmlPath; textPath = $textPath; screenshotPath = $screenshotPath; supplementalScreenshotPath = $supplementalScreenshotPath; printPath = $printPath; browserStatePath = $browserStatePath; failure = $failure })
+        [void]$routeResults.Add([pscustomobject]@{ name = $Route.Name; path = $Route.Path; label = $Route.Label; url = $url; viewportWidth = $routeViewportWidth; viewportHeight = $routeViewportHeight; expectedStatus = $expectedStatus; statusCode = $response.StatusCode; title = $title; h1 = $h1; htmlPath = $htmlPath; textPath = $textPath; screenshotPath = $screenshotPath; screenshotSha256 = $screenshotSha256; supplementalScreenshotPath = $supplementalScreenshotPath; printPath = $printPath; browserStatePath = $browserStatePath; failure = $failure })
         $routeHtmlByName[$Route.Name] = $safeHtml
     }
 
@@ -2101,6 +2240,28 @@ try {
         if ($null -ne $interactionBrowserSession) {
             Stop-InteractionAwareBrowserSession -Session $interactionBrowserSession
             $interactionBrowserSession = $null
+        }
+    }
+
+    if ($Issue502) {
+        $issue502StateRows = @()
+        foreach ($result in $routeResults | Where-Object { $_.browserStatePath }) {
+            $stateFile = Join-Path $packetDir $result.browserStatePath
+            $state = Get-Content -LiteralPath $stateFile -Raw | ConvertFrom-Json
+            $issue502StateRows += [ordered]@{ route = $result.name; label = $result.label; path = $result.path; screenshotPath = $result.screenshotPath; screenshotSha256 = $result.screenshotSha256; capturePurpose = $state.capturePurpose; initialScroll = $state.initialScroll; finalScroll = $state.finalScroll; viewport = $state.viewport; document = $state.document; horizontalOverflow = $state.horizontalOverflow; focusedElement = $state.focusedElement; keyboardFocusVisible = $state.keyboardFocusVisible; landmarks = $state.landmarks; screenshot = $state.screenshot }
+        }
+        $responsiveRows = @($issue502StateRows | Where-Object { $_.route -in @('issue-502-home-mobile', 'issue-502-facility-mobile', 'issue-502-facility-mobile-focused-results', 'issue-502-facility-reflow') })
+        $focusRows = @($issue502StateRows | Where-Object { $_.route -in @('issue-502-home-keyboard', 'issue-502-facility-keyboard') })
+        Set-Content -LiteralPath (Join-Path $diagnosticsDir 'issue-502-responsive-measurements.json') -Value ($responsiveRows | ConvertTo-Json -Depth 10) -Encoding UTF8
+        Set-Content -LiteralPath (Join-Path $diagnosticsDir 'issue-502-focus-state-report.json') -Value ($focusRows | ConvertTo-Json -Depth 10) -Encoding UTF8
+        foreach ($route in $routesToCapture | Where-Object { $_.ContainsKey('Issue502DistinctFrom') }) {
+            $keyboardResult = $routeResults | Where-Object { $_.name -eq $route.Name } | Select-Object -First 1
+            $baselineResult = $routeResults | Where-Object { $_.name -eq $route.Issue502DistinctFrom } | Select-Object -First 1
+            $distinct = $null -ne $keyboardResult -and $null -ne $baselineResult -and $keyboardResult.screenshotSha256 -and $baselineResult.screenshotSha256 -and $keyboardResult.screenshotSha256 -ne $baselineResult.screenshotSha256
+            $distinctStatus = if ($distinct) { 'PASS' } else { 'FAIL' }
+            $distinctMessage = if ($distinct) { "Keyboard interaction produced a distinct screenshot hash from $($route.Issue502DistinctFrom)." } else { "Keyboard screenshot hash did not differ from $($route.Issue502DistinctFrom)." }
+            Add-AssertionResult -Target $assertions -RouteName $route.Name -Check 'Issue #502 keyboard screenshot differs from ordinary route' -Status $distinctStatus -Message $distinctMessage
+            if (-not $distinct -and $null -ne $keyboardResult) { $keyboardResult.failure = "Issue #502 keyboard screenshot did not differ from $($route.Issue502DistinctFrom)." }
         }
     }
 
