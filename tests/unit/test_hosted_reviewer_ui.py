@@ -2712,10 +2712,14 @@ def test_reviewer_ui_detail_shows_attorney_tier_and_hides_support_details() -> N
         assert unsafe_phrase not in normalized_html.casefold()
 
     assert '<dfn class="inline-glossary-term" tabindex="0" role="term"' in html
-    assert 'aria-description="The outcome or status shown in the public complaint record."' in html
+    assert (
+        'aria-description="The outcome or status shown in the public complaint record."'
+        not in html
+    )
+    assert 'title="The outcome or status shown in the public complaint record."' not in html
     assert 'data-definition="The outcome or status shown in the public complaint record."' in html
     assert "function createDefinitions()" in html
-    assert "definition.id = 'inline-glossary-definition-' + termId" in html
+    assert "var baseId = 'inline-glossary-definition-' + safeTermId" in html
     assert ".inline-glossary-term" in html
     assert "border-bottom: 1px dotted currentColor" in html
     assert ".inline-glossary-definition.is-visible" in html
@@ -4474,7 +4478,7 @@ def test_reviewer_value_states_render_explicit_accessible_labels() -> None:
     assert "not-a-date" not in html
     assert 'class="inline-glossary-term"' in html
     assert 'tabindex="0"' in html
-    assert 'aria-description="' in html
+    assert 'aria-description="' not in html
     assert zero_markup == "0"
     assert "No value recorded" in null_markup
     assert "Source unavailable" in unavailable_markup

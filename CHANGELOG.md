@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+- Unified reviewer glossary and missing-value help under one collision-safe
+  behavior for Issue #606. Hover, focus, click, and tap share one viewport-aware
+  definition window with predictable Escape, blur, outside dismissal, and focus
+  restoration; duplicate native and ARIA descriptions are removed. Compare
+  Facilities also removes the redundant `CCLD finding term` label.
 - Fixed Compare Facilities complaint, source-report, and reviewer-status actions
   for Issue #605. Complaint links now preserve a public facility identity,
   source actions require a matching governed facility/document/report

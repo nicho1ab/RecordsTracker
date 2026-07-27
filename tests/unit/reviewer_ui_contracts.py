@@ -13,6 +13,7 @@ PROHIBITED_INFORMATION_TIER_TERMS = frozenset(
     {"validated-load", "pipeline command", "sqlite", "connection string", "operator mutation"}
 )
 NO_ANNOUNCEMENT_HELP_TYPES = frozenset({"static-inline-definition"})
+SUPPORTED_HELP_TRIGGERS = frozenset({"hover", "focus", "click", "tap"})
 KNOWN_INFORMATION_TIER_EXCEPTION_TERMS = MappingProxyType(
     {"RT-RC-002-sqlite": frozenset({"sqlite"})}
 )
@@ -231,25 +232,52 @@ def assert_information_tier(
 def assert_help_surface(
     surfaces: Sequence[Mapping[str, object]], *, escape_supported: bool
 ) -> None:
+    """Prove the reusable RT-RC-003 help-surface outcome."""
+
     active = [surface for surface in surfaces if surface.get("active")]
-    if len(active) > 1 or (active and not active[0].get("focus")):
+    if len(active) > 1:
         raise ReviewerContractError("help surface collision or accessibility state")
+    for surface in surfaces:
+        if surface.get("native_title") or surface.get("aria_description"):
+            raise ReviewerContractError("help surface duplicates its accessible description")
+        description_count = surface.get("accessible_descriptions")
+        if (
+            isinstance(description_count, bool)
+            or not isinstance(description_count, int)
+            or description_count != 1
+        ):
+            raise ReviewerContractError(
+                "help surface requires exactly one accessible description"
+            )
     if not active:
         return
     surface = active[0]
+    trigger = surface.get("trigger")
+    if trigger not in SUPPORTED_HELP_TRIGGERS:
+        raise ReviewerContractError("help surface trigger is missing or unsupported")
+    if trigger in {"focus", "click", "tap"} and not surface.get("focus"):
+        raise ReviewerContractError("keyboard or activation help lost trigger focus")
+    if surface.get("within_viewport") is not True or surface.get("overlaps_trigger"):
+        raise ReviewerContractError("help surface is clipped or overlaps its trigger")
     announcement_mode = surface.get("announcement_mode", "required")
     announcements = surface.get("announcements")
     if isinstance(announcements, bool) or not isinstance(announcements, int):
         raise ReviewerContractError("help announcement evidence is missing or malformed")
-    if announcement_mode == "required" and announcements != 1:
-        raise ReviewerContractError("help surface requires exactly one announcement")
+    expected_announcements = 1 if surface.get("focus") else 0
+    if announcement_mode == "required" and announcements != expected_announcements:
+        raise ReviewerContractError("help surface announcement count is not equivalent")
     if announcement_mode == "not-required":
         if surface.get("help_type") not in NO_ANNOUNCEMENT_HELP_TYPES or announcements != 0:
             raise ReviewerContractError("help no-announcement mode is not governed")
     elif announcement_mode != "required":
         raise ReviewerContractError("help announcement mode is unsupported")
-    if escape_supported and not surface.get("escape_dismisses"):
-        raise ReviewerContractError("dismissible help surface lacks Escape behavior")
+    if surface.get("help_type") not in NO_ANNOUNCEMENT_HELP_TYPES:
+        if escape_supported and not surface.get("escape_dismisses"):
+            raise ReviewerContractError("dismissible help surface lacks Escape behavior")
+        if not surface.get("blur_dismisses") or not surface.get("outside_dismisses"):
+            raise ReviewerContractError("help surface lacks predictable light dismissal")
+        if surface.get("escape_dismisses") and not surface.get("focus_restored"):
+            raise ReviewerContractError("Escape dismissal does not restore trigger focus")
 
 
 def assert_facility_identity(records: Iterable[Mapping[str, object]]) -> None:

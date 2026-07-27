@@ -386,12 +386,19 @@ The readable value must remain visible. `Open original source` and
 - **Figma proof:** Inline glossary examples for `Group Home`,
   `Substantiated`, and `Type A`.
 - **Responsive requirement:** Terms remain inline; the definition window may
-  reposition to fit the viewport.
+  reposition above or below the term to fit the viewport without covering its
+  trigger.
 - **Accessibility requirement:** Terms use a dotted underline, keyboard focus,
-  and a hover/focus definition window.
-- **Prohibited regression:** Ordinary-link styling or repeated definition
-  paragraphs.
-- **Required evidence before acceptance:** Hover and focus screenshots.
+  and one hover/focus/click/tap definition window. Escape, blur, and outside
+  interaction dismiss predictably; Escape retains trigger focus. The custom
+  definition supplies one accessible description without a duplicate native
+  `title` or `aria-description`.
+- **Prohibited regression:** Ordinary-link styling, repeated definition
+  paragraphs, simultaneous help surfaces, hover-only access, duplicate
+  descriptions, or a definition window clipped by its container or viewport.
+- **Required evidence before acceptance:** Shared component interaction tests,
+  representative route coverage, and hover/focus visual evidence when the
+  approved visual presentation changes.
 
 ### RT-ST-001 — Review flags represented primarily as badges
 
