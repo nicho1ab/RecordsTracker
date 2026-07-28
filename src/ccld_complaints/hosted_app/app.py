@@ -47,6 +47,7 @@ from ccld_complaints.hosted_app.ccld_facility_lookup import (
     CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH,
     CCLD_FACILITY_REVIEW_PRIORITY_PATH,
     CCLD_FACILITY_SUGGESTIONS_PATH,
+    CcldFacilityLookupRecord,
     CcldFacilityLookupResult,
     CcldFacilityReferenceSource,
     CcldFacilityReviewContext,
@@ -1204,9 +1205,41 @@ def route_response(
                 parse_qs(parsed_url.query, keep_blank_values=True),
                 "facility_number",
             )
+            evidence_state = _first_query_value(
+                parse_qs(parsed_url.query, keep_blank_values=True),
+                "evidence_state",
+            )
+            fixture_reference = None
+            if (
+                parsed_path == CCLD_FACILITY_REVIEW_HUB_PATH
+                and facility_number == "157806098"
+                and evidence_state == "facility-overview-missing-identity"
+            ):
+                fixture_reference = CcldFacilityReferenceSource(
+                    source_kind="fixture_evidence_identity_projection",
+                    label="Bounded fixture-only Facility Overview identity projection",
+                    path_label="",
+                    records=(
+                        CcldFacilityLookupRecord(
+                            facility_number="157806098",
+                            facility_name="A. MIRIAM JAMISON CHILDREN'S CENTER",
+                            city="",
+                            state="",
+                            county="",
+                            zip_code="",
+                            facility_type="",
+                            program_type="",
+                            capacity="",
+                            status="",
+                            closed_date="",
+                            address="",
+                        ),
+                    ),
+                    notices=(),
+                )
             return route_ccld_facility_lookup_response_with_source(
                 path,
-                None,
+                fixture_reference,
                 _facility_review_context_from_context(
                     active_ccld_context,
                     facility_number,

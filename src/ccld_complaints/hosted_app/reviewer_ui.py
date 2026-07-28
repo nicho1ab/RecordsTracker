@@ -674,6 +674,7 @@ class FacilityPriorityComplaint:
     finding: str
     detail_href: str
     source_url_href: str
+    subject: str = "Complaint record"
     substantiated: bool = False
     serious_topics: tuple[str, ...] = ()
     strongest_delay_days: int = 0
@@ -1514,6 +1515,8 @@ def build_facility_review_context(
     filters = _facility_intelligence_filters(query_values or {})
     origin = _first_form_value(query_values or {}, "origin").strip().casefold()
     active_filters = _facility_hub_active_filters(filters, origin=origin)
+    route_query_values = _facility_hub_route_query_values(filters, origin=origin)
+    inventory_filter = _facility_hub_inventory_filter(query_values or {})
     source_status, source_result = _substantiated_source_records_response(context)
     if source_status != 200 or isinstance(source_result, bytes):
         return CcldFacilityReviewContext(
@@ -1523,6 +1526,9 @@ def build_facility_review_context(
             reviewer_state_available=False,
             origin=origin,
             active_filters=active_filters,
+            route_query_values=route_query_values,
+            inventory_filter=inventory_filter,
+            data_state="unavailable",
         )
 
     all_summaries = _facility_priority_summaries(
@@ -1543,6 +1549,9 @@ def build_facility_review_context(
             date_dimension_label=date_dimension_label(filters.date_dimension),
             origin=origin,
             active_filters=active_filters,
+            route_query_values=route_query_values,
+            inventory_filter=inventory_filter,
+            data_state="not_loaded",
         )
 
     complaints = tuple(
@@ -1560,11 +1569,16 @@ def build_facility_review_context(
             complaints = ()
     if not complaints:
         return CcldFacilityReviewContext(
+            facility_name=source_summary.facility_name,
+            facility_type=source_summary.facility_type,
             source_label="No complaint records match the active facility filters.",
             date_dimension=filters.date_dimension,
             date_dimension_label=date_dimension_label(filters.date_dimension),
             origin=origin,
             active_filters=active_filters,
+            route_query_values=route_query_values,
+            inventory_filter=inventory_filter,
+            data_state="filtered_empty",
         )
 
     summary = _facility_intelligence_rebuild_priority_summary(
@@ -1597,6 +1611,8 @@ def build_facility_review_context(
             filters,
             state_summaries,
             reviewer_state_available=reviewer_state_available,
+            route_query_values=route_query_values,
+            inventory_filter=inventory_filter,
         )
         for complaint in summary.complaints
     )
@@ -1634,6 +1650,8 @@ def build_facility_review_context(
     )
     recommended = complaint_contexts[0]
     return CcldFacilityReviewContext(
+        facility_name=summary.facility_name,
+        facility_type=summary.facility_type,
         loaded_complaint_record_count=summary.complaint_count,
         start_date=dated_values[0] if dated_values else "",
         end_date=dated_values[-1] if dated_values else "",
@@ -1662,6 +1680,9 @@ def build_facility_review_context(
         reviewer_state_available=reviewer_state_available,
         origin=origin,
         active_filters=active_filters,
+        route_query_values=route_query_values,
+        inventory_filter=inventory_filter,
+        data_state=("partial" if coverage.status == "partial" else "loaded"),
     )
 
 
@@ -1672,6 +1693,8 @@ def _facility_hub_complaint_context(
     state_summaries: Mapping[str, Mapping[str, Any]],
     *,
     reviewer_state_available: bool,
+    route_query_values: tuple[tuple[str, str], ...],
+    inventory_filter: str,
 ) -> CcldFacilityComplaintContext:
     state_summary = state_summaries.get(
         complaint.source_record_key,
@@ -1681,12 +1704,14 @@ def _facility_hub_complaint_context(
         source_record_key=complaint.source_record_key,
         stable_complaint_id=complaint.stable_complaint_id,
         complaint_control_number=complaint.complaint_control_number,
+        subject=complaint.subject,
         activity_date=complaint.activity_date,
         finding=complaint.finding,
-        detail_href=_facility_intelligence_detail_href(
+        detail_href=_facility_overview_detail_href(
             complaint,
             summary,
-            filters,
+            route_query_values=route_query_values,
+            inventory_filter=inventory_filter,
         ),
         source_url_href=complaint.source_url_href,
         serious_topics=complaint.serious_topics,
@@ -1705,6 +1730,50 @@ def _facility_hub_complaint_context(
             else 0
         ),
     )
+
+
+def _facility_hub_route_query_values(
+    filters: FacilityIntelligenceFilters,
+    *,
+    origin: str,
+) -> tuple[tuple[str, str], ...]:
+    values = {
+        "origin": origin,
+        "start_date": filters.start_date or "",
+        "end_date": filters.end_date or "",
+        "date_dimension": filters.date_dimension,
+        "facility_type": filters.facility_type,
+        "geography": filters.geography,
+        "finding": filters.finding,
+        "serious_topic": filters.serious_topic,
+        "coverage": filters.coverage if filters.coverage != "all" else "",
+    }
+    return tuple((key, value) for key, value in values.items() if value)
+
+
+def _facility_hub_inventory_filter(
+    query_values: Mapping[str, list[str]],
+) -> str:
+    value = _first_form_value(query_values, "inventory_filter").strip()
+    if not value or len(value) > 160:
+        return "all"
+    if value in {
+        "all",
+        "recommended",
+        "dated",
+        "review-flags",
+        "trend",
+        "notes",
+        "source:available",
+        "source:unavailable",
+    }:
+        return value
+    if any(
+        value.startswith(prefix)
+        for prefix in ("finding:", "serious:", "status:")
+    ):
+        return value
+    return "all"
 
 
 def _facility_hub_active_filters(
@@ -3292,6 +3361,7 @@ def _facility_priority_complaint(
         finding=_optional_string(original_values, "finding"),
         detail_href=_reviewer_detail_href(source_record_key, CcldQueueReturnContext()),
         source_url_href=source_url if source_available else "",
+        subject=_complaint_subject(source_record, complaint_related_records),
         substantiated=(
             _substantiated_finding_evidence(
                 source_record,
@@ -3307,6 +3377,29 @@ def _facility_priority_complaint(
         missing_dates=_facility_priority_missing_dates(original_values),
         source_available=source_available,
     )
+
+
+def _facility_overview_detail_href(
+    complaint: FacilityPriorityComplaint,
+    summary: FacilityPrioritySummary,
+    *,
+    route_query_values: tuple[tuple[str, str], ...],
+    inventory_filter: str,
+) -> str:
+    return_query = dict(route_query_values)
+    if inventory_filter != "all":
+        return_query["inventory_filter"] = inventory_filter
+    return _reviewer_detail_href(
+        complaint.source_record_key,
+        CcldQueueReturnContext(
+            facility_number=summary.facility_number,
+            start_date=return_query.get("start_date"),
+            end_date=return_query.get("end_date"),
+            context_origin="facility_overview",
+            lookup_facility_name=summary.facility_name,
+            search_query=urlencode(return_query),
+        ),
+    ).replace("source_record_key", "source%5Frecord%5Fkey")
 
 
 def _facility_intelligence_source_report_url(
@@ -11589,9 +11682,14 @@ def _render_detail_tertiary_actions(
         prompt="Describe what was confusing about this reviewer detail step.",
     )
     queue_href = _ccld_request_href(related_records, return_context)
+    return_label = (
+        "Return to Facility Overview"
+        if return_context.context_origin == "facility_overview"
+        else "Return to Complaint Worklist"
+    )
     return f"""<div class="overview-tertiary-actions" aria-label="Additional reviewer actions">
             <a href="{_escape(feedback_href)}">Report an issue</a>
-            <a href="{_escape(queue_href)}">Return to Complaint Worklist</a>
+            <a href="{_escape(queue_href)}">{return_label}</a>
           </div>"""
 
 
@@ -11664,8 +11762,13 @@ def _render_detail_context_row(
     return_context: CcldQueueReturnContext,
 ) -> str:
     queue_href = _ccld_request_href(related_records, return_context)
+    return_label = (
+        "Return to Facility Overview"
+        if return_context.context_origin == "facility_overview"
+        else "Return to Complaint Worklist"
+    )
     return f"""<nav class="reviewer-detail-context" aria-label="Review context">
-            <a href="{_escape(queue_href)}">Return to Complaint Worklist</a>
+            <a href="{_escape(queue_href)}">{return_label}</a>
         </nav>"""
 
 
@@ -11750,6 +11853,8 @@ def _render_detail_decision_continuity(
 
 
 def _request_origin_label(value: str | None) -> str:
+    if value == "facility_overview":
+        return "Facility Overview"
     if value == "facility_lookup":
         return "Facility lookup result"
     if value == "prefilled_link":
@@ -11820,6 +11925,8 @@ def _detail_facility_context_status(
 
 
 def _detail_request_context_label(value: str | None) -> str:
+    if value == "facility_overview":
+        return "Facility Overview context"
     if value == "facility_lookup":
         return "facility lookup context"
     if value == "prefilled_link":
@@ -11853,6 +11960,8 @@ def _facility_hub_href(facility_number: str) -> str:
 
 
 def _detail_facility_hub_action(return_context: CcldQueueReturnContext) -> str:
+    if return_context.context_origin == "facility_overview":
+        return ""
     if return_context.facility_number is None:
         return ""
     context_label, _context_guidance, hub_link = _detail_facility_context_status(
@@ -13703,6 +13812,24 @@ def _ccld_request_href(
 ) -> str:
     if (
         return_context is not None
+        and return_context.context_origin == "facility_overview"
+        and return_context.facility_number
+    ):
+        query_values = parse_qs(
+            return_context.search_query or "",
+            keep_blank_values=False,
+        )
+        query_values["facility_number"] = [return_context.facility_number]
+        if return_context.start_date:
+            query_values["start_date"] = [return_context.start_date]
+        if return_context.end_date:
+            query_values["end_date"] = [return_context.end_date]
+        return (
+            f"{CCLD_FACILITY_REVIEW_HUB_PATH}?{urlencode(query_values, doseq=True)}"
+            "#facility-complaint-inventory"
+        )
+    if (
+        return_context is not None
         and return_context.context_origin == "reviewer_worklist"
     ):
         query = urlencode({"q": return_context.search_query or ""})
@@ -13713,14 +13840,14 @@ def _ccld_request_href(
         )
         return f"{REVIEWER_UI_RECORDS_PATH}?{query}{fragment}"
     if return_context is not None and return_context.facility_number:
-        query_values = {
+        request_query_values = {
             "facility_number": return_context.facility_number,
             "start_date": return_context.start_date or "",
             "end_date": return_context.end_date or "",
             "request_context_origin": return_context.context_origin or "manual_entry",
             "lookup_facility_name": return_context.lookup_facility_name or "",
         }
-        return f"{CCLD_RECORD_REQUEST_PATH}?{urlencode(query_values)}"
+        return f"{CCLD_RECORD_REQUEST_PATH}?{urlencode(request_query_values)}"
     facility = _facility_context(related_records)
     facility_number = _facility_context_value(facility, "external_facility_number")
     if facility_number == "unknown":

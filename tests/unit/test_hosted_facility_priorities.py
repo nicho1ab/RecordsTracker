@@ -1677,55 +1677,75 @@ def test_facility_hub_reuses_intelligence_aggregates_state_and_tie_order() -> No
                 ccld_record_request_context_for_reviewer_context(reviewer_context)
             ),
         )
+        filtered_status, _, filtered_body = route_response(
+            (
+                f"{CCLD_FACILITY_REVIEW_HUB_PATH}?facility_number=100001"
+                "&origin=facility_intelligence"
+                "&date_dimension=complaint_received_date"
+                "&start_date=2026-04-01&end_date=2026-05-31"
+                "&coverage=partial&inventory_filter=source%3Aunavailable"
+            ),
+            page_data_mode="postgres",
+            ccld_record_request_ui_context=(
+                ccld_record_request_context_for_reviewer_context(reviewer_context)
+            ),
+        )
         after = _table_counts(connection)
 
     html = body.decode("utf-8")
+    filtered_html = filtered_body.decode("utf-8")
     normalized = " ".join(html.casefold().split())
-    all_start = html.index('id="facility-hub-contributors-all"')
-    all_end = html.index("</details>", all_start)
-    all_contributors = html[all_start:all_end]
 
     assert status == 200
+    assert filtered_status == 200
     assert content_type == "text/html; charset=utf-8"
     assert after == before
     assert "<h2 id=\"facility-hub-heading\">" in html
     assert ">Alpha Center</h2>" in html
     assert 'aria-label="Copy facility name"' not in html
-    assert html.count("Primary facility facts") == 1
-    assert html.count("<dt>Facility type</dt>") == 1
-    assert "Opened from</dt><dd>Compare Facilities" in html
+    assert html.count('aria-label="Facility identity"') == 1
+    assert "Opened from:</strong> Compare Facilities" in html
     assert "04/01/2026 to 05/31/2026" in html
-    assert "Source coverage</dt><dd>Partial" in html
-    assert "4</a></strong><span>Deduplicated complaints" in html
+    assert "Partial source coverage" in html
+    assert ">4</a></strong><span>Deduplicated complaints" in html
     assert "04/01/2026" in html
     assert "05/03/2026" in html
-    assert "Substantiated: 2 exact complaint record(s)" in html
-    assert "Unsubstantiated: 2 exact complaint record(s)" in html
-    assert "Supervision topic: 1 exact complaint record(s)" in html
-    assert "Trend or anomaly summary" in html
-    assert "Increased activity" in html
-    assert "Partial: " in html
-    assert "3 with a CCLD report" in html
-    assert "1 without a report link" in html
-    assert "In review: 1 complaint record(s)" in html
-    assert "Not started: 3 complaint record(s)" in html
+    assert "Finding: Substantiated" in html
+    assert "Finding: Unsubstantiated" in html
+    assert "Supervision topic" in html
+    assert "Trend contributors" in html
+    visible_text = " ".join(re.sub(r"<[^>]+>", " ", unescape(html)).split())
+    assert "3 with a report link; 1 without one" in visible_text
+    assert "Status: In review" in html
+    assert "Status: Not started" in html
     assert "1 note(s) across 1 complaint record(s)" in html
-    assert "Open recommended complaint A-1" in html
-    assert html.index("Open recommended complaint A-1") < html.index(
-        "Open complaint record A-2"
-    )
+    assert "Review complaint A-1" in html
+    assert html.count('class="facility-inventory-item') == 4
+    assert html.count('class="facility-inventory-item is-recommended"') == 1
     for control_number in ("A-1", "A-2", "A-3", "A-4"):
-        assert f"Open complaint record {control_number}" in all_contributors
-    assert all_contributors.count("120+ day gap") == 1
-    assert all_contributors.count("Supervision topic") == 1
+        assert f"Review complaint {control_number}" in html
+    assert html.count("120+ day gap") == 1
+    assert html.count("Supervision topic") >= 1
+    assert "Get Additional Records" in html
+    assert "<details" not in html
+    assert 'aria-label="Filter the complaint inventory"' in html
+    assert "Showing 4 of 4 complaints: All complaints." in html
+    assert "Showing 1 of 4 complaints: Original report unavailable." in filtered_html
+    assert filtered_html.count('class="facility-inventory-item') == 1
+    assert "Review complaint A-4" in filtered_html
+    assert "Show recommended complaint" in filtered_html
+    assert "Review complaint A-1" not in filtered_html
+    assert "Review complaint A-2" not in filtered_html
+    assert "Review complaint A-3" not in filtered_html
     assert 'aria-label="Copy Facility ID"' in html
     assert 'aria-label="Copy complaint or control number"' in html
     assert 'aria-label="Copy complaint date"' in html
-    assert 'aria-label="Copy complaint finding"' in html
-    assert 'aria-label="Copy reviewer-created status"' in html
     assert 'aria-label="Copy original CCLD report URL"' in html
+    assert "return_context_origin=facility_overview" in html
+    assert "return_q=" in filtered_html
+    assert "inventory_filter%3Dsource%253Aunavailable" in filtered_html
     assert 'class="inline-glossary-term"' in html
-    assert 'data-term-id="hub-finding">Finding</dfn>' in html
+    assert 'data-term-id="facility-inventory-finding-' in html
     assert "function createDefinitions()" in html
     assert "border-bottom: 1px dotted currentColor" in html
     assert (
@@ -1782,12 +1802,12 @@ def test_facility_hub_renders_complaint_context_without_directory_row() -> None:
     assert "Corpus Only Center" in html
     assert "Children&#x27;s Center" in html
     assert "Kern" in html
-    assert "Source unavailable" in html
+    assert "Unavailable facility facts" in html
     assert "ccld:facility:157806098" not in html
     assert "Untrusted Query Facility" not in html
     assert "Review summary" in html
     assert "Review next" in html
-    assert "Opened from</dt><dd>Compare Facilities" in html
+    assert "Opened from:</strong> Compare Facilities" in html
     assert "complaint received date" in html.casefold()
     assert "157806098" in html
     assert "Different Directory Facility" not in html
@@ -1797,9 +1817,10 @@ def test_facility_hub_renders_complaint_context_without_directory_row() -> None:
     assert unknown_status == 200
     assert unknown_content_type == "text/html; charset=utf-8"
     assert "Facility-directory result not found" not in unknown_html
-    assert "Source unavailable" in unknown_html
+    assert "Unavailable facility facts" in unknown_html
     assert "999999999" in unknown_html
-    assert "No loaded complaint records are currently available" in unknown_html
+    assert "Records needed for review" in unknown_html
+    assert "This is not a verified zero" in unknown_html
     assert "Corpus Only Center" not in unknown_html
     assert "ccld:facility:999999999" not in unknown_html
     assert "Untrusted Query Facility" not in unknown_html
