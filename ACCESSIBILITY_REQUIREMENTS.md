@@ -171,6 +171,18 @@ Accessibility requirements apply to:
   text plus the shared #606 glossary behavior. Missing reviewer status, missing
   notes, and unavailable source links must not appear as badges that imply the
   complaint itself merits closer review.
+- Attorney Help must expose one H1 and four logical visible-by-default category
+  sections. Every in-page Help action targets one unique visible `h2` or `h3`,
+  moves focus to that heading, scrolls it into an unobscured viewport position,
+  supports copied fragment URLs and browser Back/Forward, and returns an
+  invalid fragment to the page start without hiding guidance. Category links,
+  the permitted secondary-example disclosure, and shared glossary terms must
+  be keyboard operable with visible focus.
+- Help must reflow without horizontal page scrolling at desktop, 1024-pixel,
+  390-pixel, and governed 200-percent-equivalent widths. Print must retain the
+  primary guidance and text meaning while omitting navigation and optional
+  secondary disclosure. Native browser zoom and assistive-technology
+  verification must not be claimed unless actually performed.
 
 ### Color and contrast
 

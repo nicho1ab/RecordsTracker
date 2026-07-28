@@ -170,6 +170,7 @@ def test_capture_script_declares_parameters_routes_and_outputs() -> None:
         "Issue417",
         "Issue418",
         "Issue419",
+        "Issue503",
         "Issue498",
         "Issue610",
         "manifest.json",
@@ -183,6 +184,9 @@ def test_capture_script_declares_parameters_routes_and_outputs() -> None:
         "issue-418-count-summaries.csv",
         "issue-419-approved-versus-rendered.csv",
         "issue-419-ui-gates.csv",
+        "issue-503-route-fragment-inventory.csv",
+        "issue-503-approved-versus-rendered.csv",
+        "issue-503-ui-gates.csv",
         "route-text-markers.txt",
         "keyboard flow text",
         "accessibility",
@@ -272,6 +276,7 @@ def test_capture_script_declares_parameters_routes_and_outputs() -> None:
     assert "-Issue417" in script
     assert "-Issue418" in script
     assert "-Issue419" in script
+    assert "-Issue503" in script
     assert "-Issue498" in script
     assert "-Issue610" in script
     for issue_415_route in (
@@ -941,6 +946,45 @@ def test_issue_502_capture_records_complete_responsive_and_keyboard_state() -> N
     assert "issue-502-responsive-measurements.json" in script
     assert "issue-502-focus-state-report.json" in script
     assert "keyboard screenshot differs from ordinary route" in script
+
+
+def test_issue_503_capture_proves_fragments_interactions_reflow_and_print() -> None:
+    script = CAPTURE_SCRIPT.read_text(encoding="utf-8")
+
+    assert "function Invoke-Issue503BrowserCapture" in script
+    for scenario in (
+        "issue-503-help-desktop",
+        "issue-503-help-narrow",
+        "issue-503-help-mobile",
+        "issue-503-help-reflow",
+        "issue-503-direct-get-started",
+        "issue-503-direct-understand-information",
+        "issue-503-direct-manage-review-work",
+        "issue-503-direct-troubleshooting",
+        "issue-503-keyboard-category",
+        "issue-503-child-history",
+        "issue-503-invalid-fragment",
+        "issue-503-secondary-disclosure",
+        "issue-503-glossary",
+        "issue-503-print",
+    ):
+        assert scenario in script
+    for behavior in (
+        "Issue503ExpectedFragment",
+        "Issue503Interaction",
+        "history.back()",
+        "history.forward()",
+        "keyboard-operated secondary disclosure",
+        "keyboard-operated collision-safe glossary",
+        "browser-observed fragment focus and viewport destination",
+        "issue-503-responsive-fragment-focus-measurements.json",
+        "issue-503-print-validation.json",
+        "READY FOR EXPLICIT OWNER REVIEW",
+        "native browser zoom and assistive-technology verification were not performed",
+    ):
+        assert behavior in script
+    assert '(?is)<details\\b(?:(?!</details>).)*</details>' in script
+    assert '[regex]::Replace($Text, "\\s+", " ")' in script
 
 
 def test_explicit_screenshot_tool_failure_does_not_silently_fallback() -> None:

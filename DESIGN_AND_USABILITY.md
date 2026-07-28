@@ -1016,6 +1016,15 @@ facility type.
     conclusion restrictions. Audience: attorney-facing. Figma AI/design
     exploration: no.
 
+Issue #503 implements UI-32 through UI-34 with the approved Issue #501
+controlled variance. Help uses four visible category sections rather than a
+numbered setup sequence or primary accordions. Stable descriptive fragments
+move viewport and focus, support copied URLs and browser history, and retain
+one disclosure only for a secondary conflicting-source example. Official CCLD
+terms use the shared #606 glossary behavior. Operator and developer mechanics
+remain in their existing governed documentation; no new support workflow,
+search infrastructure, or information tier is introduced.
+
 ### Job Status/operator diagnostics
 
 35. **UI-35 - Move Job Status out of primary attorney navigation.** Current

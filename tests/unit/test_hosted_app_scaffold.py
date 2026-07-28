@@ -672,7 +672,7 @@ def test_production_mode_blocks_anonymous_workflow_routes(
     assert "CCLD workflow access requires sign-in" in ccld_body.decode("utf-8")
     assert help_status == 200
     assert help_content_type == "text/html; charset=utf-8"
-    assert "How CCLD RecordsTracker works" in help_body.decode("utf-8")
+    assert "Find guidance by task or information question" in help_body.decode("utf-8")
 
 
 def test_explicit_local_dev_auth_mode_allows_default_workflow_actor() -> None:
@@ -1443,7 +1443,7 @@ def test_help_route_does_not_activate_retrieve_nav() -> None:
     assert 'class="is-active" aria-current="page" href="/ccld/records/request">Retrieve' not in html
 
 
-def test_help_page_topics_toc_links_to_every_help_section_in_order() -> None:
+def test_help_navigation_targets_visible_unique_headings_with_browser_behavior() -> None:
     auth_config = load_hosted_auth_runtime_config(
         environ={
             "CCLD_HOSTED_TESTER_AUTH_MODE": "local-dev",
@@ -1458,42 +1458,76 @@ def test_help_page_topics_toc_links_to_every_help_section_in_order() -> None:
     html = body.decode("utf-8")
     parser = parse_html_structure(html)
 
-    expected_topics = [
-        ("find-facility", "Find a facility"),
-        ("request-records", "Request Records"),
-        ("review-queue", "Review Queue"),
-        ("reviewer-detail", "Reviewer Detail"),
-        ("packet-preparation", "Packet preview and preparation draft"),
-        ("feedback", "Send feedback"),
+    expected_categories = [
+        ("get-started", "Get started"),
+        ("understand-information", "Understand the information"),
+        ("manage-review-work", "Manage review work"),
+        ("troubleshooting", "Troubleshooting"),
     ]
-    expected_hrefs = [f"#{topic_id}" for topic_id, _label in expected_topics]
-    toc_start = html.index('<h2 id="help-topics-heading">Help topics</h2>')
-    details_start = html.index('<section class="help-details"', toc_start)
-    toc_html = html[toc_start:details_start]
+    nav_start = html.index(
+        '<nav class="help-category-nav" aria-labelledby="help-categories-heading">'
+    )
+    nav_end = html.index("</nav>", nav_start)
+    nav_html = html[nav_start:nav_end]
+    detail_matches = re.findall(r"<details\b.*?</details>", html, flags=re.DOTALL)
+    visible_html = re.sub(r"<details\b.*?</details>", "", html, flags=re.DOTALL)
+    all_ids = [
+        attrs["id"]
+        for attrs_by_tag in parser.start_attrs_by_tag.values()
+        for attrs in attrs_by_tag
+        if "id" in attrs
+    ]
 
     assert status == 200
-    assert "Help topics" in parser.text_for("h2")
-    assert "<details" not in toc_html
-    assert toc_html.count('href="#') == len(expected_topics)
-    assert [toc_html.index(f'href="{href}"') for href in expected_hrefs] == sorted(
-        toc_html.index(f'href="{href}"') for href in expected_hrefs
+    assert parser.tags.count("h1") == 1
+    assert parser.text_for("h1") == "Help"
+    assert "Choose a Help category" in parser.text_for("h2")
+    assert nav_html.count('href="#') == len(expected_categories)
+    for category_id, label in expected_categories:
+        assert f'href="#{category_id}"' in nav_html
+        assert label in nav_html
+        assert re.search(
+            rf'<h2 class="help-target" id="{category_id}" tabindex="-1">',
+            visible_html,
+        )
+    target_ids = re.findall(
+        r'<h[23] class="help-target" id="([^"]+)" tabindex="-1">',
+        visible_html,
     )
-    for topic_id, label in expected_topics:
-        assert f'<a href="#{topic_id}">{label}</a>' in toc_html
+    fragment_hrefs = [
+        fragment
+        for fragment in re.findall(r'href="#([^"]+)"', html)
+        if fragment != "main-content"
+    ]
+    assert set(fragment_hrefs).issubset(set(target_ids))
+    assert len(target_ids) == len(set(target_ids))
+    assert len(all_ids) == len(set(all_ids))
+    assert len(detail_matches) == 1
+    assert "<h2" not in detail_matches[0]
+    assert "<h3" not in detail_matches[0]
+    assert parser.summary_texts == [
+        "Secondary example: public sources show different facility details"
+    ]
+    for behavior_marker in (
+        "window.history.pushState",
+        "window.history.replaceState",
+        "window.addEventListener('popstate'",
+        "window.addEventListener('hashchange'",
+        "target.scrollIntoView",
+        "target.focus",
+        "helpFragmentState",
+    ):
+        assert behavior_marker in html
 
-    details_attrs = parser.start_attrs_by_tag["details"]
-    detail_ids = [attrs.get("id", "") for attrs in details_attrs]
-    assert detail_ids[: len(expected_topics)] == [
-        topic_id for topic_id, _label in expected_topics
-    ]
-    assert "support-operator-help" not in detail_ids
-    assert "#support-operator-help" not in toc_html
-    assert len(detail_ids) == len(set(detail_ids))
-    assert all(detail_ids)
-    assert parser.summary_texts[: len(expected_topics)] == [
-        label for _topic_id, label in expected_topics
-    ]
-    assert "Support and runtime notes" not in parser.summary_texts
+
+def test_help_alias_preserves_direct_fragment_content() -> None:
+    status, _content_type, body = route_response("/help#facility-not-found")
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert '<h1 id="page-heading">Help</h1>' in html
+    assert 'id="facility-not-found" tabindex="-1"' in html
+    assert "Continue with Facility ID" in html
 
 
 def test_retrieval_job_detail_route_keeps_diagnostics_context_outside_primary_nav() -> None:

@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased
+- Rebuilt `/ccld/help` for Issue #503 as a concise attorney task guide with
+  four visible categories, current task destinations, official CCLD term
+  explanations through the shared glossary, truthful source/reviewer
+  boundaries, stable browser-functional fragments, responsive reflow, and
+  print-safe primary guidance. Obsolete implementation-sequence disclosures
+  and reviewer-facing operator/developer mechanics are no longer protected.
 - Separated Home from facility discovery for Issue #502. Home is now a concise
   task launch; `/ccld/facilities` is the single facility-search destination;
   record retrieval is contextual; and global navigation now uses Find a

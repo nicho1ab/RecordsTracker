@@ -85,7 +85,12 @@ from ccld_complaints.hosted_app.reviewer_ui import (
     default_local_test_reviewer_ui_context,
 )
 from ccld_complaints.hosted_app.source_derived_reads import SourceDerivedRecordRead
-from ccld_complaints.hosted_app.ui_shell import ActionItem, render_action_group, render_page_shell
+from ccld_complaints.hosted_app.ui_shell import (
+    ActionItem,
+    render_action_group,
+    render_inline_glossary_term,
+    render_page_shell,
+)
 
 CCLD_UI_PREFIX = "/ccld"
 CCLD_RECORD_REQUEST_PATH = f"{CCLD_UI_PREFIX}/records/request"
@@ -153,14 +158,101 @@ _SECRET_HTML_MARKERS = (
     "secret",
     "token",
 )
-_HELP_TOPICS: tuple[tuple[str, str], ...] = (
-    ("find-facility", "Find a facility"),
-    ("request-records", "Request Records"),
-    ("review-queue", "Review Queue"),
-    ("reviewer-detail", "Reviewer Detail"),
-    ("packet-preparation", "Packet preview and preparation draft"),
-    ("feedback", "Send feedback"),
+_HELP_CATEGORIES: tuple[tuple[str, str, str], ...] = (
+    (
+        "get-started",
+        "Get started",
+        "Find a facility, compare facilities, get complaint records, and begin review.",
+    ),
+    (
+        "understand-information",
+        "Understand the information",
+        "Read official CCLD terms, information states, review indicators, and source links.",
+    ),
+    (
+        "manage-review-work",
+        "Manage review work",
+        "Use the Complaint Worklist, filters, reviewer-created notes, and statuses.",
+    ),
+    (
+        "troubleshooting",
+        "Troubleshooting",
+        "Recover from facility, complaint-record, record-request, source, and access problems.",
+    ),
 )
+
+_HELP_FRAGMENT_SCRIPT = """<script>
+(function () {
+  'use strict';
+  var helpTargetSelector = '.help-target[id]';
+
+  function targetForHash(hash) {
+    if (!hash || hash === '#') return null;
+    var targetId;
+    try {
+      targetId = decodeURIComponent(hash.slice(1));
+    } catch (_error) {
+      return null;
+    }
+    var target = document.getElementById(targetId);
+    return target && target.matches(helpTargetSelector) ? target : null;
+  }
+
+  function focusPageStart(fragmentState) {
+    var main = document.getElementById('main-content');
+    document.documentElement.dataset.helpFragmentState = fragmentState;
+    window.scrollTo({left: 0, top: 0, behavior: 'auto'});
+    if (main) main.focus({preventScroll: true});
+  }
+
+  function moveToFragment(hash) {
+    if (!hash || hash === '#') {
+      focusPageStart('page-start');
+      return false;
+    }
+    var target = targetForHash(hash);
+    if (!target) {
+      focusPageStart('invalid');
+      return false;
+    }
+    document.documentElement.dataset.helpFragmentState = 'valid';
+    target.scrollIntoView({block: 'start', behavior: 'auto'});
+    window.requestAnimationFrame(function () {
+      target.focus({preventScroll: true});
+    });
+    return true;
+  }
+
+  document.querySelectorAll(
+    '.help-category-nav a[href^="#"], .help-section a[href^="#"]'
+  ).forEach(function (link) {
+    link.addEventListener('click', function (event) {
+      var hash = link.getAttribute('href');
+      var target = targetForHash(hash);
+      if (!target) return;
+      event.preventDefault();
+      if (window.location.hash === hash) {
+        window.history.replaceState({helpFragment: target.id}, '', hash);
+      } else {
+        window.history.pushState({helpFragment: target.id}, '', hash);
+      }
+      moveToFragment(hash);
+    });
+  });
+
+  window.addEventListener('popstate', function () {
+    moveToFragment(window.location.hash);
+  });
+  window.addEventListener('hashchange', function () {
+    moveToFragment(window.location.hash);
+  });
+  if (window.location.hash) {
+    window.requestAnimationFrame(function () {
+      moveToFragment(window.location.hash);
+    });
+  }
+})();
+</script>"""
 
 
 @dataclass(frozen=True)
@@ -1012,171 +1104,307 @@ def _mode_badge_class(label: str) -> str:
 
 
 def _render_help_page() -> str:
-        return _page(
-                title="How CCLD RecordsTracker works",
-                                heading="Help",
-            active_path=CCLD_HELP_PATH,
-            step_id="start",
-            next_action="Start facility review or open the section you need",
-            show_workflow_indicator=False,
-                                main=f"""    <section class="hero-card" aria-labelledby="help-purpose-heading">
-                        <p class="launch-kicker">Product help</p>
-                            <h2 id="help-purpose-heading">Use RecordsTracker for facility complaint review</h2>
-                            <p>Use this guide to move through the tester workflow: find or enter a facility, request complaint records for a CCLD request context, review loaded CCLD records, prepare packet notes when useful, and send feedback with safe context.</p>
-                            <p>The public CCLD portal remains the source of record. RecordsTracker helps you organize review work and check available source links; it does not make legal findings or prove that every public source record is loaded.</p>
-                </section>
-                {_render_help_topics_toc()}
-                <section class="help-details" aria-label="Help topic details">
-                    <details open id="find-facility">
-                        <summary id="help-find-facility-heading">Find a facility</summary>
-                        <p>Use Facility lookup when you need the facility/license number. Choose a matching
-                        facility to carry its number into Request Records, or enter a known facility/license
-                        number directly.</p>
-                        <p>Facility lookup helps set the CCLD request context. It is not a complaint search by
-                        itself, and it does not decide whether records exist for that facility.</p>
-                    </details>
-                    <details id="request-records">
-                        <summary id="help-request-records-heading">Request Records</summary>
-                        <p>Request complaint records for one facility/date request. Confirm the facility/license
-                        number, date range, and whether the request came from lookup or manual entry before you
-                        review results.</p>
-                        <p>When loaded CCLD records are available, continue to the review queue. If no records
-                        match, confirm the facility/date request before treating the result as meaningful, then
-                        adjust the request or send feedback if the next step is unclear.</p>
-                    </details>
-                    <details id="review-queue">
-                        <summary id="help-review-queue-heading">Review Queue</summary>
-                        <p>Use the review queue to scan loaded CCLD records for the same facility/date request.
-                        Start with the suggested next record when it helps, or use the visible queue counts and
-                        reviewer-status filter to choose another record.</p>
-                        <p>Queue summaries are review aids. Open a record before relying on dates, findings,
-                        review flags, missing-value cues, or CCLD source available indicators.</p>
-                    </details>
-                    <details id="reviewer-detail">
-                        <summary id="help-reviewer-detail-heading">Reviewer Detail</summary>
-                        <p>Open a complaint review workspace to check the complaint/control number, facility
-                        identity, key dates, finding/status wording, review flags, source link or source record
-                        availability, reviewer notes/status, and the next action.</p>
-                        <p>Use reviewer notes/status for your review observations when helpful. Notes and status
-                        do not change the loaded CCLD record or create a legal conclusion.</p>
-                    </details>
-                    <details id="packet-preparation">
-                        <summary id="help-packet-heading">Packet preview and preparation draft</summary>
-                        <p>Use packet preview when you need a compact review of the active facility/date request,
-                        included complaint records, source link availability, reviewer notes/status, and items
-                        that may need another look before copying or printing.</p>
-                        <p>Use the preparation draft as a browser copy/print aid after checking the source record
-                        where needed. It is not a final export, certified report, legal finding, or proof of
-                        source completeness.</p>
-                    </details>
-                    <details id="feedback">
-                        <summary id="help-feedback-heading">Send feedback</summary>
-                        <p>Send feedback when a facility lookup, facility/date request, review queue, reviewer
-                        detail, packet preview, preparation draft, or label/keyboard step is confusing.</p>
-                        <p>Include safe context such as the facility/license number, date range, complaint/control
-                        number when relevant, visible workflow state, and what you expected to happen. Do not
-                        include private facts, credentials, legal strategy, privileged work product, private URLs,
-                        private values, or unrelated sensitive details.</p>
-                        <p><a href="{_FEEDBACK_PATH}">Send feedback</a></p>
-                    </details>
-                </section>
-                """,
-        )
-
-
-def _render_help_topics_toc() -> str:
-    links = "\n".join(
-        f'                        <li><a href="#{_escape(topic_id)}">{_escape(label)}</a></li>'
-        for topic_id, label in _HELP_TOPICS
+    ccld_term = render_inline_glossary_term(
+        "CCLD",
+        "California Community Care Licensing Division.",
+        "help-ccld",
     )
-    return f"""                <nav class="summary-card" aria-labelledby="help-topics-heading">
-                    <h2 id="help-topics-heading">Help topics</h2>
-                    <ol>
-{links}
-                    </ol>
-                </nav>"""
+    substantiated_term = render_inline_glossary_term(
+        "Substantiated",
+        "The public complaint record shows that the allegation was found to have occurred.",
+        "help-substantiated",
+    )
+    unsubstantiated_term = render_inline_glossary_term(
+        "Unsubstantiated",
+        "The public complaint record shows that the allegation was not proven by the available evidence.",
+        "help-unsubstantiated",
+    )
+    inconclusive_term = render_inline_glossary_term(
+        "Inconclusive",
+        "The public complaint record shows that the available evidence did not establish whether the allegation occurred.",
+        "help-inconclusive",
+    )
+    strtp_term = render_inline_glossary_term(
+        "STRTP",
+        "Short-Term Residential Therapeutic Program.",
+        "help-strtp",
+    )
+    type_a_term = render_inline_glossary_term(
+        "Type A citation",
+        "A CCLD citation category for a deficiency that presents an immediate or substantial threat to health, safety, or personal rights.",
+        "help-type-a",
+    )
+    type_b_term = render_inline_glossary_term(
+        "Type B citation",
+        "A CCLD citation category for a deficiency that could become a threat if it is not corrected.",
+        "help-type-b",
+    )
+    plan_of_correction_term = render_inline_glossary_term(
+        "Plan of Correction",
+        "The correction steps and timing recorded for a cited deficiency.",
+        "help-plan-of-correction",
+    )
+    return _page(
+        title="Help",
+        heading="Help",
+        active_path=CCLD_HELP_PATH,
+        step_id="start",
+        next_action="Choose the attorney task or information question you need",
+        show_workflow_indicator=False,
+        main=f"""    <section class="hero-card help-intro" aria-labelledby="help-purpose-heading">
+      <p class="launch-kicker">Attorney task guide</p>
+      <h2 id="help-purpose-heading">Find guidance by task or information question</h2>
+      <p>Use this page to find a facility, compare facilities, get complaint records,
+      review a complaint, manage your review work, and understand public {ccld_term}
+      information.</p>
+      <p>RecordsTracker organizes public information for review. It does not assign work,
+      score facilities, make legal findings, or prove that every public record is available.</p>
+    </section>
+    {_render_help_category_navigation()}
+    <div class="help-article-list">
+      <section class="help-section" aria-labelledby="get-started">
+        <h2 class="help-target" id="get-started" tabindex="-1">Get started</h2>
+        <p class="help-section-lede">Choose the task you want to complete. RecordsTracker
+        keeps facility, complaint, public-source, and reviewer-created information in
+        distinct parts of the review workflow.</p>
+        <div class="help-guidance-grid">
+          <article class="help-guidance" aria-labelledby="find-and-select-facility">
+            <h3 class="help-target" id="find-and-select-facility" tabindex="-1">Find and select a facility</h3>
+            <p>Open <a href="{CCLD_FACILITY_LOOKUP_PATH}">Find a Facility</a>. Search by
+            facility name, Facility ID, city, county, ZIP, or facility type, then choose
+            the facility you want to review.</p>
+            <p>A valid Facility ID can still be used when the directory has no matching
+            facility. RecordsTracker must not treat that directory result as proof that
+            the facility does not exist. <a href="#facility-not-found">Read the facility-not-found recovery guidance</a>.</p>
+          </article>
+          <article class="help-guidance" aria-labelledby="compare-facilities">
+            <h3 class="help-target" id="compare-facilities" tabindex="-1">Compare facilities</h3>
+            <p>Open <a href="/ccld/facilities/intelligence">Compare Facilities</a> to review
+            complaint patterns, licensing and visit activity, or complaint activity over
+            time. Open a Facility Overview or complaint when closer source review is useful.</p>
+            <p>Factors and suggestions are deterministic review aids. They are not risk
+            scores, assignments, legal judgments, or findings about a facility.</p>
+          </article>
+          <article class="help-guidance" aria-labelledby="get-complaint-records">
+            <h3 class="help-target" id="get-complaint-records" tabindex="-1">Get complaint records</h3>
+            <p>Select a facility, then open <a href="{CCLD_RECORD_REQUEST_PATH}">Get Complaint Records</a>.
+            Choose the date range you need. RecordsTracker shows complaint records already
+            available for that facility and can request additional records where that action
+            is authorized.</p>
+            <p>A result describes only the records currently available in RecordsTracker
+            for the selected facility and dates. It is not proof that no public complaint exists.</p>
+          </article>
+          <article class="help-guidance" aria-labelledby="review-a-complaint">
+            <h3 class="help-target" id="review-a-complaint" tabindex="-1">Review a complaint</h3>
+            <p>Open the <a href="/reviewer">Complaint Worklist</a>, narrow the list when
+            useful, and choose a complaint. Complaint overview keeps the complaint subject,
+            facility identity, dates, finding, source action, and your review update together.</p>
+            <p>Use the original public source when a date, finding, allegation, deficiency,
+            citation, or correction plan needs closer review.</p>
+          </article>
+          <article class="help-guidance" aria-labelledby="save-review-work">
+            <h3 class="help-target" id="save-review-work" tabindex="-1">Save status or notes</h3>
+            <p>On Complaint overview, choose a reviewer status and add an optional note.
+            Save only review progress or context that will help you or another reviewer continue.</p>
+            <p>Statuses and notes are reviewer-created. They do not change the public
+            complaint record, become a source fact, or make a legal conclusion.</p>
+          </article>
+          <article class="help-guidance" aria-labelledby="prepare-print-export">
+            <h3 class="help-target" id="prepare-print-export" tabindex="-1">Prepare, print, or export material</h3>
+            <p>Use available Complaint Worklist CSV downloads for filtered complaint
+            information. Where the selected review context offers Review Packet Preview
+            and Open Printable Draft, check the included complaints and source availability
+            before using browser print.</p>
+            <p>Help itself is print-safe. Printed or downloaded material remains a review
+            aid, not a certified report, legal finding, or source-completeness statement.</p>
+          </article>
+        </div>
+      </section>
 
-
-def _render_workflow_overview() -> str:
-        return """    <section aria-labelledby="workflow-overview-heading">
-            <h2 id="workflow-overview-heading">Review session path</h2>
-            <ol>
-                <li>Start with facility lookup when you need the Facility ID, or
-                use manual entry when you already know it.</li>
-                <li>Confirm the CCLD request context: Facility ID, optional date
-                range, lookup/manual-entry origin, and active facility reference
-                source.</li>
-                <li>Submit the facility/date request to search loaded CCLD source-derived records.
-                If no match appears, use the no-match guidance without treating it as
-                public-source absence.</li>
-                <li>Use the CCLD review queue to choose a suggested next record, read the
-                active reviewer-created status filter and counts, or spot queue wording that
-                belongs in an feedback item.</li>
-                <li>Use reviewer detail to check the source link/status, key dates,
-                findings, review flags, and reviewer-created note/status actions.</li>
-                <li>Return to the same queue/request context, resubmit when needed to refresh
-                progress, continue to the next record, and send feedback when records or
-                wording are confusing.</li>
-            </ol>
-            <p>The browser pages do not create a saved review session, persisted queue state,
-            duplicate feedback workflow, live CCLD fetch, connector execution, or
-            artifact building.</p>
-        </section>"""
-
-
-def _render_key_terms_section() -> str:
-        return """    <section aria-labelledby="key-terms-heading">
-            <h2 id="key-terms-heading">Key terms</h2>
-            <dl>
-                <dt>Facility ID</dt>
-                <dd>The digit identifier CCLD uses for the facility or license record scope.</dd>
-                <dt>Facility lookup</dt>
-                <dd>A search over preloaded public facility-directory fields such
-                as Facility ID, name, city, county, ZIP code, facility type,
-                program type, capacity, and status code.</dd>
-                <dt>CCLD request context</dt>
-                <dd>The Facility ID, optional date range, request origin, and active
-                facility reference source used for this request.</dd>
-                <dt>Facility/date request</dt>
-                <dd>A CCLD request for one Facility ID and optional date range.</dd>
-                <dt>Date range</dt>
-                <dd>An optional filter over dates already extracted into preloaded CCLD source-derived records.
-                It is not a live public-source search.</dd>
-                <dt>Loaded CCLD source-derived records</dt>
-                <dd>Validated CCLD records staged from hosted seeded-corpus JSON into
-                source-derived records.</dd>
-                <dt>Source-derived records</dt>
-                <dd>Source-derived facility, source document, complaint, allegation, event, or
-                extraction audit rows that preserve original values and source traceability.</dd>
-                <dt>CCLD review queue</dt>
-                <dd>The facility/date-scoped list of matching complaint records to review next.</dd>
-                <dt>Reviewer-created notes/status</dt>
-                <dd>Reviewer-created note/status rows stored separately from
-                source-derived records.</dd>
-                <dt>Correction-readiness</dt>
-                <dd>Guidance for describing a possible correction concern after checking source
-                traceability. Use it to decide whether a reviewer-created note or feedback item
-                would help the current review.</dd>
-                <dt>Reviewer-status filter</dt>
-                <dd>A queue filter based on existing reviewer-created status rows. Records with
-                no saved reviewer status are counted as not started. The active filter and
-                counts describe which records are shown in this queue view.</dd>
-                <dt>Suggested next record</dt>
-                <dd>Navigation help derived from the current request context and
-                reviewer-created note/status cues.</dd>
-                <dt>feedback details</dt>
-                <dd>Safe context testers can carry into the Feedback page or its
-                unconfigured copyable fallback.</dd>
-                <dt>Reviewer status value</dt>
-                <dd>A bounded review state such as needs review, in review, reviewed,
-                blocked, or needs follow-up.</dd>
+      <section class="help-section" aria-labelledby="understand-information">
+        <h2 class="help-target" id="understand-information" tabindex="-1">Understand the information</h2>
+        <p class="help-section-lede">Public CCLD terms keep their official meaning.
+        RecordsTracker adds review organization and cautious indicators without replacing
+        the source record.</p>
+        <div class="help-guidance-grid">
+          <article class="help-guidance" aria-labelledby="facility-license-information">
+            <h3 class="help-target" id="facility-license-information" tabindex="-1">Facility and license information</h3>
+            <p>Facility identity can include the public Facility ID, name, facility type,
+            license status, address, county, and capacity when those values are available.
+            A facility type such as {strtp_term} is an official program term, not a RecordsTracker category.</p>
+            <p>Current directory information and observations recorded in an older complaint
+            can differ. Keep the date and source of each value in mind.</p>
+          </article>
+          <article class="help-guidance" aria-labelledby="complaint-record-terms">
+            <h3 class="help-target" id="complaint-record-terms" tabindex="-1">Complaint, allegation, finding, and correction terms</h3>
+            <dl class="help-definition-list">
+              <dt>Complaint</dt><dd>A public record about a reported concern and the agency response shown in the source.</dd>
+              <dt>Allegation</dt><dd>The reported issue described in the complaint record.</dd>
+              <dt>Finding</dt><dd>The outcome or status shown in the public complaint record, including
+              {substantiated_term}, {unsubstantiated_term}, or {inconclusive_term} when the source uses those terms.</dd>
+              <dt>Deficiency</dt><dd>A cited failure to meet a licensing requirement shown in the public record.</dd>
+              <dt>Citation</dt><dd>A recorded licensing citation, including {type_a_term} or {type_b_term} when applicable.</dd>
+              <dt>{plan_of_correction_term}</dt><dd>The source-recorded response to a deficiency. It may include a correction action or due date.</dd>
             </dl>
-        </section>"""
+          </article>
+          <article class="help-guidance" aria-labelledby="review-indicators">
+            <h3 class="help-target" id="review-indicators" tabindex="-1">Review indicators and suggestions</h3>
+            <p>Review indicators help narrow public records using visible, explainable
+            conditions such as findings, dates, complaint activity, source availability,
+            and supported licensing or visit observations.</p>
+            <p>They do not prove harm, liability, source completeness, or a facility-wide
+            conclusion. A Review next suggestion is not an assignment or a hidden score.</p>
+          </article>
+          <article class="help-guidance" aria-labelledby="information-states">
+            <h3 class="help-target" id="information-states" tabindex="-1">Missing, unavailable, partial, conflicting, and not-applicable information</h3>
+            <ul>
+              <li><strong>Not listed in source</strong> means the field is not shown in the applicable public record.</li>
+              <li><strong>Source unavailable</strong> means RecordsTracker cannot offer the public source action for that record.</li>
+              <li><strong>Data processing incomplete</strong> means RecordsTracker cannot yet present the value reliably.</li>
+              <li><strong>Partial</strong> means some relevant records or source links are available and others are not.</li>
+              <li><strong>Sources differ</strong> means public sources show conflicting values that should be checked in context.</li>
+              <li><strong>Not applicable</strong> means the field or state does not apply to that record.</li>
+            </ul>
+          </article>
+          <article class="help-guidance" aria-labelledby="public-source-evidence">
+            <h3 class="help-target" id="public-source-evidence" tabindex="-1">Public source links and preserved evidence</h3>
+            <p>Use an Open original source action to compare important values with the
+            available public document. RecordsTracker preserves source support for its
+            public-record information without placing technical traceability details in attorney Help.</p>
+            <p>An unavailable source action does not mean the complaint did not occur or
+            that every other value is missing. Treat the visible state as a reason for a
+            careful source check or follow-up.</p>
+          </article>
+        </div>
+        <details class="help-secondary-disclosure">
+          <summary>Secondary example: public sources show different facility details</summary>
+          <p>An older complaint may show the facility name or status recorded at the time,
+          while current facility information shows a later value. Read the dates and source
+          labels, keep both observations in context, and avoid silently choosing one as
+          universally correct.</p>
+        </details>
+      </section>
+
+      <section class="help-section" aria-labelledby="manage-review-work">
+        <h2 class="help-target" id="manage-review-work" tabindex="-1">Manage review work</h2>
+        <p class="help-section-lede">Use one Complaint Worklist and the review context
+        already shown by RecordsTracker. Reviewer-created work remains separate from public facts.</p>
+        <div class="help-guidance-grid">
+          <article class="help-guidance" aria-labelledby="use-complaint-worklist">
+            <h3 class="help-target" id="use-complaint-worklist" tabindex="-1">Use the Complaint Worklist</h3>
+            <p>The Complaint Worklist is the canonical list of complaint records available
+            for review. Each result has one complaint-specific action. Open the complaint
+            you want to examine rather than treating the list summary as the full source record.</p>
+          </article>
+          <article class="help-guidance" aria-labelledby="filter-review-work">
+            <h3 class="help-target" id="filter-review-work" tabindex="-1">Filter and narrow review work</h3>
+            <p>Search and filters can narrow by complaint, facility, finding, review category,
+            or reviewer-created status when those controls are available. A filtered-empty
+            result means the current filters matched nothing; clear filters before concluding
+            that no complaint records are available.</p>
+          </article>
+          <article class="help-guidance" aria-labelledby="reviewer-notes-statuses">
+            <h3 class="help-target" id="reviewer-notes-statuses" tabindex="-1">Use reviewer-created notes and statuses</h3>
+            <p>Status tracks review progress. A note preserves short review context. Neither
+            value edits the source record, verifies an allegation, assigns the complaint,
+            or changes a CCLD finding.</p>
+          </article>
+          <article class="help-guidance" aria-labelledby="return-after-navigation">
+            <h3 class="help-target" id="return-after-navigation" tabindex="-1">Return after navigation</h3>
+            <p>Use Return to Complaint Worklist or Return to Facility Overview when those
+            actions appear. RecordsTracker preserves supported search, facility, date, filter,
+            and selected-complaint context so you can continue from the review you left.</p>
+          </article>
+          <article class="help-guidance" aria-labelledby="choose-next-review">
+            <h3 class="help-target" id="choose-next-review" tabindex="-1">Choose what to examine next</h3>
+            <p>Use visible findings, dates, complaint subjects, source availability, filters,
+            and explainable Review next factors to choose a record. You can always choose
+            another complaint; the suggestion does not claim priority as a legal or factual conclusion.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="help-section" aria-labelledby="troubleshooting">
+        <h2 class="help-target" id="troubleshooting" tabindex="-1">Troubleshooting</h2>
+        <p class="help-section-lede">Start with the visible page state and the safest
+        reviewer action. Use Feedback when the visible recovery guidance does not resolve the problem.</p>
+        <div class="help-guidance-grid">
+          <article class="help-guidance" aria-labelledby="facility-not-found">
+            <h3 class="help-target" id="facility-not-found" tabindex="-1">Facility not found</h3>
+            <p>Clear or broaden the search and check the Facility ID. If a digit-only valid
+            Facility ID has no directory match, use Continue with Facility ID. This means
+            only that the current directory did not return a match.</p>
+          </article>
+          <article class="help-guidance" aria-labelledby="no-complaint-records">
+            <h3 class="help-target" id="no-complaint-records" tabindex="-1">No complaint records found</h3>
+            <p>Check the selected facility, change the date range, and clear active filters.
+            A no-record or filtered-empty state describes the current RecordsTracker result;
+            it is not a verified statement that no public complaint exists.</p>
+          </article>
+          <article class="help-guidance" aria-labelledby="record-request-state">
+            <h3 class="help-target" id="record-request-state" tabindex="-1">Complaint-record request is waiting, running, limited, or failed</h3>
+            <ul>
+              <li><strong>Queued or running:</strong> wait for the current request to finish before trying again.</li>
+              <li><strong>Completed with notices:</strong> review the visible counts and any safe warning before opening records.</li>
+              <li><strong>Failed:</strong> no uncontrolled error details should appear; retry only when the page offers that action.</li>
+              <li><strong>Rate-limited:</strong> wait for the stated period before another request.</li>
+            </ul>
+          </article>
+          <article class="help-guidance" aria-labelledby="source-document-unavailable">
+            <h3 class="help-target" id="source-document-unavailable" tabindex="-1">Source document unavailable</h3>
+            <p>Use the visible complaint information cautiously and note that the original
+            source cannot currently be opened from RecordsTracker. Do not treat an unavailable
+            link as proof that the complaint or its facts are absent.</p>
+          </article>
+          <article class="help-guidance" aria-labelledby="missing-partial-source-information">
+            <h3 class="help-target" id="missing-partial-source-information" tabindex="-1">Information is missing or partial</h3>
+            <p>Read the exact state label. Change the facility, dates, or filters only when
+            that could change the result. If the source visibly contains a reviewer-relevant
+            value that RecordsTracker does not show reliably, report the mismatch through Feedback.</p>
+          </article>
+          <article class="help-guidance" aria-labelledby="report-a-problem">
+            <h3 class="help-target" id="report-a-problem" tabindex="-1">Report a problem through Feedback</h3>
+            <p>Open <a href="{_FEEDBACK_PATH}">Feedback</a> for a confusing label, broken
+            destination, missing page context, accessibility issue, or source-data concern.
+            State the page, what you tried, what you expected, and what happened.</p>
+            <p>Do not include private facts, credentials, private links, privileged work
+            product, legal strategy, or unrelated sensitive details.</p>
+          </article>
+          <article class="help-guidance" aria-labelledby="accessibility">
+            <h3 class="help-target" id="accessibility" tabindex="-1">Accessibility and browser use</h3>
+            <p>Use the skip link and keyboard-focus outlines to move through Help. Category
+            links move focus to the visible heading, copied fragment URLs reopen the same
+            guidance, and browser Back and Forward preserve that movement.</p>
+            <p>At narrow widths, navigation and guidance stack in the same reading order.
+            Browser print removes navigation while retaining the primary guidance and text meaning.</p>
+          </article>
+        </div>
+      </section>
+    </div>
+    {_HELP_FRAGMENT_SCRIPT}
+""",
+    )
+
+
+def _render_help_category_navigation() -> str:
+    links = "\n".join(
+        f"""      <li>
+        <a href="#{_escape(category_id)}">{_escape(label)}: {_escape(description)}</a>
+      </li>"""
+        for category_id, label, description in _HELP_CATEGORIES
+    )
+    return f"""    <nav class="help-category-nav" aria-labelledby="help-categories-heading">
+      <h2 id="help-categories-heading">Choose a Help category</h2>
+      <p>Each link moves focus to visible guidance and can be copied or revisited with browser Back and Forward.</p>
+      <ul class="help-category-list">
+{links}
+      </ul>
+    </nav>"""
 
 
 def _render_feedback_guidance_section() -> str:
-        return """    <section aria-labelledby="feedback-guidance-heading">
-            <h2 id="feedback-guidance-heading">feedback guidance</h2>
+    return """    <section aria-labelledby="feedback-guidance-heading">
+            <h2 id="feedback-guidance-heading">Feedback guidance</h2>
             <p>Use the Feedback page when review is blocked or confusing. When GitHub intake is configured,
             the server creates a GitHub issue; when it is not configured, the page provides a
             safe copyable summary for the agreed support channel.</p>

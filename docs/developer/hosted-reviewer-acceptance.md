@@ -112,12 +112,14 @@ for route, screenshot, text, and accessibility review.
 ## What This Proves
 
 A passing acceptance run proves that the hosted local/test workflow exposes a
-repeatable tester-readiness path across Home, Facility Lookup, Facility Hub,
-Facility Review Priority, Facility Review Intelligence, Request, Queue, Matrix
-CSV Export, Detail, Packet Preview, Packet Draft, Feedback, Help, and evidence capture. It also
+repeatable tester-readiness path across Home, Facility Lookup, Facility
+Overview, Compare Facilities, Get Complaint Records, Complaint Worklist,
+Complaint Overview, CSV exports, packet preview/draft, Feedback, Help, and
+evidence capture. It also
 proves that the checked pages expose key visible markers for route reachability,
 review queue continuity, complaint review workspace access, packet preparation,
-feedback, help, local/test context, and source traceability availability.
+feedback, the four attorney Help categories, local/test context, and source
+availability.
 
 The run also proves that default checks avoid persistent writes: no forms are
 submitted, no retrieval job is submitted, no import/reload is run, no feedback is

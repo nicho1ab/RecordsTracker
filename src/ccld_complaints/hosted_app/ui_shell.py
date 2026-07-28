@@ -3558,6 +3558,117 @@ SHARED_CSS = r"""
       color: var(--ink);
       padding: 0.7rem;
     }
+    .help-intro {
+      margin-bottom: 1rem;
+    }
+    .help-category-nav {
+      background: var(--ds-surface-info);
+      border: 1px solid var(--line);
+      border-radius: var(--ds-radius-lg);
+      margin-bottom: 1.5rem;
+      padding: 1rem;
+    }
+    .help-category-nav h2 {
+      margin-bottom: 0.35rem;
+    }
+    .help-category-nav > p {
+      color: var(--muted);
+      margin-bottom: 0.75rem;
+    }
+    .help-category-list {
+      display: grid;
+      gap: 0.65rem;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    .help-category-list a {
+      background: #ffffff;
+      border: 1px solid var(--line);
+      border-radius: var(--ds-radius-md);
+      display: block;
+      font-weight: 750;
+      min-height: 3.5rem;
+      padding: 0.75rem;
+      text-decoration-thickness: 0.08rem;
+      text-underline-offset: 0.18rem;
+    }
+    .help-article-list {
+      display: grid;
+      gap: 1.5rem;
+    }
+    .help-section {
+      background: #ffffff;
+      border: 1px solid var(--line);
+      border-radius: var(--ds-radius-lg);
+      box-shadow: var(--shadow);
+      padding: 1.15rem;
+    }
+    .help-section > h2 {
+      border-bottom: 3px solid var(--ds-link);
+      margin-bottom: 0.5rem;
+      padding-bottom: 0.4rem;
+    }
+    .help-section-lede {
+      color: var(--muted);
+      max-width: 72rem;
+    }
+    .help-target {
+      scroll-margin-top: 1.5rem;
+    }
+    .help-target:focus-visible {
+      border-radius: var(--ds-radius-sm);
+      outline: 3px solid var(--focus);
+      outline-offset: 0.25rem;
+    }
+    .help-guidance-grid {
+      display: grid;
+      gap: 1rem 1.5rem;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .help-guidance {
+      border-top: 1px solid var(--line-soft);
+      min-width: 0;
+      padding-top: 0.9rem;
+    }
+    .help-guidance h3 {
+      margin-bottom: 0.45rem;
+    }
+    .help-guidance p:last-child,
+    .help-guidance ul:last-child,
+    .help-guidance dl:last-child {
+      margin-bottom: 0;
+    }
+    .help-definition-list {
+      display: grid;
+      gap: 0.4rem 0.75rem;
+      grid-template-columns: minmax(7rem, 10rem) minmax(0, 1fr);
+      margin: 0;
+    }
+    .help-definition-list dt {
+      font-weight: 800;
+    }
+    .help-definition-list dd {
+      margin: 0;
+      min-width: 0;
+    }
+    .help-secondary-disclosure {
+      border-top: 1px solid var(--line-soft);
+      margin-top: 1rem;
+      padding-top: 0.75rem;
+    }
+    .help-secondary-disclosure summary {
+      color: var(--ds-link);
+      cursor: pointer;
+      font-weight: 750;
+      min-height: 2.75rem;
+      padding: 0.65rem 0;
+    }
+    .help-secondary-disclosure p {
+      margin: 0.25rem 0 0;
+      max-width: 68rem;
+    }
     @media (max-width: 1100px) {
       .civic-header__inner {
         grid-template-columns: minmax(12rem, 1fr) auto;
@@ -3691,6 +3802,16 @@ SHARED_CSS = r"""
       .reviewer-state-panel .summary-list {
         grid-template-columns: minmax(7.5rem, 10rem) minmax(0, 1fr);
       }
+      .help-category-list,
+      .help-guidance-grid {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      .help-definition-list {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      .help-definition-list dd {
+        margin-bottom: 0.45rem;
+      }
       .civic-footer__inner {
         align-items: start;
         display: grid;
@@ -3708,6 +3829,8 @@ SHARED_CSS = r"""
       .copy-icon-button, .copy-text-control, .facility-intelligence-sort,
       .facility-pagination, .facility-row-actions, .facility-status-form,
       .compare-facilities-views,
+      .help-category-nav,
+      .help-secondary-disclosure,
       .intelligence-filters, .compact-filter-panel,
       .worklist-controls, .worklist-action, .overview-source-action,
       .overview-tertiary-actions, .review-update-form {
@@ -3816,6 +3939,21 @@ SHARED_CSS = r"""
       .reviewer-state-panel {
         background: #fff !important;
         border-color: #000 !important;
+      }
+      .help-section {
+        border: 0;
+        box-shadow: none;
+        break-inside: auto;
+        padding: 0;
+      }
+      .help-section > h2,
+      .help-guidance h3 {
+        break-after: avoid-page;
+        page-break-after: avoid;
+      }
+      .help-guidance {
+        break-inside: avoid;
+        page-break-inside: avoid;
       }
     }
     @media (max-width: 760px) {

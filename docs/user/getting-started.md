@@ -138,22 +138,25 @@ facility/license number and date range are being used, and which local/test
 facility reference source is active. Use the change-facility/date links when the
 context is not the one you intended.
 Across the hosted CCLD pages, the same terms are used for the same ideas:
-facility/license number, CCLD request context, facility/date request, loaded
-local/test CCLD records, source-derived records, source traceability, reviewer-
-created notes/status, reviewer-status filter, suggested next record, and manual
-feedback checklist.
+Facility ID, selected facility and dates, available complaint records, public
+source information, reviewer-created notes/status, Complaint Worklist filters,
+Review next, and Feedback.
 
 The request page accepts a CCLD facility/license number and optional date range,
 reads existing seeded
 source-derived records, can load or refresh matching rows from local validated
 hosted seeded-corpus output, and links matching rows into the hosted reviewer
-UI. It also includes a first-time help page at `/ccld/help`, contextual
-facility/date/load/review help, feedback guidance, a structured copyable feedback
-checklist for the current request and queue state, and a facility/date-scoped
-review queue with one row per matching complaint record, triage summaries,
-progress counts, reviewer note/status cues, source-traceability availability
-cues, suggested next-record links, and a reviewer-status filter. Reviewer detail
-pages include a plain-language record summary, source traceability, source-
+UI. The attorney Help page at `/ccld/help` is organized around Get started,
+Understand the information, Manage review work, and Troubleshooting. Primary
+task instructions and recovery actions are visible without opening
+disclosures. Category and child links use stable fragments that can be copied,
+revisited with browser Back and Forward, and activated by keyboard. Official
+CCLD terms use point-of-use definitions. Help distinguishes public-source facts
+from reviewer-created notes/statuses and explains missing, unavailable,
+partial, conflicting, and not-applicable states without exposing operator or
+developer mechanics.
+
+Reviewer detail pages include a plain-language record summary, source traceability, source-
 confidence cues, related context, reviewer notes/statuses, CCLD return links,
 and feedback clues for the selected record. The detail page explains available
 and missing source traceability and complaint-field values with local/test

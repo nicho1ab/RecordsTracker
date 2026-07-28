@@ -238,7 +238,7 @@ function Invoke-StandardRouteChecks {
     Invoke-RouteCheck -Url "$Base/ccld/records/request" -AllowedStatus @(200, 401, 503)
     Invoke-RouteCheck -Url "$Base/ccld/retrieval/jobs" -AllowedStatus @(200, 401, 503)
     Invoke-RouteCheck -Url "$Base/ccld/retrieval/jobs/detail?job_id=missing-job" -AllowedStatus @(400, 401, 404, 503)
-    Invoke-RouteCheck -Url "$Base/ccld/help" -AllowedStatus @(200) -RequiredText @("How CCLD review works")
+    Invoke-RouteCheck -Url "$Base/ccld/help" -AllowedStatus @(200) -RequiredText @("Get started", "Understand the information", "Manage review work", "Troubleshooting")
     Invoke-RouteCheck -Url "$Base/reviewer" -AllowedStatus @(200, 401, 503)
 }
 

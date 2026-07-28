@@ -319,6 +319,26 @@ primary-content disclosures. Route-level evidence must cover submitted-result
 focus/viewport continuity, keyboard use, browser back/forward, narrow/mobile,
 and governed 200% reflow. Exact strings and old structural disclosures are not
 durable unless an approved requirement says otherwise.
+
+### Issue #503 attorney Help
+
+Focused Help tests must prove the four approved categories, visible primary
+guidance, current task destinations and terminology, official CCLD terms,
+source-state truthfulness, reviewer-created-state separation, one bounded
+secondary disclosure, no operator/developer mechanics, and no duplicate IDs.
+Structural checks must prove that every Help fragment targets one unique
+visible focusable heading and that the shared fragment script provides viewport
+movement, focus, copied-URL, Back/Forward, and invalid-fragment behavior.
+
+The focused local evidence path must exercise desktop, 1024-pixel narrow,
+390-pixel mobile, 720-pixel reflow approximation, direct category fragments,
+keyboard category and child activation, browser history, invalid fragments,
+the secondary disclosure, the shared glossary, and print PDF/page rendering.
+Browser measurements must fail on horizontal page overflow, hidden primary
+guidance, missing focus, obscured destinations, or failed interaction states.
+Passing automation records `READY FOR EXPLICIT OWNER REVIEW`; it does not
+record native zoom, assistive-technology, Figma, or visual acceptance.
+
 Reviewer detail next-record navigation tests should prove return-to-same-queue
 guidance, note/status confirmation next-record wording, queue suggested-next
 wording, and no-assignment/no-claim/no-workflow-state boundaries render while

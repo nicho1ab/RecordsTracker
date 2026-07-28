@@ -131,7 +131,7 @@ $checks = @(
     @{ Name = "packet-draft-empty"; Path = "/reviewer/packet/draft"; Required = @("No facility/date packet context was supplied."); Forbidden = @("Date range: not provided") },
     @{ Name = "packet-draft-context"; Path = "/reviewer/packet/draft?$contextQuery"; Required = @("Attorney Review Packet Draft", "Preparation draft for browser copy or print", "Review before copying or printing", "Before using this draft", "Report copy/print preparation concern", $ContextFacilityNumber); Forbidden = @("Date range: not provided") },
     @{ Name = "feedback"; Path = "/feedback"; Required = @("Feedback", "Send RecordsTracker feedback", "Do not include private material", "Feedback type", "Description") },
-    @{ Name = "help"; Path = "/ccld/help"; Required = @("Find a facility", "Reviewer Detail", "Review Queue", "Packet preview and preparation draft") }
+    @{ Name = "help"; Path = "/ccld/help"; Required = @("Get started", "Understand the information", "Manage review work", "Troubleshooting", "Complaint Worklist") }
 )
 
 $forbiddenMarkers = @(

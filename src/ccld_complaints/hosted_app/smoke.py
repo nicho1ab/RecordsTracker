@@ -342,11 +342,11 @@ def run_scaffold_smoke_check(host: str = "127.0.0.1", port: int = 0) -> dict[str
     if (
         help_status != 200
         or b"Help" not in help_body
-            or b"Find a facility" not in help_body
-        or b"Request Records" not in help_body
-            or b"Review Queue" not in help_body
-        or b"Reviewer Detail" not in help_body
-            or b"Packet preview and preparation draft" not in help_body
+        or b"Get started" not in help_body
+        or b"Understand the information" not in help_body
+        or b"Manage review work" not in help_body
+        or b"Troubleshooting" not in help_body
+        or b"Complaint Worklist" not in help_body
     ):
         raise RuntimeError("Hosted scaffold CCLD help page did not return guided help.")
     if (
