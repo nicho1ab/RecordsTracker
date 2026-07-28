@@ -395,7 +395,6 @@ def test_capture_script_declares_parameters_routes_and_outputs() -> None:
         "issue-420-filtered-empty",
         "issue-420-zero-complaint",
         "issue-420-missing-identity-values",
-        "issue-420-partial-coverage",
         "issue-420-print",
     ):
         assert issue_420_scenario in script
@@ -414,6 +413,14 @@ def test_capture_script_declares_parameters_routes_and_outputs() -> None:
         "issue420 missing identity consolidation",
         "issue420 partial and stale transparency",
         "issue420 print contract",
+        "issue420 distinct missing identity screenshot",
+        "issue420 partial coverage consolidation",
+        "issue420 print image differs from screen",
+        "issue-420-duplicate-images.json",
+        "issue-420-print-validation.json",
+        "render-pdf-pages.ps1",
+        "Emulation.setEmulatedMedia",
+        "Page.printToPDF",
         "issue-420-approved-versus-rendered.csv",
         "issue-420-source-reconciliation.csv",
         "issue-420-ui-gates.csv",

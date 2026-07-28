@@ -249,10 +249,14 @@ For the Issue #420 Facility Overview redesign, use:
 
 The focused packet captures populated desktop, original-report-unavailable and
 reviewer-state filters, 1024px narrow desktop, 390px mobile, 720px reflow,
-keyboard focus, filtered-empty, zero-complaint, missing-identity-value, partial
-coverage, and print states. It adds
+keyboard focus, filtered-empty, zero-complaint, missing-identity-value, and
+print states. Partial coverage is verified on the populated desktop state, so
+the packet intentionally does not create a duplicate partial-coverage image.
+The print capture activates print media before producing the authoritative PDF,
+then renders every PDF page for review. It adds
 `issue-420-approved-versus-rendered.csv`,
-`issue-420-source-reconciliation.csv`, `issue-420-ui-gates.csv`, and
+`issue-420-source-reconciliation.csv`, `issue-420-ui-gates.csv`,
+`issue-420-duplicate-images.json`, `issue-420-print-validation.json`, and
 `diagnostics/issue-420-responsive-focus-measurements.json`. The assertions
 require one default-visible complaint inventory, one primary next action,
 truthful source/reviewer-state separation, preserved Facility Overview return

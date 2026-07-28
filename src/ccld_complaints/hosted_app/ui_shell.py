@@ -3715,6 +3715,7 @@ SHARED_CSS = r"""
       }
       .facility-inventory-filters,
       .facility-inventory-actions,
+      .summary-card .form-actions,
       .facility-overview-empty .action-group {
         display: none !important;
       }

@@ -1208,6 +1208,44 @@ def test_ccld_facility_review_hub_renders_safe_directory_context() -> None:
     assert_no_secret_html(html)
 
 
+def test_fixture_facility_overview_missing_identity_projection_preserves_only_identity() -> None:
+    with _seeded_connection() as connection:
+        status, content_type, body = route_response(
+            f"{CCLD_FACILITY_REVIEW_HUB_PATH}?facility_number=157806098"
+            "&evidence_state=facility-overview-missing-identity",
+            page_data_mode="fixture-demo",
+            ccld_record_request_ui_context=ccld_record_request_context_for_reviewer_context(
+                reviewer_ui_context_for_connection(
+                    connection,
+                    actor=_actor(roles=("tester_reviewer",)),
+                )
+            ),
+        )
+
+    html = body.decode("utf-8")
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert "A. MIRIAM JAMISON CHILDREN&#x27;S CENTER" in html
+    assert "157806098" in html
+    assert "Unavailable facility facts" in html
+    for unavailable_field in (
+        "Facility type",
+        "Address",
+        "City",
+        "State",
+        "ZIP",
+        "County",
+        "License status",
+        "Capacity",
+    ):
+        assert unavailable_field in html
+    assert "TEMPORARY SHELTER CARE FACILITY" not in html
+    assert ">LICENSED<" not in html
+    assert ">48<" not in html
+    assert ">KERN<" not in html
+    assert ">unknown<" not in html.casefold()
+
+
 def test_ccld_facility_review_hub_known_loaded_preloaded_example_renders(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
