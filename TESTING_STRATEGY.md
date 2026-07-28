@@ -1,5 +1,15 @@
 # Testing Strategy
 
+## Hosted corpus verification
+
+The hosted corpus verification contract has focused coverage for its versioned
+result schema, current Compare Facilities count path, duplicate and
+source-linkage failures, synthetic/fallback/tiny-corpus detection, nonzero CLI
+failure, Docker source/schema availability, and evidence-package path and ZIP
+safeguards. Existing hosted PostgreSQL integration coverage remains responsible
+for PostgreSQL-specific behavior; SQLite is not substituted for PostgreSQL query
+or aggregation coverage.
+
 ## Aggregate readiness
 
 Aggregate and export changes test positive, verified-zero, unavailable,
