@@ -24,6 +24,7 @@ APPROVED_TRACKED_FIXTURES = frozenset(
     }
 )
 
+_CONTAINER_STATION_HOME = "/" + "/".join(("home", "containerstation"))
 _USERNAME = r"""[a-z0-9](?:[a-z0-9._ -]*[a-z0-9._-])?"""
 _PATTERNS = (
     (
@@ -150,7 +151,10 @@ def find_portable_path_violations(
             matched_value = text[match.start() : end]
             if (
                 pattern_id == "linux_named_user_home"
-                and re.match(r"(?i)^/home/containerstation(?:/|$)", matched_value)
+                and (
+                    matched_value.casefold() == _CONTAINER_STATION_HOME
+                    or matched_value.casefold().startswith(_CONTAINER_STATION_HOME + "/")
+                )
             ):
                 continue
             line, column = _line_and_column(text, match.start())

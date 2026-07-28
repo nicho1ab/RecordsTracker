@@ -184,6 +184,15 @@ def test_tracked_scanner_pr_lifecycle_and_ci_use_the_authoritative_module() -> N
     assert "python scripts/audit_portable_paths.py tracked" in security
 
 
+def test_authoritative_module_does_not_trigger_its_own_contract() -> None:
+    path = ROOT / "src/ccld_complaints/portable_paths.py"
+
+    assert find_portable_path_violations(
+        path.read_text(encoding="utf-8"),
+        field=path.as_posix(),
+    ) == ()
+
+
 def test_pr_body_preflight_rejects_path_before_lifecycle_mutation() -> None:
     verification = _load_script(
         "portable_path_independent_verification",
