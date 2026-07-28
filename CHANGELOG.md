@@ -1,6 +1,13 @@
 # Changelog
 
 ## Unreleased
+- Added the Issue #632 portable-path publication contract. Generic named-user
+  Windows, macOS, and Linux paths now fail through one redacted rule set across
+  Git-tracked text, local and CI PR validation, guarded PR-body repair, hosted
+  issue intake, scripted issue publication, generated publication preflight,
+  source/evidence safety checks, and supported GitHub-content remediation.
+  The versioned remediation inventory records classifications, freshness, and
+  verification without retaining complete personal paths.
 - Rebuilt `/ccld/help` for Issue #503 as a concise attorney task guide with
   four visible categories, current task destinations, official CCLD term
   explanations through the shared glossary, truthful source/reviewer

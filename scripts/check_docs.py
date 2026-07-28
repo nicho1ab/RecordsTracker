@@ -10,6 +10,12 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import Any, cast
 
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "src"))
+from ccld_complaints.portable_paths import (  # noqa: E402
+    find_portable_path_violations,
+)
+
 EVIDENCE_POLICY_PATH = ".github/evidence-reuse-validation-impact-policy.json"
 EVIDENCE_SCHEMA_PATH = "schemas/evidence-reuse-validation-impact-v1.schema.json"
 EVIDENCE_EVALUATOR_PATH = "scripts/evaluate_evidence_reuse_policy.py"
@@ -1015,10 +1021,6 @@ STALE_ROADMAP_CURRENT_PRIORITIES = {
     ],
 }
 
-USER_SPECIFIC_REPOSITORY_PATH = re.compile(
-    r"(?i)c:[\\/]+users[\\/]+andre[\\/]+onedrive[\\/]+desktop[\\/]+repos[\\/]+"
-)
-
 PULL_REQUEST_TEMPLATE_SECTIONS = (
     "Governing issue and intended outcome",
     "Implementation scope",
@@ -1165,6 +1167,8 @@ def find_stale_roadmap_priorities(root: Path = Path(".")) -> list[str]:
 def find_user_specific_repository_paths(
     root: Path = Path("."), tracked_files: Iterable[str] | None = None
 ) -> list[str]:
+    """Scan Git-tracked text through the authoritative portable-path contract."""
+
     if tracked_files is None:
         result = subprocess.run(
             ["git", "-C", str(root), "ls-files", "-z"],
@@ -1173,7 +1177,7 @@ def find_user_specific_repository_paths(
         )
         tracked_files = result.stdout.decode("utf-8").split("\0")
 
-    found = []
+    found: list[str] = []
     for relative_path in tracked_files:
         if not relative_path:
             continue
@@ -1181,12 +1185,19 @@ def find_user_specific_repository_paths(
         if not path.is_file():
             continue
         try:
-            lines = path.read_text(encoding="utf-8").splitlines()
+            content = path.read_text(encoding="utf-8")
         except UnicodeDecodeError:
             continue
-        for line_number, line in enumerate(lines, start=1):
-            if USER_SPECIFIC_REPOSITORY_PATH.search(line):
-                found.append(f"{Path(relative_path).as_posix()}:{line_number}")
+        display_path = Path(relative_path).as_posix()
+        found.extend(
+            violation.diagnostic()
+            for violation in find_portable_path_violations(
+                content,
+                field=display_path,
+                source_path=display_path,
+                allow_approved_fixture=True,
+            )
+        )
     return found
 
 
@@ -1749,8 +1760,8 @@ def main() -> None:
     user_specific_repository_paths = find_user_specific_repository_paths()
     if user_specific_repository_paths:
         raise SystemExit(
-            "User-specific absolute repository paths found; replace the local "
-            "repository prefix with <Repo Path>\\: " + "; ".join(user_specific_repository_paths)
+            "Prohibited personal filesystem paths found in tracked content: "
+            + "; ".join(user_specific_repository_paths)
         )
 
     reviewer_ui_governance_violations = find_reviewer_ui_governance_contract_violations()

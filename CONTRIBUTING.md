@@ -21,6 +21,14 @@ explicitly authorized body-only repair lifecycle in
 `docs/developer/codex-workflow.md`. It does not authorize any code, commit,
 merge, approval, or issue-state change.
 
+Before creating or updating an issue body, issue comment, pull-request body,
+pull-request comment, completion comment, evidence summary, or completion
+report, run the shared publication preflight in
+`scripts/audit_portable_paths.py`. Local execution may resolve absolute paths,
+but published content uses repository-relative paths or an approved placeholder.
+The PR-body lifecycle consumes the same contract automatically before any body
+mutation.
+
 ## Creating loop-compatible implementation issues
 
 Use the **Loop-compatible implementation** issue form when proposed work is

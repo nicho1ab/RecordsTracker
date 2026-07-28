@@ -908,6 +908,24 @@ def test_issue_body_rejects_secret_like_description() -> None:
         raise AssertionError("Expected secret-like issue body to be rejected")
 
 
+def test_feedback_personal_path_preflight_stops_before_github_mutation() -> None:
+    client = MockGitHubIssueClient()
+    context = _feedback_context(configured=True, actor=_actor(), client=client)
+    personal_path = "\\".join(
+        ("C:", "Users", "synthetic-user", "Desktop", "feedback.txt")
+    )
+
+    status, _content_type, body = route_response(
+        FEEDBACK_PATH,
+        method="POST",
+        request_body=_valid_form_bytes(description=f"See {personal_path}"),
+        feedback_context=context,
+    )
+
+    assert status == 502
+    assert client.calls == []
+
+
 def _feedback_context(
     *,
     configured: bool,

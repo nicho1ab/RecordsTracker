@@ -3,7 +3,7 @@
   "title": "Delivery-automation failure and prevention registry",
   "purpose": "Records authoritative delivery-automation failures and durable prevention evidence without granting autonomous governance authority.",
   "owner_issue": "#617",
-  "highest_assigned_id": 31,
+  "highest_assigned_id": 32,
   "historical_gaps": [
     {
       "start_id": 1,
@@ -105,6 +105,40 @@
         "Do not infer closure safety solely from PR-body wording; incomplete observable evidence, partial pagination, unknown timeline events, and unknown closure sources fail closed, while informational cross-references remain relationship evidence and the unexposed development-link closure effect requires explicit post-merge verification."
       ],
       "related_issues": ["#608", "#617"],
+      "supersession": {"supersedes": [], "superseded_by": []},
+      "retirement": {"status": "not_applicable", "rationale": null},
+      "temporary_exception": null
+    },
+    {
+      "id": "DA-032",
+      "title": "Portable-path publication parity",
+      "failure_pattern": "A tracked-file-only, username-specific path check allowed personal filesystem locations to recur in GitHub issue content and generated publication text.",
+      "evidence_references": [
+        {"kind": "issue", "reference": "#442"},
+        {"kind": "issue", "reference": "#550"},
+        {"kind": "issue", "reference": "#632"},
+        {"kind": "repository_path", "reference": "src/ccld_complaints/portable_paths.py"}
+      ],
+      "owner_issue": "#632",
+      "lifecycle_status": "prevented",
+      "prevention_state": "prevention_complete",
+      "governance_change_classifications": ["stronger_enforcement"],
+      "enforcement_levels": ["validation", "guarded_mutation", "workflow_gate"],
+      "evidence_completeness": "complete",
+      "prevention_summary": "One generic named-user path contract now governs Git-tracked text, PR-body validation and repair, hosted issue intake, scripted issue publication, generated publication preflight, CI, and guarded GitHub-content remediation with redacted diagnostics and inventory evidence.",
+      "merged_prevention_prs": [],
+      "regression_coverage": [
+        "tests/unit/test_portable_paths.py",
+        "tests/unit/test_github_portable_path_audit.py",
+        "tests/data_quality/test_documentation_checks.py"
+      ],
+      "documentation_impact": [
+        "SECURITY_AND_PRIVACY.md#portable-path-publication-contract",
+        "docs/developer/codex-workflow.md#da-032-portable-path-publication-parity",
+        "TESTING_STRATEGY.md"
+      ],
+      "remaining_work": [],
+      "related_issues": ["#442", "#550", "#608", "#617", "#632"],
       "supersession": {"supersedes": [], "superseded_by": []},
       "retirement": {"status": "not_applicable", "rationale": null},
       "temporary_exception": null

@@ -42,6 +42,7 @@ from ccld_complaints.hosted_app.persistence import (
     HostedDatabaseConfigError,
     load_hosted_database_config,
 )
+from ccld_complaints.portable_paths import find_portable_path_violations
 from ccld_complaints.source_to_screen_catalog import (
     AGGREGATE_FEATURES,
     COMPLAINT_REPORT_INVENTORY_FIELDNAMES,
@@ -546,6 +547,12 @@ def redact_sensitive_text(value: str, *, redact_urls: bool = True) -> str:
     redacted = _SECRET_ASSIGNMENT_RE.sub(lambda match: f"{match.group(1)}=<redacted>", redacted)
     if redact_urls:
         redacted = _URL_RE.sub("<redacted-url>", redacted)
+    for violation in reversed(
+        find_portable_path_violations(redacted, field="aggregate audit output")
+    ):
+        redacted = (
+            redacted[: violation.start] + "<redacted-path>" + redacted[violation.end :]
+        )
     redacted = _ABSOLUTE_WINDOWS_PATH_RE.sub("<redacted-path>", redacted)
     redacted = _ABSOLUTE_PRIVATE_POSIX_PATH_RE.sub("<redacted-path>", redacted)
     return redacted
@@ -3254,6 +3261,7 @@ def _reject_prohibited_coverage_content(value: Any) -> None:
         _CONNECTION_STRING_RE.search(value)
         or _SECRET_ASSIGNMENT_RE.search(value)
         or _URL_RE.search(value)
+        or find_portable_path_violations(value, field="coverage input")
         or _ABSOLUTE_WINDOWS_PATH_RE.search(value)
         or _ABSOLUTE_PRIVATE_POSIX_PATH_RE.search(value)
         or _COVERAGE_HTML_RE.search(value)

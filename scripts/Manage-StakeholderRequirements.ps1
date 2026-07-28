@@ -37,6 +37,24 @@ function Write-Utf8File {
     )
 }
 
+function Assert-PortablePublicationFile {
+    param(
+        [Parameter(Mandatory=$true)][string]$Path,
+        [Parameter(Mandatory=$true)][string]$Field
+    )
+
+    $python = Join-Path (Get-Location) ".venv\Scripts\python.exe"
+    if (Test-Path -LiteralPath $python) {
+        & $python "scripts\audit_portable_paths.py" publication --field $Field --input $Path
+    }
+    else {
+        & python "scripts\audit_portable_paths.py" publication --field $Field --input $Path
+    }
+    if ($LASTEXITCODE -ne 0) {
+        throw "Portable-path publication preflight rejected $Field."
+    }
+}
+
 function Invoke-GhJson {
     param([Parameter(Mandatory=$true)][string[]]$Arguments)
     $raw = & gh @Arguments
@@ -679,6 +697,7 @@ if ($SyncIssues) {
     } else {
         $temp = Join-Path $env:TEMP "recordstracker-$($epic.id).md"
         Write-Utf8File -Path $temp -Content (New-IssueBody -Requirement $epic -IssueMap $issueMap -IsEpic)
+        Assert-PortablePublicationFile -Path $temp -Field "issue body"
         if ($PSCmdlet.ShouldProcess("$Repository issue '$($epic.title)'","Create")) {
             $url = (& gh issue create --repo $Repository --title $epic.title --body-file $temp --label ($epic.labels -join ",")).Trim()
             if ($LASTEXITCODE -ne 0) { throw "Failed to create epic." }
@@ -697,6 +716,7 @@ if ($SyncIssues) {
         }
         $temp = Join-Path $env:TEMP "recordstracker-$($requirement.id).md"
         Write-Utf8File -Path $temp -Content (New-IssueBody -Requirement $requirement -IssueMap $issueMap)
+        Assert-PortablePublicationFile -Path $temp -Field "issue body"
         if ($PSCmdlet.ShouldProcess("$Repository issue '$($requirement.title)'","Create")) {
             $url = (& gh issue create --repo $Repository --title $requirement.title --body-file $temp --label ($requirement.labels -join ",")).Trim()
             if ($LASTEXITCODE -ne 0) { throw "Failed to create issue $($requirement.id)." }
@@ -709,6 +729,7 @@ if ($SyncIssues) {
     if ($issueMap.ContainsKey("STAKEHOLDER-EPIC")) {
         $tempEpic = Join-Path $env:TEMP "recordstracker-STAKEHOLDER-EPIC-final.md"
         Write-Utf8File -Path $tempEpic -Content (New-IssueBody -Requirement $epic -IssueMap $issueMap -IsEpic)
+        Assert-PortablePublicationFile -Path $tempEpic -Field "issue body update"
         if ($PSCmdlet.ShouldProcess("$Repository issue #$($issueMap["STAKEHOLDER-EPIC"].number)","Update linked child checklist")) {
             & gh issue edit $issueMap["STAKEHOLDER-EPIC"].number --repo $Repository --body-file $tempEpic | Out-Null
             if ($LASTEXITCODE -ne 0) { throw "Failed to update epic child checklist." }

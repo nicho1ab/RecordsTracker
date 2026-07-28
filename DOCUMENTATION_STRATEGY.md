@@ -147,9 +147,20 @@ Public documentation, examples, templates, and repository metadata must avoid pe
 
 Use neutral placeholders in public examples:
 
+- `<Repo Path>` for a repository root in published workflow evidence.
+- `<Evidence Path>` for retained local evidence.
+- `<Output Path>` or `<User-Accessible Output Path>` for generated output.
 - `<repo-root>` for the repository root.
 - `<local-project-path>` for local filesystem paths.
 - `<your-github-org-or-user>` for GitHub owners.
 - `<repository-name>` for repository names.
+
+Resolved absolute paths are legitimate transient inputs to local execution.
+They are not publication identities. Tracked examples, GitHub issue and PR
+content, comments, completion reports, and evidence summaries must use the
+authoritative portable-path preflight. Operational evidence records filenames,
+hashes, run or job IDs, and approved placeholders. Immutable historical
+artifacts are inventoried and bounded rather than rewritten or described as
+corrected.
 
 Do not include account-specific billing or entitlement details. State the governance rule as: avoid project dependencies on optional paid platform features.

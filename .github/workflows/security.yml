@@ -21,5 +21,7 @@ jobs:
         run: python -m pip install --upgrade pip pip-audit
       - name: Check for committed secrets
         run: python scripts/check_no_secrets.py
+      - name: Check tracked content for personal filesystem paths
+        run: python scripts/audit_portable_paths.py tracked
       - name: Run dependency audit
         run: pip-audit -r requirements.txt -r requirements-dev.txt

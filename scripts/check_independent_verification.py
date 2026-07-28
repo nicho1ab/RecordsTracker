@@ -17,6 +17,10 @@ from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Any, NamedTuple, cast
 
+REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPOSITORY_ROOT / "src"))
+from ccld_complaints.portable_paths import publication_diagnostics  # noqa: E402
+
 REQUIRED_WORKFLOWS: dict[str, tuple[str, tuple[str, ...]]] = {
     ".github/workflows/ci.yml": (
         "validate",
@@ -31,6 +35,7 @@ REQUIRED_WORKFLOWS: dict[str, tuple[str, tuple[str, ...]]] = {
         "security",
         (
             "python scripts/check_no_secrets.py",
+            "python scripts/audit_portable_paths.py tracked",
             "pip-audit -r requirements.txt -r requirements-dev.txt",
         ),
     ),
@@ -919,6 +924,7 @@ def validate_pr_evidence(
     violations = find_workflow_contract_violations(repo_root) + find_pr_evidence_violations(
         normalized_body, normalized_files
     )
+    violations.extend(publication_diagnostics(normalized_body, field="pull-request body"))
     compact_headings = _heading_occurrences(normalized_body, COMPACT_POLICY_HEADING)
     compact_section = _markdown_section(normalized_body, COMPACT_POLICY_HEADING)
     if len(compact_headings) == 1 and "```json" in compact_section:

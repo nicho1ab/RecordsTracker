@@ -20,7 +20,7 @@
   registry: `.github/delivery-automation-registry.json`, its versioned schema,
   the offline `scripts/delivery_automation_registry.py` validator, and the
   lifecycle authority in `docs/developer/codex-workflow.md`. The initial
-  registry records only DA-029, DA-030, and DA-031; DA-001 through DA-028 remain
+  registry records DA-029 through DA-032; DA-001 through DA-028 remain
   explicit unavailable historical gaps. Documentation validation runs the
   validator without adding a required check, changing workflow permissions, or
   granting autonomous approval, merge, issue closure, deployment, or
@@ -41,6 +41,13 @@
   repository-bounded and post-merge collection uses fixed read-only queries for
   exact declared issues only. It does not merge, close, reopen, unlink,
   recover, or grant merge authority.
+- DA-032 records the tracked-file-only enforcement gap that allowed personal
+  paths to recur in GitHub content. One generic contract now governs
+  Git-tracked text, publication preflight, PR-body lifecycle validation and
+  guarded repair, hosted issue intake, scripted issue publication, CI, and
+  supported GitHub-content remediation. Diagnostics and the versioned
+  remediation inventory retain only redacted pattern identifiers, locations,
+  hashes, classifications, replacement types, and verification results.
 - Issue #617 slice 1 adds the canonical governed evidence-reuse and
   validation-impact policy, versioned envelope schema, deterministic local
   evaluator, and sanitized fixtures. It classifies only complete

@@ -19,6 +19,7 @@ from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 from jsonschema import validate as jsonschema_validate
 
+from ccld_complaints.portable_paths import find_portable_path_violations
 from ccld_complaints.utils.hash import sha256_bytes
 
 CONTRACT_VERSION: Final = "issue-490.source-profile.v1"
@@ -33,9 +34,6 @@ SECRET_LIKE_PATTERN: Final = re.compile(
     r"(?:password|private[_-]?key|client[_-]?secret)\s*[:=])",
     re.IGNORECASE,
 )
-PERSONAL_PATH_PATTERN: Final = re.compile(r"(?:[A-Za-z]:\\Users\\|/Users/|/home/)")
-
-
 class FetchTransport(Protocol):
     def get(self, url: str, *, timeout_seconds: float) -> HttpResponse: ...
 
@@ -894,7 +892,7 @@ def write_csv_output(
 def assert_safe_output(text: str) -> None:
     if SECRET_LIKE_PATTERN.search(text):
         raise ValueError("Output contains a secret-like value.")
-    if PERSONAL_PATH_PATTERN.search(text):
+    if find_portable_path_violations(text, field="evaluation output"):
         raise ValueError("Output contains an absolute personal path.")
 
 

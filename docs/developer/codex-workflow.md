@@ -605,7 +605,7 @@ Each stable `DA-NNN` identifier is unique, uppercase, numerically ordered, and
 never silently renumbered or reused. A declared historical gap is a truthful
 absence of authoritative evidence, not an empty failure record. DA-001 through
 DA-028 are explicitly unavailable because the #617 readiness audit found no
-authoritative repository evidence; only DA-029 through DA-031 are seeded.
+authoritative repository evidence; only DA-029 through DA-032 are seeded.
 
 Records identify their owner issue, lifecycle status, prevention state,
 governance-change classification, enforcement level, evidence completeness,
@@ -719,6 +719,37 @@ permission is granted.
 
 A freeform body cannot substitute for the full governed template. Compact
 governed-summary eligibility remains controlled only by the validator.
+
+### DA-032 portable-path publication parity
+
+Issue #632 records why the narrower Issue #442 check was incomplete. It scanned
+Git-tracked text with a regex tied to one username and one repository prefix;
+generated but untracked reports, issue bodies and comments, PR bodies and
+comments, completion reports, evidence summaries, and direct agent-authored
+GitHub content had no equivalent pre-mutation boundary.
+
+`src/ccld_complaints/portable_paths.py` now owns the only named-user path rules,
+approved placeholders, redacted diagnostics, and exact tracked-fixture
+exception. `scripts/audit_portable_paths.py` provides Git-aware tracked
+scanning, file-based preflight for issue/comment/evidence/completion text, and a
+supported GitHub audit/remediation lifecycle. The GitHub lifecycle paginates
+open and closed issues and PRs, conversation comments, and inline review
+comments; classifies editability and authorship; refetches and hashes each
+candidate target immediately before one update; preflights the replacement;
+refetches after the update; and emits a versioned inventory without raw matched
+paths. Concurrent drift stops mutation for that item. Third-party or unsupported
+historical content is recorded, not blindly rewritten.
+
+The PR-body validator and DA-030 repair path consume this same contract before
+any PATCH. Hosted feedback issue creation checks title and body before its HTTP
+request, scripted stakeholder issue creation checks each body file before
+`gh`, and the security workflow invokes the same tracked scanner. Codex and
+Copilot may resolve absolute paths for local execution but must publish
+repository-relative paths, filenames, hashes, run or job IDs, or approved
+placeholders.
+
+This is a `stronger_enforcement` governance change and retains the existing
+governed-boundary disclosures without changing their wording or authority.
 
 ### Governed evidence reuse and validation-impact policy
 

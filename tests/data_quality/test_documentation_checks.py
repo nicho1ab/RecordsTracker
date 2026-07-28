@@ -866,24 +866,29 @@ def test_user_specific_repository_path_variants_are_rejected(
     )
 
     assert check_docs.find_user_specific_repository_paths(tmp_path, [document.name]) == [
-        "example.md:1"
+        "example.md:1:10: prohibited pattern windows_named_user_profile; "
+        "replace the local path with <Repo Path>"
     ]
 
 
-def test_repository_path_check_ignores_untracked_and_unrelated_windows_paths(
+def test_repository_path_check_ignores_untracked_but_detects_generic_user_profiles(
     tmp_path: Path,
 ) -> None:
     check_docs = _load_check_docs_module()
     tracked = tmp_path / "tracked.md"
+    generic_profile = "\\".join(["C:", "Users", "tester", "RecordsTracker"])
     tracked.write_text(
-        r"Use C:\Program Files\RecordsTracker or C:\Users\tester\RecordsTracker." + "\n",
+        f"Use C:\\Program Files\\RecordsTracker or {generic_profile}.\n",
         encoding="utf-8",
     )
     untracked = tmp_path / "generated.txt"
     prohibited_prefix = "\\".join(["C:", "Users", "andre", "OneDrive", "Desktop", "Repos", ""])
     untracked.write_text(prohibited_prefix + "generated", encoding="utf-8")
 
-    assert check_docs.find_user_specific_repository_paths(tmp_path, [tracked.name]) == []
+    assert check_docs.find_user_specific_repository_paths(tmp_path, [tracked.name]) == [
+        "tracked.md:1:40: prohibited pattern windows_named_user_profile; "
+        "replace the local path with <local-project-path>"
+    ]
 
 
 def test_completed_review_grouping_priority_is_rejected(tmp_path: Path) -> None:

@@ -1,0 +1,18 @@
+{
+  "fixture_contract": "recordstracker.portable-paths.v1",
+  "purpose": "Synthetic named-user path detection cases; this exact tracked fixture is exempt only from the repository-wide scan.",
+  "prohibited": [
+    "D:\\Users\\sample-user\\Documents\\RecordsTracker\\report.json",
+    "e:/Users/example.person/OneDrive/Repositories/RecordsTracker/output file.json",
+    "/Users/sample-user/Documents/RecordsTracker/report.json",
+    "/home/example.person/projects/RecordsTracker/report.json"
+  ],
+  "allowed": [
+    "<Repo Path>/scripts/check_docs.py",
+    "<Evidence Path>/report.json",
+    "<Output Path>/report.json",
+    "<User-Accessible Output Path>/report.json",
+    "docs/developer/codex-workflow.md",
+    "https://api.github.com/repos/nicho1ab/RecordsTracker/issues/632"
+  ]
+}
