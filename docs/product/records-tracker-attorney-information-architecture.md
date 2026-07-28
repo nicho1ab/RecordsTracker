@@ -474,6 +474,13 @@ required; matching anchor text alone is insufficient.
    visible primary guidance, working browser fragment/focus behavior, official
    point-of-use definitions, and tier-correct troubleshooting.
 
+Issue #503 repository status: step 6 is implemented on its assigned branch.
+The existing Help route now uses the four approved visible category groups,
+current accepted destinations, shared point-of-use definitions, browser-
+functional fragments, tier-correct troubleshooting, responsive reflow, and
+print rules. Exact-route evidence remains subject to explicit product-owner
+review; implementation does not claim visual acceptance or a Figma update.
+
 Issue #419 repository status: step 4 is implemented on its assigned branch.
 Complaint Patterns, Licensing and Visit Activity, and Complaint Activity Over
 Time are available under the canonical route, and the three legacy URLs use

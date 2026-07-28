@@ -60,7 +60,7 @@ $routes = @(
     @{ Path = "/ccld/records/request"; AllowedStatus = @(200, 401, 503); RequiredText = @(); Expected = "request page, protected, or setup-required state" },
     @{ Path = "/ccld/retrieval/jobs"; AllowedStatus = @(200, 401, 503); RequiredText = @(); Expected = "retrieval history, protected, or setup-required state" },
     @{ Path = "/ccld/retrieval/jobs/detail?job_id=missing-job"; AllowedStatus = @(400, 401, 404, 503); RequiredText = @(); Expected = "safe missing-job detail state" },
-    @{ Path = "/ccld/help"; AllowedStatus = @(200); RequiredText = @("How CCLD review works"); Expected = "public CCLD help" },
+    @{ Path = "/ccld/help"; AllowedStatus = @(200); RequiredText = @("Get started", "Understand the information", "Manage review work", "Troubleshooting"); Expected = "attorney task Help" },
     @{ Path = "/reviewer"; AllowedStatus = @(200, 401, 503); RequiredText = @(); Expected = "reviewer UI, protected, or setup-required state" }
 )
 

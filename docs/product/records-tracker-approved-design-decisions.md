@@ -315,6 +315,14 @@ An implementation must not silently redefine an approved decision.
   accessible-name review, point-of-use glossary interaction evidence, and
   exact-route screenshots.
 
+Issue #503 consumes this decision with `RT-IA-004`, `RT-NAV-001`,
+`RT-GL-001`, `RT-ACT-001`, `RT-TIER-001`, `RT-SRC-001`, `RT-STATE-001`,
+`RT-RWD-001`, `RT-A11Y-001`, `RT-A11Y-002`, `RT-STRESS-001`,
+`RT-PRINT-001`, and `RT-SAFE-001`. Its repository evidence record is
+`../planning/issue-503-help-attorney-task-evidence.md`. The record implements
+the approved controlled variance and does not claim a Figma update or visual
+acceptance.
+
 ### RT-ID-001 — Facility identity displayed once per page context
 
 - **Approved decision:** Facility identity is displayed once per page context.

@@ -206,7 +206,7 @@ def test_ccld_trailing_slash_route_renders_request_start() -> None:
     assert_no_secret_html(html)
 
 
-def test_ccld_help_page_explains_workflow_terms_and_feedback() -> None:
+def test_ccld_help_page_is_an_attorney_task_guide_with_safe_boundaries() -> None:
     status, content_type, body = route_response("/ccld/help")
     html = body.decode("utf-8")
     normalized_html = " ".join(html.split())
@@ -215,68 +215,82 @@ def test_ccld_help_page_explains_workflow_terms_and_feedback() -> None:
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
     assert "Help" in html
-    assert "Use RecordsTracker for facility complaint review" in html
-    assert "Find a facility" in html
-    assert "Request Records" in html
-    assert "Review Queue" in html
-    assert "Reviewer Detail" in html
-    assert "Packet preview and preparation draft" in html
-    assert "Send feedback" in html
-    assert "facility/license number" in normalized_html
-    assert "CCLD request context" in normalized_html
-    assert "facility/date request" in normalized_html
-    assert "loaded CCLD records" in normalized_html
-    assert "review queue" in lowered_html
-    assert "suggested next record" in normalized_html
-    assert "complaint review workspace" in normalized_html
-    assert "review flags" in normalized_html
-    assert "source link or source record availability" in normalized_html
-    assert "CCLD source available indicators" in normalized_html
-    assert "reviewer notes/status" in normalized_html
-    assert "next action" in normalized_html
-    assert "packet preview" in normalized_html
-    assert "preparation draft" in normalized_html
-    assert "public CCLD portal remains the source of record" in normalized_html
-    assert "check available source links" in normalized_html
-    assert "does not make legal findings" in normalized_html
-    assert "proof of source completeness" in normalized_html
-    assert "How reviewer-created status filters work" not in html
-    assert "Support notes" not in html
-    assert "Support and runtime notes" not in html
-    assert "How source traceability works" not in html
-    assert "What to do with source-confidence cues" not in html
-    assert "Operator setup: enabling live Request Records" not in html
-    assert "How correction-readiness works" not in html
+    assert "Find guidance by task or information question" in html
+    for category in (
+        "Get started",
+        "Understand the information",
+        "Manage review work",
+        "Troubleshooting",
+    ):
+        assert category in html
+    for task in (
+        "Find and select a facility",
+        "Compare facilities",
+        "Get complaint records",
+        "Review a complaint",
+        "Save status or notes",
+        "Prepare, print, or export material",
+        "Use the Complaint Worklist",
+        "Report a problem through Feedback",
+    ):
+        assert task in html
+    for official_term in (
+        "Allegation",
+        "Finding",
+        "Deficiency",
+        "Type A citation",
+        "Type B citation",
+        "Plan of Correction",
+        "Substantiated",
+        "Unsubstantiated",
+        "Inconclusive",
+    ):
+        assert official_term in html
+    assert "reviewer-created" in lowered_html
+    assert "do not change the public complaint record" in lowered_html
+    assert "not proof that no public complaint exists" in lowered_html
+    assert "not a risk score" not in lowered_html
+    assert "not risk scores" in lowered_html
+    assert "not an assignment" in lowered_html
+    assert "not a certified report" in lowered_html
+    assert 'href="/ccld/facilities"' in html
+    assert 'href="/ccld/facilities/intelligence"' in html
+    assert 'href="/ccld/records/request"' in html
+    assert 'href="/reviewer"' in html
+    assert 'href="/feedback"' in html
+    assert html.count("<details") == 1
+    assert 'class="help-secondary-disclosure"' in html
+    assert 'data-term-id="help-substantiated"' in html
+    assert 'data-term-id="help-plan-of-correction"' in html
     assert 'action="/ccld/correction' not in normalized_html
     assert 'name="correction_status"' not in normalized_html
-    assert "correction approved" not in normalized_html
-    assert "correction applied" not in normalized_html
-    assert "corrected source record" not in normalized_html
-    assert "Open Request Records" not in html
     for forbidden_term in (
+        "Facility Review Intelligence",
+        "Facility review priority list",
+        "Facility Hub",
+        "Review Queue",
+        "Reviewer Detail",
+        "preparation draft",
+        "request context",
+        "loaded records",
+        "planning view",
+        "review cue",
+        "reference data details",
+        "source-available indicator",
         "raw SHA-256",
         "raw artifact reference",
         "connector metadata",
-        "source-derived fields",
-        "source-derived values",
-        "source-derived records",
         "source traceability internals",
         "extraction audit",
         "bundle rows",
         "operator diagnostics",
         "runtime details",
-        "production readiness",
-        "live browser crawling",
         "connector execution",
         "schema changes",
-        "auth",
-        "exports",
+        "database",
+        "server path",
+        "configuration variable",
         "persistence changes",
-        "harm",
-        "abuse",
-        "neglect",
-        "liability",
-        "rights-deprivation",
     ):
         assert forbidden_term.casefold() not in lowered_html
     assert_no_secret_html(html)

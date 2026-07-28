@@ -287,6 +287,26 @@ focused-element geometry, focus-visible styling, and screenshot hashes in
 differ from their ordinary route screenshot hashes. This disclosure is required
 when governed workflow boundaries change; it does not grant visual acceptance.
 
+## Issue #503 evidence scope
+
+Issue #503 captures `/ccld/help` at desktop, 1024-pixel narrow desktop,
+390-pixel mobile, and a 720-pixel 200-percent-reflow approximation. Four direct
+fragment routes prove copied category URLs. Interaction-aware routes prove
+keyboard activation, representative child guidance, browser Back/Forward focus
+continuity, invalid-fragment recovery, the permitted secondary disclosure, and
+the shared official-term glossary. The print route produces a PDF and rendered
+page images.
+
+The packet adds `issue-503-route-fragment-inventory.csv`,
+`issue-503-approved-versus-rendered.csv`, `issue-503-ui-gates.csv`,
+`issue-503-print-validation.json`, and
+`diagnostics/issue-503-responsive-fragment-focus-measurements.json`. Browser
+capture fails if primary guidance is hidden, more than one disclosure exists,
+a fragment target is missing, hidden, unfocused, or obscured, keyboard/history
+state fails, or horizontal page overflow appears. Native browser zoom and
+assistive-technology verification are not claimed. `RT-UI-GATE-009` remains
+`READY FOR EXPLICIT OWNER REVIEW`.
+
 ## Uploading For Review
 
 Upload or summarize the sibling ZIP created by the capture command, or the whole

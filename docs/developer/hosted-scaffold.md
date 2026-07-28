@@ -157,7 +157,8 @@ navigation without diagnostic links in the primary nav, progressive request
 workflow, native facility type-ahead with manual fallback, focused retrieval
 result/recovery states, status-center job pages, worklist-style reviewer queue
 with technical runtime details collapsed, summary-first reviewer detail
-workspace, card-prefilled feedback, collapsible help, skip-to-main links, strong
+workspace, card-prefilled feedback, attorney-task Help with visible primary
+guidance and one secondary-example disclosure, skip-to-main links, strong
 focus styling, readable tables/forms, and mode badges for Live public CCLD,
 Fixture/mock demo, and Retrieval not configured. This presentation work does not
 add routes, workflows, frontend dependencies, auth, exports, deployment, non-CCLD
