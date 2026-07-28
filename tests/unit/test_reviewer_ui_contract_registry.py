@@ -26,7 +26,8 @@ def test_initial_reviewer_ui_contract_registry_is_complete_and_bounded() -> None
         assert any(status in row for status in ("Documented", "Partially enforced", "Enforced"))
         assert "|" in row
 
-    assert "`RT-RC-006` | Partially enforced" in content
+    for contract in ("001", "002", "003", "004", "005", "006"):
+        assert f"`RT-RC-{contract}` | Enforced" in content
     assert "tests/unit/reviewer_ui_contracts.py" in content
     assert "tests/unit/test_reviewer_ui_contract_routes.py" in content
     assert "assert_fixture_integrity" in content
@@ -39,9 +40,16 @@ def test_registry_requires_pr_contract_disposition_and_focused_first_validation(
     assert "focused applicable checks" in content
     assert "final stable" in content
     assert "must not be presented as completed executable coverage" in content
+    assert "universal enforcement" in content
+    assert "pixel-perfect presentation enforcement" in content
     assert "## Registration and change lifecycle" in content
     assert "Retire or supersede a contract only through Issue\n#504 classification" in content
     assert "## Bounded historical sample" in content
     for issue in ("#568", "#419", "#522", "#605", "#606"):
         assert issue in content
-    assert "## Deferred Issue #608 phases" in content
+    assert "## Issue #419 adoption reconciliation" in content
+    assert "## Issue #420 adoption reconciliation" in content
+    assert "## Completed Issue #608 adoption reconciliation" in content
+    assert "adopt in #" not in content
+    assert "full #419 adoption remains deferred" not in content
+    assert "not #608 blockers" in content

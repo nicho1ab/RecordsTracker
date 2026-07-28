@@ -487,6 +487,7 @@ def test_evidence_policy_documentation_contract_is_complete() -> None:
     check_docs = _load_check_docs_module()
 
     assert check_docs.find_evidence_policy_documentation_contract_violations() == []
+    assert "state=merged-accepted-closed" in check_docs.EVIDENCE_IMPLEMENTATION_STATUS
 
 
 @pytest.mark.parametrize(

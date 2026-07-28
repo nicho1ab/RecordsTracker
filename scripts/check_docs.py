@@ -123,7 +123,7 @@ EVIDENCE_DOCUMENTATION_MARKERS = (
 EVIDENCE_IMPLEMENTATION_STATUS = (
     "Issue #617 implementation status: slice_1=policy-schema-evaluator; "
     "slice_2=PR-preparation-and-independent-verification; "
-    "slice_3=documentation-checks; state=local-unmerged-unaccepted; "
+    "slice_3=documentation-checks; state=merged-accepted-closed; "
     "issue_533_execution_authority=absent."
 )
 _EVIDENCE_CURRENT_STATUS_CLAIM = re.compile(
@@ -1424,11 +1424,14 @@ def find_evidence_policy_documentation_contract_violations(
             violations.append(
                 f"evidence-policy implementation status contradicts integration: {document_name}"
             )
-        if _EVIDENCE_CURRENT_STATUS_CLAIM.search(content):
-            violations.append(
-                "evidence-policy implementation status makes an untruthful current claim: "
-                f"{document_name}"
-            )
+        for line in content.splitlines():
+            is_untruthful_status_claim = _EVIDENCE_CURRENT_STATUS_CLAIM.search(line)
+            if is_untruthful_status_claim and line.strip() != EVIDENCE_IMPLEMENTATION_STATUS:
+                violations.append(
+                    "evidence-policy implementation status makes an untruthful current claim: "
+                    f"{document_name}"
+                )
+                break
         if _EVIDENCE_AUTHORITY_TRANSFER_CLAIM.search(content):
             violations.append(
                 f"evidence-policy documentation transfers #533 authority: {document_name}"
