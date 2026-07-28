@@ -37,12 +37,14 @@ _SYNTHETIC_MARKERS = (
     "fixture",
     "demo",
     "mock",
-    "test",
     "synthetic",
     "sample",
     "tiny",
     "emergency",
 )
+_PROVENANCE_MARKERS = _SYNTHETIC_MARKERS + ("test", "tests")
+_KNOWN_SYNTHETIC_FACILITY_IDS = frozenset({"900000001", "900000002"})
+_MARKER_TOKEN = re.compile(r"[a-z0-9]+")
 
 
 def run_hosted_corpus_verification(
@@ -237,16 +239,69 @@ def _source_linkage(
 def _synthetic_records(records: Sequence[SourceDerivedRecordRead]) -> list[dict[str, str]]:
     findings: list[dict[str, str]] = []
     for record in records:
-        haystack = " ".join(
-            (
-                record.source_record_key,
-                record.stable_source_id,
-                str(record.original_values.get("facility_name", "")),
+        known_facility_id = _known_synthetic_facility_id(record)
+        if known_facility_id is not None:
+            field, marker = known_facility_id
+            findings.append(
+                {
+                    "record_key": record.source_record_key,
+                    "reason": "known synthetic facility identity",
+                    "field": field,
+                    "marker": marker,
+                }
             )
-        ).casefold()
-        if any(marker in haystack for marker in _SYNTHETIC_MARKERS):
-            findings.append({"record_key": record.source_record_key, "reason": "synthetic marker"})
+            continue
+        identity_marker = _synthetic_identity_marker(record)
+        if identity_marker is not None:
+            field, marker = identity_marker
+            findings.append(
+                {
+                    "record_key": record.source_record_key,
+                    "reason": "synthetic identity marker",
+                    "field": field,
+                    "marker": marker,
+                }
+            )
     return findings
+
+
+def _known_synthetic_facility_id(record: SourceDerivedRecordRead) -> tuple[str, str] | None:
+    fields = (
+        ("original_values.facility_id", record.original_values.get("facility_id")),
+        (
+            "original_values.external_facility_number",
+            record.original_values.get("external_facility_number"),
+        ),
+        ("original_values.facility_number", record.original_values.get("facility_number")),
+        ("facility_id", record.facility_id),
+    )
+    for field, value in fields:
+        facility_number = _facility_number(value)
+        if facility_number in _KNOWN_SYNTHETIC_FACILITY_IDS:
+            return field, facility_number
+    return None
+
+
+def _facility_number(value: object) -> str | None:
+    if not isinstance(value, str):
+        return None
+    normalized = value.strip().casefold()
+    for prefix in ("ccld:facility:", "ccld-facility-"):
+        if normalized.startswith(prefix):
+            normalized = normalized.removeprefix(prefix)
+            break
+    return normalized if normalized.isdecimal() else None
+
+
+def _synthetic_identity_marker(record: SourceDerivedRecordRead) -> tuple[str, str] | None:
+    for field, value in (
+        ("source_record_key", record.source_record_key),
+        ("stable_source_id", record.stable_source_id),
+    ):
+        marker = _governed_marker(value, markers=_SYNTHETIC_MARKERS)
+        if marker is not None:
+            return field, marker
+    return None
 
 
 def _provenance(records: Sequence[SourceDerivedRecordRead]) -> dict[str, Any]:
@@ -260,15 +315,17 @@ def _provenance(records: Sequence[SourceDerivedRecordRead]) -> dict[str, Any]:
             or not record.retrieved_at
         ):
             missing.append(record.source_record_key)
-        marker_text = " ".join(
-            (
-                record.import_batch.source_artifact_identity,
-                record.import_batch.source_pipeline_version or "",
-                record.connector_name,
+        provenance_marker = _provenance_marker(record)
+        if provenance_marker is not None:
+            field, marker = provenance_marker
+            fallback.append(
+                {
+                    "record_key": record.source_record_key,
+                    "reason": "governed provenance marker",
+                    "field": field,
+                    "marker": marker,
+                }
             )
-        ).casefold()
-        if any(marker in marker_text for marker in _SYNTHETIC_MARKERS):
-            fallback.append({"record_key": record.source_record_key, "reason": "provenance marker"})
         if len(samples) < 10:
             samples.append(
                 {
@@ -281,6 +338,26 @@ def _provenance(records: Sequence[SourceDerivedRecordRead]) -> dict[str, Any]:
                 }
             )
     return {"missing": sorted(missing), "fallback_markers": fallback, "samples": samples}
+
+
+def _provenance_marker(record: SourceDerivedRecordRead) -> tuple[str, str] | None:
+    for field, value in (
+        ("import_batch.source_artifact_identity", record.import_batch.source_artifact_identity),
+        ("import_batch.source_pipeline_version", record.import_batch.source_pipeline_version),
+        ("connector_name", record.connector_name),
+    ):
+        marker = _governed_marker(value, markers=_PROVENANCE_MARKERS)
+        if marker is not None:
+            return field, marker
+    return None
+
+
+def _governed_marker(value: object, *, markers: Sequence[str]) -> str | None:
+    if not isinstance(value, str):
+        return None
+    marker_set = frozenset(markers)
+    tokens = _MARKER_TOKEN.findall(value.casefold())
+    return next((token for token in tokens if token in marker_set), None)
 
 
 def _representatives(

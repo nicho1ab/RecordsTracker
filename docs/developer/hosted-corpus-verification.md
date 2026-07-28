@@ -24,6 +24,13 @@ operator-captured displayed counts are warnings rather than invented values. The
 result never contains database URLs, credentials, cookies, tokens, private
 headers, raw paths, or personal local paths.
 
+Synthetic findings are limited to the known synthetic facility identities and
+exact governed marker tokens in controlled record identities. Fixture, demo,
+mock, test, synthetic, sample, tiny, and emergency markers are evaluated only
+in the import-batch provenance and connector fields. Each finding reports its
+safe field path and normalized marker token, never the complete source value;
+reviewer-facing values such as facility names are not synthetic markers.
+
 ## QNAP operator boundary
 
 Use a standalone SSH session with the exact operator-supplied

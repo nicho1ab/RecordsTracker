@@ -11,6 +11,8 @@ from sqlalchemy import create_engine, select, update
 
 from ccld_complaints.cli import verify_hosted_corpus
 from ccld_complaints.hosted_app.corpus_verification import (
+    _provenance,
+    _synthetic_records,
     run_hosted_corpus_verification,
     validate_corpus_verification_result,
     write_corpus_verification_result,
@@ -21,6 +23,10 @@ from ccld_complaints.hosted_app.seeded_import import (
     hosted_source_derived_records,
     import_seeded_corpus_artifact,
     load_seeded_corpus_artifact,
+)
+from ccld_complaints.hosted_app.source_derived_reads import (
+    ImportBatchRead,
+    SourceDerivedRecordRead,
 )
 
 FIXTURE = Path("tests/fixtures/hosted_seeded_corpus/validated_seeded_corpus.json")
@@ -84,7 +90,13 @@ def test_audit_detects_blocking_corpus_conditions(mutation: str, expected_failur
                     hosted_source_derived_records.c.source_record_key
                     == "facility:ccld:facility:extra"
                 )
-                .values(stable_source_id="synthetic-facility")
+                .values(
+                    stable_source_id="ccld:facility:900000001",
+                    original_values={
+                        "facility_id": "ccld:facility:900000001",
+                        "external_facility_number": "900000001",
+                    },
+                )
             )
         elif mutation == "fallback":
             connection.execute(
@@ -102,6 +114,150 @@ def test_audit_detects_blocking_corpus_conditions(mutation: str, expected_failur
             environ={"CCLD_HOSTED_PAGE_DATA_MODE": "postgres"},
         )
     assert expected_failure in result["blocking_failures"]
+
+
+@pytest.mark.parametrize(
+    ("facility_number", "facility_name"),
+    (
+        ("100406223", "Public Test Services"),
+        ("107207223", "Sampletown Child Care"),
+        ("198209668", "Emergency Learning Center"),
+        ("198209740", "Mockingbird Child Care"),
+    ),
+)
+def test_public_looking_flagged_id_reproduction_does_not_scan_facility_name(
+    facility_number: str, facility_name: str
+) -> None:
+    """Local reproductions use redacted stand-in names, not production-row values."""
+    record = _record(
+        source_record_key=f"facility:ccld-facility-{facility_number}",
+        stable_source_id=f"ccld-facility-{facility_number}",
+        original_values={
+            "facility_id": f"ccld:facility:{facility_number}",
+            "external_facility_number": facility_number,
+            "facility_name": facility_name,
+        },
+    )
+
+    assert _synthetic_records((record,)) == []
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "expected_field"),
+    (
+        ("external_facility_number", "900000001", "original_values.external_facility_number"),
+        ("facility_number", "900000002", "original_values.facility_number"),
+        ("facility_id", "CCLD:FACILITY:900000001", "original_values.facility_id"),
+    ),
+)
+def test_known_synthetic_facility_identity_is_blocking_with_exact_reason(
+    field: str, value: str, expected_field: str
+) -> None:
+    record = _record(original_values={field: value})
+
+    assert _synthetic_records((record,)) == [
+        {
+            "record_key": "facility:ccld-facility-200000001",
+            "reason": "known synthetic facility identity",
+            "field": expected_field,
+            "marker": value.rsplit(":", maxsplit=1)[-1].casefold(),
+        }
+    ]
+
+
+@pytest.mark.parametrize(
+    ("source_artifact_identity", "source_pipeline_version", "connector_name", "field", "marker"),
+    (
+        (
+            "tests/fixtures/hosted_seeded_corpus/validated_seeded_corpus.json",
+            "live-pipeline",
+            "ccld_facility_reports",
+            "import_batch.source_artifact_identity",
+            "tests",
+        ),
+        (
+            "governed-corpus.json",
+            "DEMO-pipeline",
+            "ccld_facility_reports",
+            "import_batch.source_pipeline_version",
+            "demo",
+        ),
+        (
+            "governed-corpus.json",
+            "live-pipeline",
+            "ccld-MOCK-reports",
+            "connector_name",
+            "mock",
+        ),
+        (
+            "governed-corpus.json",
+            "TEST-pipeline",
+            "ccld_facility_reports",
+            "import_batch.source_pipeline_version",
+            "test",
+        ),
+        (
+            "synthetic-corpus.json",
+            "live-pipeline",
+            "ccld_facility_reports",
+            "import_batch.source_artifact_identity",
+            "synthetic",
+        ),
+        (
+            "emergency-fallback.json",
+            "live-pipeline",
+            "ccld_facility_reports",
+            "import_batch.source_artifact_identity",
+            "emergency",
+        ),
+    ),
+)
+def test_governed_fixture_demo_and_fallback_provenance_remains_blocking(
+    source_artifact_identity: str,
+    source_pipeline_version: str,
+    connector_name: str,
+    field: str,
+    marker: str,
+) -> None:
+    record = _record(
+        source_artifact_identity=source_artifact_identity,
+        source_pipeline_version=source_pipeline_version,
+        connector_name=connector_name,
+    )
+
+    assert _provenance((record,))["fallback_markers"] == [
+        {
+            "record_key": "facility:ccld-facility-200000001",
+            "reason": "governed provenance marker",
+            "field": field,
+            "marker": marker,
+        }
+    ]
+
+
+def test_marker_substrings_in_public_values_do_not_become_provenance_or_audit_output() -> None:
+    record = _record(
+        source_artifact_identity="contest-results.json",
+        source_pipeline_version="testimony-pipeline",
+        connector_name="ccld-testament-reports",
+        original_values={"facility_name": "Contest Testimony Center"},
+    )
+
+    provenance = _provenance((record,))
+
+    assert _synthetic_records((record,)) == []
+    assert provenance["fallback_markers"] == []
+
+
+def test_provenance_reason_redacts_the_source_value() -> None:
+    sensitive_fragment = "token" + "=not-for-audit-output"
+    record = _record(source_artifact_identity=f"fixture-{sensitive_fragment}")
+
+    serialized = json.dumps(_provenance((record,)), sort_keys=True)
+
+    assert "fixture" in serialized
+    assert "token" + "=" not in serialized
+    assert "not-for-audit-output" not in serialized
 
 
 def test_fixture_demo_and_tiny_corpus_are_failures() -> None:
@@ -152,6 +308,43 @@ def test_cli_writes_result_and_returns_nonzero_for_blocking_audit(
     output = tmp_path / "blocking.json"
     assert verify_hosted_corpus.main(["--output", str(output)]) == 1
     assert output.is_file()
+
+
+def _record(
+    *,
+    source_record_key: str = "facility:ccld-facility-200000001",
+    stable_source_id: str = "ccld-facility-200000001",
+    original_values: dict[str, object] | None = None,
+    source_artifact_identity: str = "governed-corpus.json",
+    source_pipeline_version: str | None = "live-pipeline",
+    connector_name: str = "ccld_facility_reports",
+) -> SourceDerivedRecordRead:
+    return SourceDerivedRecordRead(
+        source_record_key=source_record_key,
+        entity_type="facility",
+        stable_source_id=stable_source_id,
+        source_document_id="ccld-document-200000001",
+        facility_id="ccld:facility:200000001",
+        source_url="https://example.invalid/public-source",
+        raw_sha256="a" * 64,
+        raw_path=None,
+        connector_name=connector_name,
+        connector_version="1",
+        retrieved_at="2026-07-28T00:00:00Z",
+        original_values=original_values or {"facility_number": "200000001"},
+        source_traceability={},
+        import_batch=ImportBatchRead(
+            import_batch_id="governed-corpus",
+            imported_at="2026-07-28T00:00:00Z",
+            source_artifact_identity=source_artifact_identity,
+            source_pipeline_version=source_pipeline_version,
+            validation_status="validated",
+            raw_hash_validation_status="validated",
+            record_counts={},
+            warnings=(),
+            errors=(),
+        ),
+    )
 
 
 def _prepared_engine(*, extra_pair: bool) -> object:
