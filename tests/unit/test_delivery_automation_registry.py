@@ -244,7 +244,7 @@ def test_existing_prevention_tests_and_documentation_are_referenced() -> None:
     )
     assert all(
         _record(registry, identifier)["documentation_impact"]
-        for identifier in ("DA-029", "DA-030", "DA-031")
+        for identifier in ("DA-029", "DA-030", "DA-031", "DA-032")
     )
 
 

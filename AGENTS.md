@@ -117,6 +117,13 @@ later phase; RL-MERGE, deployment, and issue closure need explicit authority.
 - Do not read, print, store, commit, or document secrets, private host details, passwords, tokens, cookies, private keys, GitHub PATs, Cloudflare tokens, QNAP passwords, or local `.env` values.
 - Do not add secrets to tests, fixtures, screenshots, docs, examples, or handoffs.
 - Use placeholders such as `<repo-root>`, `<local-project-path>`, `<qnap-host>`, and `<repository-name>` for machine-specific or private values.
+- Resolve absolute filesystem paths only for local execution. Before publishing
+  an issue body, issue comment, PR body, PR comment, completion comment,
+  evidence summary, completion report, or handoff, run the shared portable-path
+  preflight in `scripts/audit_portable_paths.py`. Publish artifact identity by
+  filename, repository-relative location where applicable, hash, run or job ID,
+  and an approved placeholder; never repeat a matched personal path in a
+  diagnostic or public inventory.
 - Use browser/computer-use only under HV-READ or HV-WORKFLOW. Use external
   network access only when the granted capability needs it, including RO for
   allowlisted issue or PR inspection, and only within the task's allowlists and

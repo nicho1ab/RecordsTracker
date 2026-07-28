@@ -1,0 +1,130 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/nicho1ab/RecordsTracker/schemas/portable-path-remediation-inventory-v1.schema.json",
+  "title": "RecordsTracker portable-path remediation inventory",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "portable_path_contract_version",
+    "audit_timestamp",
+    "repository",
+    "audit_scope",
+    "records",
+    "summary"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "recordstracker.portable-path-remediation-inventory.v1"
+    },
+    "portable_path_contract_version": {
+      "const": "recordstracker.portable-paths.v1"
+    },
+    "audit_timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "repository": {
+      "type": "string",
+      "pattern": "^[^/\\s]+/[^/\\s]+$"
+    },
+    "audit_scope": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"type": "string"}
+    },
+    "records": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/record"}
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "content_items_audited",
+        "matches_classified",
+        "corrections_applied",
+        "retained_or_uneditable",
+        "editable_matches_remaining"
+      ],
+      "properties": {
+        "content_items_audited": {"type": "integer", "minimum": 0},
+        "matches_classified": {"type": "integer", "minimum": 0},
+        "corrections_applied": {"type": "integer", "minimum": 0},
+        "retained_or_uneditable": {"type": "integer", "minimum": 0},
+        "editable_matches_remaining": {"type": "integer", "minimum": 0}
+      }
+    }
+  },
+  "$defs": {
+    "record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "item_type",
+        "issue_or_pull_request_number",
+        "comment_identifier",
+        "author_classification",
+        "prohibited_pattern_identifier",
+        "location",
+        "editability_classification",
+        "correction_applied",
+        "replacement_type",
+        "verification_result",
+        "limitation_or_exception",
+        "source_content_freshness"
+      ],
+      "properties": {
+        "item_type": {"type": "string"},
+        "issue_or_pull_request_number": {"type": "integer", "minimum": 1},
+        "comment_identifier": {
+          "type": ["integer", "null"],
+          "minimum": 1
+        },
+        "author_classification": {"type": "string"},
+        "prohibited_pattern_identifier": {
+          "enum": [
+            "windows_named_user_profile",
+            "macos_named_user_home",
+            "linux_named_user_home"
+          ]
+        },
+        "location": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["line", "column"],
+          "properties": {
+            "line": {"type": "integer", "minimum": 1},
+            "column": {"type": "integer", "minimum": 1}
+          }
+        },
+        "editability_classification": {"type": "string"},
+        "correction_applied": {"type": "boolean"},
+        "replacement_type": {
+          "type": ["string", "null"]
+        },
+        "verification_result": {"type": "string"},
+        "limitation_or_exception": {
+          "type": ["string", "null"]
+        },
+        "source_content_freshness": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["updated_at", "body_sha256", "verified_updated_at"],
+          "properties": {
+            "updated_at": {"type": "string", "format": "date-time"},
+            "body_sha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "verified_updated_at": {
+              "type": ["string", "null"],
+              "format": "date-time"
+            }
+          }
+        }
+      }
+    }
+  }
+}

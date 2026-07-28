@@ -17,6 +17,7 @@ from urllib.parse import parse_qsl, urljoin, urlsplit, urlunsplit
 
 from jsonschema import validate as jsonschema_validate
 
+from ccld_complaints.portable_paths import find_portable_path_violations
 from ccld_complaints.statewide_facility_source_evaluation import (
     canonical_fingerprint,
     canonical_json_bytes,
@@ -73,7 +74,6 @@ PROHIBITED_RESPONSE_PATTERNS: Final[tuple[re.Pattern[str], ...]] = (
     re.compile(r"x-amz-(?:credential|signature)=", re.IGNORECASE),
     re.compile(r"authorization\s*:\s*bearer\s+", re.IGNORECASE),
     re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----"),
-    re.compile(r"(?:[A-Za-z]:\\Users\\|/Users/|/home/)[^\s\"']+"),
 )
 
 FIELD_CANDIDATES: Final[dict[str, tuple[str, ...]]] = {
@@ -309,6 +309,10 @@ def assert_response_safe_to_retain(body: bytes, media_type: str) -> None:
     if not any(token in lowered_type for token in ("json", "text", "xml", "html", "csv")):
         return
     text = body.decode("utf-8", errors="replace")
+    if find_portable_path_violations(text, field="source response"):
+        raise ProhibitedContentError(
+            "Source response matched a prohibited sensitive-material pattern."
+        )
     for pattern in PROHIBITED_RESPONSE_PATTERNS:
         if pattern.search(text):
             raise ProhibitedContentError(

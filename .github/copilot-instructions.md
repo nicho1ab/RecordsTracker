@@ -58,6 +58,14 @@ variant.
 - Do not remove source traceability.
 - Do not delete raw source preservation behavior.
 - Do not store secrets in the repo.
+- Use resolved absolute paths only for local execution. Never persist
+  operator-local named-user paths in tracked content, GitHub issue or PR
+  content, comments, completion reports, evidence summaries, or handoffs.
+  Use repository-relative paths or approved placeholders and run
+  `scripts/audit_portable_paths.py publication` before GitHub publication.
+  Report artifacts by filename, repository-relative location where applicable,
+  hash, run or job ID, and approved placeholder; diagnostics and public
+  inventories must redact matched paths.
 - Under RL-PREPARE, when GitHub CLI is installed and authenticated, prefer `gh`
 	for the assigned branch and single PR, including viewing PR status, waiting
 	for checks, and editing the PR body. Squash merge and cleanup require
@@ -111,6 +119,13 @@ a supported open-PR validate, preview, and explicitly confirmed body-only repair
 lifecycle; follow the authoritative details in `docs/developer/codex-workflow.md`.
 That lifecycle requires current live scope validation and does not authorize code
 changes, commits, merges, approvals, or issue closure.
+
+The portable-path publication contract is a second mandatory boundary, not a
+freeform review step. The tracked scanner, local/CI PR validation, PR-body
+repair, scripted issue publication, hosted feedback issue creation, and GitHub
+remediation workflow must consume
+`src/ccld_complaints/portable_paths.py`. Do not introduce a second path regex
+list.
 
 Implementation and RL-PREPARE handoffs are concise: outcome; root cause where
 applicable; changed files; focused validation; documentation or governance

@@ -1,0 +1,484 @@
+{
+  "audit_scope": [
+    "open_and_closed_issue_bodies",
+    "issue_comments",
+    "open_and_closed_pull_request_bodies",
+    "pull_request_conversation_comments",
+    "pull_request_review_comments"
+  ],
+  "audit_timestamp": "2026-07-28T04:16:16.994193+00:00",
+  "portable_path_contract_version": "recordstracker.portable-paths.v1",
+  "records": [
+    {
+      "author_classification": "authenticated_repository_user",
+      "comment_identifier": null,
+      "correction_applied": true,
+      "editability_classification": "editable",
+      "issue_or_pull_request_number": 442,
+      "item_type": "issue_body",
+      "limitation_or_exception": null,
+      "location": {
+        "column": 79,
+        "line": 7
+      },
+      "prohibited_pattern_identifier": "windows_named_user_profile",
+      "replacement_type": "<Repo Path>",
+      "source_content_freshness": {
+        "body_sha256": "8b8cbb8cee47010650fa2921ddc63c316f96237a3a69ed5d5f96ca519601ed6d",
+        "updated_at": "2026-07-14T15:37:22Z",
+        "verified_updated_at": "2026-07-28T04:16:00Z"
+      },
+      "verification_result": "verified_absent"
+    },
+    {
+      "author_classification": "authenticated_repository_user",
+      "comment_identifier": null,
+      "correction_applied": true,
+      "editability_classification": "editable",
+      "issue_or_pull_request_number": 550,
+      "item_type": "issue_body",
+      "limitation_or_exception": null,
+      "location": {
+        "column": 23,
+        "line": 33
+      },
+      "prohibited_pattern_identifier": "windows_named_user_profile",
+      "replacement_type": "<Evidence Path>",
+      "source_content_freshness": {
+        "body_sha256": "6d29f2ce19fb787f814fe8319235a68d321a9a00dffbfe659473413fc3789c6c",
+        "updated_at": "2026-07-23T03:00:19Z",
+        "verified_updated_at": "2026-07-28T04:16:01Z"
+      },
+      "verification_result": "verified_absent"
+    },
+    {
+      "author_classification": "authenticated_repository_user",
+      "comment_identifier": null,
+      "correction_applied": true,
+      "editability_classification": "editable",
+      "issue_or_pull_request_number": 551,
+      "item_type": "issue_body",
+      "limitation_or_exception": null,
+      "location": {
+        "column": 23,
+        "line": 33
+      },
+      "prohibited_pattern_identifier": "windows_named_user_profile",
+      "replacement_type": "<Evidence Path>",
+      "source_content_freshness": {
+        "body_sha256": "6d29f2ce19fb787f814fe8319235a68d321a9a00dffbfe659473413fc3789c6c",
+        "updated_at": "2026-07-23T00:35:07Z",
+        "verified_updated_at": "2026-07-28T04:16:03Z"
+      },
+      "verification_result": "verified_absent"
+    },
+    {
+      "author_classification": "authenticated_repository_user",
+      "comment_identifier": null,
+      "correction_applied": true,
+      "editability_classification": "editable",
+      "issue_or_pull_request_number": 552,
+      "item_type": "issue_body",
+      "limitation_or_exception": null,
+      "location": {
+        "column": 23,
+        "line": 33
+      },
+      "prohibited_pattern_identifier": "windows_named_user_profile",
+      "replacement_type": "<Evidence Path>",
+      "source_content_freshness": {
+        "body_sha256": "6d29f2ce19fb787f814fe8319235a68d321a9a00dffbfe659473413fc3789c6c",
+        "updated_at": "2026-07-23T00:35:08Z",
+        "verified_updated_at": "2026-07-28T04:16:04Z"
+      },
+      "verification_result": "verified_absent"
+    },
+    {
+      "author_classification": "authenticated_repository_user",
+      "comment_identifier": null,
+      "correction_applied": true,
+      "editability_classification": "editable",
+      "issue_or_pull_request_number": 632,
+      "item_type": "issue_body",
+      "limitation_or_exception": null,
+      "location": {
+        "column": 69,
+        "line": 7
+      },
+      "prohibited_pattern_identifier": "windows_named_user_profile",
+      "replacement_type": "<Output Path>",
+      "source_content_freshness": {
+        "body_sha256": "f2a38cd3171a288290851693440fef56c255e3181ae0d93d1ce5d3df20be5072",
+        "updated_at": "2026-07-28T03:48:02Z",
+        "verified_updated_at": "2026-07-28T04:16:06Z"
+      },
+      "verification_result": "verified_absent"
+    },
+    {
+      "author_classification": "authenticated_repository_user",
+      "comment_identifier": 4948808803,
+      "correction_applied": true,
+      "editability_classification": "editable",
+      "issue_or_pull_request_number": 414,
+      "item_type": "issue_comment",
+      "limitation_or_exception": null,
+      "location": {
+        "column": 1,
+        "line": 17
+      },
+      "prohibited_pattern_identifier": "windows_named_user_profile",
+      "replacement_type": "<Evidence Path>",
+      "source_content_freshness": {
+        "body_sha256": "44acaf2666e04e94993b4b2c450a2801db5830ada71be75f4a2d9feaf9115ae1",
+        "updated_at": "2026-07-11T21:23:59Z",
+        "verified_updated_at": "2026-07-28T04:16:08Z"
+      },
+      "verification_result": "verified_absent"
+    },
+    {
+      "author_classification": "authenticated_repository_user",
+      "comment_identifier": 4952483578,
+      "correction_applied": true,
+      "editability_classification": "editable",
+      "issue_or_pull_request_number": 415,
+      "item_type": "issue_comment",
+      "limitation_or_exception": null,
+      "location": {
+        "column": 20,
+        "line": 7
+      },
+      "prohibited_pattern_identifier": "windows_named_user_profile",
+      "replacement_type": "<Repo Path>",
+      "source_content_freshness": {
+        "body_sha256": "79483c05fd10f64e7aa99b7bfd1f944721b48081c35c5363c0d625757bb9f377",
+        "updated_at": "2026-07-12T19:33:50Z",
+        "verified_updated_at": "2026-07-28T04:16:09Z"
+      },
+      "verification_result": "verified_absent"
+    },
+    {
+      "author_classification": "authenticated_repository_user",
+      "comment_identifier": 4952746175,
+      "correction_applied": true,
+      "editability_classification": "editable",
+      "issue_or_pull_request_number": 416,
+      "item_type": "issue_comment",
+      "limitation_or_exception": null,
+      "location": {
+        "column": 18,
+        "line": 4
+      },
+      "prohibited_pattern_identifier": "windows_named_user_profile",
+      "replacement_type": "<Repo Path>",
+      "source_content_freshness": {
+        "body_sha256": "e192e770359065cecae143dfe6019da2805876b0645b5dd8a78391121f387a49",
+        "updated_at": "2026-07-12T20:57:37Z",
+        "verified_updated_at": "2026-07-28T04:16:11Z"
+      },
+      "verification_result": "verified_absent"
+    },
+    {
+      "author_classification": "authenticated_repository_user",
+      "comment_identifier": 4953093573,
+      "correction_applied": true,
+      "editability_classification": "editable",
+      "issue_or_pull_request_number": 417,
+      "item_type": "issue_comment",
+      "limitation_or_exception": null,
+      "location": {
+        "column": 18,
+        "line": 6
+      },
+      "prohibited_pattern_identifier": "windows_named_user_profile",
+      "replacement_type": "<Repo Path>",
+      "source_content_freshness": {
+        "body_sha256": "86030c6a8d4bd7fc34f158a27efc6b7391d3d1581331d892d4ceb75658b88459",
+        "updated_at": "2026-07-12T22:51:52Z",
+        "verified_updated_at": "2026-07-28T04:16:12Z"
+      },
+      "verification_result": "verified_absent"
+    },
+    {
+      "author_classification": "authenticated_repository_user",
+      "comment_identifier": 4954693277,
+      "correction_applied": true,
+      "editability_classification": "editable",
+      "issue_or_pull_request_number": 418,
+      "item_type": "issue_comment",
+      "limitation_or_exception": null,
+      "location": {
+        "column": 18,
+        "line": 6
+      },
+      "prohibited_pattern_identifier": "windows_named_user_profile",
+      "replacement_type": "<Repo Path>",
+      "source_content_freshness": {
+        "body_sha256": "c66ef4b2249674f1dd51a4f339934892c31ebef9a02c25a26a8409b3a1ad12a2",
+        "updated_at": "2026-07-13T05:21:30Z",
+        "verified_updated_at": "2026-07-28T04:16:14Z"
+      },
+      "verification_result": "verified_absent"
+    },
+    {
+      "author_classification": "authenticated_repository_user",
+      "comment_identifier": 4972421121,
+      "correction_applied": true,
+      "editability_classification": "editable",
+      "issue_or_pull_request_number": 446,
+      "item_type": "issue_comment",
+      "limitation_or_exception": null,
+      "location": {
+        "column": 1,
+        "line": 19
+      },
+      "prohibited_pattern_identifier": "windows_named_user_profile",
+      "replacement_type": "<Evidence Path>",
+      "source_content_freshness": {
+        "body_sha256": "82d50989e37b9e76d52865b7294348339afb8241bf0833b600f5bf34ebfbb897",
+        "updated_at": "2026-07-14T18:06:01Z",
+        "verified_updated_at": "2026-07-28T04:16:15Z"
+      },
+      "verification_result": "verified_absent"
+    },
+    {
+      "author_classification": "authenticated_repository_user",
+      "comment_identifier": 4972887419,
+      "correction_applied": true,
+      "editability_classification": "editable",
+      "issue_or_pull_request_number": 446,
+      "item_type": "issue_comment",
+      "limitation_or_exception": null,
+      "location": {
+        "column": 1,
+        "line": 45
+      },
+      "prohibited_pattern_identifier": "windows_named_user_profile",
+      "replacement_type": "<Evidence Path>",
+      "source_content_freshness": {
+        "body_sha256": "d49ff942bcd4795ef3c0d87bd7d9cba43bc4b7eef8f3bbc6d93f285765fdac6a",
+        "updated_at": "2026-07-14T19:00:28Z",
+        "verified_updated_at": "2026-07-28T04:16:17Z"
+      },
+      "verification_result": "verified_absent"
+    },
+    {
+      "author_classification": "authenticated_repository_user",
+      "comment_identifier": null,
+      "correction_applied": true,
+      "editability_classification": "editable",
+      "issue_or_pull_request_number": 378,
+      "item_type": "pull_request_body",
+      "limitation_or_exception": null,
+      "location": {
+        "column": 20,
+        "line": 18
+      },
+      "prohibited_pattern_identifier": "windows_named_user_profile",
+      "replacement_type": "<Repo Path>",
+      "source_content_freshness": {
+        "body_sha256": "006a9cd43ca4f3a83bc75bcfa4113680365dc63f042ad14c146688b4cc7763cf",
+        "updated_at": "2026-07-01T13:51:05Z",
+        "verified_updated_at": "2026-07-28T04:16:18Z"
+      },
+      "verification_result": "verified_absent"
+    },
+    {
+      "author_classification": "authenticated_repository_user",
+      "comment_identifier": null,
+      "correction_applied": true,
+      "editability_classification": "editable",
+      "issue_or_pull_request_number": 378,
+      "item_type": "pull_request_body",
+      "limitation_or_exception": null,
+      "location": {
+        "column": 17,
+        "line": 19
+      },
+      "prohibited_pattern_identifier": "windows_named_user_profile",
+      "replacement_type": "<Repo Path>",
+      "source_content_freshness": {
+        "body_sha256": "006a9cd43ca4f3a83bc75bcfa4113680365dc63f042ad14c146688b4cc7763cf",
+        "updated_at": "2026-07-01T13:51:05Z",
+        "verified_updated_at": "2026-07-28T04:16:18Z"
+      },
+      "verification_result": "verified_absent"
+    },
+    {
+      "author_classification": "authenticated_repository_user",
+      "comment_identifier": null,
+      "correction_applied": true,
+      "editability_classification": "editable",
+      "issue_or_pull_request_number": 379,
+      "item_type": "pull_request_body",
+      "limitation_or_exception": null,
+      "location": {
+        "column": 20,
+        "line": 17
+      },
+      "prohibited_pattern_identifier": "windows_named_user_profile",
+      "replacement_type": "<Repo Path>",
+      "source_content_freshness": {
+        "body_sha256": "5a8700eb0be2355dfeaeda1c9b10f5994d8d9f2dc878337019fe98a7b2c1a29f",
+        "updated_at": "2026-07-01T14:19:46Z",
+        "verified_updated_at": "2026-07-28T04:16:20Z"
+      },
+      "verification_result": "verified_absent"
+    },
+    {
+      "author_classification": "authenticated_repository_user",
+      "comment_identifier": null,
+      "correction_applied": true,
+      "editability_classification": "editable",
+      "issue_or_pull_request_number": 379,
+      "item_type": "pull_request_body",
+      "limitation_or_exception": null,
+      "location": {
+        "column": 17,
+        "line": 18
+      },
+      "prohibited_pattern_identifier": "windows_named_user_profile",
+      "replacement_type": "<Repo Path>",
+      "source_content_freshness": {
+        "body_sha256": "5a8700eb0be2355dfeaeda1c9b10f5994d8d9f2dc878337019fe98a7b2c1a29f",
+        "updated_at": "2026-07-01T14:19:46Z",
+        "verified_updated_at": "2026-07-28T04:16:20Z"
+      },
+      "verification_result": "verified_absent"
+    },
+    {
+      "author_classification": "authenticated_repository_user",
+      "comment_identifier": null,
+      "correction_applied": true,
+      "editability_classification": "editable",
+      "issue_or_pull_request_number": 380,
+      "item_type": "pull_request_body",
+      "limitation_or_exception": null,
+      "location": {
+        "column": 20,
+        "line": 18
+      },
+      "prohibited_pattern_identifier": "windows_named_user_profile",
+      "replacement_type": "<Repo Path>",
+      "source_content_freshness": {
+        "body_sha256": "a0b3a9af4964d54487c1dabdcd6a91a82df7e3550da4575ba96994ad4a0902fc",
+        "updated_at": "2026-07-01T15:42:47Z",
+        "verified_updated_at": "2026-07-28T04:16:22Z"
+      },
+      "verification_result": "verified_absent"
+    },
+    {
+      "author_classification": "authenticated_repository_user",
+      "comment_identifier": null,
+      "correction_applied": true,
+      "editability_classification": "editable",
+      "issue_or_pull_request_number": 380,
+      "item_type": "pull_request_body",
+      "limitation_or_exception": null,
+      "location": {
+        "column": 17,
+        "line": 19
+      },
+      "prohibited_pattern_identifier": "windows_named_user_profile",
+      "replacement_type": "<Repo Path>",
+      "source_content_freshness": {
+        "body_sha256": "a0b3a9af4964d54487c1dabdcd6a91a82df7e3550da4575ba96994ad4a0902fc",
+        "updated_at": "2026-07-01T15:42:47Z",
+        "verified_updated_at": "2026-07-28T04:16:22Z"
+      },
+      "verification_result": "verified_absent"
+    },
+    {
+      "author_classification": "authenticated_repository_user",
+      "comment_identifier": null,
+      "correction_applied": true,
+      "editability_classification": "editable",
+      "issue_or_pull_request_number": 381,
+      "item_type": "pull_request_body",
+      "limitation_or_exception": null,
+      "location": {
+        "column": 20,
+        "line": 17
+      },
+      "prohibited_pattern_identifier": "windows_named_user_profile",
+      "replacement_type": "<Repo Path>",
+      "source_content_freshness": {
+        "body_sha256": "c5b617dd1f3b1113a9528a4e231d172e7c50bcedd8c09f559c2b30a81be95086",
+        "updated_at": "2026-07-01T17:54:44Z",
+        "verified_updated_at": "2026-07-28T04:16:23Z"
+      },
+      "verification_result": "verified_absent"
+    },
+    {
+      "author_classification": "authenticated_repository_user",
+      "comment_identifier": null,
+      "correction_applied": true,
+      "editability_classification": "editable",
+      "issue_or_pull_request_number": 381,
+      "item_type": "pull_request_body",
+      "limitation_or_exception": null,
+      "location": {
+        "column": 17,
+        "line": 18
+      },
+      "prohibited_pattern_identifier": "windows_named_user_profile",
+      "replacement_type": "<Repo Path>",
+      "source_content_freshness": {
+        "body_sha256": "c5b617dd1f3b1113a9528a4e231d172e7c50bcedd8c09f559c2b30a81be95086",
+        "updated_at": "2026-07-01T17:54:44Z",
+        "verified_updated_at": "2026-07-28T04:16:23Z"
+      },
+      "verification_result": "verified_absent"
+    },
+    {
+      "author_classification": "authenticated_repository_user",
+      "comment_identifier": null,
+      "correction_applied": true,
+      "editability_classification": "editable",
+      "issue_or_pull_request_number": 382,
+      "item_type": "pull_request_body",
+      "limitation_or_exception": null,
+      "location": {
+        "column": 20,
+        "line": 18
+      },
+      "prohibited_pattern_identifier": "windows_named_user_profile",
+      "replacement_type": "<Repo Path>",
+      "source_content_freshness": {
+        "body_sha256": "1a11b05cd562fb76b1578fbfe694d5ca78c6fe06a9a2e3c6c5ee13b4b042bf3e",
+        "updated_at": "2026-07-01T19:56:50Z",
+        "verified_updated_at": "2026-07-28T04:16:25Z"
+      },
+      "verification_result": "verified_absent"
+    },
+    {
+      "author_classification": "authenticated_repository_user",
+      "comment_identifier": null,
+      "correction_applied": true,
+      "editability_classification": "editable",
+      "issue_or_pull_request_number": 382,
+      "item_type": "pull_request_body",
+      "limitation_or_exception": null,
+      "location": {
+        "column": 17,
+        "line": 19
+      },
+      "prohibited_pattern_identifier": "windows_named_user_profile",
+      "replacement_type": "<Repo Path>",
+      "source_content_freshness": {
+        "body_sha256": "1a11b05cd562fb76b1578fbfe694d5ca78c6fe06a9a2e3c6c5ee13b4b042bf3e",
+        "updated_at": "2026-07-01T19:56:50Z",
+        "verified_updated_at": "2026-07-28T04:16:25Z"
+      },
+      "verification_result": "verified_absent"
+    }
+  ],
+  "repository": "nicho1ab/RecordsTracker",
+  "schema_version": "recordstracker.portable-path-remediation-inventory.v1",
+  "summary": {
+    "content_items_audited": 849,
+    "corrections_applied": 22,
+    "editable_matches_remaining": 0,
+    "matches_classified": 22,
+    "retained_or_uneditable": 0
+  }
+}

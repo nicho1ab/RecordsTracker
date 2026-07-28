@@ -480,6 +480,30 @@ where applicable.
 
 Public repository content must not include personal paths, account details, secrets, tokens, private URLs, local machine names, personal handles, personal email addresses, or other machine-specific identifiers. Use neutral placeholders such as `<repo-root>`, `<local-project-path>`, `<your-github-org-or-user>`, and `<repository-name>` in examples.
 
+## Portable-path publication contract
+
+`src/ccld_complaints/portable_paths.py` is the authoritative contract for
+named-user filesystem paths. It detects generic Windows profile paths and
+macOS/Linux named-user home paths across slash-normalized and escaped text.
+Tracked content, proposed GitHub bodies and comments, PR-body lifecycle
+operations, generated publication text, and redacted remediation evidence must
+consume this contract rather than maintain username-specific regex lists.
+
+Local runtime code may resolve an absolute path when execution requires it, but
+that value must not be copied into tracked examples, GitHub content,
+completion reports, evidence summaries, or manifests intended for publication.
+Use repository-relative paths or `<Repo Path>`, `<Evidence Path>`,
+`<Output Path>`, `<User-Accessible Output Path>`, `<repo-root>`, or
+`<local-project-path>`. Identify artifacts with a filename, repository-relative
+location where applicable, hash, run or job ID, and an approved placeholder.
+
+The tracked scanner uses Git enumeration, skips binary and ignored content, and
+permits only the exact centrally listed synthetic detection fixture. GitHub
+audit diagnostics and inventories record the content field, location, pattern
+identifier, replacement class, freshness hash, and verification outcome without
+repeating the matched path. Immutable workflow logs and inappropriate
+third-party content are recorded as limitations rather than rewritten.
+
 ## Logging
 
 Logs must not include secrets or unnecessary personal information. Logs should include source URL, document ID, connector name, and error details.

@@ -689,6 +689,18 @@ Validate documentation structure and run manual or automated checks for user-fac
   pre/post-merge state-reason-timestamp checks, and the PR #615/#608
   regression. It has no live API, merge, issue-write, recovery, arbitrary path,
   or PR-body mutation path.
+- DA-032 portable-path coverage exercises generic Windows profile paths with
+  backslash, slash-normalized, case-varied, JSON-escaped, YAML, Markdown,
+  Python, and PowerShell forms; macOS and Linux named-user homes; usernames
+  unrelated to the repository owner; spaces; approved placeholders;
+  repository-relative paths; public URLs; and the one exact synthetic tracked
+  fixture. Parity tests bind the Git-aware tracked scanner, local/CI PR
+  validator, guarded PR-body lifecycle, hosted issue intake, scripted issue
+  publication, completion/evidence preflight, source/evidence safety checks,
+  and CI security entry point to the same module. Guarded GitHub audit tests
+  prove no mutation after candidate rejection, one refetch-bound update,
+  third-party classification, redacted diagnostics, schema-valid inventory,
+  and absence of raw matched paths.
 - Evidence-reuse and validation-impact policy coverage uses sanitized fixtures
   and deterministic inputs for every supported path class, strict mixed-scope
   union, freshness and invalidation, body-dependent evidence, exact immutable

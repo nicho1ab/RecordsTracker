@@ -324,9 +324,9 @@ coding begins.
 
 ## Change-control procedure for this file
 
-Before each response, ChatGPT should determine whether new facts require an update. When an update is required, ChatGPT will provide a one-line PowerShell command that modifies this absolute file:
+Before each response, ChatGPT should determine whether new facts require an update. When an update is required, ChatGPT will provide a one-line PowerShell command that modifies this user-accessible output file:
 
-`C:\Users\andre\OneDrive\Desktop\RecordsTracker-UI-UX-Data-Completeness-Remediation-Plan.md`
+`<User-Accessible Output Path>/RecordsTracker-UI-UX-Data-Completeness-Remediation-Plan.md`
 
 After updating it, replace the version in ChatGPT Project Sources.
 

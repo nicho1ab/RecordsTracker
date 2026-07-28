@@ -291,10 +291,13 @@ def test_ccld_hosted_artifact_builder_rejects_private_or_absolute_raw_path(
     tmp_path: Path,
 ) -> None:
     db_path = _fixture_sqlite_db(tmp_path)
+    private_raw_path = "\\".join(
+        ("C:", "Users", "tester", "private", "157806098_inx3.html")
+    )
     with sqlite3.connect(db_path) as connection:
         connection.execute(
             "UPDATE source_documents SET raw_path = ?",
-            (r"C:\Users\tester\private\157806098_inx3.html",),
+            (private_raw_path,),
         )
         connection.commit()
 

@@ -703,11 +703,13 @@ def test_parity_report_is_written_only_when_both_stores_are_inspected(
 
 
 def test_redaction_removes_connections_urls_paths_and_secret_assignments() -> None:
+    windows_path = "\\".join(("C:", "Users", "sample-user", "private", "audit.txt"))
+    linux_path = "/" + "/".join(("home", "sample-user", "private", "audit.txt"))
     unsafe = (
         "postgresql://sample-user:sample-pass@private.invalid/audit "
         "https://private.invalid/record "
-        "C:\\Users\\sample-user\\private\\audit.txt "
-        "/home/sample-user/private/audit.txt token=synthetic-token"
+        f"{windows_path} "
+        f"{linux_path} token=synthetic-token"
     )
 
     safe = redact_sensitive_text(unsafe)
@@ -778,7 +780,8 @@ def test_audit_output_and_tracked_baseline_are_deterministic_and_value_free(
         "<p>Complaint Control Number: "
         + RECORD_VALUE_CANARY
         + "</p><p>Investigation Findings: https://private.invalid/record "
-        "C:\\Users\\sample-user\\private\\record.txt</p>"
+        + "\\".join(("C:", "Users", "sample-user", "private", "record.txt"))
+        + "</p>"
         "<p>synthetic padding ensures this governed artifact is long enough.</p>"
         "</body></html>",
         encoding="utf-8",

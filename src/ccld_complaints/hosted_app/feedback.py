@@ -24,6 +24,7 @@ from ccld_complaints.hosted_app.auth import (
     require_permission,
 )
 from ccld_complaints.hosted_app.ui_shell import render_page_shell
+from ccld_complaints.portable_paths import assert_portable_publication
 
 FEEDBACK_PATH = "/feedback"
 GITHUB_FEEDBACK_REPO_ENV = "GITHUB_FEEDBACK_REPO"
@@ -191,6 +192,8 @@ class GitHubRestIssueClient:
         body: str,
         labels: Sequence[str],
     ) -> Mapping[str, Any]:
+        assert_portable_publication(title, field="issue title")
+        assert_portable_publication(body, field="issue body")
         payload = json.dumps(
             {"title": title, "body": body, "labels": list(labels)},
             sort_keys=True,
@@ -1090,6 +1093,8 @@ def _create_github_issue_with_label_fallback(
     labels: Sequence[str],
 ) -> Mapping[str, Any]:
     issue_title = build_issue_title(submission)
+    assert_portable_publication(issue_title, field="issue title")
+    assert_portable_publication(issue_body, field="issue body")
     try:
         return context.github_client.create_issue(
             repo=context.github_config.repo or "",
