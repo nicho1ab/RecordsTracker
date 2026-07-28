@@ -1,5 +1,9 @@
 # Hosted Reviewer Acceptance
 
+The separate [Hosted Corpus Verification and Evidence Packaging](hosted-corpus-verification.md)
+workflow supplies the governed post-deployment corpus gate. Its result does not
+authorize deployment or establish stakeholder acceptance.
+
 ## Purpose
 
 Use this checklist to validate the hosted local/test CCLD review loop as one

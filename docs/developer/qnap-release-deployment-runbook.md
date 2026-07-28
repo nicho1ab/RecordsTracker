@@ -1,5 +1,10 @@
 # QNAP Release Deployment Runbook
 
+Post-deployment corpus verification is a separate read-only acceptance gate.
+Use [Hosted Corpus Verification and Evidence Packaging](hosted-corpus-verification.md)
+after deployment; it does not authorize deployment, rollback, container
+recreation, or Issue #419 closure.
+
 ## Authority
 
 This is the authoritative RecordsTracker procedure for QNAP release deployment, verification, hosted acceptance, and application rollback. Do not invent an alternate deployment process. Stop and update this runbook through a reviewed pull request when an observed runtime condition conflicts with it.

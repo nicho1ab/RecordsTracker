@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://recordstracker.example/schemas/hosted-corpus-verification-v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract_id", "contract_version", "executed_at", "application_sha", "data_mode", "retrieval_mode", "counts", "counting_rules", "identity_rules", "duplicates", "source_linkage", "synthetic_and_fallback", "representatives", "provenance", "reviewer_state_separation", "blocking_failures", "warnings", "limitations", "artifact_disposition"],
+  "properties": {
+    "contract_id": {"const": "recordstracker.hosted-corpus-verification.v1"},
+    "contract_version": {"const": "1.0.0"},
+    "executed_at": {"type": "string", "format": "date-time"},
+    "application_sha": {"type": "string", "minLength": 1},
+    "data_mode": {"type": "object"},
+    "retrieval_mode": {"type": "object"},
+    "counts": {"type": "object", "required": ["persisted_facility_count", "read_model_facility_count", "persisted_complaint_count", "unique_complaint_count", "read_model_displayed_complaint_count"]},
+    "counting_rules": {"type": "object"},
+    "identity_rules": {"type": "object"},
+    "duplicates": {"type": "object"},
+    "source_linkage": {"type": "object"},
+    "synthetic_and_fallback": {"type": "object"},
+    "representatives": {"type": "object"},
+    "provenance": {"type": "object"},
+    "reviewer_state_separation": {"type": "object"},
+    "blocking_failures": {"type": "array", "items": {"type": "string"}},
+    "warnings": {"type": "array", "items": {"type": "string"}},
+    "limitations": {"type": "array", "items": {"type": "string"}},
+    "artifact_disposition": {"type": "object", "required": ["disposition", "content_materially_changed"], "properties": {"disposition": {"enum": ["created", "updated", "copied unchanged", "reused unchanged"]}, "content_materially_changed": {"type": "boolean"}}}
+  }
+}
