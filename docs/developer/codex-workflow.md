@@ -806,7 +806,7 @@ legacy governed-summary form fails closed. Documentation-check integration
 is slice 3; generic orchestration remains owned by #533. The deferred `merged`
 timeline-event classifier remains out of scope.
 
-Issue #617 implementation status: slice_1=policy-schema-evaluator; slice_2=PR-preparation-and-independent-verification; slice_3=documentation-checks; state=local-unmerged-unaccepted; issue_533_execution_authority=absent.
+Issue #617 implementation status: slice_1=policy-schema-evaluator; slice_2=PR-preparation-and-independent-verification; slice_3=documentation-checks; state=merged-accepted-closed; issue_533_execution_authority=absent.
 
 The policy retains these boundaries exactly:
 
