@@ -929,6 +929,9 @@ def test_local_issue_641_fixture_renders_raw_type_identity_and_detail_parity() -
     assert "Issue 641 Code 430 Center" in raw_430_html
     assert "430000001" in raw_430_html
     assert "Source code 430 — label not verified" in raw_430_html
+    assert "grid-template-columns: repeat(3, minmax(0, 1fr));" in raw_430_html
+    assert ".facility-intelligence-filter-grid p:nth-child(8)" in raw_430_html
+    assert "grid-column: auto;" in raw_430_html
     assert (
         '<option value="430" selected="selected">'
         "Source code 430 — label not verified</option>"

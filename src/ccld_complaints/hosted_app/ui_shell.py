@@ -3100,10 +3100,10 @@ SHARED_CSS = r"""
     }
     .civic-ledger-page .facility-intelligence-filter-grid {
       gap: 0.2rem 0;
-      grid-template-columns: repeat(7, minmax(8.5rem, 1fr));
+      grid-template-columns: repeat(3, minmax(0, 1fr));
     }
     .civic-ledger-page .facility-intelligence-filter-grid p:nth-child(8) {
-      grid-column: 1 / 2;
+      grid-column: auto;
     }
     .civic-ledger-page .facility-intelligence-filter-grid label,
     .facility-intelligence-sort label {

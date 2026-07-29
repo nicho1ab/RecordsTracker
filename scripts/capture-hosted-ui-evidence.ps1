@@ -897,6 +897,67 @@ function Invoke-Issue641BrowserCapture {
   if (Math.abs(actualPageScaleFactor - expectedPageScaleFactor) > 0.01) throw new Error('Issue #641 requested page-scale evidence was not applied.');
   const select = document.querySelector('select[name="facility_type"]');
   const optionLabels = select ? Array.from(select.options).map((option) => ({ value: option.value, label: option.textContent.trim(), selected: option.selected })) : [];
+  let controlLegibility = [];
+  let clippedControls = [];
+  if (location.pathname === '/ccld/facilities/intelligence') {
+  const filterGrid = document.querySelector('.facility-intelligence-filter-grid');
+  const filterControlDefinitions = [
+    ['facility-type', 'Facility type', '#facility-intelligence-facility-type'],
+    ['geography', 'Geography', '#facility-intelligence-geography'],
+    ['complaint-finding', 'Complaint finding', '#facility-intelligence-finding'],
+    ['source-coverage', 'Source coverage', '#facility-intelligence-coverage'],
+    ['start-date', 'Start date', '#facility-intelligence-start-date'],
+    ['end-date', 'End date', '#facility-intelligence-end-date'],
+    ['date-based-on', 'Date based on', '#facility-intelligence-date-dimension'],
+    ['serious-review-category', 'Serious review category', '#facility-intelligence-serious-topic']
+  ];
+  const controlFields = filterControlDefinitions.map(([id, label, selector]) => {
+    const element = document.querySelector(selector);
+    if (!element || !visible(element)) throw new Error('Required Issue #641 filter control is unavailable: ' + label);
+    const field = element.closest('p');
+    if (!field) throw new Error('Required Issue #641 filter control has no layout field: ' + label);
+    return { id, label, selector, element, field, bounds: rect(element), fieldBounds: rect(field) };
+  });
+  const orderedTops = Array.from(new Set(controlFields.map((entry) => Math.round(entry.fieldBounds.top * 10) / 10))).sort((left, right) => left - right);
+  const orderedLefts = Array.from(new Set(controlFields.map((entry) => Math.round(entry.fieldBounds.left * 10) / 10))).sort((left, right) => left - right);
+  controlLegibility = controlFields.map((entry) => {
+    const style = getComputedStyle(entry.element);
+    const selectedText = entry.element.tagName === 'SELECT'
+      ? (entry.element.selectedOptions[0] ? entry.element.selectedOptions[0].textContent.trim() : '')
+      : String(entry.element.value || '').trim();
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    context.font = style.font || [style.fontStyle, style.fontVariant, style.fontWeight, style.fontSize, style.fontFamily].filter(Boolean).join(' ');
+    const textWidth = selectedText ? context.measureText(selectedText).width : 0;
+    const padding = parseFloat(style.paddingLeft || '0') + parseFloat(style.paddingRight || '0');
+    const controlAdornmentWidth = entry.element.tagName === 'SELECT' ? Math.max(36, parseFloat(style.fontSize || '16') * 2) : 0;
+    const availableTextWidth = Math.max(0, entry.bounds.width - padding - controlAdornmentWidth);
+    const clipped = selectedText.length > 0 && textWidth > availableTextWidth + 1;
+    return {
+      id: entry.id,
+      label: entry.label,
+      selector: entry.selector,
+      selectedText,
+      fullExpectedText: selectedText,
+      bounds: entry.bounds,
+      textWidth,
+      availableTextWidth,
+      scrollWidth: entry.element.scrollWidth,
+      clientWidth: entry.element.clientWidth,
+      clippingResult: clipped ? 'CLIPPED' : (selectedText.length ? 'LEGIBLE' : 'NO_SELECTED_TEXT'),
+      legible: !clipped,
+      layout: {
+        row: orderedTops.indexOf(Math.round(entry.fieldBounds.top * 10) / 10) + 1,
+        column: orderedLefts.indexOf(Math.round(entry.fieldBounds.left * 10) / 10) + 1,
+        gridTemplateColumns: filterGrid ? getComputedStyle(filterGrid).gridTemplateColumns : '',
+        gridColumnCount: orderedLefts.length
+      },
+      pageHorizontalOverflow: horizontalOverflow
+    };
+  });
+  clippedControls = controlLegibility.filter((entry) => !entry.legible);
+  if (clippedControls.length) throw new Error('Issue #641 selected filter control text is clipped: ' + clippedControls.map((entry) => entry.label + ' (' + entry.selectedText + ')').join('; '));
+  }
   const measuredSelectors = ['header', '.civic-nav', 'h1', 'main p', '.compare-facilities-views', 'form', '#facility-results, .facility-results, .facility-contributing-records', '.facility-contributing-records', 'a.button, button'].map((selector) => {
     const element = document.querySelector(selector);
     if (!element || !visible(element)) return { selector, present: false };
@@ -920,6 +981,8 @@ function Invoke-Issue641BrowserCapture {
     requiredElements: required,
     overflowingRequiredElements: overflowingRequired,
     facilityTypeOptions: optionLabels,
+    controlLegibility,
+    clippedControls,
     url: location.href,
     title: document.title,
     h1: document.querySelector('h1') ? document.querySelector('h1').textContent.trim() : '',
@@ -1456,6 +1519,25 @@ function Get-EvidenceFileCount {
     return @(
         Get-ChildItem -LiteralPath $Path -Filter $Filter -File -Recurse -ErrorAction SilentlyContinue
     ).Count
+}
+
+function Get-Issue641ValidationSummary {
+    param(
+        [int]$RouteFailures,
+        [int]$AssertionFailures,
+        [int]$FeatureAssertionFailures,
+        [int]$ScreenshotFailures,
+        [string[]]$RequiredFeatureAssertions
+    )
+    $allFailuresZero = $RouteFailures -eq 0 -and $AssertionFailures -eq 0 -and $FeatureAssertionFailures -eq 0 -and $ScreenshotFailures -eq 0
+    return [ordered]@{
+        routeFailures = $RouteFailures
+        assertionFailures = $AssertionFailures
+        featureAssertionFailures = $FeatureAssertionFailures
+        screenshotFailures = $ScreenshotFailures
+        requiredFeatureAssertions = @($RequiredFeatureAssertions)
+        status = if ($allFailuresZero) { 'PASS' } else { 'FAIL' }
+    }
 }
 
 function Get-EvidenceFileIndex {
@@ -3304,10 +3386,20 @@ try {
         Add-Issue641Feature "I641-NETWORK" (@($issue641States | Where-Object { @($_.failedNetworkRequests).Count -gt 0 }).Count -eq 0) "browser-state/"
         Add-Issue641Feature "I641-PRINT" $printPass "print/issue-641-13-detail-print.pdf"
         Add-Issue641Feature "I641-FULL-PAGE" $screenshotsPass "screenshots/full-page/"
-        $featureRows = @("assertion,status,evidence")
-        foreach ($feature in $featureDefinitions) { $featureRows += ('"{0}","{1}","{2}"' -f $feature[0], $(if ([bool]$feature[1]) { "PASS" } else { "FAIL" }), $feature[2]) }
-        Set-Content -LiteralPath (Join-Path $packetDir "issue-641-feature-assertions.csv") -Value ($featureRows -join "`n") -Encoding UTF8
-        $featureFailures = @($featureDefinitions | Where-Object { -not [bool]$_[1] }).Count
+        function Test-Issue641ControlLegibility {
+            param([object]$State, [string]$ControlId, [string]$ExpectedText = '')
+            if ($null -eq $State) { return $false }
+            $control = @($State.controlLegibility | Where-Object { $_.id -eq $ControlId }) | Select-Object -First 1
+            return $null -ne $control -and [bool]$control.legible -and [string]$control.clippingResult -eq 'LEGIBLE' -and (-not $ExpectedText -or [string]$control.fullExpectedText -eq $ExpectedText) -and -not [bool]$control.pageHorizontalOverflow
+        }
+        Add-Issue641Feature "I641-CONTROL-430-1440" (Test-Issue641ControlLegibility -State $raw430State -ControlId 'facility-type' -ExpectedText 'Source code 430 — label not verified') "browser-state/issue-641-02-raw-430-browser-state.json"
+        Add-Issue641Feature "I641-CONTROL-733-1440" (Test-Issue641ControlLegibility -State $raw733State -ControlId 'facility-type' -ExpectedText 'Source code 733 — label not verified') "browser-state/issue-641-03-raw-733-browser-state.json"
+        Add-Issue641Feature "I641-CONTROL-430-1024" (Test-Issue641ControlLegibility -State $statesByName['issue-641-compare-1024'] -ControlId 'facility-type' -ExpectedText 'Source code 430 — label not verified') "browser-state/issue-641-05-compare-1024-browser-state.json"
+        Add-Issue641Feature "I641-CONTROL-430-768" (Test-Issue641ControlLegibility -State $statesByName['issue-641-compare-768'] -ControlId 'facility-type' -ExpectedText 'Source code 430 — label not verified') "browser-state/issue-641-06-compare-768-browser-state.json"
+        Add-Issue641Feature "I641-CONTROL-430-400" (Test-Issue641ControlLegibility -State $statesByName['issue-641-compare-400'] -ControlId 'facility-type' -ExpectedText 'Source code 430 — label not verified') "browser-state/issue-641-07-compare-400-browser-state.json"
+        Add-Issue641Feature "I641-CONTROL-430-390" (Test-Issue641ControlLegibility -State $statesByName['issue-641-compare-390'] -ControlId 'facility-type' -ExpectedText 'Source code 430 — label not verified') "browser-state/issue-641-08-compare-390-browser-state.json"
+        Add-Issue641Feature "I641-CONTROL-430-200" (Test-Issue641ControlLegibility -State $statesByName['issue-641-compare-1280-page-scale-200'] -ControlId 'facility-type' -ExpectedText 'Source code 430 — label not verified') "browser-state/issue-641-08b-compare-1280-page-scale-200-browser-state.json"
+        Add-Issue641Feature "I641-CONTROL-DATE-DIMENSION-200" (Test-Issue641ControlLegibility -State $statesByName['issue-641-compare-1280-page-scale-200'] -ControlId 'date-based-on') "browser-state/issue-641-08b-compare-1280-page-scale-200-browser-state.json"
         foreach ($result in $issue641Routes) {
             if ($result.screenshotPath) {
                 $sourceScreenshot = Join-Path $packetDir $result.screenshotPath
@@ -3326,10 +3418,6 @@ try {
         Copy-Item -LiteralPath (Join-Path $accessibilityDir "headings.txt") -Destination (Join-Path $packetDir "issue-641-accessibility-results.txt")
         Set-Content -LiteralPath (Join-Path $logsDir "local-validation-output.txt") -Value "Focused UI, capture, documentation, lint, typing, security, portability, diff, and full-suite validation are recorded in the PR body and validation summary." -Encoding UTF8
         Set-Content -LiteralPath (Join-Path $logsDir "postgresql-test-output.txt") -Value "Three disposable local PostgreSQL regressions passed before packet capture; no database URL is retained." -Encoding UTF8
-        Set-Content -LiteralPath (Join-Path $packetDir "validation-summary.json") -Value ([ordered]@{ routeFailures=@($routeFailures).Count; assertionFailures=@($assertionFailures).Count; featureAssertionFailures=$featureFailures; requiredFeatureAssertions=@($featureDefinitions | ForEach-Object { $_[0] }); status=if ($featureFailures -eq 0) { "PASS" } else { "FAIL" } } | ConvertTo-Json -Depth 5) -Encoding UTF8
-        Set-Content -LiteralPath (Join-Path $packetDir "validation-summary.md") -Value "# Validation summary`n`nAll required Issue #641 feature assertions pass: $($featureFailures -eq 0)." -Encoding UTF8
-        Copy-Item -LiteralPath (Join-Path $packetDir "issue-641-feature-assertions.csv") -Destination (Join-Path $packetDir "issue-641-requirement-to-evidence.csv")
-        if ($featureFailures -gt 0) { Stop-CaptureFail "Issue #641 feature assertion failures prevent packet publication." }
         $gateDefinitions = @(
             @("I641-ROUTE-001", "all governed routes return their expected status", $routesPass, "route-status.csv"),
             @("I641-STATE-002", "raw-code, readable-label, identity, terminology, and optional-category assertions", $assertionsPass, "route-assertions.csv"),
@@ -3428,6 +3516,22 @@ explicitly says to do so.
     $routeFailures = @($routeResults | Where-Object { $_.statusCode -eq 0 -or $_.statusCode -ne $_.expectedStatus -or $_.failure })
     $assertionFailures = @($assertions | Where-Object { $_.status -eq "FAIL" })
     $screenshotFailures = @($screenshotWarnings | Where-Object { $_ -match "(screenshot|print capture) failed" })
+    $issue641ValidationSummary = $null
+    if ($Issue641) {
+        $preSummary = Get-Issue641ValidationSummary -RouteFailures @($routeFailures).Count -AssertionFailures @($assertionFailures).Count -FeatureAssertionFailures @($featureDefinitions | Where-Object { -not [bool]$_[1] }).Count -ScreenshotFailures @($screenshotFailures).Count -RequiredFeatureAssertions @($featureDefinitions | ForEach-Object { $_[0] })
+        $preSummaryCountsReconcile = $preSummary.routeFailures -eq @($routeFailures).Count -and $preSummary.assertionFailures -eq @($assertionFailures).Count -and $preSummary.featureAssertionFailures -eq @($featureDefinitions | Where-Object { -not [bool]$_[1] }).Count -and $preSummary.screenshotFailures -eq @($screenshotFailures).Count
+        $preSummaryStatusMatchesCounts = ([string]$preSummary.status -eq 'PASS') -eq ($preSummary.routeFailures -eq 0 -and $preSummary.assertionFailures -eq 0 -and $preSummary.featureAssertionFailures -eq 0 -and $preSummary.screenshotFailures -eq 0)
+        Add-Issue641Feature "I641-SUMMARY-RECONCILIATION" ($preSummaryCountsReconcile -and $preSummaryStatusMatchesCounts) "validation-summary.json"
+        $featureFailures = @($featureDefinitions | Where-Object { -not [bool]$_[1] }).Count
+        $issue641ValidationSummary = Get-Issue641ValidationSummary -RouteFailures @($routeFailures).Count -AssertionFailures @($assertionFailures).Count -FeatureAssertionFailures $featureFailures -ScreenshotFailures @($screenshotFailures).Count -RequiredFeatureAssertions @($featureDefinitions | ForEach-Object { $_[0] })
+        $featureRows = @("assertion,status,evidence")
+        foreach ($feature in $featureDefinitions) { $featureRows += ('"{0}","{1}","{2}"' -f $feature[0], $(if ([bool]$feature[1]) { "PASS" } else { "FAIL" }), $feature[2]) }
+        Set-Content -LiteralPath (Join-Path $packetDir "issue-641-feature-assertions.csv") -Value ($featureRows -join "`n") -Encoding UTF8
+        Copy-Item -LiteralPath (Join-Path $packetDir "issue-641-feature-assertions.csv") -Destination (Join-Path $packetDir "issue-641-requirement-to-evidence.csv")
+        Set-Content -LiteralPath (Join-Path $packetDir "validation-summary.json") -Value ($issue641ValidationSummary | ConvertTo-Json -Depth 5) -Encoding UTF8
+        Set-Content -LiteralPath (Join-Path $packetDir "validation-summary.md") -Value "# Validation summary`n`nRoute failures: $($issue641ValidationSummary.routeFailures)`nAssertion failures: $($issue641ValidationSummary.assertionFailures)`nFeature assertion failures: $($issue641ValidationSummary.featureAssertionFailures)`nScreenshot failures: $($issue641ValidationSummary.screenshotFailures)`nStatus: $($issue641ValidationSummary.status)" -Encoding UTF8
+        if ($featureFailures -gt 0) { Stop-CaptureFail "Issue #641 feature assertion failures prevent packet publication." }
+    }
     $outputCounts = [ordered]@{
         screenshots   = Get-EvidenceFileCount -Path $screenshotDir -Filter "*.png"
         html          = Get-EvidenceFileCount -Path $htmlDir -Filter "*.html"
