@@ -742,13 +742,18 @@ def test_source_record_list_route_labels_sample_read_only_scope() -> None:
 def test_load_sample_facility_records_uses_committed_public_source_fixtures() -> None:
     records = load_sample_facility_records()
 
-    assert len(records) == 4
+    assert len(records) == 5
     assert {record.source_fixture for record in records} == {
         "ccld_program_facilities_tiny.csv",
         "chhs_facility_master_tiny.csv",
     }
-    assert {record.facility_number for record in records} == {"900000001", "900000002"}
+    assert {record.facility_number for record in records} == {
+        "430000001",
+        "900000001",
+        "900000002",
+    }
     assert {record.facility_name for record in records} == {
+        "Issue 641 Code 430 Center",
         "Synthetic Orchard Child Care",
         "Synthetic Valley Family Agency",
     }

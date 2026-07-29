@@ -22,6 +22,7 @@ from ccld_complaints.hosted_app.facility_identity_presenter import (
     present_facility_field,
     projected_display_text,
     projected_selected_text,
+    unresolved_raw_code_text,
 )
 from ccld_complaints.hosted_app.facility_identity_projection import (
     FacilityIdentityProjection,
@@ -1830,11 +1831,7 @@ def _facility_identity_fact_rows(
                 "facility-overview-facility-type",
             ),
             "Facility type",
-            _facility_identity_source_value(
-                record,
-                FacilityProjectionField.FACILITY_TYPE,
-                record.facility_type,
-            ),
+            _facility_type_source_value(record),
         ),
         (
             "License status",
@@ -1949,6 +1946,16 @@ def _facility_identity_source_value(
             else value
         )
     return str(fallback or "").strip()
+
+
+def _facility_type_source_value(record: CcldFacilityLookupRecord) -> str:
+    """Keep unresolved facility type codes truthful on Facility Overview."""
+    value = _facility_identity_source_value(
+        record,
+        FacilityProjectionField.FACILITY_TYPE,
+        record.facility_type,
+    )
+    return unresolved_raw_code_text(value) if value.isdigit() else value
 
 
 def _render_secondary_facility_facts(record: CcldFacilityLookupRecord) -> str:
@@ -2459,7 +2466,7 @@ def _render_facility_inventory_item(
             <p class="complaint-identity"><strong>{_render_copyable_value("Copy complaint or control number", label)}</strong></p>
             <dl class="summary-list complaint-source-facts">
               <dt>Complaint date</dt><dd>{_render_copyable_value("Copy complaint date", date_text)}</dd>
-              <dt>Finding</dt><dd>{finding_text}</dd>
+              <dt>Complaint finding</dt><dd>{finding_text}</dd>
               <dt>CCLD source</dt><dd>{source_markup}</dd>
             </dl>
             {_render_facility_complaint_flags(item)}
@@ -2966,7 +2973,7 @@ def _render_facility_contributor_item(
             <p><a href="{_escape(item.detail_href)}">Open complaint record {_escape(label)}</a> {_render_copyable_value("Copy complaint or control number", label)}</p>
             <dl class="summary-list">
               <dt>Date used</dt><dd>{_render_copyable_value("Copy complaint date", date_text)}</dd>
-              <dt>Finding</dt><dd>{_render_copyable_value("Copy complaint finding", _display_value(item.finding))}</dd>
+              <dt>Complaint finding</dt><dd>{_render_copyable_value("Copy complaint finding", _display_value(item.finding))}</dd>
               <dt>Reviewer-created status</dt><dd>{_render_copyable_value("Copy reviewer-created status", _reviewer_status_label(item.reviewer_status))}</dd>
               <dt>Reviewer-created notes</dt><dd>{_escape(note_text)}</dd>
               <dt>CCLD source</dt><dd>{source_markup}</dd>

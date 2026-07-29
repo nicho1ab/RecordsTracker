@@ -173,6 +173,7 @@ def test_capture_script_declares_parameters_routes_and_outputs() -> None:
         "Issue503",
         "Issue498",
         "Issue610",
+        "Issue641",
         "manifest.json",
         "file-index.json",
         "route-status.csv",
@@ -198,7 +199,7 @@ def test_capture_script_declares_parameters_routes_and_outputs() -> None:
         "Get-FileHash",
         "Test-EvidencePacketFiles",
         "Test-EvidenceZipIntegrity",
-        "Evidence ZIP membership and sizes do not match the packet file index.",
+            "Evidence ZIP membership, sizes, or SHA-256 hashes do not match the packet file index.",
         "Invoke-NativeCaptureCommand",
         "Test-HtmlScreenshotCandidate",
         "SkipHttpErrorCheck",
@@ -279,6 +280,36 @@ def test_capture_script_declares_parameters_routes_and_outputs() -> None:
     assert "-Issue503" in script
     assert "-Issue498" in script
     assert "-Issue610" in script
+    assert "-Issue641" in script
+    assert "Issue #641 evidence routes are local fixture/demo-only" in script
+    assert "Issue #641 geometry gate failed" in script
+    assert "document.documentElement.scrollWidth > clientWidth" in script
+    assert "overflowingRequired" in script
+    assert "Issue #641 selected filter control text is clipped" in script
+    assert "fullExpectedText" in script
+    assert "clippingResult" in script
+    assert "availableTextWidth" in script
+    assert "pageHorizontalOverflow" in script
+    assert "gridColumnCount" in script
+    assert "issue641 expected visible state" in script
+    assert "issue641 optional category absence" in script
+    assert "issue-641-compare-1280-page-scale-200" in script
+    assert "Issue641PageScaleFactor = 2.0" in script
+    assert "requested page-scale evidence was not applied" in script
+    assert "issue-641-evidence-gates.csv" in script
+    assert "I641-GEOMETRY-003" in script
+    for issue_641_control_assertion in (
+        "I641-CONTROL-430-1440",
+        "I641-CONTROL-733-1440",
+        "I641-CONTROL-430-1024",
+        "I641-CONTROL-430-768",
+        "I641-CONTROL-430-400",
+        "I641-CONTROL-430-390",
+        "I641-CONTROL-430-200",
+        "I641-CONTROL-DATE-DIMENSION-200",
+        "I641-SUMMARY-RECONCILIATION",
+    ):
+        assert issue_641_control_assertion in script
     for issue_415_route in (
         "/reviewer/records/substantiated?facility=107207198",
         "/reviewer/records/substantiated?facility_type=FOSTER%20FAMILY%20AGENCY",
@@ -514,12 +545,16 @@ def test_capture_script_verifies_zip_membership_sizes_and_hash(tmp_path: Path) -
         + "$files = @(Test-EvidencePacketFiles -PacketDirectory $packet)\n"
         + "$hash = Test-EvidenceZipIntegrity -PacketDirectory $packet "
         + "-ZipPath $zip -ExpectedFiles $files\n"
+        + "$file = @($files | Where-Object { $_.path -eq 'README.txt' })[0]\n"
         + "$length = (Get-Item -LiteralPath $zip).Length\n"
         + "Set-Content -LiteralPath (Join-Path $packet 'README.txt') -Value '' -NoNewline\n"
         + "try { Test-EvidencePacketFiles -PacketDirectory $packet | Out-Null; "
         + "$zero = 'not rejected' } "
         + "catch { $zero = $_.Exception.Message }\n"
-        + "[ordered]@{ Hash = $hash; Length = $length; ZeroLength = $zero } | ConvertTo-Json\n"
+        + "[ordered]@{ Hash = $hash; Length = $length; FileHash = $file.sha256; "
+        + "FileAction = $file.action; FileSource = $file.source; "
+        + "FileTimestamp = $file.timestamp; FileSanitization = $file.sanitizationState; "
+        + "ZeroLength = $zero } | ConvertTo-Json\n"
     )
     result = subprocess.run(
         [powershell(), "-NoProfile", "-Command", ps_script],
@@ -532,8 +567,66 @@ def test_capture_script_verifies_zip_membership_sizes_and_hash(tmp_path: Path) -
     assert result.returncode == 0, plain_output(result)
     verified = json.loads(result.stdout)
     assert re.fullmatch(r"[A-F0-9]{64}", verified["Hash"])
+    assert re.fullmatch(r"[A-F0-9]{64}", verified["FileHash"])
+    assert verified["FileAction"] == "sanitized-capture-or-derived-text"
+    assert verified["FileSource"] == "local fixture evidence capture"
+    assert verified["FileTimestamp"].endswith("Z")
+    assert "credentials" in verified["FileSanitization"]
     assert verified["Length"] > 0
     assert "zero-length files" in verified["ZeroLength"]
+
+
+def test_issue_641_validation_summary_fails_when_any_failure_count_is_nonzero() -> None:
+    summary_function = powershell_function(
+        "Get-Issue641ValidationSummary", "Get-EvidenceFileIndex"
+    )
+    ps_script = f"""
+{summary_function}
+function Get-SummaryStatus {{
+    param(
+        [int]$RouteFailures = 0,
+        [int]$AssertionFailures = 0,
+        [int]$FeatureAssertionFailures = 0,
+        [int]$ScreenshotFailures = 0
+    )
+    $parameters = @{{
+        RouteFailures = $RouteFailures
+        AssertionFailures = $AssertionFailures
+        FeatureAssertionFailures = $FeatureAssertionFailures
+        ScreenshotFailures = $ScreenshotFailures
+        RequiredFeatureAssertions = @('I641-A')
+    }}
+    return (Get-Issue641ValidationSummary @parameters).status
+}}
+$pass = Get-SummaryStatus
+$route_failure = Get-SummaryStatus -RouteFailures 1
+$assertion_failure = Get-SummaryStatus -AssertionFailures 1
+$feature_failure = Get-SummaryStatus -FeatureAssertionFailures 1
+$screenshot_failure = Get-SummaryStatus -ScreenshotFailures 1
+[ordered]@{{
+    pass = $pass
+    route = $route_failure
+    assertion = $assertion_failure
+    feature = $feature_failure
+    screenshot = $screenshot_failure
+}} | ConvertTo-Json -Compress
+"""
+    result = subprocess.run(
+        [powershell(), "-NoProfile", "-Command", ps_script],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, plain_output(result)
+    assert json.loads(result.stdout) == {
+        "pass": "PASS",
+        "route": "FAIL",
+        "assertion": "FAIL",
+        "feature": "FAIL",
+        "screenshot": "FAIL",
+    }
 
 
 def test_capture_script_issue_498_defines_interaction_aware_standard_artifacts() -> None:
