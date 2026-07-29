@@ -1465,8 +1465,17 @@ function Get-EvidenceFileIndex {
             Sort-Object FullName |
             ForEach-Object {
                 [ordered]@{
-                    path  = ConvertTo-RelativeEvidencePath -Path $_.FullName -Root $PacketDirectory
-                    bytes = [int64]$_.Length
+                    path       = ConvertTo-RelativeEvidencePath -Path $_.FullName -Root $PacketDirectory
+                    bytes      = [int64]$_.Length
+                    sha256     = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash
+                    action     = if ($_.Extension -in @('.html', '.txt')) { 'sanitized-capture-or-derived-text' } elseif ($_.FullName -match '[\\/]screenshots[\\/]|[\\/]print[\\/]') { 'captured' } else { 'generated' }
+                    source     = 'local fixture evidence capture'
+                    timestamp  = $_.LastWriteTimeUtc.ToString('o')
+                    routeState = 'recorded in manifest routes and browser-state artifacts when route-specific'
+                    viewport   = 'recorded in the associated browser-state artifact when route-specific'
+                    browser    = 'recorded in the associated browser-state artifact when route-specific'
+                    associatedAssertions = @()
+                    sanitizationState = if ($_.Extension -in @('.html', '.txt', '.json', '.csv')) { 'sanitized or generated without credentials, cookies, headers, or environment values' } else { 'local fixture visual capture' }
                 }
             }
     )
@@ -1496,7 +1505,7 @@ function Test-EvidenceZipIntegrity {
 
     $packetName = Split-Path -Leaf $PacketDirectory
     $expectedByPath = @{}
-    foreach ($file in $ExpectedFiles) { $expectedByPath[[string]$file.path] = [int64]$file.bytes }
+    foreach ($file in $ExpectedFiles) { $expectedByPath[[string]$file.path] = $file }
     $archive = [System.IO.Compression.ZipFile]::OpenRead($ZipPath)
     try {
         $actualByPath = @{}
@@ -1506,15 +1515,32 @@ function Test-EvidenceZipIntegrity {
             if (-not $entryPath.StartsWith($prefix, [System.StringComparison]::Ordinal)) {
                 Stop-CaptureFail "Evidence ZIP contains an unexpected root entry: $entryPath"
             }
-            $actualByPath[$entryPath.Substring($prefix.Length)] = [int64]$entry.Length
+            $entryRelativePath = $entryPath.Substring($prefix.Length)
+            $hashAlgorithm = [System.Security.Cryptography.SHA256]::Create()
+            try {
+                $entryStream = $entry.Open()
+                try {
+                    $entrySha256 = [Convert]::ToHexString($hashAlgorithm.ComputeHash($entryStream))
+                }
+                finally {
+                    $entryStream.Dispose()
+                }
+            }
+            finally {
+                $hashAlgorithm.Dispose()
+            }
+            $actualByPath[$entryRelativePath] = [ordered]@{ bytes = [int64]$entry.Length; sha256 = $entrySha256 }
         }
         $missing = @($expectedByPath.Keys | Where-Object { -not $actualByPath.ContainsKey($_) })
         $unexpected = @($actualByPath.Keys | Where-Object { -not $expectedByPath.ContainsKey($_) })
         $sizeMismatch = @($expectedByPath.Keys | Where-Object {
-            $actualByPath.ContainsKey($_) -and $actualByPath[$_] -ne $expectedByPath[$_]
+            $actualByPath.ContainsKey($_) -and $actualByPath[$_].bytes -ne [int64]$expectedByPath[$_].bytes
         })
-        if ($missing.Count -gt 0 -or $unexpected.Count -gt 0 -or $sizeMismatch.Count -gt 0) {
-            Stop-CaptureFail "Evidence ZIP membership and sizes do not match the packet file index."
+        $hashMismatch = @($expectedByPath.Keys | Where-Object {
+            $actualByPath.ContainsKey($_) -and $actualByPath[$_].sha256 -ne [string]$expectedByPath[$_].sha256
+        })
+        if ($missing.Count -gt 0 -or $unexpected.Count -gt 0 -or $sizeMismatch.Count -gt 0 -or $hashMismatch.Count -gt 0) {
+            Stop-CaptureFail "Evidence ZIP membership, sizes, or SHA-256 hashes do not match the packet file index."
         }
     }
     finally {

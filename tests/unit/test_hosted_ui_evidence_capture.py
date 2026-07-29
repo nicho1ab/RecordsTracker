@@ -199,7 +199,7 @@ def test_capture_script_declares_parameters_routes_and_outputs() -> None:
         "Get-FileHash",
         "Test-EvidencePacketFiles",
         "Test-EvidenceZipIntegrity",
-        "Evidence ZIP membership and sizes do not match the packet file index.",
+            "Evidence ZIP membership, sizes, or SHA-256 hashes do not match the packet file index.",
         "Invoke-NativeCaptureCommand",
         "Test-HtmlScreenshotCandidate",
         "SkipHttpErrorCheck",
@@ -527,12 +527,16 @@ def test_capture_script_verifies_zip_membership_sizes_and_hash(tmp_path: Path) -
         + "$files = @(Test-EvidencePacketFiles -PacketDirectory $packet)\n"
         + "$hash = Test-EvidenceZipIntegrity -PacketDirectory $packet "
         + "-ZipPath $zip -ExpectedFiles $files\n"
+        + "$file = @($files | Where-Object { $_.path -eq 'README.txt' })[0]\n"
         + "$length = (Get-Item -LiteralPath $zip).Length\n"
         + "Set-Content -LiteralPath (Join-Path $packet 'README.txt') -Value '' -NoNewline\n"
         + "try { Test-EvidencePacketFiles -PacketDirectory $packet | Out-Null; "
         + "$zero = 'not rejected' } "
         + "catch { $zero = $_.Exception.Message }\n"
-        + "[ordered]@{ Hash = $hash; Length = $length; ZeroLength = $zero } | ConvertTo-Json\n"
+        + "[ordered]@{ Hash = $hash; Length = $length; FileHash = $file.sha256; "
+        + "FileAction = $file.action; FileSource = $file.source; "
+        + "FileTimestamp = $file.timestamp; FileSanitization = $file.sanitizationState; "
+        + "ZeroLength = $zero } | ConvertTo-Json\n"
     )
     result = subprocess.run(
         [powershell(), "-NoProfile", "-Command", ps_script],
@@ -545,6 +549,11 @@ def test_capture_script_verifies_zip_membership_sizes_and_hash(tmp_path: Path) -
     assert result.returncode == 0, plain_output(result)
     verified = json.loads(result.stdout)
     assert re.fullmatch(r"[A-F0-9]{64}", verified["Hash"])
+    assert re.fullmatch(r"[A-F0-9]{64}", verified["FileHash"])
+    assert verified["FileAction"] == "sanitized-capture-or-derived-text"
+    assert verified["FileSource"] == "local fixture evidence capture"
+    assert verified["FileTimestamp"].endswith("Z")
+    assert "credentials" in verified["FileSanitization"]
     assert verified["Length"] > 0
     assert "zero-length files" in verified["ZeroLength"]
 
