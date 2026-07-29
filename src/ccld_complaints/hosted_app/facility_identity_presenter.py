@@ -42,7 +42,7 @@ _CONTEXT_TEXT = {
 def present_facility_field(result: FacilityFieldResult) -> FacilityFieldPresentation:
     value = result.display_value
     if result.state is FacilityValueState.UNRESOLVED_RAW_CODE and value is not None:
-        text = f"Source code {value} — label not verified"
+        text = unresolved_raw_code_text(value)
     elif value is not None:
         text = str(value)
     else:
@@ -67,6 +67,11 @@ def present_facility_field(result: FacilityFieldResult) -> FacilityFieldPresenta
         context=result.context,
         conflict_note=conflict_note,
     )
+
+
+def unresolved_raw_code_text(value: object) -> str:
+    """Present a source code without claiming an unverified descriptive label."""
+    return f"Source code {value} — label not verified"
 
 
 def projected_display_text(

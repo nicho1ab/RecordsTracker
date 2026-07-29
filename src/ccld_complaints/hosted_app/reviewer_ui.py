@@ -12,7 +12,7 @@ import json
 import os
 import re
 from collections import Counter
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, replace
 from datetime import UTC, date, datetime
 from pathlib import Path
@@ -78,6 +78,7 @@ from ccld_complaints.hosted_app.facility_identity_presenter import (
     projected_context_text,
     projected_display_text,
     projected_selected_text,
+    unresolved_raw_code_text,
 )
 from ccld_complaints.hosted_app.facility_identity_projection import (
     FacilityIdentityProjection,
@@ -1411,6 +1412,7 @@ def _facility_intelligence_response(
             for record in source_result
             if not _is_local_rt_src_002_visual_fixture_record(record)
         ]
+    source_result = _records_with_projected_facility_identity(context, source_result)
     page_priority_summaries = _facility_priority_summaries(
         source_result,
         date_dimension=filters.date_dimension,
@@ -1418,6 +1420,7 @@ def _facility_intelligence_response(
     page_summaries = _facility_intelligence_summaries(
         page_priority_summaries,
         filters=filters,
+        source_filters_applied=True,
     )
     summary_by_identity = {
         item.priority.facility_identity: item for item in page_summaries
@@ -1985,20 +1988,25 @@ def _facility_intelligence_summaries(
     all_summaries: list[FacilityPrioritySummary],
     *,
     filters: FacilityIntelligenceFilters,
+    source_filters_applied: bool = False,
 ) -> list[FacilityIntelligenceSummary]:
     results: list[FacilityIntelligenceSummary] = []
     for summary in all_summaries:
-        if not _facility_priority_text_matches(
+        if not source_filters_applied and not _facility_priority_text_matches(
             summary.facility_type,
             filters.facility_type,
         ):
             continue
-        if not _facility_priority_text_matches(summary.geography, filters.geography):
+        if not source_filters_applied and not _facility_priority_text_matches(
+            summary.geography,
+            filters.geography,
+        ):
             continue
         complaints = tuple(
             complaint
             for complaint in summary.complaints
-            if _facility_intelligence_complaint_matches(complaint, filters)
+            if source_filters_applied
+            or _facility_intelligence_complaint_matches(complaint, filters)
         )
         if not complaints:
             continue
@@ -2375,10 +2383,23 @@ def _render_facility_intelligence_filters(
     filters: FacilityIntelligenceFilters,
     filter_options: FacilityIntelligenceFilterOptions,
 ) -> str:
-    facility_types = _substantiated_filter_options(filter_options.facility_types)
-    geographies = _substantiated_filter_options(filter_options.geographies)
-    findings = _substantiated_filter_options(filter_options.findings)
-    serious_topics = _substantiated_filter_options(filter_options.serious_topics)
+    facility_types = _substantiated_filter_options(
+        filter_options.facility_types,
+        current=filters.facility_type,
+        display_label=_facility_type_filter_option_label,
+    )
+    geographies = _substantiated_filter_options(
+        filter_options.geographies,
+        current=filters.geography,
+    )
+    findings = _substantiated_filter_options(
+        filter_options.findings,
+        current=filters.finding,
+    )
+    serious_topics = _substantiated_filter_options(
+        filter_options.serious_topics,
+        current=filters.serious_topic,
+    )
     return f"""        <section class="intelligence-filters" aria-labelledby="facility-intelligence-filters-heading">
           <h2 id="facility-intelligence-filters-heading">Filter facilities</h2>
           <form class="compact-filter-form" method="get" action="{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}">
@@ -2392,7 +2413,7 @@ def _render_facility_intelligence_filters(
                 <select id="facility-intelligence-geography" name="geography">{_facility_intelligence_filter_options(filters.geography, geographies, 'All geographies')}</select>
               </p>
               <p>
-                <label for="facility-intelligence-finding">Finding / disposition</label>
+                <label for="facility-intelligence-finding">Complaint finding</label>
                 <select id="facility-intelligence-finding" name="finding">{_facility_intelligence_filter_options(filters.finding, findings, 'All findings')}</select>
               </p>
               <p>
@@ -2958,11 +2979,13 @@ def _facility_intelligence_contributor_item(
         else complaint.stable_complaint_id
     )
     date_text = _reviewer_value_text(complaint.activity_date, kind="date")
-    topics = ", ".join(complaint.serious_topics) if complaint.serious_topics else "No serious-review category"
     source_label = "CCLD source available" if complaint.source_available else "Source not available"
+    metadata = [_escape(date_text), _finding_badge(complaint.finding)]
+    metadata.extend(_escape(topic) for topic in complaint.serious_topics)
+    metadata.append(_escape(source_label))
     return f"""                  <li>
                     <a href="{_escape(_facility_intelligence_detail_href(complaint, summary, filters))}">Open complaint record {_escape(control)}</a>
-                    — {_escape(date_text)}; {_finding_badge(complaint.finding)}; {_escape(topics)}; {_escape(source_label)}
+                    — {'; '.join(metadata)}
                   </li>"""
 
 
@@ -5958,7 +5981,12 @@ def _render_substantiated_filter_form(
         </section>"""
 
 
-def _substantiated_filter_options(values: object) -> str:
+def _substantiated_filter_options(
+    values: object,
+    *,
+    current: str = "",
+    display_label: Callable[[str], str] | None = None,
+) -> str:
     if not isinstance(values, list | tuple | set):
         values = tuple(values)  # type: ignore[arg-type]
     options = []
@@ -5973,9 +6001,17 @@ def _substantiated_filter_options(values: object) -> str:
         seen.add(key)
         options.append(text)
     return "".join(
-        f'<option value="{_escape(value)}"></option>'
+        _facility_intelligence_option(
+            current,
+            value,
+            display_label(value) if display_label is not None else value,
+        )
         for value in sorted(options, key=str.casefold)
     )
+
+
+def _facility_type_filter_option_label(value: str) -> str:
+    return unresolved_raw_code_text(value) if value.strip().isdigit() else value
 
 
 def _substantiated_sort_option(current: str, value: str, label: str) -> str:
@@ -12461,7 +12497,7 @@ def _render_allegations_findings_section(
       <table>
         <thead>
           <tr>
-            <th scope="col">Finding</th>
+            <th scope="col">Allegation finding</th>
             <th scope="col">Allegation</th>
           </tr>
         </thead>
@@ -13688,7 +13724,12 @@ def _records_with_projected_facility_identity(
 
 
 def _facility_public_id_from_values(values: Mapping[str, Any]) -> str | None:
-    for key in ("external_facility_number", "facility_number", "license_number"):
+    for key in (
+        "external_facility_number",
+        "facility_number",
+        "license_number",
+        "facility_id",
+    ):
         value = values.get(key)
         if isinstance(value, str) and value.strip().isdigit():
             return value.strip()

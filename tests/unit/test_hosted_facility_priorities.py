@@ -1036,6 +1036,44 @@ def test_facility_intelligence_uses_public_identity_fallback_for_missing_name() 
     )
 
 
+def test_facility_intelligence_projects_raw_type_codes_and_labels_all_options() -> None:
+    with _priority_connection() as connection:
+        _insert_facility_bundle(
+            connection,
+            facility_number="430000001",
+            facility_name="Code 430 Center",
+            facility_type="430",
+            county="Kern",
+            complaints=(_complaint("CODE-430", "2026-05-01", "Unsubstantiated"),),
+        )
+        _insert_facility_bundle(
+            connection,
+            facility_number="733000001",
+            facility_name="Code 733 Center",
+            facility_type="733",
+            county="Kern",
+            complaints=(_complaint("CODE-733", "2026-05-02", "Unsubstantiated"),),
+        )
+        status, _content_type, body = route_response(
+            f"{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}?facility_type=733",
+            reviewer_ui_context=reviewer_ui_context_for_connection(connection),
+        )
+
+    html = body.decode("utf-8")
+
+    assert status == 200
+    assert "Source code 733 — label not verified" in html
+    assert '<option value="430">Source code 430 — label not verified</option>' in html
+    assert (
+        '<option value="733" selected="selected">'
+        "Source code 733 — label not verified</option>"
+    ) in html
+    assert '<option value="Kern">Kern</option>' in html
+    assert '<option value="Unsubstantiated">Unsubstantiated</option>' in html
+    assert re.search(r'<option value="[^"]+"></option>', html) is None
+    assert "No serious-review category" not in html
+
+
 def test_facility_intelligence_pagination_boundaries_and_exact_position_wording() -> None:
     cases = (0, 1, 24, 25, 26, 49, 50, 51)
     for facility_count in cases:

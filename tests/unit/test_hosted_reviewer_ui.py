@@ -31,6 +31,7 @@ from ccld_complaints.hosted_app.auth import (
 from ccld_complaints.hosted_app.ccld_facility_lookup import (
     CCLD_FACILITY_REFERENCE_CSV_ENV,
     CCLD_FACILITY_REVIEW_HUB_PATH,
+    CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH,
     CCLD_FACILITY_REVIEW_PRIORITY_PATH,
     CCLD_RECORD_REQUEST_PATH,
 )
@@ -1837,6 +1838,10 @@ def test_core_facility_surfaces_share_projected_identity_without_mutation() -> N
                 "/reviewer/records",
                 reviewer_ui_context=reviewer_context,
             ),
+            "Compare Facilities": route_response(
+                CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH,
+                reviewer_ui_context=reviewer_context,
+            ),
             "reviewer detail": route_response(
                 f"{REVIEWER_UI_DETAIL_PATH}?source_record_key={quote(COMPLAINT_KEY)}"
                 f"&return_facility_number=157806098&{date_query}"
@@ -2836,7 +2841,7 @@ def test_reviewer_ui_detail_shows_attorney_tier_and_hides_support_details() -> N
     ):
         assert removed not in html
     assert "0.95" not in parser.text_for("main")
-    assert "Finding</th>" in html
+    assert "Allegation finding</th>" in html
     assert "Allegation</th>" in html
     assert "ccld:document:" not in html
     assert "source_document:" not in html

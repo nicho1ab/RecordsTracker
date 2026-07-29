@@ -7,9 +7,18 @@ from collections.abc import Iterator
 from typing import Any
 
 import pytest
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine, event, select, update
 from sqlalchemy.engine import Connection, Engine
 
+from ccld_complaints.hosted_app.app import route_response
+from ccld_complaints.hosted_app.auth import HostedAccessScope
+from ccld_complaints.hosted_app.ccld_facility_lookup import (
+    CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH,
+)
+from ccld_complaints.hosted_app.reviewer_ui import (
+    local_test_reviewer_actor,
+    reviewer_ui_context_for_connection,
+)
 from ccld_complaints.hosted_app.seeded_import import (
     hosted_import_batches,
     hosted_seeded_import_metadata,
@@ -154,6 +163,47 @@ def test_postgres_facility_intelligence_page_is_bounded_and_completes(
     ]
     assert len(review_next_statements) == 1
     assert " limit " in review_next_statements[0]
+
+
+def test_postgres_facility_intelligence_route_projects_raw_type_codes(
+    postgres_performance_connection: Connection,
+) -> None:
+    connection = postgres_performance_connection
+    facility_key = "facility:ccld:facility:900000000"
+    facility = connection.execute(
+        select(hosted_source_derived_records.c.original_values).where(
+            hosted_source_derived_records.c.source_record_key == facility_key
+        )
+    ).scalar_one()
+    original_values = dict(facility)
+    original_values["facility_type"] = "733"
+    connection.execute(
+        update(hosted_source_derived_records)
+        .where(hosted_source_derived_records.c.source_record_key == facility_key)
+        .values(original_values=original_values)
+    )
+    connection.commit()
+
+    status, content_type, body = route_response(
+        f"{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}?facility_type=733",
+        reviewer_ui_context=reviewer_ui_context_for_connection(
+            connection,
+            actor=local_test_reviewer_actor(
+                scopes=(HostedAccessScope("seeded_corpus", PERFORMANCE_IMPORT_BATCH_ID),)
+            ),
+            scope=HostedAccessScope("seeded_corpus", PERFORMANCE_IMPORT_BATCH_ID),
+        ),
+    )
+
+    html = body.decode("utf-8")
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert "Source code 733 — label not verified" in html
+    assert (
+        '<option value="733" selected="selected">'
+        "Source code 733 — label not verified</option>"
+    ) in html
+    assert '<option value="733"></option>' not in html
 
 
 def test_postgres_seek_pages_are_complete_and_reversible(

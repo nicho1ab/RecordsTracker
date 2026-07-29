@@ -2092,7 +2092,7 @@ def test_ccld_facility_review_intelligence_dashboard_filters_sorts_and_links(
     assert filter_grid.labels == [
         "Facility type",
         "Geography",
-        "Finding / disposition",
+        "Complaint finding",
         "Source coverage",
         "Start date",
         "End date",
