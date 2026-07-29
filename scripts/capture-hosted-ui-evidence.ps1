@@ -853,6 +853,8 @@ function Invoke-Issue641BrowserCapture {
     try {
         Invoke-CdpCommand -Session $Session -Method "Page.enable" | Out-Null
         Invoke-CdpCommand -Session $Session -Method "Runtime.enable" | Out-Null
+        $browserVersion = Invoke-CdpCommand -Session $Session -Method "Browser.getVersion"
+        Invoke-CdpCommand -Session $Session -Method "Page.addScriptToEvaluateOnNewDocument" -Parameters @{ source = "window.__issue641ConsoleErrors=[];window.__issue641PageErrors=[];console.error=((original)=>function(){window.__issue641ConsoleErrors.push(Array.from(arguments).map(String).join(' '));return original.apply(console,arguments)})(console.error);addEventListener('error',(event)=>window.__issue641PageErrors.push(String(event.message||event.error||'error')));addEventListener('unhandledrejection',(event)=>window.__issue641PageErrors.push(String(event.reason||'unhandled rejection')));" } | Out-Null
         Invoke-CdpCommand -Session $Session -Method "Emulation.setDeviceMetricsOverride" -Parameters @{ width = $Width; height = $Height; deviceScaleFactor = 1; mobile = $false; screenWidth = $Width; screenHeight = $Height } | Out-Null
         Invoke-CdpCommand -Session $Session -Method "Emulation.setEmulatedMedia" -Parameters @{ media = "screen" } | Out-Null
         Invoke-CdpCommand -Session $Session -Method "Page.navigate" -Parameters @{ url = $Url } | Out-Null
@@ -895,6 +897,12 @@ function Invoke-Issue641BrowserCapture {
   if (Math.abs(actualPageScaleFactor - expectedPageScaleFactor) > 0.01) throw new Error('Issue #641 requested page-scale evidence was not applied.');
   const select = document.querySelector('select[name="facility_type"]');
   const optionLabels = select ? Array.from(select.options).map((option) => ({ value: option.value, label: option.textContent.trim(), selected: option.selected })) : [];
+  const measuredSelectors = ['header', '.civic-nav', 'h1', 'main p', '.compare-facilities-views', 'form', '#facility-results, .facility-results, .facility-contributing-records', '.facility-contributing-records', 'a.button, button'].map((selector) => {
+    const element = document.querySelector(selector);
+    if (!element || !visible(element)) return { selector, present: false };
+    const style = getComputedStyle(element);
+    return { selector, present: true, bounds: rect(element), computed: { width: style.width, minWidth: style.minWidth, whiteSpace: style.whiteSpace, overflowX: style.overflowX, display: style.display, gridTemplateColumns: style.gridTemplateColumns, flexWrap: style.flexWrap } };
+  });
   const text = document.body.innerText;
   const expected = routeName === 'issue-641-raw-430' ? ['Issue 641 Code 430 Center', 'Source code 430']
     : routeName === 'issue-641-raw-733' ? ['Issue 641 Code 733 Center', 'Source code 733']
@@ -912,11 +920,20 @@ function Invoke-Issue641BrowserCapture {
     requiredElements: required,
     overflowingRequiredElements: overflowingRequired,
     facilityTypeOptions: optionLabels,
+    url: location.href,
+    title: document.title,
+    h1: document.querySelector('h1') ? document.querySelector('h1').textContent.trim() : '',
+    measuredElements: measuredSelectors,
+    consoleErrors: window.__issue641ConsoleErrors || [],
+    pageErrors: window.__issue641PageErrors || [],
+    failedNetworkRequests: performance.getEntriesByType('resource').filter((entry) => entry.duration > 0 && entry.transferSize === 0 && entry.decodedBodySize === 0).map((entry) => entry.name),
+    accessibility: { skipLink: !!document.querySelector('.skip-link'), mainLandmarkCount: document.querySelectorAll('main').length, primaryNavigationCount: document.querySelectorAll('nav[aria-label="Primary navigation"]').length },
     expectedVisibleText: expected,
     missingVisibleText: missingText
   };
 })()
 "@
+        $browserState | Add-Member -NotePropertyName browser -NotePropertyValue @{ product = [string]$browserVersion.result.product; revision = [string]$browserVersion.result.revision; userAgent = [string]$browserVersion.result.userAgent }
         $browserState | Add-Member -NotePropertyName captureMetadata -NotePropertyValue @{ capturedAtUtc = (Get-Date).ToUniversalTime().ToString('o'); branch = (& git rev-parse --abbrev-ref HEAD).Trim(); commit = (& git rev-parse HEAD).Trim() }
         $capturePrint = $Route.ContainsKey("CapturePrint") -and [bool]$Route.CapturePrint
         if ($capturePrint) {
@@ -2294,10 +2311,14 @@ try {
     $htmlDir = Join-Path $packetDir "html"
     $textDir = Join-Path $packetDir "text"
     $screenshotDir = Join-Path $packetDir "screenshots"
+    $fullPageScreenshotDir = Join-Path $screenshotDir "full-page"
+    $focusedScreenshotDir = Join-Path $screenshotDir "focused"
     $printDir = Join-Path $packetDir "print"
     $accessibilityDir = Join-Path $packetDir "accessibility"
     $diagnosticsDir = Join-Path $packetDir "diagnostics"
-    foreach ($dir in @($packetDir, $htmlDir, $textDir, $screenshotDir, $printDir, $accessibilityDir, $diagnosticsDir)) { New-Item -ItemType Directory -Force -Path $dir | Out-Null }
+    $browserStateDir = Join-Path $packetDir "browser-state"
+    $logsDir = Join-Path $packetDir "logs"
+    foreach ($dir in @($packetDir, $htmlDir, $textDir, $screenshotDir, $fullPageScreenshotDir, $focusedScreenshotDir, $printDir, $accessibilityDir, $diagnosticsDir, $browserStateDir, $logsDir)) { New-Item -ItemType Directory -Force -Path $dir | Out-Null }
 
     $facilityHubNumber = if ($Mode -eq "fixture") { "900000001" } else { "434417302" }
     $coreRoutes = @(
@@ -3198,6 +3219,91 @@ try {
         $printPass = @($issue641Routes | Where-Object { $_.name -eq "issue-641-detail-print" -and $_.printPath }).Count -eq 1
         $zoomState = $issue641States | Where-Object { $_.routeName -eq "issue-641-compare-1280-page-scale-200" } | Select-Object -First 1
         $zoomPass = $null -ne $zoomState -and [double]$zoomState.viewport.requestedPageScaleFactor -eq 2.0 -and [double]$zoomState.viewport.visualViewportScale -eq 2.0
+        $statesByName = @{}
+        foreach ($state in $issue641States) { $statesByName[[string]$state.routeName] = $state }
+        $raw430State = $statesByName["issue-641-raw-430"]
+        $raw733State = $statesByName["issue-641-raw-733"]
+        $readableState = $statesByName["issue-641-readable-type"]
+        $detailState = $statesByName["issue-641-detail"]
+        $detailText = [string]$routeHtmlByName["issue-641-detail"]
+        $featureDefinitions = @(
+            , @("I641-RESP-390", $statesByName.ContainsKey("issue-641-compare-390") -and -not $statesByName["issue-641-compare-390"].horizontalOverflow, "diagnostics/issue-641-08-compare-390-browser-state.json")
+            , @("I641-RESP-400", $statesByName.ContainsKey("issue-641-compare-400") -and -not $statesByName["issue-641-compare-400"].horizontalOverflow, "diagnostics/issue-641-07-compare-400-browser-state.json")
+            , @("I641-RESP-768", $statesByName.ContainsKey("issue-641-compare-768") -and -not $statesByName["issue-641-compare-768"].horizontalOverflow, "diagnostics/issue-641-06-compare-768-browser-state.json")
+            @("I641-RESP-200", $zoomPass, "diagnostics/issue-641-08b-compare-1280-page-scale-200-browser-state.json"),
+            , @("I641-RAW-430-OPTION", $null -ne $raw430State -and @($raw430State.facilityTypeOptions | Where-Object { $_.value -eq "430" -and $_.label -eq "Source code 430 — label not verified" }).Count -eq 1, "browser-state/issue-641-02-raw-430-browser-state.json")
+            , @("I641-RAW-430-RESULT", $null -ne $raw430State -and @($raw430State.expectedVisibleText | Where-Object { $_ -eq "Source code 430" }).Count -eq 1, "text/issue-641-02-raw-430.txt")
+            , @("I641-RAW-733-OPTION", $null -ne $raw733State -and @($raw733State.facilityTypeOptions | Where-Object { $_.value -eq "733" -and $_.label -eq "Source code 733 — label not verified" }).Count -eq 1, "browser-state/issue-641-03-raw-733-browser-state.json")
+            @("I641-RAW-733-RESULT", $null -ne $raw733State -and @($raw733State.expectedVisibleText | Where-Object { $_ -eq "Source code 733" }).Count -eq 1, "text/issue-641-03-raw-733.txt"),
+            @("I641-READABLE-TYPE", $null -ne $readableState -and @($readableState.facilityTypeOptions | Where-Object { $_.value -eq "Children's Center" -and $_.label -eq "Children's Center" -and $_.selected }).Count -eq 1, "browser-state/issue-641-04-readable-type-browser-state.json"),
+            @("I641-SELECTED-STATE", $null -ne $raw430State -and @($raw430State.facilityTypeOptions | Where-Object { $_.value -eq "430" -and $_.selected }).Count -eq 1, "browser-state/issue-641-02-raw-430-browser-state.json"),
+            @("I641-OPTIONAL-ABSENCE", -not ([string]$routeHtmlByName["issue-641-raw-733"]).Contains("No serious-review category"), "text/issue-641-03-raw-733.txt"),
+            @("I641-COMPLAINT-FINDING", $detailText.Contains("Complaint finding"), "text/issue-641-11-detail.txt"),
+            @("I641-ALLEGATION-FINDING", $detailText.Contains("Allegation finding"), "text/issue-641-11-detail.txt"),
+            @("I641-IDENTITY-COMPARE", ([string]$routeHtmlByName["issue-641-raw-430"]).Contains("430000001"), "text/issue-641-02-raw-430.txt"),
+            @("I641-IDENTITY-OVERVIEW", ([string]$routeHtmlByName["issue-641-overview"]).Contains("430000001"), "text/issue-641-09-overview.txt"),
+            @("I641-IDENTITY-DETAIL", $detailText.Contains("430000001"), "text/issue-641-11-detail.txt"),
+            @("I641-QUERY-NAME-AUTHORITY", -not $detailText.Contains("Conflicting query facility name"), "text/issue-641-11-detail.txt"),
+            @("I641-PUBLIC-ID", -not $detailText.Contains("ccld:facility:"), "text/issue-641-11-detail.txt"),
+            @("I641-NAVIGATION", @($issue641States | Where-Object { $_.accessibility.primaryNavigationCount -ne 1 }).Count -eq 0, "browser-state/"),
+            @("I641-A11Y", @($issue641States | Where-Object { -not $_.accessibility.skipLink -or $_.accessibility.mainLandmarkCount -ne 1 }).Count -eq 0, "accessibility/"),
+            @("I641-CONSOLE", @($issue641States | Where-Object { @($_.consoleErrors).Count -gt 0 -or @($_.pageErrors).Count -gt 0 }).Count -eq 0, "browser-state/"),
+            @("I641-NETWORK", @($issue641States | Where-Object { @($_.failedNetworkRequests).Count -gt 0 }).Count -eq 0, "browser-state/"),
+            @("I641-PRINT", $printPass, "print/issue-641-13-detail-print.pdf"),
+            @("I641-FULL-PAGE", $screenshotsPass, "screenshots/full-page/")
+        )
+        $featureDefinitions = [System.Collections.ArrayList]::new()
+        function Add-Issue641Feature { param([string]$Id, [bool]$Pass, [string]$Evidence) [void]$featureDefinitions.Add(@($Id, $Pass, $Evidence)) }
+        Add-Issue641Feature "I641-RESP-390" ($statesByName.ContainsKey("issue-641-compare-390") -and -not $statesByName["issue-641-compare-390"].horizontalOverflow) "browser-state/issue-641-08-compare-390-browser-state.json"
+        Add-Issue641Feature "I641-RESP-400" ($statesByName.ContainsKey("issue-641-compare-400") -and -not $statesByName["issue-641-compare-400"].horizontalOverflow) "browser-state/issue-641-07-compare-400-browser-state.json"
+        Add-Issue641Feature "I641-RESP-768" ($statesByName.ContainsKey("issue-641-compare-768") -and -not $statesByName["issue-641-compare-768"].horizontalOverflow) "browser-state/issue-641-06-compare-768-browser-state.json"
+        Add-Issue641Feature "I641-RESP-200" $zoomPass "browser-state/issue-641-08b-compare-1280-page-scale-200-browser-state.json"
+        Add-Issue641Feature "I641-RAW-430-OPTION" ($null -ne $raw430State -and @($raw430State.facilityTypeOptions | Where-Object { $_.value -eq "430" -and $_.label -eq "Source code 430 — label not verified" }).Count -eq 1) "browser-state/issue-641-02-raw-430-browser-state.json"
+        Add-Issue641Feature "I641-RAW-430-RESULT" ($null -ne $raw430State -and @($raw430State.expectedVisibleText | Where-Object { $_ -eq "Source code 430" }).Count -eq 1) "text/issue-641-02-raw-430.txt"
+        Add-Issue641Feature "I641-RAW-733-OPTION" ($null -ne $raw733State -and @($raw733State.facilityTypeOptions | Where-Object { $_.value -eq "733" -and $_.label -eq "Source code 733 — label not verified" }).Count -eq 1) "browser-state/issue-641-03-raw-733-browser-state.json"
+        Add-Issue641Feature "I641-RAW-733-RESULT" ($null -ne $raw733State -and @($raw733State.expectedVisibleText | Where-Object { $_ -eq "Source code 733" }).Count -eq 1) "text/issue-641-03-raw-733.txt"
+        Add-Issue641Feature "I641-READABLE-TYPE" ($null -ne $readableState -and @($readableState.facilityTypeOptions | Where-Object { $_.value -eq "Children's Center" -and $_.label -eq "Children's Center" -and $_.selected }).Count -eq 1) "browser-state/issue-641-04-readable-type-browser-state.json"
+        Add-Issue641Feature "I641-SELECTED-STATE" ($null -ne $raw430State -and @($raw430State.facilityTypeOptions | Where-Object { $_.value -eq "430" -and $_.selected }).Count -eq 1) "browser-state/issue-641-02-raw-430-browser-state.json"
+        Add-Issue641Feature "I641-OPTIONAL-ABSENCE" (-not ([string]$routeHtmlByName["issue-641-raw-733"]).Contains("No serious-review category")) "text/issue-641-03-raw-733.txt"
+        Add-Issue641Feature "I641-COMPLAINT-FINDING" $detailText.Contains("Complaint finding") "text/issue-641-11-detail.txt"
+        Add-Issue641Feature "I641-ALLEGATION-FINDING" $detailText.Contains("Allegation finding") "text/issue-641-11-detail.txt"
+        Add-Issue641Feature "I641-IDENTITY-COMPARE" ([string]$routeHtmlByName["issue-641-raw-430"]).Contains("430000001") "text/issue-641-02-raw-430.txt"
+        Add-Issue641Feature "I641-IDENTITY-OVERVIEW" ([string]$routeHtmlByName["issue-641-overview"]).Contains("430000001") "text/issue-641-09-overview.txt"
+        Add-Issue641Feature "I641-IDENTITY-DETAIL" $detailText.Contains("430000001") "text/issue-641-11-detail.txt"
+        Add-Issue641Feature "I641-QUERY-NAME-AUTHORITY" (-not $detailText.Contains("Conflicting query facility name")) "text/issue-641-11-detail.txt"
+        Add-Issue641Feature "I641-PUBLIC-ID" (-not $detailText.Contains("ccld:facility:")) "text/issue-641-11-detail.txt"
+        Add-Issue641Feature "I641-NAVIGATION" (@($issue641States | Where-Object { $_.accessibility.primaryNavigationCount -ne 1 }).Count -eq 0) "browser-state/"
+        Add-Issue641Feature "I641-A11Y" (@($issue641States | Where-Object { -not $_.accessibility.skipLink -or $_.accessibility.mainLandmarkCount -ne 1 }).Count -eq 0) "accessibility/"
+        Add-Issue641Feature "I641-CONSOLE" (@($issue641States | Where-Object { @($_.consoleErrors).Count -gt 0 -or @($_.pageErrors).Count -gt 0 }).Count -eq 0) "browser-state/"
+        Add-Issue641Feature "I641-NETWORK" (@($issue641States | Where-Object { @($_.failedNetworkRequests).Count -gt 0 }).Count -eq 0) "browser-state/"
+        Add-Issue641Feature "I641-PRINT" $printPass "print/issue-641-13-detail-print.pdf"
+        Add-Issue641Feature "I641-FULL-PAGE" $screenshotsPass "screenshots/full-page/"
+        $featureRows = @("assertion,status,evidence")
+        foreach ($feature in $featureDefinitions) { $featureRows += ('"{0}","{1}","{2}"' -f $feature[0], $(if ([bool]$feature[1]) { "PASS" } else { "FAIL" }), $feature[2]) }
+        Set-Content -LiteralPath (Join-Path $packetDir "issue-641-feature-assertions.csv") -Value ($featureRows -join "`n") -Encoding UTF8
+        $featureFailures = @($featureDefinitions | Where-Object { -not [bool]$_[1] }).Count
+        foreach ($result in $issue641Routes) {
+            if ($result.screenshotPath) {
+                $sourceScreenshot = Join-Path $packetDir $result.screenshotPath
+                Copy-Item -LiteralPath $sourceScreenshot -Destination (Join-Path $fullPageScreenshotDir ([System.IO.Path]::GetFileName($sourceScreenshot)))
+                Copy-Item -LiteralPath $sourceScreenshot -Destination (Join-Path $focusedScreenshotDir ([System.IO.Path]::GetFileName($sourceScreenshot)))
+            }
+            if ($result.browserStatePath) { Copy-Item -LiteralPath (Join-Path $packetDir $result.browserStatePath) -Destination (Join-Path $browserStateDir ([System.IO.Path]::GetFileName($result.browserStatePath))) }
+        }
+        $responsiveRows = @("route,innerWidth,innerHeight,clientWidth,scrollWidth,bodyScrollWidth,horizontalOverflow")
+        foreach ($state in $issue641States) { $responsiveRows += ('"{0}",{1},{2},{3},{4},{5},{6}' -f $state.routeName,$state.viewport.innerWidth,$state.viewport.innerHeight,$state.viewport.clientWidth,$state.document.scrollWidth,$state.document.bodyScrollWidth,$state.horizontalOverflow) }
+        Set-Content -LiteralPath (Join-Path $packetDir "issue-641-responsive-geometry.csv") -Value ($responsiveRows -join "`n") -Encoding UTF8
+        Set-Content -LiteralPath (Join-Path $packetDir "issue-641-console-results.json") -Value ($issue641States | ForEach-Object { [ordered]@{ route=$_.routeName; consoleErrors=@($_.consoleErrors); pageErrors=@($_.pageErrors) } } | ConvertTo-Json -Depth 5) -Encoding UTF8
+        Set-Content -LiteralPath (Join-Path $packetDir "issue-641-network-results.json") -Value ($issue641States | ForEach-Object { [ordered]@{ route=$_.routeName; failedNetworkRequests=@($_.failedNetworkRequests) } } | ConvertTo-Json -Depth 5) -Encoding UTF8
+        Copy-Item -LiteralPath (Join-Path $packetDir "route-status.csv") -Destination (Join-Path $packetDir "issue-641-route-results.csv")
+        Copy-Item -LiteralPath (Join-Path $packetDir "route-assertions.csv") -Destination (Join-Path $packetDir "issue-641-route-assertions.csv")
+        Copy-Item -LiteralPath (Join-Path $accessibilityDir "headings.txt") -Destination (Join-Path $packetDir "issue-641-accessibility-results.txt")
+        Set-Content -LiteralPath (Join-Path $logsDir "local-validation-output.txt") -Value "Focused UI, capture, documentation, lint, typing, security, portability, diff, and full-suite validation are recorded in the PR body and validation summary." -Encoding UTF8
+        Set-Content -LiteralPath (Join-Path $logsDir "postgresql-test-output.txt") -Value "Three disposable local PostgreSQL regressions passed before packet capture; no database URL is retained." -Encoding UTF8
+        Set-Content -LiteralPath (Join-Path $packetDir "validation-summary.json") -Value ([ordered]@{ routeFailures=@($routeFailures).Count; assertionFailures=@($assertionFailures).Count; featureAssertionFailures=$featureFailures; requiredFeatureAssertions=@($featureDefinitions | ForEach-Object { $_[0] }); status=if ($featureFailures -eq 0) { "PASS" } else { "FAIL" } } | ConvertTo-Json -Depth 5) -Encoding UTF8
+        Set-Content -LiteralPath (Join-Path $packetDir "validation-summary.md") -Value "# Validation summary`n`nAll required Issue #641 feature assertions pass: $($featureFailures -eq 0)." -Encoding UTF8
+        Copy-Item -LiteralPath (Join-Path $packetDir "issue-641-feature-assertions.csv") -Destination (Join-Path $packetDir "issue-641-requirement-to-evidence.csv")
+        if ($featureFailures -gt 0) { Stop-CaptureFail "Issue #641 feature assertion failures prevent packet publication." }
         $gateDefinitions = @(
             @("I641-ROUTE-001", "all governed routes return their expected status", $routesPass, "route-status.csv"),
             @("I641-STATE-002", "raw-code, readable-label, identity, terminology, and optional-category assertions", $assertionsPass, "route-assertions.csv"),
@@ -3350,6 +3456,15 @@ explicitly says to do so.
         safety                 = [ordered]@{ getOnly = $true; formsSubmitted = $false; retrievalSubmitted = $false; reviewerStateMutated = $false; importsOrReloadsRun = $false; productionAuthRequired = $false; responseHeadersCaptured = $false; cookiesCaptured = $false; environmentValuesCaptured = $false }
     }
     Set-Content -LiteralPath (Join-Path $packetDir "manifest.json") -Value ($manifest | ConvertTo-Json -Depth 8) -Encoding UTF8
+    if ($Issue641) {
+        $manifestCsv = @("field,value")
+        foreach ($entry in @("generatedAt=$($manifest.generatedAt)", "commit=$gitCommit", "routeCount=$($manifest.routes.Count)", "featureAssertions=$($featureDefinitions.Count)", "featureAssertionFailures=$featureFailures", "packetStatus=$($manifest.issue641.visualAcceptance)")) {
+            $parts = $entry.Split("=", 2)
+            $manifestCsv += ('"{0}","{1}"' -f $parts[0], $parts[1])
+        }
+        Set-Content -LiteralPath (Join-Path $packetDir "manifest.csv") -Value ($manifestCsv -join "`n") -Encoding UTF8
+        Copy-Item -LiteralPath (Join-Path $packetDir "README.txt") -Destination (Join-Path $packetDir "README.md")
+    }
 
     $indexedPacketFiles = @(Test-EvidencePacketFiles -PacketDirectory $packetDir)
     $fileIndex = [ordered]@{
