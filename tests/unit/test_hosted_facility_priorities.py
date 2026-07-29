@@ -868,7 +868,7 @@ def test_facility_intelligence_inline_status_error_keeps_page_and_does_not_write
     ) in html
 
 
-def test_local_compare_facilities_excludes_visual_only_records_and_opens_complaint() -> None:
+def test_local_compare_facilities_excludes_rt_src_002_records_and_opens_complaint() -> None:
     context = reviewer_ui.build_local_test_reviewer_ui_context()
     status, content_type, body = route_response(
         CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH,
@@ -884,12 +884,13 @@ def test_local_compare_facilities_excludes_visual_only_records_and_opens_complai
     assert status == 200
     assert content_type == "text/html; charset=utf-8"
     assert "rt-src-002" not in html
+    assert "Issue 641 Code 430 Center" in html
     assert "inx=50" not in html
     assert "inx=3" in html
     assert len(context.facility_intelligence_excluded_source_record_keys) == 3
     assert detail_match is not None
     detail_href = unescape(detail_match.group(1))
-    assert "return_facility_number=157806098" in detail_href
+    assert "return_facility_number=430000001" in detail_href
     assert "return_facility_number=ccld" not in detail_href
 
     detail_status, detail_content_type, detail_body = route_response(
@@ -900,7 +901,7 @@ def test_local_compare_facilities_excludes_visual_only_records_and_opens_complai
     assert detail_status == 200
     assert detail_content_type == "text/html; charset=utf-8"
     assert "Complaint overview" in detail_html
-    assert "32-CR-20220407124448" in detail_html
+    assert "ISSUE-641-430000001" in detail_html
 
     filtered_status, _filtered_content_type, filtered_body = route_response(
         (
@@ -913,6 +914,72 @@ def test_local_compare_facilities_excludes_visual_only_records_and_opens_complai
     assert filtered_status == 200
     assert "No facilities match these filters" in filtered_html
     assert "rt-src-002" not in filtered_html
+
+
+def test_local_issue_641_fixture_renders_raw_type_identity_and_detail_parity() -> None:
+    context = reviewer_ui.build_local_test_reviewer_ui_context()
+    raw_430_path = f"{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}?facility_type=430"
+    raw_430_status, _raw_430_content_type, raw_430_body = route_response(
+        raw_430_path,
+        reviewer_ui_context=context,
+    )
+    raw_430_html = raw_430_body.decode("utf-8")
+
+    assert raw_430_status == 200
+    assert "Issue 641 Code 430 Center" in raw_430_html
+    assert "430000001" in raw_430_html
+    assert "Source code 430 — label not verified" in raw_430_html
+    assert (
+        '<option value="430" selected="selected">'
+        "Source code 430 — label not verified</option>"
+    ) in raw_430_html
+    assert '<option value="733">Source code 733 — label not verified</option>' in raw_430_html
+    assert '<option value="Children&#x27;s Center">Children&#x27;s Center</option>' in raw_430_html
+
+    raw_733_status, _raw_733_content_type, raw_733_body = route_response(
+        f"{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}?facility_type=733",
+        reviewer_ui_context=context,
+    )
+    raw_733_html = raw_733_body.decode("utf-8")
+    assert raw_733_status == 200
+    assert "Issue 641 Code 733 Center" in raw_733_html
+    assert "Source code 733 — label not verified" in raw_733_html
+    assert "No serious-review category" not in raw_733_html
+
+    overview_status, _overview_content_type, overview_body = route_response(
+        f"{CCLD_FACILITY_REVIEW_HUB_PATH}?facility_number=430000001",
+        reviewer_ui_context=context,
+        ccld_record_request_ui_context=(
+            ccld_record_request_context_for_reviewer_context(context)
+        ),
+    )
+    overview_html = overview_body.decode("utf-8")
+    assert overview_status == 200
+    assert "Issue 641 Code 430 Center" in overview_html
+    assert "430000001" in overview_html
+    assert "Source code 430 — label not verified" in overview_html
+    assert "ccld:facility:430000001" not in overview_html
+
+    detail_path = "/reviewer/records/detail?" + urlencode(
+        {
+            "source_record_key": "complaint:ccld:complaint:ISSUE-641-430000001",
+            "return_facility_number": "430000001",
+            "return_lookup_facility_name": "Conflicting query facility name",
+            "return_context_origin": "facility_intelligence",
+        }
+    )
+    detail_status, _detail_content_type, detail_body = route_response(
+        detail_path,
+        reviewer_ui_context=context,
+    )
+    detail_html = detail_body.decode("utf-8")
+    assert detail_status == 200
+    assert "Issue 641 Code 430 Center" in detail_html
+    assert "Conflicting query facility name" not in detail_html
+    assert "430000001" in detail_html
+    assert "ccld:facility:430000001" not in detail_html
+    assert "Complaint finding" in detail_html
+    assert "Allegation finding" in detail_html
 
 
 @pytest.mark.parametrize(

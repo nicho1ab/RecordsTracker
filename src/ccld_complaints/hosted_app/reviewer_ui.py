@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import binascii
+import copy
 import csv
 import hashlib
 import html
@@ -756,8 +757,10 @@ def build_local_test_reviewer_ui_context() -> ReviewerUiContext:
     hosted_ccld_retrieval_jobs.metadata.create_all(engine)
     connection = engine.connect()
     transaction = connection.begin()
-    artifact = _with_local_rt_src_002_visual_fixture_records(
-        load_seeded_corpus_artifact(LOCAL_REVIEWER_UI_FIXTURE)
+    artifact = _with_local_issue_641_visual_fixture_records(
+        _with_local_rt_src_002_visual_fixture_records(
+            load_seeded_corpus_artifact(LOCAL_REVIEWER_UI_FIXTURE)
+        )
     )
     excluded_source_record_keys = tuple(
         f"complaint:{complaint_id}"
@@ -870,6 +873,136 @@ def _is_local_rt_src_002_visual_fixture_record(
     return (
         "-rt-src-002-" in source_record_key
         and source_record_key.endswith("-fixture")
+    )
+
+
+def _with_local_issue_641_visual_fixture_records(
+    artifact: SeededCorpusArtifact,
+) -> SeededCorpusArtifact:
+    """Add deterministic identity/type evidence records only to local fixture/demo mode."""
+    source_record = next(
+        (
+            record
+            for record in artifact.records
+            if isinstance(record, Mapping)
+            and isinstance(record.get("facility"), Mapping)
+            and isinstance(record.get("source_document"), Mapping)
+            and isinstance(record.get("complaint"), Mapping)
+        ),
+        None,
+    )
+    if source_record is None:
+        raise ValueError("Local Issue #641 fixtures require one seeded complaint bundle.")
+
+    fixture_records: list[Mapping[str, Any]] = []
+    for facility_number, facility_name, facility_type, finding, categories in (
+        (
+            "430000001",
+            "Issue 641 Code 430 Center",
+            "430",
+            "Substantiated",
+            ("Staff conduct", "Inadequate supervision"),
+        ),
+        (
+            "733000001",
+            "Issue 641 Code 733 Center",
+            "733",
+            "Unsubstantiated",
+            ("Licensing paperwork", "Administrative review"),
+        ),
+        (
+            "641000001",
+            "Issue 641 Readable Type Center",
+            "Children's Center",
+            "Unsubstantiated",
+            ("Licensing paperwork", "Administrative review"),
+        ),
+    ):
+        bundle = copy.deepcopy(source_record)
+        facility = cast(dict[str, Any], bundle["facility"])
+        source_document = cast(dict[str, Any], bundle["source_document"])
+        complaint = cast(dict[str, Any], bundle["complaint"])
+        allegations = cast(list[dict[str, Any]], bundle.get("allegations", []))
+        events = cast(list[dict[str, Any]], bundle.get("events", []))
+        audits = cast(list[dict[str, Any]], bundle.get("extraction_audit", []))
+
+        facility_id = f"ccld:facility:{facility_number}"
+        document_id = f"ccld:document:{facility_number}:issue-641"
+        complaint_id = f"ccld:complaint:ISSUE-641-{facility_number}"
+        facility.update(
+            {
+                "facility_id": facility_id,
+                "external_facility_number": facility_number,
+                "facility_name": facility_name,
+                "facility_type": facility_type,
+                "county": "Evidence County",
+            }
+        )
+        source_document.update(
+            {
+                "document_id": document_id,
+                "facility_id": facility_id,
+                "source_url": "unavailable",
+                "raw_path": "tests/fixtures/hosted_seeded_corpus/local_issue_641.json",
+            }
+        )
+        complaint.update(
+            {
+                "complaint_id": complaint_id,
+                "facility_id": facility_id,
+                "document_id": document_id,
+                "complaint_control_number": f"ISSUE-641-{facility_number}",
+                "finding": finding,
+            }
+        )
+        for index, allegation in enumerate(allegations, start=1):
+            allegation.update(
+                {
+                    "allegation_id": f"ccld:allegation:ISSUE-641-{facility_number}:{index}",
+                    "complaint_id": complaint_id,
+                    "allegation_category": categories[index - 1],
+                    "finding": finding if index == 1 else "Unsubstantiated",
+                }
+            )
+        for index, event in enumerate(events, start=1):
+            event.update(
+                {
+                    "event_id": f"ccld:event:ISSUE-641-{facility_number}:{index}",
+                    "complaint_id": complaint_id,
+                }
+            )
+        for audit in audits:
+            audit.update(
+                {
+                    "audit_id": f"ccld:audit:ISSUE-641-{facility_number}:facility_number",
+                    "document_id": document_id,
+                    "extracted_value": facility_number,
+                }
+            )
+        fixture_records.append(bundle)
+
+    record_counts = dict(artifact.record_counts)
+    for record_type, increment in (
+        ("facility", 3),
+        ("source_document", 3),
+        ("complaint", 3),
+        ("allegation", 6),
+        ("event", 3),
+        ("extraction_audit", 3),
+    ):
+        record_counts[record_type] = record_counts.get(record_type, 0) + increment
+    return replace(
+        artifact,
+        source_artifact_identity=(
+            f"{artifact.source_artifact_identity} + local Issue #641 visual fixtures"
+        ),
+        record_counts=record_counts,
+        warnings=artifact.warnings
+        + (
+            "Three deterministic Issue #641 identity/type records are available only "
+            "in the explicit local fixture/demo reviewer context.",
+        ),
+        records=artifact.records + tuple(fixture_records),
     )
 
 
@@ -11121,7 +11254,7 @@ def _render_detail_heading_context(original_values: Mapping[str, Any]) -> str:
     return (
         '<p class="detail-heading-context">'
         f"Complaint {_copyable_value('Complaint/control number', complaint_number)} &middot; "
-        f'{_glossary_term("Finding", "The outcome or status shown in the public complaint record.", "detail-finding")}: '
+        f'{_glossary_term("Complaint finding", "The outcome or status shown in the public complaint record.", "detail-complaint-finding")}: '
         f"{_finding_definition_term(finding)}"
         "</p>"
     )
@@ -11146,7 +11279,7 @@ def _render_complaint_overview_card(
             <div>
               <h2 id="complaint-overview-card-heading">What happened</h2>
               <p class="complaint-subject">{_escape(subject)}</p>
-              <p class="finding-context-line">{_glossary_term("Finding", "The outcome or status shown in the public complaint record.", "overview-finding")} {_finding_badge(finding)}</p>
+              <p class="finding-context-line">{_glossary_term("Complaint finding", "The outcome or status shown in the public complaint record.", "overview-complaint-finding")} {_finding_badge(finding)}</p>
             </div>
             <div class="overview-source-action">
               {_source_action_link(source_document)}
@@ -11870,7 +12003,7 @@ def _render_detail_decision_continuity(
               <dd>{_escape(_request_origin_label(return_context.context_origin))}</dd>
               <dt>Complaint/control identifier</dt>
               <dd>{_escape(control_number)}</dd>
-              <dt>Finding</dt>
+              <dt>Complaint finding</dt>
               <dd>{_escape(finding)}</dd>
             </dl>
             {_render_detail_facility_context_cues(related_records, return_context)}

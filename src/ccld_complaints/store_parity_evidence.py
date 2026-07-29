@@ -908,7 +908,7 @@ def _facility_reference_parity(repo_root: Path) -> dict[str, object]:
         "counts_match": second_count == len(eligible_keys),
         "field_rows": field_rows,
         "null_rows": null_rows,
-        "date_arrays_ordered": _date_arrays_ordered(records, stored_rows),
+        "date_arrays_ordered": _date_arrays_ordered(expected_rows, stored_rows),
         "idempotency_row": {
             "check_id": "facility_reference_preload",
             "first_count": first_count,

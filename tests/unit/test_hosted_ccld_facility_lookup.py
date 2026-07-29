@@ -375,9 +375,10 @@ def _local_dev_auth_config() -> Any:
 def test_ccld_facility_reference_loads_safe_lookup_columns() -> None:
     records = load_ccld_facility_reference()
 
-    assert len(records) == 2
+    assert len(records) == 3
     assert records == tuple(sorted(records, key=lambda record: record.facility_name))
-    assert records[0] == CcldFacilityLookupRecord(
+    orchard = next(record for record in records if record.facility_number == "900000001")
+    assert orchard == CcldFacilityLookupRecord(
         facility_number="900000001",
         facility_name="Synthetic Orchard Child Care",
         city="Sample City",
@@ -395,7 +396,11 @@ def test_ccld_facility_reference_loads_safe_lookup_columns() -> None:
         capacity_source_present=True,
         closed_date_source_present=True,
     )
-    assert {record.facility_number for record in records} == {"900000001", "900000002"}
+    assert {record.facility_number for record in records} == {
+        "430000001",
+        "900000001",
+        "900000002",
+    }
 
 
 def test_same_id_reference_conflict_is_insertion_order_independent_in_lookup_ui() -> None:
@@ -654,7 +659,7 @@ def test_active_ccld_facility_reference_uses_tiny_fallback_when_full_csv_unset(
     assert source.path_label == (
         "tests/fixtures/public_source_facilities/ccld_program_facilities_tiny.csv"
     )
-    assert len(source.records) == 2
+    assert len(source.records) == 3
     assert source.notices == (
         "No full CCLD facility reference CSV is configured or available. "
         "Using tiny fixture fallback.",

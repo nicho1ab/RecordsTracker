@@ -68,7 +68,7 @@ def test_manifest_has_traceability_style_columns_and_safe_placeholders() -> None
 
 def test_ccld_program_fixture_has_required_facility_view_fields() -> None:
     rows = _read_csv(FIXTURE_DIR / "ccld_program_facilities_tiny.csv")
-    assert len(rows) == 2
+    assert len(rows) == 3
     assert set(rows[0]) >= {
         "Facility Type",
         "Facility Number",
@@ -77,9 +77,21 @@ def test_ccld_program_fixture_has_required_facility_view_fields() -> None:
         "Facility Status",
         "Facility Capacity",
     }
-    assert {row["Facility Number"] for row in rows} == {"900000001", "900000002"}
-    assert all(row["Facility Name"].startswith("Synthetic ") for row in rows)
-    assert {row["County Name"] for row in rows} == {"Los Angeles", "Sacramento"}
+    assert {row["Facility Number"] for row in rows} == {
+        "430000001",
+        "900000001",
+        "900000002",
+    }
+    assert {row["Facility Name"] for row in rows} == {
+        "Issue 641 Code 430 Center",
+        "Synthetic Orchard Child Care",
+        "Synthetic Valley Family Agency",
+    }
+    assert {row["County Name"] for row in rows} == {
+        "Evidence County",
+        "Los Angeles",
+        "Sacramento",
+    }
 
 
 def test_chhs_facility_master_fixture_has_required_facility_view_fields() -> None:

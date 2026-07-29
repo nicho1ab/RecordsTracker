@@ -22,6 +22,7 @@ from ccld_complaints.hosted_app.facility_identity_presenter import (
     present_facility_field,
     projected_display_text,
     projected_selected_text,
+    unresolved_raw_code_text,
 )
 from ccld_complaints.hosted_app.facility_identity_projection import (
     FacilityIdentityProjection,
@@ -1830,11 +1831,7 @@ def _facility_identity_fact_rows(
                 "facility-overview-facility-type",
             ),
             "Facility type",
-            _facility_identity_source_value(
-                record,
-                FacilityProjectionField.FACILITY_TYPE,
-                record.facility_type,
-            ),
+            _facility_type_source_value(record),
         ),
         (
             "License status",
@@ -1949,6 +1946,16 @@ def _facility_identity_source_value(
             else value
         )
     return str(fallback or "").strip()
+
+
+def _facility_type_source_value(record: CcldFacilityLookupRecord) -> str:
+    """Keep unresolved facility type codes truthful on Facility Overview."""
+    value = _facility_identity_source_value(
+        record,
+        FacilityProjectionField.FACILITY_TYPE,
+        record.facility_type,
+    )
+    return unresolved_raw_code_text(value) if value.isdigit() else value
 
 
 def _render_secondary_facility_facts(record: CcldFacilityLookupRecord) -> str:

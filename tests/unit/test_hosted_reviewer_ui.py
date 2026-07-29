@@ -2561,7 +2561,7 @@ def test_reviewer_ui_detail_shows_attorney_tier_and_hides_support_details() -> N
     assert "Complaint 32-CR-20220407124448" in parser.text_for("main")
     assert "Complaint <span class=\"copyable-value\">32-CR-20220407124448" in html
     assert "&middot;" in html
-    assert ">Finding<" in html
+    assert "Complaint finding" in html
     assert ">Unsubstantiated<" in html
     assert "Facility 157806098" not in parser.text_for("main")
     assert "What happened" in html

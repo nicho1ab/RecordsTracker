@@ -173,6 +173,7 @@ def test_capture_script_declares_parameters_routes_and_outputs() -> None:
         "Issue503",
         "Issue498",
         "Issue610",
+        "Issue641",
         "manifest.json",
         "file-index.json",
         "route-status.csv",
@@ -279,6 +280,18 @@ def test_capture_script_declares_parameters_routes_and_outputs() -> None:
     assert "-Issue503" in script
     assert "-Issue498" in script
     assert "-Issue610" in script
+    assert "-Issue641" in script
+    assert "Issue #641 evidence routes are local fixture/demo-only" in script
+    assert "Issue #641 geometry gate failed" in script
+    assert "document.documentElement.scrollWidth > clientWidth" in script
+    assert "overflowingRequired" in script
+    assert "issue641 expected visible state" in script
+    assert "issue641 optional category absence" in script
+    assert "issue-641-compare-1280-page-scale-200" in script
+    assert "Issue641PageScaleFactor = 2.0" in script
+    assert "requested page-scale evidence was not applied" in script
+    assert "issue-641-evidence-gates.csv" in script
+    assert "I641-GEOMETRY-003" in script
     for issue_415_route in (
         "/reviewer/records/substantiated?facility=107207198",
         "/reviewer/records/substantiated?facility_type=FOSTER%20FAMILY%20AGENCY",
