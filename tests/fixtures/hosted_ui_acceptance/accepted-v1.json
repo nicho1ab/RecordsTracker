@@ -15,8 +15,8 @@
   },
   "scope": {
     "governance_issue": "#648",
-    "parent_issue": "#419",
-    "stakeholder_issue": "#640",
+    "parent_issue": "#640",
+    "stakeholder_issue": "#419",
     "feature_issues": ["#641"],
     "captured_routes": ["/ccld/facilities/intelligence"]
   },

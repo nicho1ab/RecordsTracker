@@ -31,6 +31,12 @@ def _load_module():
 
 VALIDATOR = _load_module()
 
+EXPECTED_ISSUE_SCOPE = {
+    "governance_issue": "#648",
+    "parent_issue": "#640",
+    "stakeholder_issue": "#419",
+}
+
 
 def _record(path: Path = ACCEPTED_FIXTURE) -> dict[str, object]:
     return copy.deepcopy(json.loads(path.read_text(encoding="utf-8")))
@@ -40,9 +46,17 @@ def _errors(record: dict[str, object]) -> tuple[str, ...]:
     return VALIDATOR.validate_acceptance(record).errors
 
 
-def test_accepted_fixture_passes_all_four_gates() -> None:
-    result = VALIDATOR.validate_acceptance(_record())
+def _issue_scope(record: dict[str, object]) -> dict[str, object]:
+    scope = record["scope"]
+    assert isinstance(scope, dict)
+    return {key: scope[key] for key in EXPECTED_ISSUE_SCOPE}
 
+
+def test_accepted_fixture_passes_all_four_gates() -> None:
+    record = _record()
+    result = VALIDATOR.validate_acceptance(record)
+
+    assert _issue_scope(record) == EXPECTED_ISSUE_SCOPE
     assert result.gates == {
         "STRUCTURAL": "PASS",
         "FUNCTIONAL": "PASS",
@@ -57,6 +71,7 @@ def test_historical_issue_641_packet_is_rejected_despite_claimed_pass() -> None:
     record = _record(REJECTED_641_FIXTURE)
     result = VALIDATOR.validate_acceptance(record)
 
+    assert _issue_scope(record) == EXPECTED_ISSUE_SCOPE
     assert result.gates == {
         "STRUCTURAL": "FAIL",
         "FUNCTIONAL": "FAIL",
@@ -76,6 +91,19 @@ def test_historical_issue_641_packet_is_rejected_despite_claimed_pass() -> None:
     assert "visual/independent_review: a human PASS decision is required" in result.errors
     assert "owner_acceptance: an explicit human PASS decision is required" in result.errors
     assert "claims/overall: claimed PASS, computed NOT_ACCEPTED" in result.errors
+
+
+def test_schema_rejects_swapped_parent_and_stakeholder_issues() -> None:
+    record = _record()
+    scope = record["scope"]
+    assert isinstance(scope, dict)
+    scope["parent_issue"] = "#419"
+    scope["stakeholder_issue"] = "#640"
+
+    errors = _errors(record)
+
+    assert any(error.startswith("schema:scope/parent_issue") for error in errors)
+    assert any(error.startswith("schema:scope/stakeholder_issue") for error in errors)
 
 
 def test_artifact_counts_must_match_exactly() -> None:

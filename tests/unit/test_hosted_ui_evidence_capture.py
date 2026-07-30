@@ -1507,8 +1507,8 @@ def test_capture_script_allow_unavailable_writes_manifest() -> None:
         assert manifest["acceptance"] == {
             "schemaVersion": "recordstracker.hosted-ui-acceptance.v1",
             "governanceIssue": "#648",
-            "parentIssue": "#419",
-            "stakeholderIssue": "#640",
+            "parentIssue": "#640",
+            "stakeholderIssue": "#419",
             "featureIssues": [],
             "structural": "PENDING_VALIDATION",
             "functional": "PENDING_VALIDATION",

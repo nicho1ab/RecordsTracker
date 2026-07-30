@@ -140,8 +140,8 @@ compact-density, stress-content, responsive, state, accessibility, and
 print-safe requirements; they do not authorize a poor layout that happens to
 fit below a ceiling.
 
-Acceptance records bind governance issue #648, parent issue #419, stakeholder
-issue #640, the feature issue or issues under review, exact routes, deployed
+Acceptance records bind governance issue #648, parent issue #640, stakeholder
+issue #419, the feature issue or issues under review, exact routes, deployed
 SHA, packet SHA-256, and evidence freshness. Historical packets remain
 immutable. Revalidation creates a new acceptance record with
 `HISTORICAL_REVALIDATION`; it never edits the old packet or carries forward an

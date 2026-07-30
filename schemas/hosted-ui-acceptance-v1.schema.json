@@ -70,8 +70,8 @@
       ],
       "properties": {
         "governance_issue": {"const": "#648"},
-        "parent_issue": {"const": "#419"},
-        "stakeholder_issue": {"const": "#640"},
+        "parent_issue": {"const": "#640"},
+        "stakeholder_issue": {"const": "#419"},
         "feature_issues": {
           "type": "array",
           "minItems": 1,

@@ -3610,8 +3610,8 @@ scripts/validate_hosted_ui_acceptance.py.
         acceptance             = [ordered]@{
             schemaVersion = "recordstracker.hosted-ui-acceptance.v1"
             governanceIssue = "#648"
-            parentIssue = "#419"
-            stakeholderIssue = "#640"
+            parentIssue = "#640"
+            stakeholderIssue = "#419"
             featureIssues = $focusedIssueScope
             structural = "PENDING_VALIDATION"
             functional = "PENDING_VALIDATION"
