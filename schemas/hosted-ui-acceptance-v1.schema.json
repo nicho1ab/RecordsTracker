@@ -1,0 +1,438 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://recordstracker.example/schemas/hosted-ui-acceptance-v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "record_id",
+    "source_packet",
+    "scope",
+    "structural",
+    "functional",
+    "visual",
+    "owner_acceptance",
+    "gate_claims",
+    "overall_claim"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "recordstracker.hosted-ui-acceptance.v1"
+    },
+    "record_id": {
+      "$ref": "#/$defs/name"
+    },
+    "source_packet": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact_id",
+        "sha256",
+        "deployed_sha",
+        "evidence_freshness",
+        "artifact_counts"
+      ],
+      "properties": {
+        "artifact_id": {
+          "$ref": "#/$defs/name"
+        },
+        "sha256": {
+          "$ref": "#/$defs/hash"
+        },
+        "deployed_sha": {
+          "$ref": "#/$defs/sha"
+        },
+        "evidence_freshness": {
+          "enum": ["FRESH_CAPTURE", "HISTORICAL_REVALIDATION"]
+        },
+        "artifact_counts": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["filesystem", "zip", "manifest", "reported"],
+          "properties": {
+            "filesystem": {"type": "integer", "minimum": 1},
+            "zip": {"type": "integer", "minimum": 1},
+            "manifest": {"type": "integer", "minimum": 1},
+            "reported": {"type": "integer", "minimum": 1}
+          }
+        }
+      }
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "governance_issue",
+        "parent_issue",
+        "stakeholder_issue",
+        "feature_issues",
+        "captured_routes"
+      ],
+      "properties": {
+        "governance_issue": {"const": "#648"},
+        "parent_issue": {"const": "#419"},
+        "stakeholder_issue": {"const": "#640"},
+        "feature_issues": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/issue"}
+        },
+        "captured_routes": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/route"}
+        }
+      }
+    },
+    "structural": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "integrity_verified",
+        "required_artifacts",
+        "missing_artifacts"
+      ],
+      "properties": {
+        "integrity_verified": {"type": "boolean"},
+        "required_artifacts": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/path"}
+        },
+        "missing_artifacts": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/path"}
+        }
+      }
+    },
+    "functional": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "assertion_total",
+        "assertion_failures",
+        "route_failures",
+        "observed_console_events",
+        "console_event_classifications",
+        "observed_network_failures",
+        "network_failure_classifications"
+      ],
+      "properties": {
+        "assertion_total": {"type": "integer", "minimum": 1},
+        "assertion_failures": {"type": "integer", "minimum": 0},
+        "route_failures": {"type": "integer", "minimum": 0},
+        "observed_console_events": {"type": "integer", "minimum": 0},
+        "console_event_classifications": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/runtime_event_classification"}
+        },
+        "observed_network_failures": {"type": "integer", "minimum": 0},
+        "network_failure_classifications": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/runtime_event_classification"}
+        }
+      }
+    },
+    "visual": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "viewports",
+        "state_matrix",
+        "design_requirements",
+        "visual_assertions",
+        "density_checks",
+        "print_checks",
+        "independent_review"
+      ],
+      "properties": {
+        "viewports": {
+          "type": "array",
+          "minItems": 4,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "screenshot"],
+            "properties": {
+              "id": {
+                "enum": ["DESKTOP", "NARROW", "MOBILE", "ZOOM_200"]
+              },
+              "screenshot": {"$ref": "#/$defs/path"}
+            }
+          }
+        },
+        "state_matrix": {
+          "type": "array",
+          "minItems": 10,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "classification", "evidence", "rationale"],
+            "properties": {
+              "id": {
+                "enum": [
+                  "DEFAULT",
+                  "HOVER",
+                  "FOCUS",
+                  "ACTIVE",
+                  "DISABLED",
+                  "EMPTY",
+                  "LOADING",
+                  "UNAVAILABLE",
+                  "STRESS",
+                  "PRINT"
+                ]
+              },
+              "classification": {
+                "enum": ["PASS", "REGRESSION", "NOT_APPLICABLE", "MISSING"]
+              },
+              "evidence": {
+                "type": "array",
+                "uniqueItems": true,
+                "items": {"$ref": "#/$defs/path"}
+              },
+              "rationale": {"type": "string"}
+            }
+          }
+        },
+        "design_requirements": {
+          "type": "array",
+          "minItems": 6,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "classification",
+              "evidence",
+              "rationale",
+              "variance_approval"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^RT-[A-Z0-9-]+$"
+              },
+              "classification": {
+                "enum": ["PASS", "VARIANCE", "REGRESSION", "NOT_APPLICABLE"]
+              },
+              "evidence": {
+                "type": "array",
+                "uniqueItems": true,
+                "items": {"$ref": "#/$defs/path"}
+              },
+              "rationale": {"type": "string"},
+              "variance_approval": {
+                "anyOf": [
+                  {"type": "null"},
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["actor", "artifact"],
+                    "properties": {
+                      "actor": {"$ref": "#/$defs/name"},
+                      "artifact": {"$ref": "#/$defs/path"}
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "visual_assertions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "evidence_types", "evidence"],
+            "properties": {
+              "id": {"$ref": "#/$defs/name"},
+              "evidence_types": {
+                "type": "array",
+                "minItems": 1,
+                "uniqueItems": true,
+                "items": {
+                  "enum": ["DOM", "TEXT", "SCREENSHOT", "INTERACTION", "PRINT"]
+                }
+              },
+              "evidence": {
+                "type": "array",
+                "minItems": 1,
+                "uniqueItems": true,
+                "items": {"$ref": "#/$defs/path"}
+              }
+            }
+          }
+        },
+        "density_checks": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/bounded_measurement"}
+        },
+        "print_checks": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "page_count",
+              "maximum_pages",
+              "interactive_controls_hidden",
+              "evidence"
+            ],
+            "properties": {
+              "id": {"$ref": "#/$defs/name"},
+              "page_count": {"type": "integer", "minimum": 1},
+              "maximum_pages": {"type": "integer", "minimum": 1},
+              "interactive_controls_hidden": {"type": "boolean"},
+              "evidence": {"$ref": "#/$defs/path"}
+            }
+          }
+        },
+        "independent_review": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "artifact",
+            "reviewer",
+            "actor_type",
+            "decision",
+            "reviewed_evidence",
+            "conclusions"
+          ],
+          "properties": {
+            "artifact": {"$ref": "#/$defs/path"},
+            "reviewer": {"$ref": "#/$defs/name"},
+            "actor_type": {"const": "HUMAN"},
+            "decision": {"enum": ["PASS", "FAIL", "PENDING"]},
+            "reviewed_evidence": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {"$ref": "#/$defs/path"}
+            },
+            "conclusions": {
+              "type": "array",
+              "minItems": 1,
+              "items": {"type": "string", "minLength": 1}
+            }
+          }
+        }
+      }
+    },
+    "owner_acceptance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact",
+        "actor",
+        "actor_type",
+        "decision",
+        "reviewed_visual_record"
+      ],
+      "properties": {
+        "artifact": {"$ref": "#/$defs/path"},
+        "actor": {"$ref": "#/$defs/name"},
+        "actor_type": {"const": "HUMAN"},
+        "decision": {"enum": ["PASS", "FAIL", "PENDING"]},
+        "reviewed_visual_record": {"$ref": "#/$defs/path"}
+      }
+    },
+    "gate_claims": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["STRUCTURAL", "FUNCTIONAL", "VISUAL", "OWNER_ACCEPTANCE"],
+      "properties": {
+        "STRUCTURAL": {"$ref": "#/$defs/gate"},
+        "FUNCTIONAL": {"$ref": "#/$defs/gate"},
+        "VISUAL": {"$ref": "#/$defs/gate"},
+        "OWNER_ACCEPTANCE": {"$ref": "#/$defs/gate"}
+      }
+    },
+    "overall_claim": {"$ref": "#/$defs/gate"}
+  },
+  "$defs": {
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9 ._#-]*$"
+    },
+    "hash": {
+      "type": "string",
+      "pattern": "^[0-9A-Fa-f]{64}$"
+    },
+    "sha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "issue": {
+      "type": "string",
+      "pattern": "^#[1-9][0-9]*$"
+    },
+    "route": {
+      "type": "string",
+      "pattern": "^/(?!/)[A-Za-z0-9._~!$&'()*+,;=:@%/?-]*$"
+    },
+    "path": {
+      "type": "string",
+      "pattern": "^(?!/)(?![A-Za-z]:)(?!.*//)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._-]+(?:/[A-Za-z0-9._-]+)*$"
+    },
+    "gate": {
+      "enum": ["PASS", "FAIL", "PENDING", "NOT_ACCEPTED"]
+    },
+    "bounded_measurement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "measured", "maximum", "unit", "evidence"],
+      "properties": {
+        "id": {"$ref": "#/$defs/name"},
+        "measured": {"type": "number", "minimum": 0},
+        "maximum": {"type": "number", "minimum": 0},
+        "unit": {"$ref": "#/$defs/name"},
+        "evidence": {"$ref": "#/$defs/path"}
+      }
+    },
+    "runtime_event_classification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "occurrences",
+        "classification",
+        "origin_scope",
+        "resource",
+        "evidence"
+      ],
+      "properties": {
+        "id": {"$ref": "#/$defs/name"},
+        "occurrences": {"type": "integer", "minimum": 1},
+        "classification": {
+          "enum": [
+            "EXPECTED_OPTIONAL_TELEMETRY",
+            "APPLICATION_ERROR",
+            "BROWSER_ERROR",
+            "UNCLASSIFIED"
+          ]
+        },
+        "origin_scope": {
+          "enum": [
+            "ALLOWLISTED_OPTIONAL_TELEMETRY",
+            "APPLICATION_ORIGIN",
+            "THIRD_PARTY",
+            "UNKNOWN"
+          ]
+        },
+        "resource": {"$ref": "#/$defs/name"},
+        "evidence": {"$ref": "#/$defs/path"}
+      }
+    }
+  }
+}

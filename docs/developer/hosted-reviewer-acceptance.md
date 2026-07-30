@@ -154,6 +154,17 @@ named approved design artifacts, and record an explicit visual-acceptance
 decision. Absence of an automated screenshot tool remains a blocker for that
 task; it is not authorization to substitute manual browser inspection.
 
+Issue #648 also prohibits treating this verifier's route result or an evidence
+packet's structural validity as overall hosted UI acceptance. For a
+reviewer-facing hosted decision, complete the four-gate record defined in
+`docs/developer/ui-evidence-review.md` and validate it against
+`schemas/hosted-ui-acceptance-v1.schema.json` with
+`scripts/validate_hosted_ui_acceptance.py`. `STRUCTURAL`, `FUNCTIONAL`,
+`VISUAL`, and `OWNER_ACCEPTANCE` must each compute `PASS`. The visual gate
+requires a separate human independent-review file; the owner gate requires a
+second human decision file that references that review. This verifier and the
+capture script never synthesize either human decision.
+
 ## Review Routing
 
 Use dedicated source, legal, production monitoring, production authentication,

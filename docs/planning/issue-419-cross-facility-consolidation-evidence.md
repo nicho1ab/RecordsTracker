@@ -172,7 +172,8 @@ The focused correction capture produced:
 - 11 approved-versus-rendered comparison rows with no failure or regression;
   and
 - `RT-UI-GATE-001` through `RT-UI-GATE-008` recorded as `PASS`, with
-  `RT-UI-GATE-009` still `READY FOR EXPLICIT OWNER REVIEW`.
+  `RT-UI-GATE-009` remains `PENDING_INDEPENDENT_VISUAL_REVIEW` under the
+  superseding Issue #648 acceptance contract.
 
 The three legacy evidence scenarios resolve to the intended canonical views.
 Focused route tests separately prove each original request returns 302 before
@@ -190,7 +191,7 @@ data access and preserves its supported query parameters.
 | `RT-UI-GATE-006` token and TLP | Shared approved tokens and text-backed semantic states are retained |
 | `RT-UI-GATE-007` automated route capture | Governed screenshots and manifest are required for applicable routes/states |
 | `RT-UI-GATE-008` accessibility/responsive | Focus, semantic, responsive, no-disclosure, and print checks are required |
-| `RT-UI-GATE-009` visual acceptance | `READY FOR EXPLICIT OWNER REVIEW`; automation is not acceptance |
+| `RT-UI-GATE-009` visual acceptance | `PENDING_INDEPENDENT_VISUAL_REVIEW`; automation is not visual or owner acceptance |
 
 ## Preserved boundaries and remaining gates
 

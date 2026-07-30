@@ -176,6 +176,14 @@ def test_capture_script_declares_parameters_routes_and_outputs() -> None:
         "Issue641",
         "manifest.json",
         "file-index.json",
+        "reviews/independent-visual-review.json",
+        "reviews/owner-acceptance.json",
+        "recordstracker.hosted-ui-acceptance.v1",
+        "PENDING_INDEPENDENT_VISUAL_REVIEW",
+        "PENDING_OWNER_DECISION",
+        "NOT_ACCEPTED",
+        "automationMayAccept = $false",
+        "scripts/validate_hosted_ui_acceptance.py",
         "route-status.csv",
         "route-assertions.csv",
         "issue-415-count-summaries.csv",
@@ -416,7 +424,7 @@ def test_capture_script_declares_parameters_routes_and_outputs() -> None:
         "issue419 responsive contract",
         "issue419 print contract",
         "RT-UI-GATE-009",
-        "READY FOR EXPLICIT OWNER REVIEW",
+        "PENDING_INDEPENDENT_VISUAL_REVIEW",
         "Issue #501 repository-readable controlled variance",
     ):
         assert issue_419_contract in script
@@ -460,7 +468,7 @@ def test_capture_script_declares_parameters_routes_and_outputs() -> None:
         "issue-420-approved-versus-rendered.csv",
         "issue-420-source-reconciliation.csv",
         "issue-420-ui-gates.csv",
-        "READY FOR EXPLICIT OWNER REVIEW",
+        "PENDING_INDEPENDENT_VISUAL_REVIEW",
     ):
         assert issue_420_contract in script
     for issue_498_scenario in (
@@ -1072,7 +1080,7 @@ def test_issue_503_capture_proves_fragments_interactions_reflow_and_print() -> N
         "browser-observed fragment focus and viewport destination",
         "issue-503-responsive-fragment-focus-measurements.json",
         "issue-503-print-validation.json",
-        "READY FOR EXPLICIT OWNER REVIEW",
+        "PENDING_INDEPENDENT_VISUAL_REVIEW",
         "native browser zoom and assistive-technology verification were not performed",
     ):
         assert behavior in script
@@ -1496,6 +1504,36 @@ def test_capture_script_allow_unavailable_writes_manifest() -> None:
         assert manifest["safety"]["importsOrReloadsRun"] is False
         assert manifest["routeFailures"]
         assert "Local hosted UI review evidence" in manifest["evidencePurpose"]
+        assert manifest["acceptance"] == {
+            "schemaVersion": "recordstracker.hosted-ui-acceptance.v1",
+            "governanceIssue": "#648",
+            "parentIssue": "#419",
+            "stakeholderIssue": "#640",
+            "featureIssues": [],
+            "structural": "PENDING_VALIDATION",
+            "functional": "PENDING_VALIDATION",
+            "visual": "PENDING_INDEPENDENT_VISUAL_REVIEW",
+            "ownerAcceptance": "PENDING_OWNER_DECISION",
+            "overall": "NOT_ACCEPTED",
+            "independentReviewArtifact": "reviews/independent-visual-review.json",
+            "ownerDecisionArtifact": "reviews/owner-acceptance.json",
+            "validator": "scripts/validate_hosted_ui_acceptance.py",
+            "automationMayAccept": False,
+        }
+        independent_review = json.loads(
+            (packet / "reviews" / "independent-visual-review.json").read_text(
+                encoding="utf-8-sig"
+            )
+        )
+        owner_acceptance = json.loads(
+            (packet / "reviews" / "owner-acceptance.json").read_text(
+                encoding="utf-8-sig"
+            )
+        )
+        assert independent_review["decision"] == "PENDING"
+        assert independent_review["actorType"] == "HUMAN_REQUIRED"
+        assert owner_acceptance["decision"] == "PENDING"
+        assert owner_acceptance["actorType"] == "HUMAN_REQUIRED"
         assert manifest["output"]["zipPacket"].endswith(".zip")
         assert manifest["output"]["counts"]["html"] == 0
         assert manifest["output"]["counts"]["text"] == 0
@@ -1779,13 +1817,13 @@ def test_capture_script_issue_419_mode_writes_governed_review_artifacts() -> Non
             "Issue #501 repository-readable controlled variance"
         )
         assert manifest["issue419"]["visualAcceptance"] == (
-            "READY FOR EXPLICIT OWNER REVIEW"
+            "PENDING_INDEPENDENT_VISUAL_REVIEW"
         )
         assert "IA-419-01" in comparison_csv
         assert "IA-419-09" in comparison_csv
         for gate_number in range(1, 10):
             assert f"RT-UI-GATE-{gate_number:03d}" in gates_csv
-        assert "READY FOR EXPLICIT OWNER REVIEW" in gates_csv
+        assert "PENDING_INDEPENDENT_VISUAL_REVIEW" in gates_csv
         assert "-Issue419" in capture_command
         assert "Focused issue #419 Compare Facilities evidence" in manifest["evidencePurpose"]
     finally:

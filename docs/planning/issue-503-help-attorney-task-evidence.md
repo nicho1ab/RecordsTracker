@@ -64,7 +64,8 @@ The packet records `issue-503-route-fragment-inventory.csv`,
 `issue-503-approved-versus-rendered.csv`, `issue-503-ui-gates.csv`,
 `issue-503-print-validation.json`, and
 `diagnostics/issue-503-responsive-fragment-focus-measurements.json`.
-`RT-UI-GATE-009` must remain `READY FOR EXPLICIT OWNER REVIEW`.
+`RT-UI-GATE-009` must remain `PENDING_INDEPENDENT_VISUAL_REVIEW` under the
+superseding Issue #648 acceptance contract.
 
 The 720-pixel capture is a governed reflow approximation. It is not native
 browser-zoom or assistive-technology verification.

@@ -1,0 +1,207 @@
+{
+  "schema_version": "recordstracker.hosted-ui-acceptance.v1",
+  "record_id": "issue-641-historical-revalidation",
+  "source_packet": {
+    "artifact_id": "issue-641-hosted-acceptance-final",
+    "sha256": "E147CBC600BB2015CCB6D8C0948536CB6CEAD0ED93A6C5102C37B142BD7E8E28",
+    "deployed_sha": "9e5cff21c1ed2d785139c2855739c1c1366185a5",
+    "evidence_freshness": "HISTORICAL_REVALIDATION",
+    "artifact_counts": {
+      "filesystem": 71,
+      "zip": 71,
+      "manifest": 68,
+      "reported": 76
+    }
+  },
+  "scope": {
+    "governance_issue": "#648",
+    "parent_issue": "#419",
+    "stakeholder_issue": "#640",
+    "feature_issues": ["#641"],
+    "captured_routes": ["/ccld/facilities/intelligence"]
+  },
+  "structural": {
+    "integrity_verified": true,
+    "required_artifacts": [
+      "manifest.json",
+      "file-index.json",
+      "reviews/independent-visual-review.json",
+      "reviews/owner-acceptance.json"
+    ],
+    "missing_artifacts": [
+      "reviews/independent-visual-review.json",
+      "reviews/owner-acceptance.json"
+    ]
+  },
+  "functional": {
+    "assertion_total": 30,
+    "assertion_failures": 0,
+    "route_failures": 0,
+    "observed_console_events": 26,
+    "console_event_classifications": [
+      {
+        "id": "historical-console-failures",
+        "occurrences": 26,
+        "classification": "UNCLASSIFIED",
+        "origin_scope": "UNKNOWN",
+        "resource": "optional-telemetry-beacon",
+        "evidence": "browser-console.json"
+      }
+    ],
+    "observed_network_failures": 26,
+    "network_failure_classifications": [
+      {
+        "id": "historical-network-failures",
+        "occurrences": 26,
+        "classification": "UNCLASSIFIED",
+        "origin_scope": "UNKNOWN",
+        "resource": "optional-telemetry-beacon",
+        "evidence": "network-failures.json"
+      }
+    ]
+  },
+  "visual": {
+    "viewports": [
+      {"id": "DESKTOP", "screenshot": "screenshots/compare-1440x1200.png"},
+      {"id": "NARROW", "screenshot": "screenshots/compare-1024x768.png"},
+      {"id": "MOBILE", "screenshot": "screenshots/compare-390x844.png"},
+      {"id": "ZOOM_200", "screenshot": "screenshots/compare-native-200.png"}
+    ],
+    "state_matrix": [
+      {"id": "DEFAULT", "classification": "MISSING", "evidence": [], "rationale": ""},
+      {"id": "HOVER", "classification": "MISSING", "evidence": [], "rationale": ""},
+      {"id": "FOCUS", "classification": "MISSING", "evidence": [], "rationale": ""},
+      {"id": "ACTIVE", "classification": "MISSING", "evidence": [], "rationale": ""},
+      {"id": "DISABLED", "classification": "MISSING", "evidence": [], "rationale": ""},
+      {"id": "EMPTY", "classification": "MISSING", "evidence": [], "rationale": ""},
+      {"id": "LOADING", "classification": "MISSING", "evidence": [], "rationale": ""},
+      {
+        "id": "UNAVAILABLE",
+        "classification": "MISSING",
+        "evidence": [],
+        "rationale": ""
+      },
+      {"id": "STRESS", "classification": "MISSING", "evidence": [], "rationale": ""},
+      {"id": "PRINT", "classification": "MISSING", "evidence": [], "rationale": ""}
+    ],
+    "design_requirements": [
+      {
+        "id": "RT-DS-004",
+        "classification": "REGRESSION",
+        "evidence": ["screenshots/compare-1440x1200.png"],
+        "rationale": "Page density is not compact.",
+        "variance_approval": null
+      },
+      {
+        "id": "RT-STATE-001",
+        "classification": "REGRESSION",
+        "evidence": [],
+        "rationale": "No state matrix was reviewed.",
+        "variance_approval": null
+      },
+      {
+        "id": "RT-RWD-001",
+        "classification": "REGRESSION",
+        "evidence": ["screenshots/compare-390x844.png"],
+        "rationale": "Responsive captures preserve an unbounded page.",
+        "variance_approval": null
+      },
+      {
+        "id": "RT-A11Y-001",
+        "classification": "REGRESSION",
+        "evidence": [],
+        "rationale": "No independent focus-state conclusion exists.",
+        "variance_approval": null
+      },
+      {
+        "id": "RT-STRESS-001",
+        "classification": "REGRESSION",
+        "evidence": ["screenshots/compare-1440x1200.png"],
+        "rationale": "Stress content becomes an unbounded complaint dump.",
+        "variance_approval": null
+      },
+      {
+        "id": "RT-PRINT-001",
+        "classification": "REGRESSION",
+        "evidence": ["print/compare-facilities.pdf"],
+        "rationale": "The print artifact is 33 pages.",
+        "variance_approval": null
+      }
+    ],
+    "visual_assertions": [
+      {
+        "id": "responsive-no-overflow",
+        "evidence_types": ["DOM", "TEXT"],
+        "evidence": ["responsive-results.json"]
+      }
+    ],
+    "density_checks": [
+      {
+        "id": "desktop-page-length",
+        "measured": 13.5,
+        "maximum": 12,
+        "unit": "viewport-heights",
+        "evidence": "screenshots/compare-1440x1200.png"
+      },
+      {
+        "id": "narrow-page-length",
+        "measured": 32.5,
+        "maximum": 16,
+        "unit": "viewport-heights",
+        "evidence": "screenshots/compare-1024x768.png"
+      },
+      {
+        "id": "mobile-page-length",
+        "measured": 49.5,
+        "maximum": 24,
+        "unit": "viewport-heights",
+        "evidence": "screenshots/compare-390x844.png"
+      },
+      {
+        "id": "zoom-200-page-length",
+        "measured": 39.6,
+        "maximum": 24,
+        "unit": "viewport-heights",
+        "evidence": "screenshots/compare-native-200.png"
+      },
+      {
+        "id": "inline-contributing-records",
+        "measured": 75,
+        "maximum": 25,
+        "unit": "records",
+        "evidence": "screenshots/compare-1440x1200.png"
+      }
+    ],
+    "print_checks": [
+      {
+        "id": "compare-print",
+        "page_count": 33,
+        "maximum_pages": 4,
+        "interactive_controls_hidden": false,
+        "evidence": "print/compare-facilities.pdf"
+      }
+    ],
+    "independent_review": {
+      "artifact": "reviews/independent-visual-review.json",
+      "reviewer": "UNASSIGNED",
+      "actor_type": "HUMAN",
+      "decision": "PENDING",
+      "reviewed_evidence": ["screenshots/compare-1440x1200.png"],
+      "conclusions": ["No independent screenshot and print review was performed."]
+    }
+  },
+  "owner_acceptance": {
+    "artifact": "reviews/owner-acceptance.json",
+    "actor": "UNASSIGNED",
+    "actor_type": "HUMAN",
+    "decision": "PENDING",
+    "reviewed_visual_record": "reviews/independent-visual-review.json"
+  },
+  "gate_claims": {
+    "STRUCTURAL": "PASS",
+    "FUNCTIONAL": "PASS",
+    "VISUAL": "PASS",
+    "OWNER_ACCEPTANCE": "PASS"
+  },
+  "overall_claim": "PASS"
+}

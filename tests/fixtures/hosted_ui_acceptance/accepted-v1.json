@@ -1,0 +1,239 @@
+{
+  "schema_version": "recordstracker.hosted-ui-acceptance.v1",
+  "record_id": "accepted-hosted-ui-record",
+  "source_packet": {
+    "artifact_id": "fresh-hosted-ui-packet",
+    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "deployed_sha": "9e5cff21c1ed2d785139c2855739c1c1366185a5",
+    "evidence_freshness": "FRESH_CAPTURE",
+    "artifact_counts": {
+      "filesystem": 12,
+      "zip": 12,
+      "manifest": 12,
+      "reported": 12
+    }
+  },
+  "scope": {
+    "governance_issue": "#648",
+    "parent_issue": "#419",
+    "stakeholder_issue": "#640",
+    "feature_issues": ["#641"],
+    "captured_routes": ["/ccld/facilities/intelligence"]
+  },
+  "structural": {
+    "integrity_verified": true,
+    "required_artifacts": [
+      "manifest.json",
+      "file-index.json",
+      "reviews/independent-visual-review.json",
+      "reviews/owner-acceptance.json"
+    ],
+    "missing_artifacts": []
+  },
+  "functional": {
+    "assertion_total": 30,
+    "assertion_failures": 0,
+    "route_failures": 0,
+    "observed_console_events": 0,
+    "console_event_classifications": [],
+    "observed_network_failures": 0,
+    "network_failure_classifications": []
+  },
+  "visual": {
+    "viewports": [
+      {"id": "DESKTOP", "screenshot": "screenshots/compare-desktop.png"},
+      {"id": "NARROW", "screenshot": "screenshots/compare-narrow.png"},
+      {"id": "MOBILE", "screenshot": "screenshots/compare-mobile.png"},
+      {"id": "ZOOM_200", "screenshot": "screenshots/compare-zoom-200.png"}
+    ],
+    "state_matrix": [
+      {
+        "id": "DEFAULT",
+        "classification": "PASS",
+        "evidence": ["screenshots/compare-desktop.png"],
+        "rationale": ""
+      },
+      {
+        "id": "HOVER",
+        "classification": "PASS",
+        "evidence": ["screenshots/compare-hover.png"],
+        "rationale": ""
+      },
+      {
+        "id": "FOCUS",
+        "classification": "PASS",
+        "evidence": ["screenshots/compare-focus.png"],
+        "rationale": ""
+      },
+      {
+        "id": "ACTIVE",
+        "classification": "PASS",
+        "evidence": ["screenshots/compare-active.png"],
+        "rationale": ""
+      },
+      {
+        "id": "DISABLED",
+        "classification": "PASS",
+        "evidence": ["screenshots/compare-disabled.png"],
+        "rationale": ""
+      },
+      {
+        "id": "EMPTY",
+        "classification": "PASS",
+        "evidence": ["screenshots/compare-empty.png"],
+        "rationale": ""
+      },
+      {
+        "id": "LOADING",
+        "classification": "PASS",
+        "evidence": ["screenshots/compare-loading.png"],
+        "rationale": ""
+      },
+      {
+        "id": "UNAVAILABLE",
+        "classification": "PASS",
+        "evidence": ["screenshots/compare-unavailable.png"],
+        "rationale": ""
+      },
+      {
+        "id": "STRESS",
+        "classification": "PASS",
+        "evidence": ["screenshots/compare-stress.png"],
+        "rationale": ""
+      },
+      {
+        "id": "PRINT",
+        "classification": "PASS",
+        "evidence": ["print/compare.pdf"],
+        "rationale": ""
+      }
+    ],
+    "design_requirements": [
+      {
+        "id": "RT-DS-004",
+        "classification": "PASS",
+        "evidence": ["screenshots/compare-desktop.png"],
+        "rationale": "",
+        "variance_approval": null
+      },
+      {
+        "id": "RT-STATE-001",
+        "classification": "PASS",
+        "evidence": ["reviews/state-matrix.json"],
+        "rationale": "",
+        "variance_approval": null
+      },
+      {
+        "id": "RT-RWD-001",
+        "classification": "PASS",
+        "evidence": ["screenshots/compare-mobile.png"],
+        "rationale": "",
+        "variance_approval": null
+      },
+      {
+        "id": "RT-A11Y-001",
+        "classification": "PASS",
+        "evidence": ["screenshots/compare-focus.png"],
+        "rationale": "",
+        "variance_approval": null
+      },
+      {
+        "id": "RT-STRESS-001",
+        "classification": "PASS",
+        "evidence": ["screenshots/compare-stress.png"],
+        "rationale": "",
+        "variance_approval": null
+      },
+      {
+        "id": "RT-PRINT-001",
+        "classification": "PASS",
+        "evidence": ["print/compare.pdf"],
+        "rationale": "",
+        "variance_approval": null
+      }
+    ],
+    "visual_assertions": [
+      {
+        "id": "compact-density",
+        "evidence_types": ["SCREENSHOT"],
+        "evidence": ["screenshots/compare-desktop.png"]
+      }
+    ],
+    "density_checks": [
+      {
+        "id": "desktop-page-length",
+        "measured": 6.5,
+        "maximum": 12,
+        "unit": "viewport-heights",
+        "evidence": "screenshots/compare-desktop.png"
+      },
+      {
+        "id": "narrow-page-length",
+        "measured": 8,
+        "maximum": 16,
+        "unit": "viewport-heights",
+        "evidence": "screenshots/compare-narrow.png"
+      },
+      {
+        "id": "mobile-page-length",
+        "measured": 12,
+        "maximum": 24,
+        "unit": "viewport-heights",
+        "evidence": "screenshots/compare-mobile.png"
+      },
+      {
+        "id": "zoom-200-page-length",
+        "measured": 14,
+        "maximum": 24,
+        "unit": "viewport-heights",
+        "evidence": "screenshots/compare-zoom-200.png"
+      },
+      {
+        "id": "inline-contributing-records",
+        "measured": 10,
+        "maximum": 25,
+        "unit": "records",
+        "evidence": "screenshots/compare-desktop.png"
+      }
+    ],
+    "print_checks": [
+      {
+        "id": "compare-print",
+        "page_count": 3,
+        "maximum_pages": 4,
+        "interactive_controls_hidden": true,
+        "evidence": "print/compare.pdf"
+      }
+    ],
+    "independent_review": {
+      "artifact": "reviews/independent-visual-review.json",
+      "reviewer": "Product UX Reviewer",
+      "actor_type": "HUMAN",
+      "decision": "PASS",
+      "reviewed_evidence": [
+        "screenshots/compare-desktop.png",
+        "screenshots/compare-narrow.png",
+        "screenshots/compare-mobile.png",
+        "screenshots/compare-zoom-200.png",
+        "print/compare.pdf"
+      ],
+      "conclusions": [
+        "All required viewports and print evidence match the approved design."
+      ]
+    }
+  },
+  "owner_acceptance": {
+    "artifact": "reviews/owner-acceptance.json",
+    "actor": "Product Owner",
+    "actor_type": "HUMAN",
+    "decision": "PASS",
+    "reviewed_visual_record": "reviews/independent-visual-review.json"
+  },
+  "gate_claims": {
+    "STRUCTURAL": "PASS",
+    "FUNCTIONAL": "PASS",
+    "VISUAL": "PASS",
+    "OWNER_ACCEPTANCE": "PASS"
+  },
+  "overall_claim": "PASS"
+}
