@@ -68,6 +68,20 @@ Complete this section only for UI or accessibility changes. Otherwise state
 
 - Evidence: <!-- Routes/states, viewport or zoom, keyboard/focus behavior, accessibility checks, print, and visual artifacts as applicable -->
 
+For hosted reviewer-facing acceptance, record each Issue #648 gate separately.
+Do not mark overall acceptance `PASS` unless the versioned validator computes
+all four gates as `PASS`; automation cannot supply either human decision. A
+feature-issue result cannot establish parent or stakeholder acceptance; name the
+exact acceptance scope and any remaining parent or stakeholder gates.
+
+| Hosted acceptance gate | Computed result | Evidence artifact |
+| --- | --- | --- |
+| `STRUCTURAL` |  |  |
+| `FUNCTIONAL` |  |  |
+| `VISUAL` |  | <!-- Separate independent human review --> |
+| `OWNER_ACCEPTANCE` |  | <!-- Separate human owner decision --> |
+| Overall |  |  |
+
 ## Reviewer-facing redesign artifact classification (when applicable)
 
 Complete this section for a material reviewer-facing removal, merge, rename,

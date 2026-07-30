@@ -346,8 +346,9 @@ keyboard category and child activation, browser history, invalid fragments,
 the secondary disclosure, the shared glossary, and print PDF/page rendering.
 Browser measurements must fail on horizontal page overflow, hidden primary
 guidance, missing focus, obscured destinations, or failed interaction states.
-Passing automation records `READY FOR EXPLICIT OWNER REVIEW`; it does not
-record native zoom, assistive-technology, Figma, or visual acceptance.
+Passing capture automation records `PENDING_INDEPENDENT_VISUAL_REVIEW`; it does
+not record native zoom, assistive-technology, Figma, visual acceptance, or owner
+acceptance.
 
 Reviewer detail next-record navigation tests should prove return-to-same-queue
 guidance, note/status confirmation next-record wording, queue suggested-next
@@ -653,6 +654,19 @@ usable as full raw-source dumps or production imports.
 ### Accessibility tests
 
 Validate documentation structure and run manual or automated checks for user-facing pages before release.
+
+### Hosted UI acceptance contract
+
+The Issue #648 acceptance validator uses the versioned
+`schemas/hosted-ui-acceptance-v1.schema.json` contract and sanitized fixtures.
+Focused coverage proves the all-four-gates `PASS` path and rejects claimed
+acceptance for count disagreement, missing or duplicate viewport/state
+coverage, design regression or unapproved variance, DOM/text-only visual
+claims, page-density and print excess, visible print-only controls,
+unclassified console or network failures, incomplete independent review,
+missing owner acceptance, private or absolute paths, and the historical Issue
+#641 negative derivative. The production validator is offline, read-only, and
+never writes human visual or owner decisions.
 
 ## Minimum pull request requirements
 

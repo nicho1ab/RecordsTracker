@@ -73,6 +73,91 @@ unless a separate contract expressly requires otherwise.
 subsequent ZIP validation includes the index itself, avoiding recursive index
 or hash content.
 
+## Fail-closed hosted acceptance record
+
+Issue #648 separates evidence capture from acceptance. A packet, route summary,
+or automation result must not use `PASS` as an overall hosted UI acceptance
+decision until the versioned
+`schemas/hosted-ui-acceptance-v1.schema.json` record passes
+`scripts/validate_hosted_ui_acceptance.py`. The validator is offline,
+read-only, deterministic, and computes these four independent gates:
+
+| Gate | Passing condition |
+|---|---|
+| `STRUCTURAL` | The record is schema-valid, packet integrity is verified, every required artifact exists, and filesystem, ZIP, manifest, and reported artifact counts match exactly. |
+| `FUNCTIONAL` | Route and functional assertion failures are zero, and every browser-console event and network failure has an explicit classification. Expected optional telemetry needs a named resource classification; it is not silently ignored. |
+| `VISUAL` | Required viewport and state matrices are complete; every design requirement is classified; visual claims use screenshot, interaction, or print evidence; density and print ceilings pass; and a separate human independent-review artifact records `PASS` after reviewing every required screenshot and print artifact. |
+| `OWNER_ACCEPTANCE` | A separate human owner-decision artifact records `PASS` and references the independent visual-review artifact. Automation cannot write or infer this decision. |
+
+Overall acceptance is `PASS` only when all four computed gates are `PASS`.
+`PENDING`, a missing record, a claimed/computed mismatch, or any one failed gate
+produces `NOT_ACCEPTED`. Capture automation writes pending human-review
+templates under `reviews/`, records `manifest.acceptance.overall` as
+`NOT_ACCEPTED`, and prints `HOSTED_UI_ACCEPTANCE=NOT_ACCEPTED`. The templates
+are not acceptance and automation must not populate their human identity,
+conclusions, or decisions.
+
+The only initial optional-telemetry resource classification is
+`static.cloudflareinsights.com beacon.min.js`. It must be recorded with
+`ALLOWLISTED_OPTIONAL_TELEMETRY`; a generic third-party, unknown-origin, or
+different-resource label fails. Application and browser failures remain
+separate classifications and cannot be relabeled as optional telemetry.
+
+The state matrix contains exactly one entry for each of `DEFAULT`, `HOVER`,
+`FOCUS`, `ACTIVE`, `DISABLED`, `EMPTY`, `LOADING`, `UNAVAILABLE`, `STRESS`,
+and `PRINT`. A `PASS` row requires evidence. `NOT_APPLICABLE` requires a
+specific rationale. `MISSING` and `REGRESSION` block the visual gate.
+
+The viewport matrix contains desktop, narrow, mobile, and actual 200% zoom
+captures. Reduced-width approximation does not satisfy the 200% entry. Each
+applicable approved-design requirement is classified `PASS`, `VARIANCE`,
+`REGRESSION`, or justified `NOT_APPLICABLE`. A variance passes only with a
+separate human approval artifact. A regression always blocks acceptance.
+
+DOM and text checks can prove structure or support a visual conclusion, but
+cannot prove a visual requirement by themselves. At least one screenshot,
+native interaction, or print artifact must support every visual assertion.
+Independent review must enumerate every required viewport screenshot and print
+artifact and record conclusions in a file separate from the owner decision.
+
+Issue #648 establishes these acceptance ceilings for the Compare Facilities
+stress case. They are blockers, not visual design targets and cannot be raised
+inside an evidence record:
+
+| Measurement | Maximum |
+|---|---:|
+| Desktop full-page height | 12 viewport heights |
+| Narrow full-page height | 16 viewport heights |
+| Mobile full-page height | 24 viewport heights |
+| 200% zoom full-page height | 24 viewport heights |
+| Inline contributing records | 25 records |
+| Compare Facilities print output | 4 pages |
+
+Print review also fails when interactive-only controls remain visible or
+required reviewer content is clipped, hidden, duplicated, or reduced to an
+unbounded complaint dump. These quantitative ceilings supplement the approved
+compact-density, stress-content, responsive, state, accessibility, and
+print-safe requirements; they do not authorize a poor layout that happens to
+fit below a ceiling.
+
+Acceptance records bind governance issue #648, parent issue #640, stakeholder
+issue #419, the feature issue or issues under review, exact routes, deployed
+SHA, packet SHA-256, and evidence freshness. Historical packets remain
+immutable. Revalidation creates a new acceptance record with
+`HISTORICAL_REVALIDATION`; it never edits the old packet or carries forward an
+old `PASS`.
+
+The sanitized negative derivative at
+`tests/fixtures/hosted_ui_acceptance/issue-641-rejected-packet-v1.json` binds
+the historical Issue #641 packet by SHA-256 and records its observed
+71/71/68/76 artifact-count disagreement, 26 unclassified console events, 26
+unclassified network failures, full-page heights of approximately 13.5, 32.5,
+49.5, and 39.6 viewport heights, 75 inline contributing-record labels,
+33-page print output, missing state evidence, design regressions, DOM/text-only
+visual claims, and absent independent and owner decisions. The production
+validator must reject that record even though it claims every gate and overall
+acceptance as `PASS`.
+
 ## Issue #479 reviewer-facing visual acceptance contract
 
 The following gate applies to every later reviewer-facing visual or interaction
@@ -237,9 +322,9 @@ The packet adds `issue-419-approved-versus-rendered.csv` and
 source-backed licensing filters, removal of uploaded-summary implementation
 language, public Facility ID presentation without internal stable identities as
 facility names, approved Complaint Worklist wording, and preserved legacy
-redirects. `RT-UI-GATE-009` remains `READY FOR EXPLICIT OWNER
-REVIEW`; passing automation is not visual acceptance and does not claim that
-Figma was updated.
+redirects. `RT-UI-GATE-009` remains
+`PENDING_INDEPENDENT_VISUAL_REVIEW`; passing automation is not visual
+acceptance, owner acceptance, or a claim that Figma was updated.
 
 For the Issue #420 Facility Overview redesign, use:
 
@@ -261,7 +346,8 @@ then renders every PDF page for review. It adds
 require one default-visible complaint inventory, one primary next action,
 truthful source/reviewer-state separation, preserved Facility Overview return
 context, no primary disclosure stack, and compact state-specific retrieval
-actions. `RT-UI-GATE-009` remains `READY FOR EXPLICIT OWNER REVIEW`.
+actions. `RT-UI-GATE-009` remains
+`PENDING_INDEPENDENT_VISUAL_REVIEW`.
 
 Do not add CI requirements for screenshot capture. Visual comparison screenshots remain outside CI because they depend on workstation browser tooling, but automated local evidence and explicit visual acceptance are still required before a reviewer-facing visual or interaction change can merge.
 
@@ -273,8 +359,9 @@ malformed Facility ID, `Review Facility`, `Get Records`, limited/unavailable
 reference, focus/viewport, back/forward, narrow/mobile, and 200%-reflow states;
 and the shared-shell approved navigation/active states. The capture asserts
 `RT-IA-004`, `RT-NAV-001`, and `RT-LANG-001`, plus `RT-UI-GATE-001` through
-`RT-UI-GATE-009`. Automation can establish `READY FOR EXPLICIT OWNER REVIEW`;
-it never records visual acceptance or a Figma update.
+`RT-UI-GATE-009`. Automation records
+`PENDING_INDEPENDENT_VISUAL_REVIEW`; it never records visual acceptance, owner
+acceptance, or a Figma update.
 
 For the 390px mobile, 720px reflow, and keyboard scenarios, Issue #502 uses an
 interaction-aware browser capture. Responsive screenshots are full-page at the
@@ -305,7 +392,7 @@ capture fails if primary guidance is hidden, more than one disclosure exists,
 a fragment target is missing, hidden, unfocused, or obscured, keyboard/history
 state fails, or horizontal page overflow appears. Native browser zoom and
 assistive-technology verification are not claimed. `RT-UI-GATE-009` remains
-`READY FOR EXPLICIT OWNER REVIEW`.
+`PENDING_INDEPENDENT_VISUAL_REVIEW`.
 
 ## Uploading For Review
 

@@ -1536,7 +1536,10 @@ function Get-Issue641ValidationSummary {
         featureAssertionFailures = $FeatureAssertionFailures
         screenshotFailures = $ScreenshotFailures
         requiredFeatureAssertions = @($RequiredFeatureAssertions)
+        gate = 'FUNCTIONAL'
         status = if ($allFailuresZero) { 'PASS' } else { 'FAIL' }
+        overallAcceptance = 'NOT_ACCEPTED'
+        notice = 'This summary cannot establish visual or owner acceptance.'
     }
 }
 
@@ -2426,7 +2429,8 @@ try {
     $diagnosticsDir = Join-Path $packetDir "diagnostics"
     $browserStateDir = Join-Path $packetDir "browser-state"
     $logsDir = Join-Path $packetDir "logs"
-    foreach ($dir in @($packetDir, $htmlDir, $textDir, $screenshotDir, $fullPageScreenshotDir, $focusedScreenshotDir, $printDir, $accessibilityDir, $diagnosticsDir, $browserStateDir, $logsDir)) { New-Item -ItemType Directory -Force -Path $dir | Out-Null }
+    $reviewDir = Join-Path $packetDir "reviews"
+    foreach ($dir in @($packetDir, $htmlDir, $textDir, $screenshotDir, $fullPageScreenshotDir, $focusedScreenshotDir, $printDir, $accessibilityDir, $diagnosticsDir, $browserStateDir, $logsDir, $reviewDir)) { New-Item -ItemType Directory -Force -Path $dir | Out-Null }
 
     $facilityHubNumber = if ($Mode -eq "fixture") { "900000001" } else { "434417302" }
     $coreRoutes = @(
@@ -2893,7 +2897,7 @@ try {
             @("IA-503-04", "Official terminology and shared glossary", "CCLD terms retain their meaning and use the collision-safe shared glossary behavior", "PASS"),
             @("IA-503-05", "Reviewer-tier information boundary", "Operator and developer mechanics and obsolete workflow labels are absent", "PASS"),
             @("IA-503-06", "Responsive and print integrity", "Desktop, 1024, 390, 720 reflow approximation, and rendered print pages are retained", "PASS"),
-            @("IA-503-07", "Visual acceptance stays explicit", "Evidence is ready for product-owner review; automation does not claim acceptance", "READY FOR EXPLICIT OWNER REVIEW")
+            @("IA-503-07", "Visual acceptance stays explicit", "Evidence requires independent visual review and a separate owner decision; automation does not claim acceptance", "PENDING_INDEPENDENT_VISUAL_REVIEW")
         )
         $comparisonCsv = @("requirementId,approvedRequirement,renderedResult,status")
         foreach ($row in $comparisonRows) {
@@ -2919,7 +2923,7 @@ try {
         foreach ($gate in $gateDefinitions) {
             $issue503GateResults += [pscustomobject]@{ gate = $gate[0]; classification = $gate[1]; status = if ([bool]$gate[2]) { "PASS" } else { "FAIL" }; evidence = $gate[3] }
         }
-        $issue503GateResults += [pscustomobject]@{ gate = "RT-UI-GATE-009"; classification = "visual-acceptance"; status = "READY FOR EXPLICIT OWNER REVIEW"; evidence = "Product-owner review package is generated; passing automation is not visual acceptance." }
+        $issue503GateResults += [pscustomobject]@{ gate = "RT-UI-GATE-009"; classification = "visual-acceptance"; status = "PENDING_INDEPENDENT_VISUAL_REVIEW"; evidence = "Capture is generated, but independent visual review and a separate owner decision are both pending." }
         $gateCsv = @("gate,classification,status,evidence")
         foreach ($gate in $issue503GateResults) {
             $values = @($gate.gate, $gate.classification, $gate.status, $gate.evidence)
@@ -3186,7 +3190,7 @@ try {
             @("IA-419-06", "Primary evidence is visible by default", "Contributing complaint records and licensing guidance use visible sections, not disclosures", "PASS"),
             @("IA-419-07", "Legacy destinations are superseded without losing queries", "Three legacy URLs redirect to the corresponding canonical view", "PASS"),
             @("IA-419-08", "Responsive, keyboard, state, and print evidence is automated", "Exact-route captures cover governed viewports, focus fragment, truthful states, and print", "PASS"),
-            @("IA-419-09", "Visual acceptance is explicit and separate from test success", "Evidence packet is ready for owner review; no acceptance is claimed", "READY FOR EXPLICIT OWNER REVIEW"),
+            @("IA-419-09", "Visual acceptance is explicit and separate from test success", "Independent visual review and a separate owner decision are pending; no acceptance is claimed", "PENDING_INDEPENDENT_VISUAL_REVIEW"),
             @("IA-419-10", "Facility identity uses reviewer-facing values", "Source-backed facility name is preferred; missing name uses Facility name unavailable and the public Facility ID is separate", "PASS"),
             @("IA-419-11", "Complaint navigation uses the approved object name", "Issue #419 actions use Complaint Worklist while preserving existing routes", "PASS")
         )
@@ -3214,7 +3218,7 @@ try {
         foreach ($gate in $gateDefinitions) {
             $issue419GateResults += [pscustomobject]@{ gate = $gate[0]; classification = $gate[1]; status = if ([bool]$gate[2]) { "PASS" } else { "FAIL" }; evidence = $gate[3] }
         }
-        $issue419GateResults += [pscustomobject]@{ gate = "RT-UI-GATE-009"; classification = "visual-acceptance"; status = "READY FOR EXPLICIT OWNER REVIEW"; evidence = "Side-by-side comparison is generated; passing automation is not visual acceptance." }
+        $issue419GateResults += [pscustomobject]@{ gate = "RT-UI-GATE-009"; classification = "visual-acceptance"; status = "PENDING_INDEPENDENT_VISUAL_REVIEW"; evidence = "Side-by-side comparison is generated; independent visual review and a separate owner decision are pending." }
         $gateCsv = @("gate,classification,status,evidence")
         foreach ($gate in $issue419GateResults) {
             $values = @($gate.gate, $gate.classification, $gate.status, $gate.evidence)
@@ -3234,7 +3238,7 @@ try {
             @("IA-420-06", "Compact state-specific empty behavior", "Filtered and zero-complaint routes show one action-focused empty state without populated-only sections", "PASS"),
             @("IA-420-07", "Responsive, keyboard, and print behavior", "Exact desktop, narrow, mobile, 720-pixel reflow, keyboard-focus, and print artifacts are captured", "PASS"),
             @("IA-420-08", "No unsupported stale inference", "Visible limitations state that no stale threshold is inferred without governed source authority", "PASS"),
-            @("IA-420-09", "Visual acceptance remains a product-owner decision", "Evidence packet is ready for review; automation does not claim visual acceptance", "READY FOR EXPLICIT OWNER REVIEW")
+            @("IA-420-09", "Visual acceptance remains a product-owner decision", "Independent visual review and a separate owner decision are pending; automation does not claim visual acceptance", "PENDING_INDEPENDENT_VISUAL_REVIEW")
         )
         $comparisonCsv = @("requirementId,approvedRequirement,renderedResult,status")
         foreach ($row in $comparisonRows) {
@@ -3307,7 +3311,7 @@ try {
         foreach ($gate in $gateDefinitions) {
             $issue420GateResults += [pscustomobject]@{ gate = $gate[0]; classification = $gate[1]; status = if ([bool]$gate[2]) { "PASS" } else { "FAIL" }; evidence = $gate[3] }
         }
-        $issue420GateResults += [pscustomobject]@{ gate = "RT-UI-GATE-009"; classification = "visual-acceptance"; status = "READY FOR EXPLICIT OWNER REVIEW"; evidence = "Product-owner review package is generated; passing automation is not visual acceptance." }
+        $issue420GateResults += [pscustomobject]@{ gate = "RT-UI-GATE-009"; classification = "visual-acceptance"; status = "PENDING_INDEPENDENT_VISUAL_REVIEW"; evidence = "Capture is generated, but independent visual review and a separate owner decision are both pending." }
         $gateCsv = @("gate,classification,status,evidence")
         foreach ($gate in $issue420GateResults) {
             $values = @($gate.gate, $gate.classification, $gate.status, $gate.evidence)
@@ -3492,6 +3496,8 @@ accessibility snapshots, and screenshots for reviewer inspection.
 
 Review these files first:
 - manifest.json
+- reviews/independent-visual-review.json
+- reviews/owner-acceptance.json
 - route-status.csv
 - route-assertions.csv
 - route-text-markers.txt
@@ -3510,6 +3516,11 @@ so testing instructions can be written from the actual rendered UI labels,
 links, buttons, and page text. Review the packet before sharing it. Do not
 commit generated evidence or ZIP packets unless a specific repository workflow
 explicitly says to do so.
+
+Capture automation never records visual or owner acceptance. The review files
+are pending human-input templates, and manifest.acceptance.overall remains
+NOT_ACCEPTED until a completed acceptance record passes
+scripts/validate_hosted_ui_acceptance.py.
 "@
     Set-Content -LiteralPath (Join-Path $packetDir "README.txt") -Value $readmeText -Encoding UTF8
 
@@ -3529,7 +3540,7 @@ explicitly says to do so.
         Set-Content -LiteralPath (Join-Path $packetDir "issue-641-feature-assertions.csv") -Value ($featureRows -join "`n") -Encoding UTF8
         Copy-Item -LiteralPath (Join-Path $packetDir "issue-641-feature-assertions.csv") -Destination (Join-Path $packetDir "issue-641-requirement-to-evidence.csv")
         Set-Content -LiteralPath (Join-Path $packetDir "validation-summary.json") -Value ($issue641ValidationSummary | ConvertTo-Json -Depth 5) -Encoding UTF8
-        Set-Content -LiteralPath (Join-Path $packetDir "validation-summary.md") -Value "# Validation summary`n`nRoute failures: $($issue641ValidationSummary.routeFailures)`nAssertion failures: $($issue641ValidationSummary.assertionFailures)`nFeature assertion failures: $($issue641ValidationSummary.featureAssertionFailures)`nScreenshot failures: $($issue641ValidationSummary.screenshotFailures)`nStatus: $($issue641ValidationSummary.status)" -Encoding UTF8
+        Set-Content -LiteralPath (Join-Path $packetDir "validation-summary.md") -Value "# Functional validation summary`n`nRoute failures: $($issue641ValidationSummary.routeFailures)`nAssertion failures: $($issue641ValidationSummary.assertionFailures)`nFeature assertion failures: $($issue641ValidationSummary.featureAssertionFailures)`nScreenshot failures: $($issue641ValidationSummary.screenshotFailures)`nFunctional gate: $($issue641ValidationSummary.status)`nOverall hosted UI acceptance: NOT_ACCEPTED`n`nThis summary cannot establish visual or owner acceptance." -Encoding UTF8
         if ($featureFailures -gt 0) { Stop-CaptureFail "Issue #641 feature assertion failures prevent packet publication." }
     }
     $outputCounts = [ordered]@{
@@ -3549,6 +3560,22 @@ explicitly says to do so.
         issue502      = if ($Issue502) { @($routesToCapture).Count } else { 0 }
         issue503      = if ($Issue503) { @($routesToCapture).Count } else { 0 }
         issue498      = if ($Issue498) { @($routesToCapture).Count } else { 0 }
+    }
+    $focusedIssueScope = @()
+    foreach ($issueEntry in @(
+        [pscustomobject]@{ Enabled = $Issue415; Reference = "#415" },
+        [pscustomobject]@{ Enabled = $Issue416; Reference = "#416" },
+        [pscustomobject]@{ Enabled = $Issue417; Reference = "#417" },
+        [pscustomobject]@{ Enabled = $Issue418; Reference = "#418" },
+        [pscustomobject]@{ Enabled = $Issue419; Reference = "#419" },
+        [pscustomobject]@{ Enabled = $Issue420; Reference = "#420" },
+        [pscustomobject]@{ Enabled = $Issue498; Reference = "#498" },
+        [pscustomobject]@{ Enabled = $Issue502; Reference = "#502" },
+        [pscustomobject]@{ Enabled = $Issue503; Reference = "#503" },
+        [pscustomobject]@{ Enabled = $Issue610; Reference = "#610" },
+        [pscustomobject]@{ Enabled = $Issue641; Reference = "#641" }
+    )) {
+        if ([bool]$issueEntry.Enabled) { $focusedIssueScope += [string]$issueEntry.Reference }
     }
     $manifest = [ordered]@{
         generatedAt            = (Get-Date).ToUniversalTime().ToString("o")
@@ -3573,13 +3600,29 @@ explicitly says to do so.
         issue416               = [ordered]@{ enabled = [bool]$Issue416; routeCount = @($routesToCapture).Count; countSummaries = @($issue416CountSummaries); zoomLimitation = "True browser zoom is not controlled by this script; reduced viewport captures are supplemental evidence only." }
         issue417               = [ordered]@{ enabled = [bool]$Issue417; routeCount = @($routesToCapture).Count; countSummaries = @($issue417CountSummaries); zoomLimitation = "True browser zoom is not controlled by this script; reduced viewport captures are supplemental evidence only." }
         issue418               = [ordered]@{ enabled = [bool]$Issue418; routeCount = @($routesToCapture).Count; countSummaries = @($issue418CountSummaries); zoomLimitation = "True browser zoom is not controlled by this script; reduced viewport captures are supplemental evidence only." }
-        issue419               = [ordered]@{ enabled = [bool]$Issue419; routeCount = @($routesToCapture).Count; scenarios = @($routesToCapture | ForEach-Object { $_.Name }); controlledVarianceAuthority = "Issue #501 repository-readable controlled variance"; visualAcceptance = "READY FOR EXPLICIT OWNER REVIEW"; uiGates = @($issue419GateResults); zoomLimitation = "The 720-pixel viewport scenario approximates 200-percent reflow; no visual acceptance is inferred from automation."; printArtifact = @($routeResults | Where-Object { $_.printPath } | ForEach-Object { $_.printPath }) }
-        issue420               = [ordered]@{ enabled = [bool]$Issue420; routeCount = @($routesToCapture).Count; scenarios = @($routesToCapture | ForEach-Object { $_.Name }); screenshotCount = if ($Issue420) { @($routeResults | Where-Object { $_.screenshotPath }).Count } else { 0 }; uniquePngCount = if ($Issue420 -and $duplicateReport) { $duplicateReport.uniquePngCount } else { 0 }; intentionalConsolidationCount = if ($Issue420) { 1 } else { 0 }; partialCoverageVisualProof = "issue-420-populated-desktop"; duplicateImageReport = if ($Issue420) { 'issue-420-duplicate-images.json' } else { '' }; printValidation = if ($Issue420) { 'issue-420-print-validation.json' } else { '' }; controlledVarianceAuthority = "Issue #420 product-owner specification and Issue #501 repository-readable controlled variance"; visualAcceptance = "READY FOR EXPLICIT OWNER REVIEW"; uiGates = @($issue420GateResults); zoomLimitation = "The 720-pixel viewport scenario approximates 200-percent reflow; no visual acceptance is inferred from automation."; printArtifact = @($routeResults | Where-Object { $_.printPath } | ForEach-Object { $_.printPath }) }
-        issue502               = [ordered]@{ enabled = [bool]$Issue502; routeCount = @($routesToCapture).Count; scenarios = @($routesToCapture | ForEach-Object { $_.Name }); controlledVarianceAuthority = "Issue #501 repository-readable controlled variance"; visualAcceptance = "READY FOR EXPLICIT OWNER REVIEW"; zoomLimitation = "The 720-pixel viewport scenario approximates 200-percent reflow; no visual acceptance is inferred from automation." }
-        issue503               = [ordered]@{ enabled = [bool]$Issue503; routeCount = @($routesToCapture).Count; scenarios = @($routesToCapture | ForEach-Object { $_.Name }); controlledVarianceAuthority = "Issue #503 product outcome and Issue #501 repository-readable controlled variance"; visualAcceptance = "READY FOR EXPLICIT OWNER REVIEW"; uiGates = @($issue503GateResults); fragmentInventory = if ($Issue503) { "issue-503-route-fragment-inventory.csv" } else { "" }; interactionMeasurements = if ($Issue503) { "diagnostics/issue-503-responsive-fragment-focus-measurements.json" } else { "" }; zoomLimitation = "The 720-pixel viewport approximates 200-percent reflow; native browser zoom and assistive-technology verification were not performed."; printArtifact = @($routeResults | Where-Object { $_.printPath } | ForEach-Object { $_.printPath }) }
+        issue419               = [ordered]@{ enabled = [bool]$Issue419; routeCount = @($routesToCapture).Count; scenarios = @($routesToCapture | ForEach-Object { $_.Name }); controlledVarianceAuthority = "Issue #501 repository-readable controlled variance"; visualAcceptance = "PENDING_INDEPENDENT_VISUAL_REVIEW"; uiGates = @($issue419GateResults); zoomLimitation = "The 720-pixel viewport scenario approximates 200-percent reflow; no visual acceptance is inferred from automation."; printArtifact = @($routeResults | Where-Object { $_.printPath } | ForEach-Object { $_.printPath }) }
+        issue420               = [ordered]@{ enabled = [bool]$Issue420; routeCount = @($routesToCapture).Count; scenarios = @($routesToCapture | ForEach-Object { $_.Name }); screenshotCount = if ($Issue420) { @($routeResults | Where-Object { $_.screenshotPath }).Count } else { 0 }; uniquePngCount = if ($Issue420 -and $duplicateReport) { $duplicateReport.uniquePngCount } else { 0 }; intentionalConsolidationCount = if ($Issue420) { 1 } else { 0 }; partialCoverageVisualProof = "issue-420-populated-desktop"; duplicateImageReport = if ($Issue420) { 'issue-420-duplicate-images.json' } else { '' }; printValidation = if ($Issue420) { 'issue-420-print-validation.json' } else { '' }; controlledVarianceAuthority = "Issue #420 product-owner specification and Issue #501 repository-readable controlled variance"; visualAcceptance = "PENDING_INDEPENDENT_VISUAL_REVIEW"; uiGates = @($issue420GateResults); zoomLimitation = "The 720-pixel viewport scenario approximates 200-percent reflow; no visual acceptance is inferred from automation."; printArtifact = @($routeResults | Where-Object { $_.printPath } | ForEach-Object { $_.printPath }) }
+        issue502               = [ordered]@{ enabled = [bool]$Issue502; routeCount = @($routesToCapture).Count; scenarios = @($routesToCapture | ForEach-Object { $_.Name }); controlledVarianceAuthority = "Issue #501 repository-readable controlled variance"; visualAcceptance = "PENDING_INDEPENDENT_VISUAL_REVIEW"; zoomLimitation = "The 720-pixel viewport scenario approximates 200-percent reflow; no visual acceptance is inferred from automation." }
+        issue503               = [ordered]@{ enabled = [bool]$Issue503; routeCount = @($routesToCapture).Count; scenarios = @($routesToCapture | ForEach-Object { $_.Name }); controlledVarianceAuthority = "Issue #503 product outcome and Issue #501 repository-readable controlled variance"; visualAcceptance = "PENDING_INDEPENDENT_VISUAL_REVIEW"; uiGates = @($issue503GateResults); fragmentInventory = if ($Issue503) { "issue-503-route-fragment-inventory.csv" } else { "" }; interactionMeasurements = if ($Issue503) { "diagnostics/issue-503-responsive-fragment-focus-measurements.json" } else { "" }; zoomLimitation = "The 720-pixel viewport approximates 200-percent reflow; native browser zoom and assistive-technology verification were not performed."; printArtifact = @($routeResults | Where-Object { $_.printPath } | ForEach-Object { $_.printPath }) }
         issue498               = [ordered]@{ enabled = [bool]$Issue498; routeCount = @($routesToCapture).Count; scenarios = @($routesToCapture | ForEach-Object { $_.Name }); zoomLimitation = "The 720-pixel viewport scenario approximates 200-percent reflow only; exact true browser zoom remains manual visual evidence."; printArtifact = @($routeResults | Where-Object { $_.printPath } | ForEach-Object { $_.printPath }) }
         issue610               = [ordered]@{ enabled = [bool]$Issue610; routeCount = @($routesToCapture).Count; scenarios = @($routesToCapture | ForEach-Object { $_.Name }); printSettings = "Portrait; scale 100%; default margins; headers and footers off; background graphics on."; printArtifact = @($routeResults | Where-Object { $_.printPath } | ForEach-Object { $_.printPath }) }
-        issue641               = [ordered]@{ enabled = [bool]$Issue641; routeCount = @($routesToCapture).Count; scenarios = @($routesToCapture | ForEach-Object { $_.Name }); evidenceGates = @($issue641GateResults); gateArtifact = if ($Issue641) { "issue-641-evidence-gates.csv" } else { "" }; summaryArtifact = if ($Issue641) { "issue-641-evidence-summary.md" } else { "" }; measuredPageScale = if ($Issue641) { "1280x900 at visualViewport scale 2" } else { "" }; visualAcceptance = "READY FOR EXPLICIT OWNER REVIEW"; printArtifact = @($routeResults | Where-Object { $_.printPath } | ForEach-Object { $_.printPath }) }
+        issue641               = [ordered]@{ enabled = [bool]$Issue641; routeCount = @($routesToCapture).Count; scenarios = @($routesToCapture | ForEach-Object { $_.Name }); evidenceGates = @($issue641GateResults); gateArtifact = if ($Issue641) { "issue-641-evidence-gates.csv" } else { "" }; summaryArtifact = if ($Issue641) { "issue-641-evidence-summary.md" } else { "" }; measuredPageScale = if ($Issue641) { "1280x900 at visualViewport scale 2" } else { "" }; visualAcceptance = "PENDING_INDEPENDENT_VISUAL_REVIEW"; printArtifact = @($routeResults | Where-Object { $_.printPath } | ForEach-Object { $_.printPath }) }
+        acceptance             = [ordered]@{
+            schemaVersion = "recordstracker.hosted-ui-acceptance.v1"
+            governanceIssue = "#648"
+            parentIssue = "#640"
+            stakeholderIssue = "#419"
+            featureIssues = $focusedIssueScope
+            structural = "PENDING_VALIDATION"
+            functional = "PENDING_VALIDATION"
+            visual = "PENDING_INDEPENDENT_VISUAL_REVIEW"
+            ownerAcceptance = "PENDING_OWNER_DECISION"
+            overall = "NOT_ACCEPTED"
+            independentReviewArtifact = "reviews/independent-visual-review.json"
+            ownerDecisionArtifact = "reviews/owner-acceptance.json"
+            validator = "scripts/validate_hosted_ui_acceptance.py"
+            automationMayAccept = $false
+        }
         git                    = [ordered]@{ branch = $gitBranch; commit = $gitCommit; workingTreeClean = [bool]$workingTreeClean; notice = if ($workingTreeClean) { "" } else { "Working tree was not clean when evidence was captured." } }
         output                 = [ordered]@{ packetDirectory = ConvertTo-RelativeEvidencePath -Path $packetDir -Root $PWD; zipPacket = ConvertTo-RelativeEvidencePath -Path $zipPath -Root $PWD; manifest = "manifest.json"; fileIndex = "file-index.json"; routeStatusCsv = "route-status.csv"; routeAssertionsCsv = "route-assertions.csv"; textMarkers = "route-text-markers.txt"; counts = $outputCounts }
         evidencePurpose        = $evidencePurpose
@@ -3595,6 +3638,25 @@ explicitly says to do so.
         Set-Content -LiteralPath (Join-Path $packetDir "manifest.csv") -Value ($manifestCsv -join "`n") -Encoding UTF8
         Copy-Item -LiteralPath (Join-Path $packetDir "README.txt") -Destination (Join-Path $packetDir "README.md")
     }
+    $independentReviewTemplate = [ordered]@{
+        artifactType = "independent-visual-review"
+        actorType = "HUMAN_REQUIRED"
+        reviewer = ""
+        decision = "PENDING"
+        reviewedEvidence = @()
+        conclusions = @()
+        notice = "Automation must not complete this file or claim visual acceptance."
+    }
+    Set-Content -LiteralPath (Join-Path $reviewDir "independent-visual-review.json") -Value ($independentReviewTemplate | ConvertTo-Json -Depth 5) -Encoding UTF8
+    $ownerAcceptanceTemplate = [ordered]@{
+        artifactType = "owner-acceptance"
+        actorType = "HUMAN_REQUIRED"
+        actor = ""
+        decision = "PENDING"
+        reviewedVisualRecord = "reviews/independent-visual-review.json"
+        notice = "Automation must not complete this file or synthesize owner acceptance."
+    }
+    Set-Content -LiteralPath (Join-Path $reviewDir "owner-acceptance.json") -Value ($ownerAcceptanceTemplate | ConvertTo-Json -Depth 5) -Encoding UTF8
 
     $indexedPacketFiles = @(Test-EvidencePacketFiles -PacketDirectory $packetDir)
     $fileIndex = [ordered]@{
@@ -3619,6 +3681,7 @@ explicitly says to do so.
     Write-Host "EVIDENCE_ZIP_PATH=$zipPath"
     Write-Host "Evidence ZIP SHA-256: $zipSha256"
     Write-Host "EVIDENCE_ZIP_SHA256=$zipSha256"
+    Write-Host "HOSTED_UI_ACCEPTANCE=NOT_ACCEPTED"
     Write-Host "Output counts: screenshots=$($outputCounts.screenshots); html=$($outputCounts.html); text=$($outputCounts.text); diagnostics=$($outputCounts.diagnostics); accessibility=$($outputCounts.accessibility)"
     Write-Host "manifest.json: $(Join-Path $packetDir 'manifest.json')"
     Write-Host "file-index.json: $(Join-Path $packetDir 'file-index.json')"
