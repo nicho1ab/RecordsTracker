@@ -37,6 +37,113 @@ def powershell_function(function_name: str, next_function_name: str) -> str:
     return script[start:end]
 
 
+def run_optional_git_revision_resolution(
+    *,
+    origin_main: str | None = None,
+    local_main: str | None = None,
+    event_path: Path | None = None,
+) -> dict[str, object]:
+    resolver = powershell_function("Resolve-OptionalGitRevision", "Test-AllowedBaseUrl")
+    event_literal = "$null" if event_path is None else json.dumps(str(event_path))
+    origin_literal = json.dumps(origin_main or "")
+    local_literal = json.dumps(local_main or "")
+    mock_git = "\n".join(
+        (
+            "function git {",
+            "  param([Parameter(ValueFromRemainingArguments = $true)][string[]]$Arguments)",
+            "  $reference = $Arguments[-1]",
+            f"  if ($reference -eq 'origin/main^{{commit}}' -and {origin_literal}) {{",
+            f"    {origin_literal}; $global:LASTEXITCODE = 0; return",
+            "  }",
+            f"  if ($reference -eq 'main^{{commit}}' -and {local_literal}) {{",
+            f"    {local_literal}; $global:LASTEXITCODE = 0; return",
+            "  }",
+            "  $global:LASTEXITCODE = 128",
+            "}",
+        )
+    )
+    ps_script = (
+        resolver
+        + "\n"
+        + mock_git
+        + "\n"
+        + "Resolve-OptionalGitRevision -GitHubEventPath "
+        + event_literal
+        + " | ConvertTo-Json -Depth 6\n"
+    )
+    result = subprocess.run(
+        [powershell(), "-NoProfile", "-Command", ps_script],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert result.returncode == 0, plain_output(result)
+    return json.loads(result.stdout)
+
+
+def test_optional_git_revision_resolution_tolerates_missing_refs_without_stderr_value() -> None:
+    resolution = run_optional_git_revision_resolution()
+
+    assert resolution["Available"] is False
+    assert resolution["Sha"] == ""
+    assert resolution["Source"] == "unavailable"
+    assert resolution["Attempts"] == ["git:origin/main", "git:main"]
+
+
+def test_optional_git_revision_resolution_uses_valid_remote_then_local_ref() -> None:
+    remote_sha = "A" * 40
+    remote = run_optional_git_revision_resolution(origin_main=remote_sha, local_main="B" * 40)
+    local = run_optional_git_revision_resolution(local_main="C" * 40)
+
+    assert remote == {
+        "Available": True,
+        "Sha": remote_sha.lower(),
+        "Source": "git:origin/main",
+        "Attempts": [],
+    }
+    assert local["Available"] is True
+    assert local["Sha"] == ("C" * 40).lower()
+    assert local["Source"] == "git:main"
+    assert local["Attempts"] == ["git:origin/main"]
+
+
+def test_optional_git_revision_resolution_uses_only_valid_github_pull_request_base_metadata(
+    tmp_path: Path,
+) -> None:
+    valid_event = tmp_path / "event.json"
+    valid_event.write_text(
+        json.dumps({"pull_request": {"base": {"sha": "D" * 40}}}), encoding="utf-8"
+    )
+    invalid_event = tmp_path / "invalid-event.json"
+    invalid_event.write_text(
+        json.dumps({"pull_request": {"base": {"sha": "not-a-sha"}}}), encoding="utf-8"
+    )
+
+    valid = run_optional_git_revision_resolution(event_path=valid_event)
+    invalid = run_optional_git_revision_resolution(event_path=invalid_event)
+
+    assert valid["Available"] is True
+    assert valid["Sha"] == ("D" * 40).lower()
+    assert valid["Source"] == "github-event:pull_request.base.sha"
+    assert invalid["Available"] is False
+    assert invalid["Sha"] == ""
+    assert invalid["Source"] == "unavailable"
+    assert invalid["Attempts"][-1] == "github-event:pull_request.base.sha-invalid"
+
+
+def test_issue_655_base_revision_metadata_is_strict_or_explicitly_unavailable() -> None:
+    script = CAPTURE_SCRIPT.read_text(encoding="utf-8")
+
+    assert "function Resolve-OptionalGitRevision" in script
+    assert "git rev-parse --verify --quiet" in script
+    assert "2>$null" in script
+    assert "Issue #655 evidence requires an authoritative base SHA" in script
+    assert "-not $AllowUnavailable" in script
+    assert "baseShaStatus=if ($gitBaseResolution.Available)" in script
+    assert "(& git merge-base HEAD origin/main).Trim()" not in script
+
+
 def run_screenshot_tool_resolution(
     requested: str,
     *,

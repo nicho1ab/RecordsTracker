@@ -210,6 +210,57 @@ function Stop-CaptureFail {
     throw "[FAIL] $Message"
 }
 
+function Resolve-OptionalGitRevision {
+    param(
+        [string]$GitHubEventPath = [string]$env:GITHUB_EVENT_PATH
+    )
+
+    $attempts = @()
+    foreach ($reference in @('origin/main', 'main')) {
+        $output = @(& git rev-parse --verify --quiet "$reference^{commit}" 2>$null)
+        $exitCode = $LASTEXITCODE
+        $candidate = ($output -join '').Trim()
+        if ($exitCode -eq 0 -and $candidate -match '^[0-9a-fA-F]{40}$') {
+            return [pscustomobject]@{
+                Available = $true
+                Sha = $candidate.ToLowerInvariant()
+                Source = "git:$reference"
+                Attempts = @($attempts)
+            }
+        }
+        $attempts += "git:$reference"
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($GitHubEventPath) -and (Test-Path -LiteralPath $GitHubEventPath -PathType Leaf)) {
+        try {
+            $event = Get-Content -LiteralPath $GitHubEventPath -Raw | ConvertFrom-Json
+            $candidate = [string]$event.pull_request.base.sha
+            if ($candidate -match '^[0-9a-fA-F]{40}$') {
+                return [pscustomobject]@{
+                    Available = $true
+                    Sha = $candidate.ToLowerInvariant()
+                    Source = 'github-event:pull_request.base.sha'
+                    Attempts = @($attempts)
+                }
+            }
+            $attempts += 'github-event:pull_request.base.sha-invalid'
+        }
+        catch {
+            $attempts += 'github-event:pull_request.base.sha-unreadable'
+        }
+    }
+    elseif (-not [string]::IsNullOrWhiteSpace($GitHubEventPath)) {
+        $attempts += 'github-event:unavailable'
+    }
+
+    return [pscustomobject]@{
+        Available = $false
+        Sha = ''
+        Source = 'unavailable'
+        Attempts = @($attempts)
+    }
+}
+
 function Test-AllowedBaseUrl {
     param([string]$Value)
     try { $uri = [System.Uri]::new($Value) }
@@ -4741,6 +4792,13 @@ This packet supersedes neither the historical rejected packet nor any acceptance
     $gitStatus = (git status --short 2>$null) -join "`n"
     $workingTreeClean = [string]::IsNullOrWhiteSpace($gitStatus)
     $gitStatusText = if ($workingTreeClean) { "clean" } else { $gitStatus }
+    $gitBaseResolution = if ($Issue655) { Resolve-OptionalGitRevision } else { $null }
+    if ($Issue655 -and -not $gitBaseResolution.Available -and -not $AllowUnavailable) {
+        Stop-CaptureFail "Issue #655 evidence requires an authoritative base SHA. Attempted: $($gitBaseResolution.Attempts -join ', ')."
+    }
+    $gitBaseSha = if ($gitBaseResolution -and $gitBaseResolution.Available) { $gitBaseResolution.Sha } else { '' }
+    $gitBaseSource = if ($gitBaseResolution) { $gitBaseResolution.Source } else { '' }
+    $gitBaseAttempts = if ($gitBaseResolution) { @($gitBaseResolution.Attempts) } else { @() }
     Set-Content -LiteralPath (Join-Path $diagnosticsDir "git-status.txt") -Value $gitStatusText -Encoding UTF8
     Set-Content -LiteralPath (Join-Path $diagnosticsDir "git-log.txt") -Value ((git log --oneline -n 5 2>$null) -join "`n") -Encoding UTF8
     $focusedCommandSuffix = if ($Issue655) { " -Issue655" } elseif ($Issue642) { " -Issue642" } elseif ($Issue641) { " -Issue641" } elseif ($Issue503) { " -Issue503" } elseif ($Issue502) { " -Issue502" } elseif ($Issue498) { " -Issue498" } elseif ($Issue420) { " -Issue420" } elseif ($Issue419) { " -Issue419" } elseif ($Issue418) { " -Issue418" } elseif ($Issue417) { " -Issue417" } elseif ($Issue416) { " -Issue416" } elseif ($Issue415) { " -Issue415" } else { "" }
@@ -4750,7 +4808,8 @@ This packet supersedes neither the historical rejected packet nor any acceptance
         "mode=$Mode",
         "branch=$gitBranch",
         "head=$gitCommit",
-        "baseSha=$((git merge-base HEAD origin/main).Trim())",
+        "baseSha=$gitBaseSha",
+        "baseShaSource=$gitBaseSource",
         "baseUrl=$normalizedBaseUrl",
         "viewport=${ViewportWidth}x${ViewportHeight}",
         "screenshotToolResolved=$($screenshotToolResolution.Resolved)",
@@ -4931,7 +4990,7 @@ scripts/validate_hosted_ui_acceptance.py.
         issue610               = [ordered]@{ enabled = [bool]$Issue610; routeCount = @($routesToCapture).Count; scenarios = @($routesToCapture | ForEach-Object { $_.Name }); printSettings = "Portrait; scale 100%; default margins; headers and footers off; background graphics on."; printArtifact = @($routeResults | Where-Object { $_.printPath } | ForEach-Object { $_.printPath }) }
         issue641               = [ordered]@{ enabled = [bool]$Issue641; routeCount = @($routesToCapture).Count; scenarios = @($routesToCapture | ForEach-Object { $_.Name }); evidenceGates = @($issue641GateResults); gateArtifact = if ($Issue641) { "issue-641-evidence-gates.csv" } else { "" }; summaryArtifact = if ($Issue641) { "issue-641-evidence-summary.md" } else { "" }; measuredPageScale = if ($Issue641) { "1280x900 at visualViewport scale 2" } else { "" }; visualAcceptance = "PENDING_INDEPENDENT_VISUAL_REVIEW"; printArtifact = @($routeResults | Where-Object { $_.printPath } | ForEach-Object { $_.printPath }) }
         issue642               = [ordered]@{ enabled = [bool]$Issue642; routeCount = if ($Issue642) { @($routesToCapture).Count } else { 0 }; scenarios = if ($Issue642) { @($routesToCapture | ForEach-Object { $_.Name }) } else { @() }; controlledInteraction = "Navigation, staged public Facility ID, multi-value state, canonical continuation, return context, responsive, focus, print"; screenshotStateArtifact = if ($Issue642) { 'diagnostics/issue-642-screenshot-states.json' } else { '' }; screenshotStates = if ($Issue642) { $issue642PacketDiagnostics.screenshotStates } else { @{} }; consoleNetworkSummaryArtifact = if ($Issue642) { 'diagnostics/issue-642-console-network-summary.json' } else { '' }; consoleNetwork = if ($Issue642) { $issue642PacketDiagnostics.consoleNetwork } else { @{} }; visualAcceptance = "PENDING_INDEPENDENT_VISUAL_REVIEW"; ownerAcceptance = "PENDING_OWNER_DECISION"; printArtifact = @($routeResults | Where-Object { $_.printPath } | ForEach-Object { $_.printPath }) }
-        issue655               = [ordered]@{ enabled = [bool]$Issue655; mode = 'local-fixture'; branch = $gitBranch; head = $gitCommit; baseSha = (& git merge-base HEAD origin/main).Trim(); routeCount = if ($Issue655) { @($routesToCapture).Count } else { 0 }; scenarios = if ($Issue655) { @($routesToCapture | ForEach-Object { $_.Name }) } else { @() }; screenshotStateArtifact = if ($Issue655) { 'diagnostics/issue-655-screenshot-states.json' } else { '' }; screenshotStates = if ($Issue655) { $issue642PacketDiagnostics.screenshotStates } else { @{} }; browserStateCount = if ($Issue655) { $issue642PacketDiagnostics.browserStates } else { 0 }; geometryDiagnosticsArtifact = if ($Issue655) { $issue642PacketDiagnostics.geometryArtifact } else { '' }; focusLiveRegionDiagnosticsArtifact = if ($Issue655) { $issue642PacketDiagnostics.focusLiveArtifact } else { '' }; interactionIndexArtifact = if ($Issue655) { $issue642PacketDiagnostics.interactionIndexArtifact } else { '' }; consoleNetworkSummaryArtifact = if ($Issue655) { 'diagnostics/issue-655-console-network-summary.json' } else { '' }; consoleNetwork = if ($Issue655) { $issue642PacketDiagnostics.consoleNetwork } else { @{} }; evidenceLimitations = 'Local fixture evidence only; it does not establish deployed-host acceptance.'; visualAcceptance = 'PENDING_INDEPENDENT_VISUAL_REVIEW'; ownerAcceptance = 'PENDING_OWNER_DECISION'; printArtifact = @($routeResults | Where-Object { $_.printPath } | ForEach-Object { $_.printPath }) }
+        issue655               = [ordered]@{ enabled = [bool]$Issue655; mode = 'local-fixture'; branch = $gitBranch; head = $gitCommit; baseSha = $gitBaseSha; baseShaSource = $gitBaseSource; baseShaAttempts = $gitBaseAttempts; routeCount = if ($Issue655) { @($routesToCapture).Count } else { 0 }; scenarios = if ($Issue655) { @($routesToCapture | ForEach-Object { $_.Name }) } else { @() }; screenshotStateArtifact = if ($Issue655) { 'diagnostics/issue-655-screenshot-states.json' } else { '' }; screenshotStates = if ($Issue655) { $issue642PacketDiagnostics.screenshotStates } else { @{} }; browserStateCount = if ($Issue655) { $issue642PacketDiagnostics.browserStates } else { 0 }; geometryDiagnosticsArtifact = if ($Issue655) { $issue642PacketDiagnostics.geometryArtifact } else { '' }; focusLiveRegionDiagnosticsArtifact = if ($Issue655) { $issue642PacketDiagnostics.focusLiveArtifact } else { '' }; interactionIndexArtifact = if ($Issue655) { $issue642PacketDiagnostics.interactionIndexArtifact } else { '' }; consoleNetworkSummaryArtifact = if ($Issue655) { 'diagnostics/issue-655-console-network-summary.json' } else { '' }; consoleNetwork = if ($Issue655) { $issue642PacketDiagnostics.consoleNetwork } else { @{} }; evidenceLimitations = 'Local fixture evidence only; it does not establish deployed-host acceptance.'; visualAcceptance = 'PENDING_INDEPENDENT_VISUAL_REVIEW'; ownerAcceptance = 'PENDING_OWNER_DECISION'; printArtifact = @($routeResults | Where-Object { $_.printPath } | ForEach-Object { $_.printPath }) }
         acceptance             = [ordered]@{
             schemaVersion = "recordstracker.hosted-ui-acceptance.v1"
             governanceIssue = "#648"
@@ -4959,7 +5018,7 @@ scripts/validate_hosted_ui_acceptance.py.
             mode = 'local-fixture'
             generatedAt = (Get-Date).ToUniversalTime().ToString('o')
             baseUrl = $normalizedBaseUrl
-            git = [ordered]@{ branch=$gitBranch; head=$gitCommit; baseSha=(& git merge-base HEAD origin/main).Trim(); workingTreeClean=[bool]$workingTreeClean }
+            git = [ordered]@{ branch=$gitBranch; head=$gitCommit; baseSha=$gitBaseSha; baseShaSource=$gitBaseSource; baseShaAttempts=$gitBaseAttempts; baseShaStatus=if ($gitBaseResolution.Available) { 'available' } else { 'unavailable' }; workingTreeClean=[bool]$workingTreeClean }
             routes = @($routeResults)
             routeCount = @($routeResults).Count
             assertions = @($assertions)
