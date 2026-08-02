@@ -2972,17 +2972,16 @@ def _facility_intelligence_navigation_control(
 def _facility_intelligence_order_description(sort_value: str) -> str:
     descriptions = {
         "priority": (
-            "Ordered by substantiated complaints, complaint count, delay, and recent activity; "
-            "ties use facility name and stable facility identity."
+            "Ordered by substantiated complaints, complaint count, delay, and recent activity."
         ),
         "complaint_count": (
-            "Ordered by complaint count; ties use facility name and stable facility identity."
+            "Ordered by complaint count."
         ),
         "recent_activity": (
-            "Ordered by recent activity; ties use facility name and stable facility identity."
+            "Ordered by recent activity."
         ),
         "facility_name": (
-            "Ordered by facility name; ties use stable facility identity."
+            "Ordered by facility name."
         ),
     }
     return descriptions.get(sort_value, descriptions["priority"])
@@ -3035,50 +3034,157 @@ def _render_facility_intelligence_result(
         summary.facility_identity,
     )
     result_id = _facility_intelligence_result_id(summary)
-    badges = _render_facility_intelligence_badges(item)
     next_complaint = summary.complaints[0]
     detail_href = _facility_intelligence_detail_href(next_complaint, summary, filters)
-    reviewer_status_control = _render_facility_intelligence_status_control(
-        next_complaint,
-        filters,
-        result_id,
-        facility_name,
-        state_summaries,
-        reviewer_state_available=reviewer_state_available,
-    )
-    source_region = _render_facility_intelligence_source_region(next_complaint)
+    hub_href = _facility_intelligence_hub_href(summary, filters)
     facility_action = (
-        f'<a class="button" href="{_escape(_facility_intelligence_hub_href(summary, filters))}" aria-label="Open Facility Overview for {_escape(facility_name)}">Open Facility Overview</a>'
+        f'<a class="button" href="{_escape(hub_href)}" aria-label="Open Facility Overview for {_escape(facility_name)}">Open Facility Overview</a>'
         if summary.facility_number != "unknown"
         else '<span class="button button-disabled" aria-disabled="true">Open facility unavailable</span>'
     )
-    selection_label = '<p class="facility-row-kicker">Review next</p>' if selected else '<p class="facility-row-kicker">Facility</p>'
+    facility_heading = (
+        f'<a href="{_escape(hub_href)}">{_escape(facility_name)}</a>'
+        if summary.facility_number != "unknown"
+        else _escape(facility_name)
+    )
+    selection_label = '<p class="facility-row-kicker">Review next</p>' if selected else ""
     row_class = "facility-intelligence-row is-selected" if selected else "facility-intelligence-row"
     return f"""            <li id="{result_id}" class="{row_class}">
-              <article aria-labelledby="{result_id}-heading">
-                <div class="facility-row-identity">
+              <article class="facility-intelligence-card" aria-labelledby="{result_id}-heading">
+                <header class="facility-card-header">
                   {selection_label}
-                  <h3 id="{result_id}-heading">{_escape(facility_name)}</h3>
+                  <div class="facility-card-title">
+                    <h3 id="{result_id}-heading">{facility_heading}</h3>
+                    {_copy_icon_button("Copy facility name", facility_name)}
+                  </div>
                   <p><strong>Facility ID</strong> {_copyable_value('Facility ID', public_facility_id)}</p>
                   <p>{_glossary_term(_reviewer_value_text(summary.facility_type), 'The facility type shown in the loaded public record.', f'{result_id}-facility-type')} <span aria-hidden="true">·</span> {_escape(_reviewer_value_text(summary.geography))}</p>
-                </div>
-                <div class="facility-row-reason">
-                  <h4>{summary.complaint_count} contributing complaint{'s' if summary.complaint_count != 1 else ''}</h4>
-                  <p class="ordering-explanation">{_escape(_facility_intelligence_ordering_explanation(summary))}</p>
-                  {badges}
-                  {_render_facility_intelligence_facility_contributors(item, filters, f'{result_id}-contributors')}
-                </div>
-                {source_region}
-                <section class="facility-row-reviewer" aria-labelledby="{result_id}-reviewer-heading">
-                  <h4 id="{result_id}-reviewer-heading">Reviewer state</h4>
-                  {reviewer_status_control}
-                </section>
-                <div class="facility-row-actions" aria-label="Actions for {_escape(facility_name)}">
+                </header>
+                {_render_facility_intelligence_summary(summary, filters, next_complaint, result_id)}
+                {_render_facility_intelligence_topics(summary, filters, result_id)}
+                {_render_facility_intelligence_recommended_complaint(next_complaint, result_id)}
+                <footer class="facility-card-actions" aria-label="Actions for {_escape(facility_name)}">
                   {facility_action}
                   <a class="button button-secondary" href="{_escape(detail_href)}" aria-label="Review complaint for {_escape(facility_name)}">Review complaint</a>
-                </div>
+                </footer>
               </article>
             </li>"""
+
+
+def _render_facility_intelligence_summary(
+    summary: FacilityPrioritySummary,
+    filters: FacilityIntelligenceFilters,
+    recommended: FacilityPriorityComplaint,
+    result_id: str,
+) -> str:
+    count_href = _facility_intelligence_hub_href(
+        summary, filters, inventory_filter="all"
+    )
+    finding_count_by_value: dict[str, int] = {}
+    for complaint in summary.complaints:
+        finding_count_by_value[complaint.finding] = (
+            finding_count_by_value.get(complaint.finding, 0) + 1
+        )
+    finding_counts = [
+        (finding, count)
+        for finding, count in sorted(
+            finding_count_by_value.items(), key=lambda item: item[0].casefold()
+        )
+        if finding.casefold() != recommended.finding.casefold()
+    ]
+    finding_markup = ""
+    if finding_counts:
+        values = ", ".join(
+            f'<a href="{_escape(_facility_intelligence_hub_href(summary, filters, inventory_filter=f"finding:{finding}"))}">{_escape(finding)} ({count})</a>'
+            for finding, count in finding_counts
+        )
+        finding_markup = f"""\n                  <div>
+                    <dt>Other findings</dt>
+                    <dd>{values}</dd>
+                  </div>"""
+    latest = _reviewer_value_text(summary.recent_activity_date, kind="date")
+    return f"""                <section class="facility-card-summary" aria-labelledby="{result_id}-summary-heading">
+                  <h4 id="{result_id}-summary-heading">Complaints</h4>
+                  <dl>
+                    <div>
+                      <dt>Complaints</dt>
+                      <dd><a href="{_escape(count_href)}">{summary.complaint_count}</a></dd>
+                    </div>{finding_markup}
+                    <div>
+                      <dt>Latest relevant activity</dt>
+                      <dd>{_escape(latest)}</dd>
+                    </div>
+                  </dl>
+                </section>"""
+
+
+def _render_facility_intelligence_topics(
+    summary: FacilityPrioritySummary,
+    filters: FacilityIntelligenceFilters,
+    result_id: str,
+) -> str:
+    topics = sorted(
+        {
+            _facility_intelligence_topic_label(topic): topic
+            for complaint in summary.complaints
+            for topic in complaint.serious_topics
+        }.items(),
+        key=lambda item: item[0].casefold(),
+    )
+    if not topics:
+        return ""
+    items = "\n".join(
+        f'<li><a class="review-chip" href="{_escape(_facility_intelligence_hub_href(summary, filters, inventory_filter=f"serious:{source_topic}"))}">{_escape(display_topic)}</a></li>'
+        for display_topic, source_topic in topics
+    )
+    return f"""                <section class="facility-card-topics" aria-labelledby="{result_id}-topics-heading">
+                  <h4 id="{result_id}-topics-heading">Review topics</h4>
+                  <ul>{items}</ul>
+                </section>"""
+
+
+def _facility_intelligence_topic_label(topic: str) -> str:
+    return {
+        "Mistreatment-topic": "Mistreatment",
+        "Care-omission topic": "Care omission",
+        "Supervision topic": "Supervision",
+        "Medication/medical-care topic": "Medication or medical care",
+        "Runaway/AWOL topic": "Runaway or AWOL",
+        "Staff-conduct topic": "Staff misconduct",
+    }.get(topic, topic)
+
+
+def _render_facility_intelligence_recommended_complaint(
+    complaint: FacilityPriorityComplaint,
+    result_id: str,
+) -> str:
+    control = (
+        complaint.complaint_control_number
+        if complaint.complaint_control_number != "unknown"
+        else complaint.stable_complaint_id
+    )
+    source = "Source available" if complaint.source_available else "Source unavailable"
+    return f"""                <section class="facility-card-recommended" aria-labelledby="{result_id}-recommended-heading">
+                  <h4 id="{result_id}-recommended-heading">Recommended complaint</h4>
+                  <dl>
+                    <div><dt>Complaint</dt><dd>{_escape(control)}</dd></div>
+                    <div><dt>Relevant activity</dt><dd>{_escape(_reviewer_value_text(complaint.activity_date, kind='date'))}</dd></div>
+                    <div><dt>Finding</dt><dd>{_facility_intelligence_finding_markup(complaint.finding)}</dd></div>
+                    <div><dt>Source availability</dt><dd>{_review_chip_markup(source)}</dd></div>
+                  </dl>
+                </section>"""
+
+
+def _facility_intelligence_finding_markup(finding: str) -> str:
+    if finding.strip().casefold() in {
+        "active",
+        "pending",
+        "uninvestigated",
+        "not determined",
+        "not yet determined",
+    }:
+        return '<span class="finding-badge finding-badge--unavailable">Finding not provided</span>'
+    return _finding_badge(finding)
 
 
 def _render_facility_intelligence_badges(item: FacilityIntelligenceSummary) -> str:
@@ -3352,14 +3458,18 @@ def _facility_intelligence_request_href(
 def _facility_intelligence_hub_href(
     summary: FacilityPrioritySummary,
     filters: FacilityIntelligenceFilters,
+    *,
+    inventory_filter: str | None = None,
 ) -> str:
     values: list[tuple[str, str]] = [
         ("facility_number", summary.facility_number),
         ("origin", "facility_intelligence"),
     ] + _facility_intelligence_query_values(filters)
+    if inventory_filter:
+        values.append(("inventory_filter", inventory_filter))
     if filters.continuation:
         values.append(("continuation", filters.continuation))
-    return f"{CCLD_FACILITY_REVIEW_HUB_PATH}?{urlencode(values, doseq=True)}#{_facility_intelligence_result_id(summary)}"
+    return f"{CCLD_FACILITY_REVIEW_HUB_PATH}?{urlencode(values, doseq=True)}#facility-complaint-inventory"
 
 
 def _facility_intelligence_result_id(summary: FacilityPrioritySummary) -> str:

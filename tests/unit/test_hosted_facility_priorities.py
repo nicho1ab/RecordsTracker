@@ -474,8 +474,16 @@ def test_facility_intelligence_filters_reconciles_and_preserves_drilldown_contex
     assert content_type == "text/html; charset=utf-8"
     assert "Alpha Center" in html
     assert "Beta Center" not in html
-    assert "1 exact contributing complaint" in html
-    assert html.count("Review complaint") >= 2
+    assert '<article class="facility-intelligence-card"' in html
+    assert (
+        '<h3 id="facility-intelligence-result-ccld-facility-100001-heading">'
+        '<a href="/ccld/facilities/detail?facility_number=100001&amp;origin=facility_intelligence'
+        in html
+    )
+    assert 'aria-label="Copy facility name"' in html
+    assert "<dt>Complaints</dt>" in html
+    assert "1 exact contributing complaint" not in html
+    assert "contributing complaint" not in html
     assert "A-2" not in html
     assert "05/01/2026" in html
     assert "/ccld/facilities/detail?facility_number=100001" in html
@@ -491,15 +499,26 @@ def test_facility_intelligence_filters_reconciles_and_preserves_drilldown_contex
     assert "return_context_origin=facility_intelligence" in html
     assert "Review next" in html
     assert "Review complaint" in html
-    assert "Open source report" in html
-    assert "Copy source report URL" in html
-    assert 'aria-label="Open source report for complaint' in html
+    assert "Open Facility Overview" in html
+    assert "Recommended complaint" in html
+    assert "Source available" in html
+    assert html.count("Source available") == 1
+    assert "Open source report" not in html
+    assert "Copy source report URL" not in html
+    assert 'aria-label="Open source report for complaint' not in html
     assert 'class="copy-icon-button" type="button"' in html
     assert 'class="copy-text-button"' not in html
     assert f'>{_source_url("100001", "1").replace("&", "&amp;")}</a>' not in html
-    assert "120+ day gap" in html
-    assert "Supervision topic" in html
-    assert "Source available" in html
+    assert "120+ day gap" not in html
+    assert ">Supervision<" in html
+    card_html = html.split('<article class="facility-intelligence-card"', 1)[1].split(
+        "</article>", 1
+    )[0]
+    assert "Supervision topic" not in card_html
+    assert "Source record" not in html
+    assert "Reviewer state" not in html
+    assert "Save status" not in html
+    assert "stable facility identity" not in html
     assert "raw_sha256" not in html
     assert "tests/fixtures" not in html
     assert "connector_name" not in html
@@ -691,10 +710,15 @@ def test_facility_intelligence_accessible_structure_and_safe_language() -> None:
     assert 'type="date"' in html
     assert 'name="date_dimension"' in html
     assert '<button class="button" type="submit">Apply filters</button>' in html
-    assert 'aria-label="Finding and review flags"' in html
     assert 'aria-current="page" href="/ccld/facilities/intelligence">Compare Facilities</a>' in html
-    assert "Source record" in html
-    assert "Reviewer state" in html
+    assert 'class="facility-intelligence-card"' in html
+    assert 'class="facility-card-summary"' in html
+    assert 'class="facility-card-recommended"' in html
+    assert 'class="facility-card-actions"' in html
+    assert 'aria-label="Copy facility name"' in html
+    assert "Source record" not in html
+    assert "Reviewer state" not in html
+    assert "Save status" not in html
     assert "Facility ID" in html
     assert 'aria-live="polite"' in html
     assert "Find Facilities That May Need Closer Review" in html
@@ -719,10 +743,10 @@ def test_facility_intelligence_accessible_structure_and_safe_language() -> None:
     assert ".facility-inventory-context" in html
     assert "position: sticky" in html
     assert "position: static !important" in html
-    assert ".facility-pagination, .facility-row-actions" in html
+    assert ".facility-pagination, .facility-card-actions" in html
     assert ".site-header, .civic-header" in html
     assert ".copy-icon-button, .copy-text-control" in html
-    assert ".facility-row-actions" in html
+    assert ".facility-card-actions" in html
     assert "gap: 0.85rem 1.5rem;" in html
     assert "@media (max-width: 900px)" in html
     assert "license number" not in normalized
@@ -808,7 +832,7 @@ def test_facility_intelligence_filter_chips_keep_canonical_no_script_removal_url
     )
 
 
-def test_facility_intelligence_binds_source_and_reviewer_actions_to_next_complaint() -> None:
+def test_facility_intelligence_card_keeps_source_and_reviewer_domains_outside_card() -> None:
     with _priority_connection() as connection:
         _insert_facility_bundle(
             connection,
@@ -849,17 +873,18 @@ def test_facility_intelligence_binds_source_and_reviewer_actions_to_next_complai
     html = body.decode("utf-8")
     assert status == 200
     assert after == before
-    assert "Complaint: <strong>BIND-1</strong>" in html
-    source_url = _source_url("100001", "1").replace("&", "&amp;")
-    assert f'href="{source_url}"' in html
-    assert f'data-copy-value="{source_url}"' in html
-    assert 'aria-label="Open source report for complaint BIND-1"' in html
-    assert 'value="in_review" selected="selected">In review</option>' in html
-    assert 'action="/reviewer/records/status#facility-intelligence-status-feedback"' in html
-    assert "Save status" in html
+    assert "Complaint: <strong>BIND-1</strong>" not in html
+    assert "Recommended complaint" in html
+    assert "BIND-1" in html
+    assert html.count("Source available") == 1
+    assert _source_url("100001", "1").replace("&", "&amp;") not in html
+    assert 'value="in_review" selected="selected">In review</option>' not in html
+    assert 'action="/reviewer/records/status#facility-intelligence-status-feedback"' not in html
+    assert "Save status" not in html
     assert "Review complaint" in html
-    assert html.index("Source record") < html.index("Reviewer state")
-    assert _source_url("100001", "2") not in html
+    assert "Source record" not in html
+    assert "Reviewer state" not in html
+    assert "Contributing complaint records" not in html
 
 
 def test_facility_intelligence_inline_status_uses_audited_write_and_keeps_page_context() -> None:
@@ -922,9 +947,9 @@ def test_facility_intelligence_inline_status_uses_audited_write_and_keeps_page_c
         in html
     )
     assert 'role="status"' in html
-    assert 'value="needs_follow_up" selected="selected">Needs follow-up</option>' in html
+    assert 'value="needs_follow_up" selected="selected">Needs follow-up</option>' not in html
     assert 'name="finding" value="Substantiated"' in html
-    assert 'name="sort" value="complaint_count"' in html
+    assert 'name="sort" value="complaint_count"' not in html
     assert "Status Center" in html
 
 
@@ -996,7 +1021,7 @@ def test_local_compare_facilities_excludes_rt_src_002_records_and_opens_complain
     assert "rt-src-002" not in html
     assert "Issue 641 Code 430 Center" in html
     assert "inx=50" not in html
-    assert "inx=3" in html
+    assert "inx=3" not in html
     assert len(context.facility_intelligence_excluded_source_record_keys) == 3
     assert detail_match is not None
     detail_href = unescape(detail_match.group(1))
@@ -1173,12 +1198,16 @@ def test_facility_intelligence_distinguishes_verified_zero_and_unavailable_value
 
     html = body.decode("utf-8")
     assert status == 200
-    assert "0 substantiated" in html
-    assert "Substantiated count unavailable" in html
-    assert "Latest complaint date unavailable" in html
+    assert "0 substantiated" not in html
+    assert "Substantiated count unavailable" not in html
+    assert "Latest complaint date unavailable" not in html
+    assert "Latest relevant activity" in html
     assert "No substantiated count" not in html
     assert "Copy unavailable" in html
-    assert 'aria-disabled="true">Source unavailable</span>' in html
+    unavailable_card = html.split("Unavailable Values Center", 1)[1].split(
+        "</article>", 1
+    )[0]
+    assert "Source unavailable" in unavailable_card
 
 
 def test_facility_intelligence_uses_public_identity_fallback_for_missing_name() -> None:
@@ -2236,7 +2265,8 @@ def _continuation_with_payload_value(
 
 def _rendered_population_names(html: str) -> list[str]:
     return re.findall(
-        r'<h3 id="facility-intelligence-result-[^"]+-heading">(Page Facility \d{3})</h3>',
+        r'<h3 id="facility-intelligence-result-[^"]+-heading">'
+        r'<a [^>]+>(Page Facility \d{3})</a></h3>',
         html,
     )
 

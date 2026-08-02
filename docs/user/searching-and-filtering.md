@@ -59,13 +59,15 @@ explicitly unavailable.
 The default order reuses the visible facility-priority rules: filtered
 substantiated/equivalent count, filtered complaint count, strongest existing
 timing flag, recent supported activity, facility name, and stable facility
-identity. This is deterministic ordering, not a hidden score. Each dashboard
-row explains the visible factors that placed it in the current order. The first
-row is selected and links to its Facility Overview and deterministic next
-complaint. Its separate source and reviewer-state regions remain bound to that
-same complaint. Applied-filter chips can clear one filter at a time; **Clear
-all** restores the default inventory. Facility Overview preserves the
-useful intelligence origin, date, finding, serious-review, and coverage filters.
+identity. This is deterministic ordering, not a hidden score. Each result is a
+facility card: its selected first card is labelled **Review next**, links to
+Facility Overview, and shows one deterministic recommended complaint with a
+single source-availability fact. The complete contributing complaint inventory,
+source actions, and reviewer-created state remain in Facility Overview and
+Complaint Overview rather than repeating in every comparison card. Applied-filter
+chips can clear one filter at a time; **Clear all** restores the default
+inventory. Facility Overview preserves the useful intelligence origin, date,
+finding, serious-review, and coverage filters.
 
 Choose **Licensing and Visit Activity** to search supported public licensing,
 visit, citation, Plan of Correction, status, and capacity observations. Its
@@ -105,7 +107,7 @@ change resets keyset pagination while Previous and Next preserve canonical state
 The Trends typeahead selection stages the public Facility ID and never submits
 automatically. Controls retain a no-JavaScript fieldset fallback; Escape closes
 an enhanced disclosure and restores focus. Print retains selected scope while
-hiding interactive controls. This interaction work does not shorten result cards,
-remove contributing complaints, reduce page height, or impose a print-page limit;
-those are Issue #643 concerns. Issue #647 location work and dependent #644 remain
-separate.
+hiding interactive controls. Complaint Patterns uses concise facility cards;
+its full contributor inventory remains in Facility Overview. This does not
+change Licensing and Visit Activity, Complaint Activity Over Time, or pagination
+placement. Issue #647 location work and dependent #644 remain separate.
