@@ -13,6 +13,10 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlencode, urlparse
 
+from ccld_complaints.hosted_app.compare_facilities_controls import (
+    CHECKBOX_MULTISELECT_SCRIPT,
+    render_checkbox_multiselect,
+)
 from ccld_complaints.hosted_app.copy_controls import (
     COPY_CONTROL_SCRIPT,
     clipboard_icon_svg,
@@ -130,6 +134,8 @@ _FACILITY_COMBOBOX_JS = r"""(function(){
   var sb=document.getElementById('facility-submit-btn');
   var sl=document.getElementById('facility-suggestion-list');
   var sc=document.getElementById('facility-selected-card');
+  var trendSelection=document.getElementById('facility-trend-selection');
+  var licensingSelection=document.getElementById('facility-licensing-selection');
   var de=document.getElementById('facility-reference-json');
   var suggestUrl=wrap.getAttribute('data-facility-suggest-url')||'';
   if(!si||!sl||!de)return;
@@ -312,6 +318,15 @@ _FACILITY_COMBOBOX_JS = r"""(function(){
       si.value=f.num;
       if(of_)of_.value='facility_lookup';
       if(lf)lf.value=f.n;
+    }else if(mode==='trend'||mode==='licensing'){
+      // Each comparison view uses the governed suggestions. Choosing a facility
+      // only stages its public Facility ID for the form's ordinary Apply action.
+      si.value=f.num;
+      if(trendSelection){trendSelection.textContent='Selected facility: '+f.n+' (Facility ID '+f.num+')';trendSelection.hidden=false;}
+      if(licensingSelection){licensingSelection.textContent='Selected facility: '+f.n+' (Facility ID '+f.num+')';licensingSelection.hidden=false;}
+      updateSubmitState();
+      si.focus();
+      return;
     }else{
       // A selected suggestion is a submitted facility search, not a second
       // manual-entry mode. The response owns the results focus target.
@@ -328,6 +343,8 @@ _FACILITY_COMBOBOX_JS = r"""(function(){
       if(lf)lf.value='';
       if(sc)sc.setAttribute('hidden','');
     }
+    if(mode==='trend'&&trendSelection){trendSelection.hidden=true;trendSelection.textContent='';}
+    if(mode==='licensing'&&licensingSelection){licensingSelection.hidden=true;licensingSelection.textContent='';}
     updateSubmitState();
     showSugs(this.value);
   });
@@ -1043,7 +1060,11 @@ def _render_facility_overview(
     {_render_copy_control_script()}
     """
     return f"""    {identity}
-    {_render_facility_overview_summary(record, review_context)}
+    {_render_facility_overview_summary(
+        record,
+        review_context,
+        directory_available=directory_available,
+    )}
     {_render_facility_overview_review_next(record, review_context)}
     {_render_facility_complaint_inventory(record, review_context)}
     {_render_facility_overview_signals(signals_summary)}
@@ -1085,25 +1106,20 @@ def render_ccld_facility_review_priority_page(
             search_query,
         )
         returned_summaries = summaries[:MAX_FACILITY_PRIORITY_RESULTS]
-        rows = "\n".join(_render_priority_row(summary) for summary in returned_summaries)
-        if not rows:
-                rows = _render_priority_empty_rows(cue_filters)
-        cards = _render_priority_cards(signal_result, cue_filters, search_query)
-        return _page(
-                title="Compare Facilities",
-                heading="Find Facilities That May Need Closer Review",
-                active_path=CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH,
-                main=f"""    <section class="hero-card attorney-hero" aria-labelledby="facility-priority-heading">
-            <div>
-                <p class="launch-kicker">Compare Facilities</p>
-                <h2 id="facility-priority-heading">Licensing and Visit Activity</h2>
-                <p>Available public visit, citation, Plan of Correction, status, and capacity information. This view does not show complaint coverage.</p>
-            </div>
-        </section>
-        {render_compare_facilities_views('licensing-visit-activity')}
-        {_render_priority_filter(cue_filters, search_query)}
-        {_render_priority_summary(signal_result, summaries, returned_summaries)}
-        {cards}
+        source_available = signal_result.loaded_source_count > 0
+        if not source_available:
+                result_state = "source-unavailable"
+                results = _render_priority_source_unavailable()
+        elif not summaries:
+                result_state = "filtered-empty"
+                results = _render_priority_filtered_empty(cue_filters, search_query)
+        else:
+                result_state = "populated"
+                rows = "\n".join(
+                    _render_priority_row(summary) for summary in returned_summaries
+                )
+                results = f"""{_render_priority_summary(signal_result, summaries, returned_summaries)}
+        {_render_priority_cards(signal_result, cue_filters, search_query)}
         <section aria-labelledby="facility-priority-list-heading">
             <h2 id="facility-priority-list-heading">Licensing and visit activity by facility</h2>
             <table>
@@ -1120,7 +1136,22 @@ def render_ccld_facility_review_priority_page(
 {rows}
                 </tbody>
             </table>
+        </section>"""
+        return _page(
+                title="Compare Facilities",
+                heading="Find Facilities That May Need Closer Review",
+                active_path=CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH,
+                main=f"""    <p class="intelligence-purpose">Compare complaint findings, activity, patterns, licensing and visit activity, and available public records to decide where to review first.</p>
+        {render_compare_facilities_views('licensing-visit-activity')}
+        <section aria-labelledby="facility-priority-heading">
+            <h2 id="facility-priority-heading">Licensing and Visit Activity</h2>
+            <p>Available public visit, citation, Plan of Correction, status, and capacity information. This view does not show complaint coverage.</p>
         </section>
+        {_render_priority_filter(cue_filters, search_query)}
+        {_render_priority_applied_filters(cue_filters, search_query)}
+        <div data-result-state="{result_state}">
+        {results}
+        </div>
         {_render_priority_guidance_disclosure()}""",
         )
 
@@ -1461,6 +1492,51 @@ def _render_facility_combobox_section(
             <script type="application/json" id="facility-reference-json">{json_data}</script>
             <script>{_FACILITY_COMBOBOX_JS}</script>
     </section>"""
+
+
+def render_staged_trend_facility_combobox(
+    facility: str,
+    *,
+    facility_name: str | None = None,
+) -> str:
+    """Reuse the governed facility combobox mechanics without auto-submitting."""
+    selection_markup = (
+        f'<p id="facility-trend-selection" class="helper-text">Selected facility: '
+        f"{_escape(facility_name)} (Facility ID {_escape(facility)})</p>"
+        if facility_name
+        else '<p id="facility-trend-selection" class="helper-text" hidden></p>'
+    )
+    return f"""<div id="facility-selector-wrap" class="facility-trend-combobox" data-facility-mode="trend" data-facility-suggest-url="{CCLD_FACILITY_SUGGESTIONS_PATH}">
+              <label for="facility-search-input">Facility name or ID</label>
+              <p id="facility-search-hint" class="helper-text">Choose a suggestion to stage its public Facility ID, then apply all filters.</p>
+              <div class="facility-combobox-outer" id="facility-combobox-outer">
+                <input id="facility-search-input" name="facility" type="search" autocomplete="off" value="{_escape(facility)}" aria-describedby="facility-search-hint">
+                <ul id="facility-suggestion-list" class="facility-suggestions" aria-label="Facility suggestions" hidden></ul>
+              </div>
+              {selection_markup}
+              <script type="application/json" id="facility-reference-json">[]</script>
+              <script>{_FACILITY_COMBOBOX_JS}</script>
+            </div>"""
+
+
+def render_staged_licensing_facility_combobox(search_query: str) -> str:
+    """Stage a governed directory Facility ID before applying Licensing filters."""
+    selection_markup = (
+        f'<p id="facility-licensing-selection" class="helper-text">Selected Facility ID: {_escape(search_query)}</p>'
+        if search_query
+        else '<p id="facility-licensing-selection" class="helper-text" hidden></p>'
+    )
+    return f"""<div id="facility-selector-wrap" class="facility-trend-combobox" data-facility-mode="licensing" data-facility-suggest-url="{CCLD_FACILITY_SUGGESTIONS_PATH}">
+              <label for="facility-search-input">Facility name or ID</label>
+              <p id="facility-search-hint" class="helper-text">Choose a governed directory suggestion to stage its public Facility ID, then apply all filters.</p>
+              <div class="facility-combobox-outer" id="facility-combobox-outer">
+                <input id="facility-search-input" name="q" type="search" autocomplete="off" value="{_escape(search_query)}" aria-describedby="facility-search-hint">
+                <ul id="facility-suggestion-list" class="facility-suggestions" aria-label="Facility suggestions" hidden></ul>
+              </div>
+              {selection_markup}
+              <script type="application/json" id="facility-reference-json">[]</script>
+              <script>{_FACILITY_COMBOBOX_JS}</script>
+            </div>"""
 
 
 def _render_facility_combobox_section_unavailable(
@@ -2115,12 +2191,18 @@ def _render_facility_overview_empty_state(
         and review_context.source_label != "Loaded source-derived complaint records"
     ):
         message = f"{message} {_escape(review_context.source_label)}"
+    compare_return = (
+        f'<a class="button button-secondary" href="{_escape(_compare_facilities_return_href(review_context))}">Return to Compare Facilities</a>'
+        if review_context.origin == "facility_intelligence"
+        else ""
+    )
     return f"""    <section class="empty-state-card facility-overview-empty" aria-labelledby="facility-overview-empty-heading">
       <p class="stage-kicker">Complaint corpus</p>
       <h2 id="facility-overview-empty-heading">Records needed for review</h2>
       <p>{message}</p>
       <div class="action-group" aria-label="Facility complaint record actions">
         <a class="button" href="{_escape(action_href)}">{_escape(action_label)}</a>
+        {compare_return}
         <a class="button button-secondary" href="{_escape(lookup_href)}">Back to Find a Facility</a>
       </div>
     </section>"""
@@ -2129,6 +2211,8 @@ def _render_facility_overview_empty_state(
 def _render_facility_overview_summary(
     record: CcldFacilityLookupRecord,
     review_context: CcldFacilityReviewContext,
+    *,
+    directory_available: bool = True,
 ) -> str:
     coverage_label = {
         "complete": "Complete for the loaded corpus",
@@ -2151,6 +2235,11 @@ def _render_facility_overview_summary(
             '<ul class="compact-list facility-overview-context" '
             f'aria-label="Current review context">{context_items}</ul>'
         )
+    compare_return = (
+        _render_facility_origin_context(review_context)
+        if not directory_available and review_context.origin == "facility_intelligence"
+        else ""
+    )
     all_href = _facility_overview_href(record.facility_number, review_context)
     source_href = _facility_overview_href(
         record.facility_number,
@@ -2211,6 +2300,7 @@ def _render_facility_overview_summary(
       <h2 id="facility-pattern-summary-heading">Review summary</h2>
       <p>Counts reconcile to the one complaint inventory below. Source-derived facts and reviewer-created state remain separate.</p>
       {current_context}
+      {compare_return}
       <div class="dense-fact-row" aria-label="Facility complaint summary">
         <div class="stat-card"><strong><a href="{_escape(all_href)}">{review_context.loaded_complaint_record_count}</a></strong><span>Deduplicated complaints</span></div>
         <div class="stat-card"><strong>{source_available}</strong><span>Original reports available</span></div>
@@ -2705,18 +2795,39 @@ def _render_governed_facility_review_summary(
 def _render_facility_origin_context(
     review_context: CcldFacilityReviewContext,
 ) -> str:
+    compare_return = (
+        f'<p><a class="button button-secondary" href="{_escape(_compare_facilities_return_href(review_context))}">Return to Compare Facilities</a></p>'
+        if review_context.origin == "facility_intelligence"
+        else ""
+    )
     if not review_context.active_filters:
-        return ""
+        return compare_return
     items = "\n".join(
         f"          <dt>{_escape(label)}</dt><dd>{_escape(value)}</dd>"
         for label, value in review_context.active_filters
     )
-    return f"""      <details class="technical-details" open>
+    return f"""      {compare_return}<details class="technical-details" open>
         <summary>Current review context</summary>
         <dl class="summary-list">
 {items}
         </dl>
       </details>"""
+
+
+def _compare_facilities_return_href(review_context: CcldFacilityReviewContext) -> str:
+    query = urlencode(
+        tuple(
+            (key, value)
+            for key, value in review_context.route_query_values
+            if key != "origin"
+        ),
+        doseq=True,
+    )
+    return (
+        f"{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}?{query}#facility-intelligence-results"
+        if query
+        else f"{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}#facility-intelligence-results"
+    )
 
 
 def _render_facility_activity_timeline(
@@ -3179,38 +3290,93 @@ def _reverse_date_key(value: str) -> int:
 
 def _render_priority_filter(active_cues: tuple[str, ...], search_query: str) -> str:
     active_set = set(active_cues or ("all",))
-    cue_controls = "\n".join(
-        f"""          <label class="filter-chip">
-            <input type="checkbox" name="cue" value="{_escape(value)}"{_checked_attr(value in active_set)}>
-            <span>{_escape(_priority_filter_label(value))}</span>
-          </label>"""
-        for value in ("all",) + _PRIORITY_CUE_ORDER
+    cue_controls = render_checkbox_multiselect(
+        control_id="priority-cue",
+        name="cue",
+        label="Supported observations",
+        options=tuple((value, _priority_filter_label(value)) for value in _PRIORITY_CUE_ORDER),
+        selected=tuple(value for value in active_set if value != "all"),
+        all_label="All supported observations",
     )
     clear_link = (
         f'<a class="button button-quiet" href="{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}?view=licensing-visit-activity">Clear Filters</a>'
-        if active_set != {"all"}
+        if active_set != {"all"} or search_query
         else ""
     )
     return f"""    <section class="workflow-panel compact-filter-panel" aria-labelledby="facility-priority-filter-heading">
       <h2 id="facility-priority-filter-heading">Filter</h2>
       <form action="{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}" method="get" class="compact-filter-form">
         <input type="hidden" name="view" value="licensing-visit-activity">
-        <fieldset>
-          <legend>Supported observations</legend>
-          <div class="filter-chip-group">
-{cue_controls}
-          </div>
-        </fieldset>
-        <p>
-          <label for="priority-search">Search</label>
-          <input id="priority-search" name="q" type="search" value="{_escape(search_query)}" placeholder="Facility name or license">
-        </p>
+        {cue_controls}
+        {render_staged_licensing_facility_combobox(search_query)}
         <div class="form-actions">
           <button type="submit" class="button button-secondary">Apply filters</button>
           {clear_link}
         </div>
       </form>
+      {CHECKBOX_MULTISELECT_SCRIPT}
     </section>"""
+
+
+def _render_priority_applied_filters(
+    active_cues: tuple[str, ...],
+    search_query: str,
+) -> str:
+    active = tuple(cue for cue in active_cues if cue != "all")
+    chips: list[str] = []
+    for cue in active:
+        remaining = [("view", "licensing-visit-activity")]
+        remaining.extend(("cue", item) for item in active if item != cue)
+        if search_query:
+            remaining.append(("q", search_query))
+        chips.append(
+            f'<li><a class="applied-filter-chip" href="{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}?{_escape(urlencode(remaining))}" aria-label="Remove supported observation filter {_escape(_priority_filter_label(cue))}">{_escape(_priority_filter_label(cue))} <span aria-hidden="true">×</span></a></li>'
+        )
+    if search_query:
+        remaining = [("view", "licensing-visit-activity")]
+        remaining.extend(("cue", item) for item in active)
+        chips.append(
+            f'<li><a class="applied-filter-chip" href="{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}?{_escape(urlencode(remaining))}" aria-label="Remove facility filter">Facility: {_escape(search_query)} <span aria-hidden="true">×</span></a></li>'
+        )
+    content = (
+        f'<ul>{"".join(chips)}</ul>'
+        if chips
+        else '<p class="applied-filter-empty">No additional filters applied.</p>'
+    )
+    return f"""        <section class="applied-filters" aria-labelledby="licensing-applied-filters-heading">
+          <h2 id="licensing-applied-filters-heading">Applied filters</h2>
+          {content}
+        </section>"""
+
+
+def _render_priority_source_unavailable() -> str:
+    return f"""        <section class="empty-state-card" aria-labelledby="licensing-source-unavailable-heading">
+          <h2 id="licensing-source-unavailable-heading">Licensing and visit source unavailable</h2>
+          <p>No verified licensing or visit counts are shown.</p>
+          <p>No licensing or visit activity is available to display while this source is unavailable.</p>
+          <p>The supported public licensing and visit information source could not be loaded. Complaint Patterns remains a separate loaded-record view.</p>
+          <p><a href="{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}?view=licensing-visit-activity">Clear Filters</a></p>
+        </section>"""
+
+
+def _render_priority_filtered_empty(
+    cue_filters: tuple[str, ...],
+    search_query: str,
+) -> str:
+    selected_text = (
+        f" for Facility ID or name {_escape(search_query)}"
+        if search_query
+        else ""
+    )
+    cue_text = " and the selected supported observations" if any(
+        cue != "all" for cue in cue_filters
+    ) else ""
+    return f"""        <section class="empty-state-card" aria-labelledby="licensing-filtered-empty-heading">
+          <h2 id="licensing-filtered-empty-heading">No loaded licensing or visit observations match the selected filters.</h2>
+          <p>The licensing and visit source is available.</p>
+          <p>It has no matching observation row{selected_text}{cue_text}.</p>
+          <p>This does not mean the selected facility has no complaints or other public-source records.</p>
+        </section>"""
 
 
 def _render_priority_guidance_disclosure() -> str:

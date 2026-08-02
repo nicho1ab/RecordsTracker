@@ -269,8 +269,12 @@ def test_rt_rc_003_representative_routes_use_one_shared_accessible_help_contract
         detail_terms = _glossary_terms(detail_html)
 
         assert intelligence_status == detail_status == 200
-        assert any(
-            term.get("data-term-id") == "intelligence-substantiated"
+        # Issue #642 removes the standalone, orphaned finding glossary line
+        # from Compare Facilities. The shared help contract remains exercised
+        # by the rendered detail terms below rather than requiring that
+        # superseded presentation artifact.
+        assert all(
+            term.get("data-term-id") != "intelligence-substantiated"
             for term in intelligence_terms
         )
         assert "CCLD finding term" not in intelligence_html

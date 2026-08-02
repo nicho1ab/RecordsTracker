@@ -520,7 +520,6 @@ def test_shared_shell_uses_approved_civic_ledger_foundation() -> None:
     shell_row_html = html[shell_row_start:shell_row_end]
     shell_regions = (
         'class="civic-brand"',
-        'class="civic-menu-label"',
         'class="civic-nav"',
     )
     previous_region_index = -1
@@ -529,7 +528,7 @@ def test_shared_shell_uses_approved_civic_ledger_foundation() -> None:
         assert region_index > previous_region_index
         previous_region_index = region_index
     assert "grid-template-columns: minmax(16rem, 1fr) auto minmax(32rem, auto)" in html
-    assert "grid-template-columns: repeat(7, minmax(5rem, auto))" in html
+    assert "grid-template-columns: repeat(6, minmax(5rem, auto))" in html
     facts_bar_css = (
         ".top-fact-strip {\n"
         "      background: var(--ds-surface-muted);\n"
@@ -1213,6 +1212,11 @@ def test_complaint_retrieval_demo_script_sets_safe_local_config() -> None:
     assert "CCLD_RETRIEVAL_RAW_DIR = $resolvedRawStorageDir" in script
     assert 'CCLD_RETRIEVAL_DEMO_MODE = "mock-success"' in script
     assert 'CCLD_RETRIEVAL_MAX_DATE_RANGE_DAYS = "30"' in script
+    assert "Issue642LicensingSourceUnavailable" in script
+    assert "ccld_program_facilities_tiny.csv" in script
+    assert "CCLD_FACILITY_REVIEW_SIGNALS_CSVS" in script
+    assert "issue642-source-unavailable.csv" in script
+    assert "unavailable-source launch marker unexpectedly exists" in script
     assert "New-Item -ItemType Directory -Force -Path $resolvedRawStorageDir" in script
     assert "Open: $baseUrl/" in script
     assert "Open: $baseUrl/ccld/records/request" in script

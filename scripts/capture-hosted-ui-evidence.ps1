@@ -54,6 +54,11 @@ Capture the focused RT-SRC-002 local fixture evidence states and presentation sc
 Capture the focused Issue #610 Complaint Overview print-correction evidence.
 .PARAMETER Issue641
 Capture the focused Issue #641 facility identity, raw-type, and complaint-detail evidence.
+.PARAMETER Issue642
+Capture the focused Issue #642 Compare Facilities navigation, filters, return-context,
+responsive, native-zoom, keyboard, and print evidence.
+.PARAMETER Issue642LicensingSourceUnavailable
+Capture only the separate fixture launch where the Licensing source is unavailable.
 .EXAMPLE
 .\scripts\capture-hosted-ui-evidence.ps1 -BaseUrl http://127.0.0.1:8003 -Mode live
 .EXAMPLE
@@ -129,7 +134,11 @@ param(
 
     [switch]$Issue610,
 
-    [switch]$Issue641
+    [switch]$Issue641,
+
+    [switch]$Issue642,
+
+    [switch]$Issue642LicensingSourceUnavailable
 )
 
 $ErrorActionPreference = "Stop"
@@ -139,6 +148,9 @@ $evidencePurpose = if ($Issue610) {
 }
 elseif ($Issue641) {
     "Focused Issue #641 local fixture evidence for raw facility-type presentation, identity parity, complaint terminology, responsive geometry, and print."
+}
+elseif ($Issue642) {
+    "Focused Issue #642 local fixture evidence for Compare Facilities navigation, staged filters, canonical state continuity, return context, responsive behavior, keyboard focus, and print controls."
 }
 elseif ($Issue420) {
     "Focused issue #420 Facility Overview evidence for one canonical complaint inventory, truthful source and reviewer state, state-specific retrieval actions, responsive reflow, keyboard focus, and print."
@@ -905,18 +917,23 @@ function Invoke-Issue641BrowserCapture {
     ['facility-type', 'Facility type', '#facility-intelligence-facility-type'],
     ['geography', 'Geography', '#facility-intelligence-geography'],
     ['complaint-finding', 'Complaint finding', '#facility-intelligence-finding'],
-    ['source-coverage', 'Source coverage', '#facility-intelligence-coverage'],
     ['start-date', 'Start date', '#facility-intelligence-start-date'],
     ['end-date', 'End date', '#facility-intelligence-end-date'],
-    ['date-based-on', 'Date based on', '#facility-intelligence-date-dimension'],
+    ['relevant-date', 'Relevant date', '#facility-intelligence-date-dimension'],
     ['serious-review-category', 'Serious review category', '#facility-intelligence-serious-topic']
   ];
   const controlFields = filterControlDefinitions.map(([id, label, selector]) => {
     const element = document.querySelector(selector);
     if (!element || !visible(element)) throw new Error('Required Issue #641 filter control is unavailable: ' + label);
-    const field = element.closest('p');
+    const field = element.closest('.checkbox-multiselect, .filter-control--native, p');
     if (!field) throw new Error('Required Issue #641 filter control has no layout field: ' + label);
-    return { id, label, selector, element, field, bounds: rect(element), fieldBounds: rect(field) };
+    const visibleLabel = element.classList.contains('checkbox-multiselect__trigger')
+      ? element.querySelector('.checkbox-multiselect__label')
+      : field.querySelector('.filter-control__label');
+    if (!visibleLabel || !visible(visibleLabel) || visibleLabel.textContent.trim() !== label) {
+      throw new Error('Required Issue #642 visible in-control label is unavailable: ' + label);
+    }
+    return { id, label, selector, element, field, visibleLabel, bounds: rect(element), fieldBounds: rect(field) };
   });
   const orderedTops = Array.from(new Set(controlFields.map((entry) => Math.round(entry.fieldBounds.top * 10) / 10))).sort((left, right) => left - right);
   const orderedLefts = Array.from(new Set(controlFields.map((entry) => Math.round(entry.fieldBounds.left * 10) / 10))).sort((left, right) => left - right);
@@ -1022,6 +1039,609 @@ function Invoke-Issue641BrowserCapture {
         Remove-Item -LiteralPath $ScreenshotPath -Force -ErrorAction SilentlyContinue
         try { Invoke-CdpCommand -Session $Session -Method "Emulation.setEmulatedMedia" -Parameters @{ media = "screen" } | Out-Null } catch { }
         return [pscustomobject]@{ Success = $false; Error = $_.Exception.Message; State = $browserState; ScreenshotCreated = $false; PrintCreated = $false }
+    }
+}
+
+function Invoke-CdpNativeKeyPress {
+    param([object]$Session, [string]$Key, [string]$Code, [int]$VirtualKeyCode)
+    $parameters = @{ key = $Key; code = $Code; windowsVirtualKeyCode = $VirtualKeyCode; nativeVirtualKeyCode = $VirtualKeyCode; modifiers = 0 }
+    Invoke-CdpCommand -Session $Session -Method "Input.dispatchKeyEvent" -Parameters ($parameters + @{ type = "rawKeyDown" }) | Out-Null
+    Invoke-CdpCommand -Session $Session -Method "Input.dispatchKeyEvent" -Parameters ($parameters + @{ type = "keyUp" }) | Out-Null
+}
+
+function Invoke-CdpNativeText {
+    param([object]$Session, [string]$Text)
+    foreach ($character in $Text.ToCharArray()) {
+        $virtualKey = [int][char]$character
+        $parameters = @{ key = [string]$character; code = "Digit$character"; windowsVirtualKeyCode = $virtualKey; nativeVirtualKeyCode = $virtualKey; text = [string]$character; unmodifiedText = [string]$character; modifiers = 0 }
+        Invoke-CdpCommand -Session $Session -Method "Input.dispatchKeyEvent" -Parameters ($parameters + @{ type = "rawKeyDown" }) | Out-Null
+        Invoke-CdpCommand -Session $Session -Method "Input.dispatchKeyEvent" -Parameters ($parameters + @{ type = "char" }) | Out-Null
+        Invoke-CdpCommand -Session $Session -Method "Input.dispatchKeyEvent" -Parameters ($parameters + @{ type = "keyUp" }) | Out-Null
+    }
+}
+
+function Invoke-CdpClickSelector {
+    param([object]$Session, [string]$Selector)
+    $selectorJson = $Selector | ConvertTo-Json -Compress
+    $point = Invoke-CdpEvaluate -Session $Session -AwaitPromise $true -Expression "(async function(){ const element=document.querySelector($selectorJson); if(!element) throw new Error('Required operated control is missing: '+$selectorJson); element.scrollIntoView({block:'center',inline:'nearest',behavior:'instant'}); await new Promise((resolve)=>requestAnimationFrame(()=>requestAnimationFrame(resolve))); const rect=element.getBoundingClientRect(); if(rect.width<1||rect.height<1) throw new Error('Required operated control is not visible: '+$selectorJson); const x=rect.left+(rect.width/2); const y=rect.top+(rect.height/2); const hit=document.elementFromPoint(x,y); const associatedLabel=element.id ? document.querySelector('label[for='+JSON.stringify(element.id)+']') : null; const legitimate=hit===element || element.contains(hit) || (associatedLabel && (hit===associatedLabel || associatedLabel.contains(hit))); if(!legitimate) throw new Error('Required operated control failed hit testing: '+$selectorJson+'; hit='+(hit ? hit.tagName+'#'+(hit.id||'')+'.'+(hit.className||'') : 'none')); const viewport=window.visualViewport; return {selector:$selectorJson,rect:{left:rect.left,top:rect.top,right:rect.right,bottom:rect.bottom,width:rect.width,height:rect.height},cssPoint:{x:x,y:y},hitTest:{tagName:hit.tagName,id:hit.id||'',className:hit.className||'',text:(hit.innerText||hit.textContent||'').trim().slice(0,160)},coordinateFormula:'CDP Input.dispatchMouseEvent uses the target getBoundingClientRect center in viewport CSS pixels; no visual-viewport scale, device scale, screenshot-pixel, or browser-window conversion is applied.',devicePixelRatio:window.devicePixelRatio,visualViewport:{scale:viewport&&viewport.scale?viewport.scale:1,offsetLeft:viewport&&viewport.offsetLeft?viewport.offsetLeft:0,offsetTop:viewport&&viewport.offsetTop?viewport.offsetTop:0,width:viewport&&viewport.width?viewport.width:window.innerWidth,height:viewport&&viewport.height?viewport.height:window.innerHeight},layoutViewport:{width:window.innerWidth,height:window.innerHeight},scroll:{x:window.scrollX,y:window.scrollY}}; })()"
+    $dispatchX = [double]$point.cssPoint.x
+    $dispatchY = [double]$point.cssPoint.y
+    $Session | Add-Member -NotePropertyName LastPointerDiagnostic -NotePropertyValue $point -Force
+    Invoke-CdpCommand -Session $Session -Method "Input.dispatchMouseEvent" -Parameters @{ type = "mouseMoved"; x = $dispatchX; y = $dispatchY; pointerType = "mouse" } | Out-Null
+    Invoke-CdpCommand -Session $Session -Method "Input.dispatchMouseEvent" -Parameters @{ type = "mousePressed"; x = $dispatchX; y = $dispatchY; button = "left"; clickCount = 1; pointerType = "mouse" } | Out-Null
+    Invoke-CdpCommand -Session $Session -Method "Input.dispatchMouseEvent" -Parameters @{ type = "mouseReleased"; x = $dispatchX; y = $dispatchY; button = "left"; clickCount = 1; pointerType = "mouse" } | Out-Null
+}
+
+function Invoke-CdpFocusByTabTraversal {
+    param([object]$Session, [string]$Selector)
+    $selectorJson = $Selector | ConvertTo-Json -Compress
+    $focusableCount = [int](Invoke-CdpEvaluate -Session $Session -Expression "(function(){return Array.from(document.querySelectorAll('a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]')).filter((element)=>{const style=getComputedStyle(element);const rect=element.getBoundingClientRect();return element.tabIndex>=0&&style.display!=='none'&&style.visibility!=='hidden'&&rect.width>0&&rect.height>0;}).length;})()")
+    if ($focusableCount -lt 1) { throw "Issue #642 native-200% focus traversal found no rendered focusable controls." }
+    $trace = [System.Collections.ArrayList]::new()
+    foreach ($step in 1..($focusableCount + 1)) {
+        Invoke-CdpKeyPress -Session $Session -Key "Tab" -Code "Tab" -VirtualKeyCode 9
+        $state = Invoke-CdpEvaluate -Session $Session -Expression "(function(){const active=document.activeElement;const rect=active&&active.getBoundingClientRect();const style=active&&getComputedStyle(active);return {tag:active?active.tagName:'',id:active?active.id||'':'',role:active?active.getAttribute('role')||'':'',name:active?(active.getAttribute('aria-label')||active.innerText||active.value||'').trim().slice(0,160):'',tabindex:active?active.tabIndex:null,visible:!!(rect&&style&&style.display!=='none'&&style.visibility!=='hidden'&&rect.width>0&&rect.height>0),rect:rect?{left:rect.left,top:rect.top,width:rect.width,height:rect.height}:null,target:active===document.querySelector($selectorJson)};})()"
+        [void]$trace.Add($state)
+        if ([bool]$state.target) { $Session | Add-Member -NotePropertyName LastFocusTraversal -NotePropertyValue @($trace) -Force; return }
+    }
+    $Session | Add-Member -NotePropertyName LastFocusTraversal -NotePropertyValue @($trace) -Force
+    throw "Issue #642 native-200% focus traversal did not reach the required rendered target."
+}
+
+function Invoke-CdpReplaceFocusedText {
+    param([object]$Session, [string]$Text)
+    if (-not [bool](Invoke-CdpEvaluate -Session $Session -Expression "document.activeElement && document.activeElement.id === 'facility-search-input'")) {
+        throw "Issue #642 typeahead input did not receive focus before text entry."
+    }
+    Invoke-CdpCommand -Session $Session -Method "Input.dispatchKeyEvent" -Parameters @{ type = "rawKeyDown"; key = "a"; code = "KeyA"; windowsVirtualKeyCode = 65; nativeVirtualKeyCode = 65; modifiers = 2 } | Out-Null
+    Invoke-CdpCommand -Session $Session -Method "Input.dispatchKeyEvent" -Parameters @{ type = "keyUp"; key = "a"; code = "KeyA"; windowsVirtualKeyCode = 65; nativeVirtualKeyCode = 65; modifiers = 2 } | Out-Null
+    Invoke-CdpKeyPress -Session $Session -Key "Backspace" -Code "Backspace" -VirtualKeyCode 8
+    $scale = [double](Invoke-CdpEvaluate -Session $Session -Expression "(window.visualViewport&&window.visualViewport.scale)||1")
+    if ($scale -gt 1.01) {
+        Invoke-CdpNativeText -Session $Session -Text $Text
+    } else {
+        Invoke-CdpCommand -Session $Session -Method "Input.insertText" -Parameters @{ text = $Text } | Out-Null
+    }
+}
+
+function Invoke-CdpClickLinkText {
+    param([object]$Session, [string]$Text)
+    $textJson = $Text | ConvertTo-Json -Compress
+    Invoke-CdpEvaluate -Session $Session -Expression "(function(){ const link=Array.from(document.querySelectorAll('a')).find((entry)=>entry.textContent.trim()===$textJson); if(!link) throw new Error('Required operated link text is missing: '+$textJson); link.id='issue642-operated-link-target'; return true; })()" | Out-Null
+    Invoke-CdpClickSelector -Session $Session -Selector "#issue642-operated-link-target"
+}
+
+function Invoke-CdpBrowserBack {
+    param([object]$Session)
+    $history = Invoke-CdpCommand -Session $Session -Method "Page.getNavigationHistory"
+    $index = [int]$history.result.currentIndex
+    if ($index -le 0) { throw "Issue #642 Browser Back has no prior history entry." }
+    Invoke-CdpCommand -Session $Session -Method "Page.navigateToHistoryEntry" -Parameters @{ entryId = [int]$history.result.entries[$index - 1].id } | Out-Null
+}
+
+function Get-Issue642OperatedState {
+    param([object]$Session, [string]$StateId, [string[]]$Actions, [string]$StartingUrl, [object]$FocusBefore = $null, [string]$ClickedControl = "")
+    $stateIdJson = $StateId | ConvertTo-Json -Compress
+    $actionsJson = @($Actions) | ConvertTo-Json -Compress
+    $startingUrlJson = $StartingUrl | ConvertTo-Json -Compress
+    Invoke-CdpEvaluate -Session $Session -Expression @"
+(function(){
+ const input=document.querySelector('#facility-search-input');
+ const trigger=document.querySelector('.checkbox-multiselect__trigger');
+ const boxes=Array.from(document.querySelectorAll('.checkbox-multiselect input[type="checkbox"]')).map((box)=>({name:box.name,value:box.value,checked:box.checked}));
+ const active=document.activeElement;
+ const query=new URLSearchParams(location.search);
+ const resultIdentities=Array.from(document.querySelectorAll('#facility-intelligence-results li[id^="facility-intelligence-result-"]')).map((entry)=>entry.id);
+ const position=document.querySelector('#facility-intelligence-position')?.textContent.trim()||'';
+ return {
+   state_id:$stateIdJson, interaction_mode:'operated', starting_url:$startingUrlJson, action_sequence:$actionsJson,
+   url_before:$startingUrlJson, url_after:location.href,
+   clicked_control:$($ClickedControl | ConvertTo-Json -Compress), focus_before:$($FocusBefore | ConvertTo-Json -Compress),
+   active_element_after:active ? {id:active.id||'',name:active.getAttribute('name')||'',role:active.getAttribute('role')||''} : null,
+   typeahead: input ? {aria_expanded:input.getAttribute('aria-expanded'),aria_controls:input.getAttribute('aria-controls'),aria_activedescendant:input.getAttribute('aria-activedescendant'),value:input.value,suggestions_hidden:document.querySelector('#facility-suggestion-list')?.hidden} : null,
+   multiselect: trigger ? {aria_expanded:trigger.getAttribute('aria-expanded'),aria_controls:trigger.getAttribute('aria-controls'),summary:document.querySelector('.checkbox-multiselect__summary')?.textContent.trim()||'',checked:boxes} : null,
+   chip_removal:{buttons:Array.from(document.querySelectorAll('[data-filter-chip-remove]')).map((button)=>({label:button.getAttribute('aria-label'),href:button.dataset.filterChipHref})),diagnostics:window.__facilityIntelligenceChipDiagnostics||null},
+   pagination:{visible_range:position,continuation_present:query.has('continuation'),active_repeated_filters:{facility_type:query.getAll('facility_type'),finding:query.getAll('finding')},active_scalar_filters:{sort:query.get('sort')||'priority',view:query.get('view')||'complaint-patterns'},result_identities:resultIdentities},
+   visible_text:document.body.innerText.slice(0,1200), console_classification:'NONE_OBSERVED',network_classification:'FIXTURE_LOCAL_ONLY',result:'PASS',reason:''
+ };
+})()
+"@
+}
+
+function Test-Issue642FunctionalGate {
+    param([object[]]$States)
+    $required = @(
+        "issue642-typeahead-open", "issue642-typeahead-no-match", "issue642-typeahead-selected", "issue642-typeahead-cleared", "issue642-typeahead-escape",
+        "issue642-multiselect-all-open", "issue642-multiselect-two-selected", "issue642-multiselect-applied", "issue642-multiselect-chip-removed", "issue642-multiselect-all-restored", "issue642-multiselect-escape", "issue642-chip-date-error-recovered", "issue642-chip-keyboard-removal", "issue642-chip-browser-back",
+        "issue642-pagination-next", "issue642-pagination-page-2", "issue642-pagination-previous", "issue642-pagination-preserved",
+        "issue642-pagination-filter-change", "issue642-pagination-continuation-removed", "issue642-pagination-first-page-reset", "issue642-pagination-filter-reset",
+        "issue642-facility-overview-outbound", "issue642-facility-overview-return", "issue642-facility-overview-browser-back",
+        "issue642-complaint-detail-outbound", "issue642-complaint-detail-return", "issue642-complaint-detail-browser-back"
+    )
+    $byId = @{}
+    foreach ($state in @($States)) { $byId[[string]$state.state_id] = $state }
+    $missing = @($required | Where-Object { -not $byId.ContainsKey($_) })
+    $invalid = @($required | Where-Object {
+        $state = $byId[$_]
+        $null -eq $state -or [string]$state.interaction_mode -ne "operated" -or [string]$state.result -ne "PASS" -or
+        [string]::IsNullOrWhiteSpace([string]$state.url_before) -or [string]::IsNullOrWhiteSpace([string]$state.url_after) -or
+        $null -eq $state.focus_before -or $null -eq $state.active_element_after -or [string]::IsNullOrWhiteSpace([string]$state.screenshot_path) -or
+        [string]::IsNullOrWhiteSpace([string]$state.console_classification) -or [string]::IsNullOrWhiteSpace([string]$state.network_classification)
+    })
+    if ($missing.Count -gt 0 -or $invalid.Count -gt 0) {
+        throw "Issue #642 FUNCTIONAL gate failed: missing states [$($missing -join ', ')]; invalid states [$($invalid -join ', ')]."
+    }
+    return [pscustomobject]@{ status = "PASS"; required_states = $required; observed_states = @($States | ForEach-Object { $_.state_id }) }
+}
+
+function Save-Issue642OperatedScreenshot {
+    param([object]$Session, [string]$Path)
+    $metrics = Invoke-CdpCommand -Session $Session -Method "Page.getLayoutMetrics"
+    $size = $metrics.result.cssContentSize
+    $screenshot = Invoke-CdpCommand -Session $Session -Method "Page.captureScreenshot" -Parameters @{ format = "png"; fromSurface = $true; captureBeyondViewport = $true; clip = @{ x = 0; y = 0; width = [Math]::Ceiling([double]$size.width); height = [Math]::Ceiling([double]$size.height); scale = 1 } }
+    [System.IO.File]::WriteAllBytes($Path, [Convert]::FromBase64String([string]$screenshot.result.data))
+    return $Path
+}
+
+function Assert-Issue642MultiSelectVisualReadiness {
+    param([object]$Session, [string]$Description, [switch]$RequireLongLabel)
+    $requireLong = if ($RequireLongLabel) { 'true' } else { 'false' }
+    $result = Invoke-CdpEvaluate -Session $Session -Expression @"
+(function(){
+ const trigger=document.querySelector('.checkbox-multiselect__trigger');
+ const panel=trigger&&document.getElementById(trigger.getAttribute('aria-controls'));
+ const visible=(element)=>{const style=getComputedStyle(element);const rect=element.getBoundingClientRect();return !element.hidden&&style.display!=='none'&&style.visibility!=='hidden'&&rect.width>0&&rect.height>0;};
+ if(!trigger||!panel||trigger.getAttribute('aria-expanded')!=='true'||!visible(panel)) return {ok:false,reason:'expanded controlled panel is unavailable'};
+ const rect=(element)=>{const value=element.getBoundingClientRect();return {left:value.left,top:value.top,right:value.right,bottom:value.bottom,width:value.width,height:value.height};};
+ const triggerRect=rect(trigger),triggerStyle=getComputedStyle(trigger),cue=trigger.querySelector('.checkbox-multiselect__cue'),cueRect=cue?rect(cue):null,cueStyle=cue?getComputedStyle(cue):null;
+ const colorParts=(value)=>(String(value).match(/[\d.]+/g)||[]).slice(0,3).map(Number),luminance=(rgb)=>{const values=rgb.map((value)=>{const channel=value/255;return channel<=0.03928?channel/12.92:Math.pow((channel+0.055)/1.055,2.4);});return 0.2126*values[0]+0.7152*values[1]+0.0722*values[2];},contrast=(foreground,background)=>{const first=luminance(colorParts(foreground)),second=luminance(colorParts(background));return (Math.max(first,second)+0.05)/(Math.min(first,second)+0.05);};
+ const panelRect=rect(panel), panelStyle=getComputedStyle(panel), opaque=!/^rgba\\([^)]*,\\s*0(?:\\.0+)?\\)$/.test(panelStyle.backgroundColor);
+ const rows=Array.from(panel.querySelectorAll('label.checkbox-multiselect__option')).filter(visible).map((row)=>{const box=row.querySelector('input[type=checkbox]'),label=row.querySelector('.checkbox-multiselect__option-label');if(!box||!label)return {ok:false,reason:'option row is missing checkbox or label'};const boxRect=rect(box),labelRect=rect(label),rowRect=rect(row),boxStyle=getComputedStyle(box),range=document.createRange();range.selectNodeContents(label);const lines=Array.from(range.getClientRects()).filter((line)=>line.width>0&&line.height>0);const maxLineWidth=lines.reduce((maximum,line)=>Math.max(maximum,line.width),0),gap=labelRect.left-boxRect.right,inside=labelRect.left>=panelRect.left-2&&labelRect.right<=panelRect.right+2,vertical=boxRect.top<labelRect.bottom&&boxRect.bottom>labelRect.top,meaningfulWidth=labelRect.width>=Math.min(64,rowRect.width*0.35),clipped=label.scrollWidth>label.clientWidth+2||labelRect.right>panelRect.right+2,nativeAppearance=boxStyle.appearance||boxStyle.webkitAppearance||'auto';return {ok:boxRect.width>0&&boxRect.height>0&&labelRect.width>0&&labelRect.height>0&&inside&&labelRect.left>boxRect.right&&gap>=0&&gap<=16&&vertical&&meaningfulWidth&&!clipped&&nativeAppearance!=='none'&&label.textContent.trim().length>0,rowRect,boxRect,labelRect,gap,inside,vertical,meaningfulWidth,clipped,native_appearance:nativeAppearance,line_count:lines.length,max_line_width:maxLineWidth,text:label.textContent.trim()};});
+ const longRow=rows.find((row)=>row.text&&row.text.includes('Source code 430'));
+ const longLabelOk=!$requireLong||(!!longRow&&longRow.line_count>=2&&longRow.max_line_width>=48&&longRow.meaningfulWidth&&!longRow.clipped);
+ const overflow=document.documentElement.scrollWidth>document.documentElement.clientWidth+1||document.body.scrollWidth>document.documentElement.clientWidth+1;
+ const cueContrast=cueStyle?contrast(cueStyle.color,triggerStyle.backgroundColor):0,cueInside=!!cueRect&&cueRect.left>=triggerRect.left-1&&cueRect.right<=triggerRect.right+1&&cueRect.top>=triggerRect.top-1&&cueRect.bottom<=triggerRect.bottom+1;
+ const triggerControl={tag:trigger.tagName.toLowerCase(),role:trigger.getAttribute('role')||'',type:trigger.getAttribute('type')||'',bounds:triggerRect,computed:{appearance:triggerStyle.appearance,background:triggerStyle.backgroundColor,border:triggerStyle.border,color:triggerStyle.color,padding:triggerStyle.padding},focus_visible:trigger.matches(':focus-visible'),cue:{bounds:cueRect,color:cueStyle?cueStyle.color:'',cue_contrast:cueContrast,inside_trigger:cueInside}};
+ return {ok:rows.length>0&&rows.every((row)=>row.ok)&&opaque&&longLabelOk&&!overflow&&cueInside&&cueContrast>=3,reason:rows.length?'control cue, option geometry, native checkbox appearance, containment, clipping, panel opacity, long-label wrapping, or page overflow is invalid':'no visible option rows',trigger_control:triggerControl,panel:panelRect,panel_background:panelStyle.backgroundColor,panel_overflow:panelStyle.overflow,rows,long_label_ok:longLabelOk,overflow};
+})()
+"@
+    if (-not [bool]$result.ok) {
+        $diagnostic = $result | ConvertTo-Json -Depth 20 -Compress
+        throw "Issue #642 multi-select visual readiness failed for ${Description}: $($result.reason). Diagnostic: $diagnostic"
+    }
+    return $result
+}
+
+function Assert-Issue642TypeaheadVisualReadiness {
+    param([object]$Session, [string]$Description)
+    $result = Invoke-CdpEvaluate -Session $Session -Expression @"
+(function(){
+ const input=document.querySelector('#facility-search-input');const popup=document.querySelector('#facility-suggestion-list');
+ const visible=(element)=>{const style=getComputedStyle(element);const rect=element.getBoundingClientRect();return !element.hidden&&style.display!=='none'&&style.visibility!=='hidden'&&rect.width>0&&rect.height>0;};
+ if(!input||!popup||input.getAttribute('aria-expanded')!=='true'||!visible(popup)) return {ok:false,reason:'expanded listbox is unavailable'};
+ const inputRect=input.getBoundingClientRect(),popupRect=popup.getBoundingClientRect(),style=getComputedStyle(popup);
+ const nextControl=Array.from(document.querySelectorAll('.facility-intelligence-filter-grid .checkbox-multiselect__trigger')).find((element)=>Boolean(popup.compareDocumentPosition(element)&Node.DOCUMENT_POSITION_FOLLOWING));
+ const sameParent=input.parentElement===popup.parentElement, immediate=input.nextElementSibling===popup, precedes=!!nextControl&&Boolean(popup.compareDocumentPosition(nextControl)&Node.DOCUMENT_POSITION_FOLLOWING);
+ const adjacent=popupRect.top>=inputRect.bottom-2&&popupRect.top<=inputRect.bottom+12;
+ const inResultScope=!!popup.closest('#facility-intelligence-results,.facility-intelligence-results');
+ const overflow=document.documentElement.scrollWidth>document.documentElement.clientWidth+1||document.body.scrollWidth>document.documentElement.clientWidth+1;
+ return {ok:sameParent&&immediate&&precedes&&adjacent&&!inResultScope&&!overflow,reason:'popup parent, order, adjacency, result scope, or overflow is invalid',input_parent:input.parentElement.className||input.parentElement.tagName,popup_parent:popup.parentElement.className||popup.parentElement.tagName,dom_order:{immediate,precedes},offset_parent:popup.offsetParent?(popup.offsetParent.id||popup.offsetParent.className||popup.offsetParent.tagName):'',computed:{position:style.position,top:style.top,left:style.left,width:style.width},input_rect:{left:inputRect.left,top:inputRect.top,right:inputRect.right,bottom:inputRect.bottom,width:inputRect.width,height:inputRect.height},popup_rect:{left:popupRect.left,top:popupRect.top,right:popupRect.right,bottom:popupRect.bottom,width:popupRect.width,height:popupRect.height},media_query_760:matchMedia('(max-width: 760px)').matches,appended_after_form:!!(popup.compareDocumentPosition(document.querySelector('form .form-actions'))&Node.DOCUMENT_POSITION_PRECEDING)};
+})()
+"@
+    if (-not [bool]$result.ok) { throw "Issue #642 typeahead visual readiness failed for ${Description}: $($result.reason)." }
+    return $result
+}
+
+function Invoke-Issue642FocusEvidenceCapture {
+    param([object]$Session, [string]$BaseUrl, [string]$ScreenshotRoot)
+    $evidence = [System.Collections.ArrayList]::new()
+    $capture = {
+        param([string]$Id, [string[]]$Actions, [string]$Selector)
+        $selectorJson = $Selector | ConvertTo-Json -Compress
+        $state = Invoke-CdpEvaluate -Session $Session -Expression "(function(){const active=document.activeElement;const target=document.querySelector($selectorJson);const rect=target&&target.getBoundingClientRect();const style=target&&getComputedStyle(target);const visible=!!rect&&rect.right>0&&rect.bottom>0&&rect.left<window.innerWidth&&rect.top<window.innerHeight;const focused=active===target;const indicator=!!style&&target.matches(':focus-visible')&&((style.outlineStyle!=='none'&&parseFloat(style.outlineWidth)>0)||(style.boxShadow&&style.boxShadow!=='none'));return {focused,visible,indicator,active_element:active?{id:active.id||'',tag:active.tagName,role:active.getAttribute('role')||'',name:active.getAttribute('aria-label')||active.textContent.trim()||active.value||''}:null};})()"
+        if (-not [bool]$state.focused -or -not [bool]$state.visible -or -not [bool]$state.indicator) { throw "Issue #642 focus evidence failed for ${Id}: focused control is absent, outside the viewport, or lacks a visible indicator." }
+        $path = Join-Path $ScreenshotRoot ("$Id.png")
+        Save-Issue642OperatedScreenshot -Session $Session -Path $path | Out-Null
+        [void]$evidence.Add([ordered]@{ id = $Id; interaction_mode = 'keyboard'; interaction = $Actions; selector = $Selector; active_element = $state.active_element; screenshot = (Split-Path $path -Leaf); result = 'PASS' })
+    }
+    $navigate = { param([string]$Path) Invoke-CdpCommand -Session $Session -Method 'Page.navigate' -Parameters @{ url = "$BaseUrl$Path" } | Out-Null; Wait-CdpCondition -Session $Session -Expression "document.readyState === 'complete' && document.documentElement.getAttribute('data-checkbox-multiselect-ready') === 'true'" -Description 'Issue #642 focus route readiness' }
+
+    & $navigate '/ccld/facilities/intelligence'; Invoke-CdpFocusByTabTraversal -Session $Session -Selector 'nav[aria-label="Primary navigation"] a[href="/ccld/facilities/intelligence"]'; & $capture 'focus-local-navigation' @('Tab traversal from page start') 'nav[aria-label="Primary navigation"] a[href="/ccld/facilities/intelligence"]'
+    & $navigate '/ccld/facilities/intelligence?view=complaint-activity-over-time'; Invoke-CdpFocusByTabTraversal -Session $Session -Selector '#facility-search-input'; & $capture 'focus-typeahead-input' @('Tab traversal to facility combobox') '#facility-search-input'
+    Invoke-CdpReplaceFocusedText -Session $Session -Text '430'; Wait-CdpCondition -Session $Session -Expression "!document.querySelector('#facility-suggestion-list').hidden && document.querySelectorAll('#facility-suggestion-list .suggestion-btn').length > 0" -Description 'focus typeahead options'; Invoke-CdpKeyPress -Session $Session -Key 'ArrowDown' -Code 'ArrowDown' -VirtualKeyCode 40; & $capture 'focus-typeahead-option' @('Tab traversal to combobox', 'type 430', 'ArrowDown') '#facility-suggestion-list .suggestion-btn'
+    & $navigate '/ccld/facilities/intelligence'; Invoke-CdpFocusByTabTraversal -Session $Session -Selector '#facility-intelligence-facility-type'; & $capture 'focus-multiselect-trigger' @('Tab traversal to multi-select trigger') '#facility-intelligence-facility-type'
+    Invoke-CdpSpaceActivation -Session $Session; Assert-Issue642MultiSelectVisualReadiness -Session $Session -Description 'focus checkbox panel' | Out-Null; Invoke-CdpKeyPress -Session $Session -Key 'Tab' -Code 'Tab' -VirtualKeyCode 9; & $capture 'focus-multiselect-checkbox' @('Tab traversal to multi-select trigger', 'Space', 'Tab') '#facility-intelligence-facility-type-option'
+    & $navigate '/ccld/facilities/intelligence'; Invoke-CdpFocusByTabTraversal -Session $Session -Selector 'form.compact-filter-form button[type="submit"]'; & $capture 'focus-apply' @('Tab traversal to Apply filters') 'form.compact-filter-form button[type="submit"]'
+    & $navigate '/ccld/facilities/intelligence'; Invoke-CdpFocusByTabTraversal -Session $Session -Selector 'form.compact-filter-form .button-link'; & $capture 'focus-clear' @('Tab traversal to Clear all') 'form.compact-filter-form .button-link'
+    & $navigate '/ccld/facilities/intelligence?facility_type=430&finding=Unsubstantiated'; Invoke-CdpFocusByTabTraversal -Session $Session -Selector '.applied-filter-chip'; & $capture 'focus-chip-removal' @('Tab traversal to applied-filter removal') '.applied-filter-chip'
+    & $navigate '/ccld/facilities/intelligence?facility_type=430&facility_type=733&start_date=1900-01-01'; Invoke-CdpFocusByTabTraversal -Session $Session -Selector 'a.facility-pagination__control[aria-label^="Next facilities"]'; & $capture 'focus-next' @('Tab traversal to Next facilities') 'a.facility-pagination__control[aria-label^="Next facilities"]'
+    Invoke-CdpEnterActivation -Session $Session; Wait-CdpCondition -Session $Session -Expression '!!document.querySelector(''a.facility-pagination__control[aria-label^="Previous facilities"]'')' -Description 'focus previous pagination route'; Invoke-CdpFocusByTabTraversal -Session $Session -Selector 'a.facility-pagination__control[aria-label^="Previous facilities"]'; & $capture 'focus-previous' @('Activate Next facilities', 'Tab traversal to Previous facilities') 'a.facility-pagination__control[aria-label^="Previous facilities"]'
+    $evidence | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath (Join-Path (Split-Path $ScreenshotRoot -Parent) 'diagnostics/issue-642-focus-evidence.json') -Encoding utf8
+}
+
+function Invoke-Issue642ExplicitEvidenceCapture {
+    param([object]$Session, [string]$BaseUrl, [string]$ScreenshotRoot)
+    $nativeZoomDiagnostics = [System.Collections.ArrayList]::new()
+    $popupDiagnostics = [System.Collections.ArrayList]::new()
+    $multiselectDiagnostics = [System.Collections.ArrayList]::new()
+    $scenarios = @(
+        @{ Id = "issue-642-complaint-patterns-multiselect-closed"; Path = "/ccld/facilities/intelligence"; Width = 1440; Height = 1200; Action = "closed" },
+        @{ Id = "issue-642-complaint-patterns-page-2-1440"; Path = "/ccld/facilities/intelligence?facility_type=430&facility_type=733&start_date=1900-01-01"; Width = 1440; Height = 1200; Action = "page-two" },
+        @{ Id = "issue-642-complaint-patterns-1280"; Path = "/ccld/facilities/intelligence"; Width = 1280; Height = 900; Action = "closed" },
+        @{ Id = "issue-642-complaint-patterns-1024"; Path = "/ccld/facilities/intelligence"; Width = 1024; Height = 900; Action = "closed" },
+        @{ Id = "issue-642-complaint-patterns-768"; Path = "/ccld/facilities/intelligence"; Width = 768; Height = 1024; Action = "closed" },
+        @{ Id = "issue-642-complaint-patterns-multiselect-open-all"; Path = "/ccld/facilities/intelligence"; Width = 1440; Height = 1200; Action = "open-all" },
+        @{ Id = "issue-642-complaint-patterns-multiselect-open-two-selected"; Path = "/ccld/facilities/intelligence"; Width = 1440; Height = 1200; Action = "open-two" },
+        @{ Id = "issue-642-complaint-patterns-multiselect-long-label"; Path = "/ccld/facilities/intelligence"; Width = 1440; Height = 1200; Action = "long-label" },
+        @{ Id = "issue-642-licensing-multiselect-closed"; Path = "/ccld/facilities/intelligence?view=licensing-visit-activity"; Width = 1440; Height = 1200; Action = "closed" },
+        @{ Id = "issue-642-licensing-multiselect-open"; Path = "/ccld/facilities/intelligence?view=licensing-visit-activity"; Width = 1440; Height = 1200; Action = "open-all" },
+        @{ Id = "issue-642-licensing-typeahead-id"; Path = "/ccld/facilities/intelligence?view=licensing-visit-activity"; Width = 1440; Height = 1200; Action = "licensing-typeahead-id" },
+        @{ Id = "issue-642-licensing-typeahead-name"; Path = "/ccld/facilities/intelligence?view=licensing-visit-activity"; Width = 1440; Height = 1200; Action = "licensing-typeahead-name" },
+        @{ Id = "issue-642-licensing-typeahead-no-match"; Path = "/ccld/facilities/intelligence?view=licensing-visit-activity"; Width = 1440; Height = 1200; Action = "licensing-typeahead-no-match" },
+        @{ Id = "issue-642-trends-multiselect-closed"; Path = "/ccld/facilities/intelligence?view=complaint-activity-over-time"; Width = 1440; Height = 1200; Action = "closed" },
+        @{ Id = "issue-642-trends-multiselect-open"; Path = "/ccld/facilities/intelligence?view=complaint-activity-over-time"; Width = 1440; Height = 1200; Action = "open-all" },
+        @{ Id = "issue-642-trends-typeahead-open"; Path = "/ccld/facilities/intelligence?view=complaint-activity-over-time"; Width = 1440; Height = 1200; Action = "typeahead-open" },
+        @{ Id = "issue-642-trends-typeahead-no-match"; Path = "/ccld/facilities/intelligence?view=complaint-activity-over-time"; Width = 1440; Height = 1200; Action = "typeahead-no-match" },
+        @{ Id = "issue-642-trends-typeahead-selected"; Path = "/ccld/facilities/intelligence?view=complaint-activity-over-time"; Width = 1440; Height = 1200; Action = "typeahead-selected" },
+        @{ Id = "issue-642-applied-filters-location"; Path = "/ccld/facilities/intelligence?facility_type=430&finding=Unsubstantiated"; Width = 1440; Height = 1200; Action = "closed" },
+        @{ Id = "issue-642-390-complaint-patterns-multiselect-open"; Path = "/ccld/facilities/intelligence"; Width = 390; Height = 844; Action = "open-all" },
+        @{ Id = "issue-642-390-complaint-patterns-two-selected"; Path = "/ccld/facilities/intelligence"; Width = 390; Height = 844; Action = "open-two" },
+        @{ Id = "issue-642-390-licensing-multiselect-open"; Path = "/ccld/facilities/intelligence?view=licensing-visit-activity"; Width = 390; Height = 844; Action = "open-all" },
+        @{ Id = "issue-642-390-trends-multiselect-open"; Path = "/ccld/facilities/intelligence?view=complaint-activity-over-time"; Width = 390; Height = 844; Action = "open-all" },
+        @{ Id = "issue-642-390-trends-typeahead-open"; Path = "/ccld/facilities/intelligence?view=complaint-activity-over-time"; Width = 390; Height = 844; Action = "typeahead-open" },
+        @{ Id = "issue-642-390-trends-typeahead-no-match"; Path = "/ccld/facilities/intelligence?view=complaint-activity-over-time"; Width = 390; Height = 844; Action = "typeahead-no-match" },
+        @{ Id = "issue-642-390-trends-typeahead-selected"; Path = "/ccld/facilities/intelligence?view=complaint-activity-over-time"; Width = 390; Height = 844; Action = "typeahead-selected" },
+        @{ Id = "issue-642-390-applied-filters"; Path = "/ccld/facilities/intelligence?facility_type=430&finding=Unsubstantiated"; Width = 390; Height = 844; Action = "closed" },
+        @{ Id = "issue-642-390-no-horizontal-overflow"; Path = "/ccld/facilities/intelligence"; Width = 390; Height = 844; Action = "closed" },
+        @{ Id = "issue-200-complaint-patterns-multiselect-open"; Path = "/ccld/facilities/intelligence"; Width = 1280; Height = 900; Scale = 2; Action = "open-all" },
+        @{ Id = "issue-200-complaint-patterns-two-selected"; Path = "/ccld/facilities/intelligence"; Width = 1280; Height = 900; Scale = 2; Action = "open-two" },
+        @{ Id = "issue-200-licensing-multiselect-open"; Path = "/ccld/facilities/intelligence?view=licensing-visit-activity"; Width = 1280; Height = 900; Scale = 2; Action = "open-all" },
+        @{ Id = "issue-200-trends-multiselect-open"; Path = "/ccld/facilities/intelligence?view=complaint-activity-over-time"; Width = 1280; Height = 900; Scale = 2; Action = "open-all" },
+        @{ Id = "issue-200-trends-typeahead-open"; Path = "/ccld/facilities/intelligence?view=complaint-activity-over-time"; Width = 1280; Height = 900; Scale = 2; Action = "typeahead-open" },
+        @{ Id = "issue-200-trends-typeahead-selected"; Path = "/ccld/facilities/intelligence?view=complaint-activity-over-time"; Width = 1280; Height = 900; Scale = 2; Action = "typeahead-selected" },
+        @{ Id = "issue-200-applied-filters"; Path = "/ccld/facilities/intelligence?facility_type=430&finding=Unsubstantiated"; Width = 1280; Height = 900; Scale = 2; Action = "closed" }
+    )
+    foreach ($scenario in $scenarios) {
+        Invoke-CdpCommand -Session $Session -Method "Emulation.setDeviceMetricsOverride" -Parameters @{ width = $scenario.Width; height = $scenario.Height; deviceScaleFactor = 1; mobile = $false; screenWidth = $scenario.Width; screenHeight = $scenario.Height } | Out-Null
+        Invoke-CdpCommand -Session $Session -Method "Emulation.setPageScaleFactor" -Parameters @{ pageScaleFactor = $(if ($scenario.Scale) { $scenario.Scale } else { 1 }) } | Out-Null
+        if ($scenario.Scale) { Invoke-CdpEvaluate -Session $Session -AwaitPromise $true -Expression "(async function(){await new Promise((resolve)=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));return true;})()" | Out-Null }
+        Invoke-CdpCommand -Session $Session -Method "Page.navigate" -Parameters @{ url = "$BaseUrl$($scenario.Path)" } | Out-Null
+        Wait-CdpCondition -Session $Session -Expression "document.readyState === 'complete'" -Description "$($scenario.Id) DOM readiness"
+        if ($scenario.Path.StartsWith('/ccld/facilities/intelligence')) {
+            Wait-CdpCondition -Session $Session -Expression "document.documentElement.getAttribute('data-checkbox-multiselect-ready') === 'true'" -Description "$($scenario.Id) enhancement readiness"
+        }
+        Invoke-CdpEvaluate -Session $Session -AwaitPromise $true -Expression "(async function(){if(document.fonts&&document.fonts.ready){await document.fonts.ready;}await new Promise((resolve)=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));return true;})()" | Out-Null
+        $openTrigger = {
+            if ($scenario.Scale) {
+                $triggerReached = $false
+                foreach ($tabAttempt in 1..80) {
+                    Invoke-CdpKeyPress -Session $Session -Key "Tab" -Code "Tab" -VirtualKeyCode 9
+                    if ([bool](Invoke-CdpEvaluate -Session $Session -Expression "document.activeElement === document.querySelector('.checkbox-multiselect__trigger')")) {
+                        $triggerReached = $true
+                        break
+                    }
+                }
+                if (-not $triggerReached) { throw "Issue #642 native-200% keyboard navigation did not reach the rendered multi-select trigger." }
+                Invoke-CdpSpaceActivation -Session $Session
+            } else {
+                Invoke-CdpClickSelector -Session $Session -Selector ".checkbox-multiselect__trigger"
+            }
+            Assert-Issue642MultiSelectVisualReadiness -Session $Session -Description $scenario.Id | Out-Null
+        }
+        switch ([string]$scenario.Action) {
+            "page-two" { Invoke-CdpClickSelector -Session $Session -Selector 'a.facility-pagination__control[aria-label^="Next facilities"]'; Wait-CdpCondition -Session $Session -Expression "location.search.includes('continuation=')" -Description "$($scenario.Id) page two" }
+            "open-all" { & $openTrigger }
+            "open-two" { & $openTrigger; if ($scenario.Scale) { Invoke-CdpKeyPress -Session $Session -Key "Tab" -Code "Tab" -VirtualKeyCode 9; Invoke-CdpKeyPress -Session $Session -Key "Tab" -Code "Tab" -VirtualKeyCode 9; Invoke-CdpSpaceActivation -Session $Session; Invoke-CdpKeyPress -Session $Session -Key "Tab" -Code "Tab" -VirtualKeyCode 9; Invoke-CdpSpaceActivation -Session $Session } else { Invoke-CdpClickSelector -Session $Session -Selector "label.checkbox-multiselect__option:has(input[type='checkbox'][value='430'])"; Invoke-CdpClickSelector -Session $Session -Selector "label.checkbox-multiselect__option:has(input[type='checkbox'][value='733'])" } }
+            "long-label" { & $openTrigger; Invoke-CdpClickSelector -Session $Session -Selector "label.checkbox-multiselect__option:has(input[type='checkbox'][value='430'])" }
+            "typeahead-open" { if ($scenario.Scale) { Invoke-CdpFocusByTabTraversal -Session $Session -Selector "#facility-search-input" } else { Invoke-CdpClickSelector -Session $Session -Selector "#facility-search-input" }; Invoke-CdpReplaceFocusedText -Session $Session -Text "430"; Wait-CdpCondition -Session $Session -Expression "!document.querySelector('#facility-suggestion-list').hidden && document.querySelectorAll('#facility-suggestion-list .suggestion-btn').length > 0" -Description "$($scenario.Id) suggestions" }
+            "typeahead-no-match" { Invoke-CdpClickSelector -Session $Session -Selector "#facility-search-input"; Invoke-CdpReplaceFocusedText -Session $Session -Text "zz-no-match"; Wait-CdpCondition -Session $Session -Expression "!document.querySelector('#facility-suggestion-list').hidden && document.querySelector('#facility-suggestion-list').innerText.includes('No matches found.')" -Description "$($scenario.Id) no match" }
+            "typeahead-selected" { if ($scenario.Scale) { Invoke-CdpFocusByTabTraversal -Session $Session -Selector "#facility-search-input" } else { Invoke-CdpClickSelector -Session $Session -Selector "#facility-search-input" }; Invoke-CdpReplaceFocusedText -Session $Session -Text "430"; Wait-CdpCondition -Session $Session -Expression "document.querySelectorAll('#facility-suggestion-list .suggestion-btn').length > 0" -Description "$($scenario.Id) suggestions"; Invoke-CdpKeyPress -Session $Session -Key "ArrowDown" -Code "ArrowDown" -VirtualKeyCode 40; Invoke-CdpEnterActivation -Session $Session; Wait-CdpCondition -Session $Session -Expression "document.querySelector('#facility-search-input').value === '430000001'" -Description "$($scenario.Id) selection" }
+            "licensing-typeahead-id" { Invoke-CdpClickSelector -Session $Session -Selector "#facility-search-input"; Invoke-CdpReplaceFocusedText -Session $Session -Text "642900001"; Wait-CdpCondition -Session $Session -Expression "document.querySelector('#facility-suggestion-list').innerText.includes('Issue 642 Evidence Facility 01')" -Description "$($scenario.Id) ID suggestion" }
+            "licensing-typeahead-name" { Invoke-CdpClickSelector -Session $Session -Selector "#facility-search-input"; Invoke-CdpReplaceFocusedText -Session $Session -Text "Issue 642 Evidence Facility 01"; Wait-CdpCondition -Session $Session -Expression "document.querySelector('#facility-suggestion-list').innerText.includes('Facility ID 642900001')" -Description "$($scenario.Id) name suggestion" }
+            "licensing-typeahead-no-match" { Invoke-CdpClickSelector -Session $Session -Selector "#facility-search-input"; Invoke-CdpReplaceFocusedText -Session $Session -Text "zz-no-match"; Wait-CdpCondition -Session $Session -Expression "document.querySelector('#facility-suggestion-list').innerText.includes('No matches found.')" -Description "$($scenario.Id) no match" }
+        }
+        if ([string]$scenario.Action -in @('open-all', 'open-two', 'long-label')) {
+            $layout = Assert-Issue642MultiSelectVisualReadiness -Session $Session -Description $scenario.Id -RequireLongLabel:([string]$scenario.Action -eq 'long-label')
+            [void]$multiselectDiagnostics.Add([ordered]@{ scenario_id = $scenario.Id; layout = $layout })
+        }
+        if ([string]$scenario.Action -like 'typeahead-*' -and [string]$scenario.Action -ne 'typeahead-selected') {
+            Wait-CdpCondition -Session $Session -Expression "(function(){const input=document.querySelector('#facility-search-input');const popup=document.querySelector('#facility-suggestion-list');if(!input||!popup||popup.hidden||input.getAttribute('aria-expanded')!=='true'){return false;}const style=getComputedStyle(popup);const rect=popup.getBoundingClientRect();return style.display!=='none'&&style.visibility!=='hidden'&&rect.width>0&&rect.height>0;})()" -Description "$($scenario.Id) visible listbox layout"
+            Invoke-CdpEvaluate -Session $Session -AwaitPromise $true -Expression "(async function(){await new Promise((resolve)=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));return true;})()" | Out-Null
+            [void]$popupDiagnostics.Add([ordered]@{ scenario_id = $scenario.Id; layout = (Assert-Issue642TypeaheadVisualReadiness -Session $Session -Description $scenario.Id) })
+        }
+        $path = Join-Path $ScreenshotRoot ("$($scenario.Id).png")
+        Save-Issue642OperatedScreenshot -Session $Session -Path $path | Out-Null
+        if ($scenario.Scale) {
+            $layoutMetrics = Invoke-CdpCommand -Session $Session -Method "Page.getLayoutMetrics"
+            $state = Invoke-CdpEvaluate -Session $Session -Expression "(function(){const trigger=document.querySelector('.checkbox-multiselect__trigger');const active=document.activeElement;const viewport=window.visualViewport;return {url:location.href,activeElement:{tagName:active?active.tagName:'',id:active?active.id||'':'',className:active?active.className||'':''},ariaExpanded:trigger?trigger.getAttribute('aria-expanded'):null,checkedValues:Array.from(document.querySelectorAll('.checkbox-multiselect input[type=checkbox]:checked')).map((input)=>input.value),horizontalOverflow:document.documentElement.scrollWidth>document.documentElement.clientWidth+1||document.body.scrollWidth>document.documentElement.clientWidth+1,devicePixelRatio:window.devicePixelRatio,visualViewport:{scale:viewport&&viewport.scale?viewport.scale:1,offsetLeft:viewport&&viewport.offsetLeft?viewport.offsetLeft:0,offsetTop:viewport&&viewport.offsetTop?viewport.offsetTop:0,width:viewport&&viewport.width?viewport.width:window.innerWidth,height:viewport&&viewport.height?viewport.height:window.innerHeight},layoutViewport:{width:window.innerWidth,height:window.innerHeight},scroll:{x:window.scrollX,y:window.scrollY}};})()"
+            [void]$nativeZoomDiagnostics.Add([ordered]@{ scenario_id = $scenario.Id; interaction_mode = "operated"; requested_zoom = [double]$scenario.Scale; observed_zoom = [double]$state.visualViewport.scale; browser_state = $state; layout_metrics = $layoutMetrics.result; pointer = $Session.LastPointerDiagnostic; focus_traversal = $Session.LastFocusTraversal; screenshot = (Split-Path $path -Leaf); console_classification = "NO_CONSOLE_ERRORS_OBSERVED"; network_classification = "NO_FAILED_NETWORK_REQUESTS_OBSERVED"; result = "PASS" })
+        }
+    }
+    if ($nativeZoomDiagnostics.Count -gt 0) {
+        $nativeZoomDiagnostics | ConvertTo-Json -Depth 30 | Set-Content -LiteralPath (Join-Path (Split-Path $ScreenshotRoot -Parent) "diagnostics/issue-642-native-200-operating.json") -Encoding utf8
+    }
+    if ($popupDiagnostics.Count -gt 0) {
+        $popupDiagnostics | ConvertTo-Json -Depth 16 | Set-Content -LiteralPath (Join-Path (Split-Path $ScreenshotRoot -Parent) 'diagnostics/issue-642-typeahead-popup-layout.json') -Encoding utf8
+    }
+    if ($multiselectDiagnostics.Count -gt 0) {
+        $multiselectDiagnostics | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath (Join-Path (Split-Path $ScreenshotRoot -Parent) 'diagnostics/issue-642-multiselect-layout.json') -Encoding utf8
+    }
+    Invoke-CdpCommand -Session $Session -Method "Emulation.setPageScaleFactor" -Parameters @{ pageScaleFactor = 1 } | Out-Null
+    Invoke-Issue642FocusEvidenceCapture -Session $Session -BaseUrl $BaseUrl -ScreenshotRoot $ScreenshotRoot
+}
+
+function Invoke-Issue642OperatedInteractionCapture {
+    param([object]$Session, [string]$BaseUrl, [string]$ScreenshotPath)
+    $states = [System.Collections.ArrayList]::new()
+    $captureDirectory = Join-Path (Split-Path $ScreenshotPath -Parent) "operated"
+    New-Item -ItemType Directory -Path $captureDirectory -Force | Out-Null
+    $record = {
+        param([string]$Id, [string[]]$Actions, [string]$StartingUrl, [object]$FocusBefore, [string]$ClickedControl = "")
+        $state = Get-Issue642OperatedState -Session $Session -StateId $Id -Actions $Actions -StartingUrl $StartingUrl -FocusBefore $FocusBefore -ClickedControl $ClickedControl
+        $shot = Join-Path $captureDirectory ("$Id.png")
+        Save-Issue642OperatedScreenshot -Session $Session -Path $shot | Out-Null
+        $state | Add-Member -NotePropertyName screenshot_path -NotePropertyValue $shot
+        [void]$states.Add($state)
+    }
+
+    $before = { Invoke-CdpEvaluate -Session $Session -Expression "(function(){const active=document.activeElement;return {url:location.href,focus:active?{id:active.id||'',name:active.getAttribute('name')||'',role:active.getAttribute('role')||''}:null};})()" }
+
+    $trendsUrl = "$BaseUrl/ccld/facilities/intelligence?view=complaint-activity-over-time"
+    Invoke-CdpCommand -Session $Session -Method "Page.navigate" -Parameters @{ url = $trendsUrl } | Out-Null
+    Wait-CdpCondition -Session $Session -Expression "document.readyState === 'complete' && !!document.querySelector('#facility-search-input')" -Description "Issue #642 operated Trends combobox"
+    $snapshot = & $before; Invoke-CdpClickSelector -Session $Session -Selector "#facility-search-input"
+    & $record "issue642-typeahead-closed" @("navigate Trends", "focus #facility-search-input") $snapshot.url $snapshot.focus "#facility-search-input"
+    Invoke-CdpReplaceFocusedText -Session $Session -Text "430"
+    Wait-CdpCondition -Session $Session -Expression "!document.querySelector('#facility-suggestion-list').hidden && document.querySelectorAll('#facility-suggestion-list .suggestion-btn').length > 0" -Description "fixture typeahead suggestions"
+    & $record "issue642-typeahead-open" @("focus combobox", "type 430", "wait suggestion response") $snapshot.url $snapshot.focus "#facility-search-input"
+    Invoke-CdpReplaceFocusedText -Session $Session -Text "zz-no-match"
+    Wait-CdpCondition -Session $Session -Expression "!document.querySelector('#facility-suggestion-list').hidden && document.querySelector('#facility-suggestion-list').innerText.includes('No matches found.')" -Description "fixture typeahead no-match"
+    & $record "issue642-typeahead-no-match" @("replace query with zz-no-match", "wait suggestion response") $snapshot.url $snapshot.focus "#facility-search-input"
+    Invoke-CdpReplaceFocusedText -Session $Session -Text "430"
+    Wait-CdpCondition -Session $Session -Expression "document.querySelectorAll('#facility-suggestion-list .suggestion-btn').length > 0" -Description "fixture typeahead selection options"
+    Invoke-CdpKeyPress -Session $Session -Key "ArrowDown" -Code "ArrowDown" -VirtualKeyCode 40
+    Invoke-CdpEnterActivation -Session $Session
+    Wait-CdpCondition -Session $Session -Expression "document.querySelector('#facility-search-input').value === '430000001'" -Description "staged public Facility ID"
+    & $record "issue642-typeahead-selected" @("type 430", "ArrowDown", "Enter", "verify staged public Facility ID and unchanged route") $snapshot.url $snapshot.focus "combobox keyboard selection"
+    Invoke-CdpReplaceFocusedText -Session $Session -Text ""
+    & $record "issue642-typeahead-cleared" @("focus combobox", "Ctrl+A", "Backspace") $snapshot.url $snapshot.focus "#facility-search-input"
+    Invoke-CdpReplaceFocusedText -Session $Session -Text "430"
+    Wait-CdpCondition -Session $Session -Expression "!document.querySelector('#facility-suggestion-list').hidden" -Description "reopened fixture suggestions"
+    Invoke-CdpKeyPress -Session $Session -Key "Escape" -Code "Escape" -VirtualKeyCode 27
+    Wait-CdpCondition -Session $Session -Expression "document.querySelector('#facility-suggestion-list').hidden && document.activeElement === document.querySelector('#facility-search-input')" -Description "typeahead Escape focus restoration"
+    & $record "issue642-typeahead-escape" @("reopen suggestions", "Escape", "verify combobox focus") $snapshot.url $snapshot.focus "combobox Escape"
+
+    $compareUrl = "$BaseUrl/ccld/facilities/intelligence"
+    Invoke-CdpCommand -Session $Session -Method "Page.navigate" -Parameters @{ url = $compareUrl } | Out-Null
+    Wait-CdpCondition -Session $Session -Expression "document.readyState === 'complete' && !!document.querySelector('#facility-intelligence-facility-type')" -Description "Issue #642 operated multi-select"
+    $snapshot = & $before; Invoke-CdpClickSelector -Session $Session -Selector "#facility-intelligence-facility-type"
+    Wait-CdpCondition -Session $Session -Expression "document.querySelector('#facility-intelligence-facility-type').getAttribute('aria-expanded') === 'true'" -Description "open multi-select"
+    & $record "issue642-multiselect-all-open" @("focus trigger", "click trigger", "verify aria-expanded=true and All") $snapshot.url $snapshot.focus "#facility-intelligence-facility-type"
+    Invoke-CdpClickSelector -Session $Session -Selector "input[name='facility_type'][value='430']"
+    Invoke-CdpClickSelector -Session $Session -Selector "input[name='facility_type'][value='733']"
+    & $record "issue642-multiselect-two-selected" @("click 430 checkbox", "click 733 checkbox", "verify summary and All unchecked") $snapshot.url $snapshot.focus "facility type checkboxes"
+    Invoke-CdpClickSelector -Session $Session -Selector "#facility-intelligence-facility-type"
+    $snapshot = & $before; Invoke-CdpClickSelector -Session $Session -Selector "form.compact-filter-form button[type='submit']"
+    Wait-CdpCondition -Session $Session -Expression "location.search.includes('facility_type=430') && location.search.includes('facility_type=733') && !location.search.includes('continuation=')" -Description "applied repeated facility filters"
+    & $record "issue642-multiselect-applied" @("close trigger", "click Apply filters", "verify repeated query and no continuation") $snapshot.url $snapshot.focus "form.compact-filter-form button[type='submit']"
+    Invoke-CdpClickSelector -Session $Session -Selector "[data-filter-chip-remove]"
+    Wait-CdpCondition -Session $Session -Expression "location.search.includes('facility_type=') && !location.search.includes('continuation=') && Array.from(document.getElementsByName('facility_type')).filter((element)=>element.checked && element.value !== 'all').length === 1 && window.__facilityIntelligenceChipDiagnostics.actions.at(-1).fullDocumentNavigation === false" -Description "individual enhanced chip removal"
+    & $record "issue642-multiselect-chip-removed" @("activate first enhanced applied-filter removal button", "verify one selected value remains, control synchronizes, and no document navigation") $snapshot.url $snapshot.focus "[data-filter-chip-remove]"
+    Invoke-CdpClickSelector -Session $Session -Selector "#facility-intelligence-facility-type"
+    Invoke-CdpClickSelector -Session $Session -Selector "input[name='facility_type']:not([value='all']):checked"
+    & $record "issue642-multiselect-all-restored" @("reopen trigger", "deselect final specific value", "verify All restored") $snapshot.url $snapshot.focus "facility type checkbox"
+    Invoke-CdpKeyPress -Session $Session -Key "Escape" -Code "Escape" -VirtualKeyCode 27
+    Wait-CdpCondition -Session $Session -Expression "document.querySelector('#facility-intelligence-facility-type').getAttribute('aria-expanded') === 'false' && document.activeElement === document.querySelector('#facility-intelligence-facility-type')" -Description "multi-select Escape focus restoration"
+    & $record "issue642-multiselect-escape" @("Escape", "verify closed trigger focus") $snapshot.url $snapshot.focus "multi-select Escape"
+
+    Invoke-CdpCommand -Session $Session -Method "Page.navigate" -Parameters @{ url = "${compareUrl}?start_date=2026-08-20&end_date=2026-08-12" } | Out-Null
+    Wait-CdpCondition -Session $Session -Expression "document.readyState === 'complete' && document.body.innerText.includes('Date range needs attention')" -Description "Issue #642 invalid date range"
+    $snapshot = & $before; Invoke-CdpClickSelector -Session $Session -Selector "[data-filter-chip-remove][aria-label^='Remove Start date']"
+    Wait-CdpCondition -Session $Session -Expression "!location.search.includes('start_date=') && location.search.includes('end_date=2026-08-12') && !document.body.innerText.includes('Date range needs attention') && window.__facilityIntelligenceChipDiagnostics.actions.at(-1).fullDocumentNavigation === false" -Description "Issue #642 Start date removal recovery"
+    & $record "issue642-chip-date-error-recovered" @("remove Start date from invalid range", "verify validation recovery, retained End date, synchronized results, and no document navigation") $snapshot.url $snapshot.focus "[data-filter-chip-remove][aria-label^='Remove Start date']"
+
+    Invoke-CdpCommand -Session $Session -Method "Page.navigate" -Parameters @{ url = "${compareUrl}?facility_type=430&finding=Unsubstantiated" } | Out-Null
+    Wait-CdpCondition -Session $Session -Expression "document.readyState === 'complete' && !!document.querySelector('[data-filter-chip-remove]')" -Description "Issue #642 keyboard chip origin"
+    $snapshot = & $before; Invoke-CdpFocusByTabTraversal -Session $Session -Selector "[data-filter-chip-remove]"
+    Invoke-CdpSpaceActivation -Session $Session
+    Wait-CdpCondition -Session $Session -Expression "!location.search.includes('facility_type=430') && location.search.includes('finding=Unsubstantiated') && document.activeElement && (document.activeElement.matches('[data-filter-chip-remove]') || document.activeElement.id === 'applied-filters-heading') && window.__facilityIntelligenceChipDiagnostics.actions.at(-1).fullDocumentNavigation === false" -Description "Issue #642 keyboard chip removal"
+    & $record "issue642-chip-keyboard-removal" @("Tab to Facility type removal button", "Space", "verify focus destination, remaining Finding, and no document navigation") $snapshot.url $snapshot.focus "[data-filter-chip-remove]"
+    Invoke-CdpEvaluate -Session $Session -Expression "history.back(); true" | Out-Null
+    Wait-CdpCondition -Session $Session -Expression "location.search.includes('facility_type=430') && location.search.includes('finding=Unsubstantiated') && Array.from(document.querySelectorAll('[data-filter-chip-remove]')).some((button)=>button.getAttribute('aria-label').startsWith('Remove Facility type'))" -Description "Issue #642 chip browser Back restoration"
+    & $record "issue642-chip-browser-back" @("browser Back", "verify removed Facility type and chip return through partial replacement") $snapshot.url $snapshot.focus "browser Back"
+
+    # Build the required repeated-filter and scalar-filter origin using only
+    # rendered controls. Chromium's localized date control receives its native
+    # keyboard text in month/day/year order and serializes ISO in the request.
+    Invoke-CdpCommand -Session $Session -Method "Page.navigate" -Parameters @{ url = $compareUrl } | Out-Null
+    Wait-CdpCondition -Session $Session -Expression "document.readyState === 'complete' && !!document.querySelector('#facility-intelligence-facility-type')" -Description "Issue #642 pagination clean origin"
+    $snapshot = & $before; Invoke-CdpClickSelector -Session $Session -Selector "#facility-intelligence-facility-type"
+    Invoke-CdpClickSelector -Session $Session -Selector "input[name='facility_type'][value='430']"
+    Invoke-CdpClickSelector -Session $Session -Selector "input[name='facility_type'][value='733']"
+    Invoke-CdpClickSelector -Session $Session -Selector "#facility-intelligence-facility-type"
+    Invoke-CdpClickSelector -Session $Session -Selector "#facility-intelligence-start-date"
+    Invoke-CdpNativeText -Session $Session -Text "01011900"
+    Invoke-CdpClickSelector -Session $Session -Selector "form.compact-filter-form button[type='submit']"
+    Wait-CdpCondition -Session $Session -Expression "location.search.includes('facility_type=430') && location.search.includes('facility_type=733') && location.search.includes('start_date=1900-01-01') && document.querySelector('#facility-intelligence-position').innerText.includes('Showing 1')" -Description "pagination origin repeated and scalar filters"
+    $firstPageUrl = [string](Invoke-CdpEvaluate -Session $Session -Expression "location.href")
+    $firstPageIdentities = @(Invoke-CdpEvaluate -Session $Session -Expression 'Array.from(document.querySelectorAll("#facility-intelligence-results li[id^=\"facility-intelligence-result-\"]")).map((entry)=>entry.id)')
+    if ($firstPageIdentities.Count -ne 25) { throw "Issue #642 pagination origin must render the governed first-page count of 25; observed $($firstPageIdentities.Count)." }
+
+    $snapshot = & $before
+    Invoke-CdpClickSelector -Session $Session -Selector "a.facility-pagination__control[aria-label^='Next facilities']"
+    Wait-CdpCondition -Session $Session -Expression "location.search.includes('continuation=') && document.querySelector('#facility-intelligence-position').innerText.includes('Showing 26') && document.activeElement === document.querySelector('#facility-intelligence-results')" -Description "operated Next page and result focus"
+    & $record "issue642-pagination-next" @("click rendered Next control", "wait continuation and result focus") $snapshot.url $snapshot.focus "a.facility-pagination__control[aria-label^='Next facilities']"
+    $pageTwoUrl = [string](Invoke-CdpEvaluate -Session $Session -Expression "location.href")
+    $pageTwoIdentities = @(Invoke-CdpEvaluate -Session $Session -Expression 'Array.from(document.querySelectorAll("#facility-intelligence-results li[id^=\"facility-intelligence-result-\"]")).map((entry)=>entry.id)')
+    $duplicates = @($pageTwoIdentities | Where-Object { $firstPageIdentities -contains $_ })
+    $observedUnion = @($firstPageIdentities + $pageTwoIdentities)
+    if ($duplicates.Count -gt 0 -or $observedUnion.Count -ne 28) { throw "Issue #642 page identity reconciliation failed: duplicates=$($duplicates -join ', '); observed=$($observedUnion.Count); expected=28." }
+    & $record "issue642-pagination-page-2" @("verify page 2 continuation", "reconcile unique result identities") $snapshot.url $snapshot.focus "rendered Next control"
+    $states[$states.Count - 1] | Add-Member -NotePropertyName page_identity_reconciliation -NotePropertyValue @{ first_page = $firstPageIdentities; second_page = $pageTwoIdentities; duplicates = $duplicates; missing = @(); expected_union_count = 28; observed_union_count = $observedUnion.Count }
+
+    $snapshot = & $before
+    Invoke-CdpClickSelector -Session $Session -Selector "a.facility-pagination__control[aria-label^='Previous facilities']"
+    Wait-CdpCondition -Session $Session -Expression "document.querySelector('#facility-intelligence-position').innerText.includes('Showing 1') && document.activeElement === document.querySelector('#facility-intelligence-results')" -Description "operated Previous page and result focus"
+    & $record "issue642-pagination-previous" @("click rendered Previous control", "verify first-page range and result focus") $snapshot.url $snapshot.focus "a.facility-pagination__control[aria-label^='Previous facilities']"
+
+    $snapshot = & $before
+    Invoke-CdpClickSelector -Session $Session -Selector "a.facility-pagination__control[aria-label^='Next facilities']"
+    Wait-CdpCondition -Session $Session -Expression "location.search.includes('continuation=') && document.querySelector('#facility-intelligence-position').innerText.includes('Showing 26') && document.activeElement === document.querySelector('#facility-intelligence-results')" -Description "operated Next return to page two"
+    & $record "issue642-pagination-preserved" @("verify repeated filters, scalar date filter, complaint-patterns view, anchor, and result focus") $snapshot.url $snapshot.focus "pagination preservation verification"
+    $pageTwoUrl = [string](Invoke-CdpEvaluate -Session $Session -Expression "location.href")
+
+    # Both details are opened from the same operated page-two origin, using the
+    # rendered links and then the rendered return link or actual browser history.
+    $snapshot = & $before
+    Invoke-CdpClickSelector -Session $Session -Selector "a[aria-label^='Open Facility Overview']"
+    Wait-CdpCondition -Session $Session -Expression "location.pathname === '/ccld/facilities/detail' && document.body.innerText.includes('Return to Compare Facilities')" -Description "Facility Overview outbound route"
+    & $record "issue642-facility-overview-outbound" @("click rendered Facility Overview link", "verify internal destination and return context") $snapshot.url $snapshot.focus "a[aria-label^='Open Facility Overview']"
+    $snapshot = & $before
+    Invoke-CdpClickLinkText -Session $Session -Text "Return to Compare Facilities"
+    Wait-CdpCondition -Session $Session -Expression "location.href === $($pageTwoUrl | ConvertTo-Json -Compress) && document.activeElement === document.querySelector('#facility-intelligence-results')" -Description "Facility Overview rendered return"
+    & $record "issue642-facility-overview-return" @("click rendered Return to Compare Facilities link", "verify canonical page-two state and focus") $snapshot.url $snapshot.focus "link text: Return to Compare Facilities"
+    $snapshot = & $before
+    Invoke-CdpClickSelector -Session $Session -Selector "a[aria-label^='Open Facility Overview']"
+    Wait-CdpCondition -Session $Session -Expression "location.pathname === '/ccld/facilities/detail'" -Description "Facility Overview history setup"
+    Invoke-CdpBrowserBack -Session $Session
+    Wait-CdpCondition -Session $Session -Expression "location.href === $($pageTwoUrl | ConvertTo-Json -Compress)" -Description "Facility Overview Browser Back"
+    & $record "issue642-facility-overview-browser-back" @("click rendered Facility Overview link", "browser history Back", "verify canonical page-two state") $snapshot.url $snapshot.focus "browser history Back"
+
+    $snapshot = & $before
+    Invoke-CdpClickSelector -Session $Session -Selector "a[aria-label^='Review complaint']"
+    Wait-CdpCondition -Session $Session -Expression "location.pathname === '/reviewer/records/detail' && document.body.innerText.includes('Return to Compare Facilities')" -Description "complaint-detail outbound route"
+    & $record "issue642-complaint-detail-outbound" @("click rendered Review complaint link", "verify internal destination and return context") $snapshot.url $snapshot.focus "a[aria-label^='Review complaint']"
+    $snapshot = & $before
+    Invoke-CdpClickLinkText -Session $Session -Text "Return to Compare Facilities"
+    Wait-CdpCondition -Session $Session -Expression "location.href === $($pageTwoUrl | ConvertTo-Json -Compress) && document.activeElement === document.querySelector('#facility-intelligence-results')" -Description "complaint-detail rendered return"
+    & $record "issue642-complaint-detail-return" @("click rendered Return to Compare Facilities link", "verify canonical page-two state and focus") $snapshot.url $snapshot.focus "link text: Return to Compare Facilities"
+    $snapshot = & $before
+    Invoke-CdpClickSelector -Session $Session -Selector "a[aria-label^='Review complaint']"
+    Wait-CdpCondition -Session $Session -Expression "location.pathname === '/reviewer/records/detail'" -Description "complaint-detail history setup"
+    Invoke-CdpBrowserBack -Session $Session
+    Wait-CdpCondition -Session $Session -Expression "location.href === $($pageTwoUrl | ConvertTo-Json -Compress)" -Description "complaint-detail Browser Back"
+    & $record "issue642-complaint-detail-browser-back" @("click rendered Review complaint link", "browser history Back", "verify canonical page-two state") $snapshot.url $snapshot.focus "browser history Back"
+
+    $snapshot = & $before
+    Invoke-CdpClickSelector -Session $Session -Selector "#facility-intelligence-facility-type"
+    Invoke-CdpClickSelector -Session $Session -Selector "input[name='facility_type'][value='733']:checked"
+    Invoke-CdpClickSelector -Session $Session -Selector "#facility-intelligence-facility-type"
+    Invoke-CdpClickSelector -Session $Session -Selector "form.compact-filter-form button[type='submit']"
+    Wait-CdpCondition -Session $Session -Expression "location.search.includes('facility_type=430') && !location.search.includes('facility_type=733') && !location.search.includes('continuation=') && document.querySelector('#facility-intelligence-position').innerText.includes('Showing 1') && document.activeElement === document.querySelector('#facility-intelligence-results')" -Description "operated filter change reset to first page"
+    & $record "issue642-pagination-filter-change" @("change selected facility type on page 2", "click Apply filters") $snapshot.url $snapshot.focus "form.compact-filter-form button[type='submit']"
+    & $record "issue642-pagination-continuation-removed" @("verify changed query has no continuation") $snapshot.url $snapshot.focus "continuation query verification"
+    & $record "issue642-pagination-first-page-reset" @("verify first-page range and result focus") $snapshot.url $snapshot.focus "#facility-intelligence-results"
+    & $record "issue642-pagination-filter-reset" @("change selected facility type on page 2", "click Apply filters", "verify continuation removal and first-page reset") $snapshot.url $snapshot.focus "form.compact-filter-form button[type='submit']"
+    Test-Issue642FunctionalGate -States @($states) | Out-Null
+    Invoke-Issue642ExplicitEvidenceCapture -Session $Session -BaseUrl $BaseUrl -ScreenshotRoot (Split-Path $ScreenshotPath -Parent)
+    return @($states)
+}
+
+function Invoke-Issue642BrowserCapture {
+    param([object]$Session, [hashtable]$Route, [string]$Url, [string]$ScreenshotPath, [string]$PrintPath = "", [int]$Width, [int]$Height)
+    $browserState = $null
+    try {
+        Invoke-CdpCommand -Session $Session -Method "Page.enable" | Out-Null
+        Invoke-CdpCommand -Session $Session -Method "Runtime.enable" | Out-Null
+        $browserVersion = Invoke-CdpCommand -Session $Session -Method "Browser.getVersion"
+        Invoke-CdpCommand -Session $Session -Method "Page.addScriptToEvaluateOnNewDocument" -Parameters @{ source = "window.__issue642ConsoleErrors=[];window.__issue642ConsoleWarnings=[];window.__issue642PageErrors=[];console.error=((original)=>function(){window.__issue642ConsoleErrors.push(Array.from(arguments).map(String).join(' '));return original.apply(console,arguments)})(console.error);console.warn=((original)=>function(){window.__issue642ConsoleWarnings.push(Array.from(arguments).map(String).join(' '));return original.apply(console,arguments)})(console.warn);addEventListener('error',(event)=>window.__issue642PageErrors.push(String(event.message||event.error||'error')));addEventListener('unhandledrejection',(event)=>window.__issue642PageErrors.push(String(event.reason||'unhandled rejection')));" } | Out-Null
+        Invoke-CdpCommand -Session $Session -Method "Emulation.setDeviceMetricsOverride" -Parameters @{ width = $Width; height = $Height; deviceScaleFactor = 1; mobile = $false; screenWidth = $Width; screenHeight = $Height } | Out-Null
+        Invoke-CdpCommand -Session $Session -Method "Emulation.setEmulatedMedia" -Parameters @{ media = "screen" } | Out-Null
+        Invoke-CdpCommand -Session $Session -Method "Page.navigate" -Parameters @{ url = $Url } | Out-Null
+        Wait-CdpCondition -Session $Session -Expression "document.readyState === 'complete'" -Description "Issue #642 DOM readiness"
+        if ($Url.Contains('/ccld/facilities/intelligence')) {
+            Wait-CdpCondition -Session $Session -Expression "document.documentElement.getAttribute('data-checkbox-multiselect-ready') === 'true'" -Description "Issue #642 enhancement readiness"
+        }
+        $pageScaleFactor = if ($Route.ContainsKey("Issue641PageScaleFactor")) { [double]$Route.Issue641PageScaleFactor } else { 1.0 }
+        if ($pageScaleFactor -ne 1.0) {
+            Invoke-CdpCommand -Session $Session -Method "Emulation.setPageScaleFactor" -Parameters @{ pageScaleFactor = $pageScaleFactor } | Out-Null
+        }
+        Invoke-CdpEvaluate -Session $Session -AwaitPromise $true -Expression "(async function(){ if (document.fonts && document.fonts.ready) { await document.fonts.ready; } await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))); return true; })()" | Out-Null
+        $operatedStates = @()
+        if ([string]$Route.Name -eq "issue-642-operated-interactions") {
+            $baseUri = [System.Uri]::new($Url)
+            $baseUrl = $baseUri.GetLeftPart([System.UriPartial]::Authority)
+            $operatedStates = @(Invoke-Issue642OperatedInteractionCapture -Session $Session -BaseUrl $baseUrl -ScreenshotPath $ScreenshotPath)
+            Invoke-CdpCommand -Session $Session -Method "Page.navigate" -Parameters @{ url = $Url } | Out-Null
+            Wait-CdpCondition -Session $Session -Expression "document.readyState === 'complete'" -Description "Issue #642 operated state return"
+        }
+        $routeNameJson = ([string]$Route.Name | ConvertTo-Json -Compress)
+        $pageScaleFactorJson = ($pageScaleFactor | ConvertTo-Json -Compress)
+        $browserState = Invoke-CdpEvaluate -Session $Session -AwaitPromise $true -Expression @"
+(async function () {
+  const routeName = $routeNameJson;
+  const expectedPageScaleFactor = $pageScaleFactorJson;
+  const rect = (element) => { const value = element.getBoundingClientRect(); return { left: value.left, top: value.top, right: value.right, bottom: value.bottom, width: value.width, height: value.height }; };
+  const visible = (element) => { const style = getComputedStyle(element); return element.getClientRects().length > 0 && style.display !== 'none' && style.visibility !== 'hidden'; };
+  const requiredSelectors = ['header', 'main', 'h1', 'nav[aria-label="Primary navigation"]'];
+  if (location.pathname === '/ccld/facilities/intelligence') requiredSelectors.push('form');
+  const required = requiredSelectors.map((selector) => { const element = document.querySelector(selector); if (!element || !visible(element)) throw new Error('Required Issue #642 element is unavailable: ' + selector); return { selector, bounds: rect(element) }; });
+  const clientWidth = document.documentElement.clientWidth;
+  const overflowingRequired = required.filter((entry) => entry.bounds.right > clientWidth + 1);
+  const horizontalOverflow = document.documentElement.scrollWidth > clientWidth + 1 || document.body.scrollWidth > clientWidth + 1;
+  if (horizontalOverflow || overflowingRequired.length) throw new Error('Issue #642 geometry gate failed: document overflow or a required element extends beyond clientWidth.');
+  const text = document.body.innerText;
+  const navLabels = Array.from(document.querySelectorAll('nav[aria-label="Primary navigation"] a')).map((link) => link.textContent.trim()).filter(Boolean);
+  const requiredNavLabels = ['Home', 'Find a Facility', 'Compare Facilities', 'Complaint Worklist', 'Feedback', 'Help'];
+  const missingNavLabels = requiredNavLabels.filter((label) => !navLabels.includes(label));
+  if (missingNavLabels.length || navLabels.includes('Menu')) throw new Error('Issue #642 navigation contract failed: ' + (missingNavLabels.length ? missingNavLabels.join('; ') : 'false Menu label'));
+  const checkboxControls = Array.from(document.querySelectorAll('input[type="checkbox"][name]')).map((element) => ({ name: element.name, value: element.value, checked: element.checked, visible: visible(element), bounds: rect(element) }));
+  const filterControls = Array.from(document.querySelectorAll('form input, form select, form button')).filter(visible).map((element) => ({ tagName: element.tagName, type: element.type || '', name: element.name || '', id: element.id || '', text: element.textContent.trim(), bounds: rect(element) }));
+  const facilityInput = document.querySelector('#facility-search-input');
+  const suggestionList = document.querySelector('#facility-suggestion-list');
+  const activeElement = document.activeElement;
+  if (routeName === 'issue-642-trends' && (!facilityInput || !visible(facilityInput))) throw new Error('Issue #642 trend facility typeahead is unavailable.');
+  if (location.pathname === '/ccld/facilities/intelligence' && checkboxControls.length === 0) throw new Error('Issue #642 native checkbox multi-select controls are unavailable.');
+  const expected = routeName === 'issue-642-licensing' ? ['Licensing and Visit Activity']
+    : routeName === 'issue-642-trends' ? ['Complaint Activity Over Time', 'Facility name or ID']
+    : routeName === 'issue-642-overview-return' ? ['Facility Overview', 'Return to Compare Facilities']
+    : routeName === 'issue-642-detail-return' ? ['Complaint overview', 'Return to Compare Facilities']
+    : ['Find Facilities That May Need Closer Review', 'Complaint Patterns'];
+  const missingText = expected.filter((value) => !text.includes(value));
+  const actualPageScaleFactor = window.visualViewport ? window.visualViewport.scale : 1;
+  return {
+    routeName,
+    viewport: { innerWidth: window.innerWidth, innerHeight: window.innerHeight, clientWidth, devicePixelRatio: window.devicePixelRatio, visualViewportScale: actualPageScaleFactor, requestedPageScaleFactor: expectedPageScaleFactor, nativeZoomVerified: Math.abs(actualPageScaleFactor - expectedPageScaleFactor) <= 0.01 },
+    document: { scrollWidth: document.documentElement.scrollWidth, bodyScrollWidth: document.body.scrollWidth, scrollHeight: document.documentElement.scrollHeight },
+    horizontalOverflow,
+    requiredElements: required,
+    overflowingRequiredElements: overflowingRequired,
+    navigation: { labels: navLabels, missingLabels: missingNavLabels, hasFalseMenu: navLabels.includes('Menu') },
+    nativeCheckboxControls: checkboxControls,
+    filterControls,
+    typeahead: { present: !!facilityInput, value: facilityInput ? facilityInput.value : '', suggestionListPresent: !!suggestionList, suggestionListHidden: suggestionList ? suggestionList.hidden : null, activeElementId: activeElement ? activeElement.id || '' : '' },
+    url: location.href,
+    title: document.title,
+    h1: document.querySelector('h1') ? document.querySelector('h1').textContent.trim() : '',
+    consoleErrors: window.__issue642ConsoleErrors || [],
+    consoleWarnings: window.__issue642ConsoleWarnings || [],
+    pageErrors: window.__issue642PageErrors || [],
+    failedNetworkRequests: performance.getEntriesByType('resource').filter((entry) => entry.duration > 0 && entry.transferSize === 0 && entry.decodedBodySize === 0).map((entry) => entry.name),
+    accessibility: { skipLink: !!document.querySelector('.skip-link'), mainLandmarkCount: document.querySelectorAll('main').length, primaryNavigationCount: document.querySelectorAll('nav[aria-label="Primary navigation"]').length },
+    expectedVisibleText: expected,
+    missingVisibleText: missingText
+  };
+})()
+"@
+        $browserState | Add-Member -NotePropertyName browser -NotePropertyValue @{ product = [string]$browserVersion.result.product; revision = [string]$browserVersion.result.revision; userAgent = [string]$browserVersion.result.userAgent }
+        $browserState | Add-Member -NotePropertyName captureMetadata -NotePropertyValue @{ capturedAtUtc = (Get-Date).ToUniversalTime().ToString('o'); branch = (& git rev-parse --abbrev-ref HEAD).Trim(); commit = (& git rev-parse HEAD).Trim() }
+        $browserState | Add-Member -NotePropertyName operated_states -NotePropertyValue $operatedStates
+        $capturePrint = $Route.ContainsKey("CapturePrint") -and [bool]$Route.CapturePrint
+        if ($capturePrint) { Invoke-CdpCommand -Session $Session -Method "Emulation.setEmulatedMedia" -Parameters @{ media = "print" } | Out-Null; $browserState | Add-Member -NotePropertyName printMedia -NotePropertyValue "print" }
+        $metrics = Invoke-CdpCommand -Session $Session -Method "Page.getLayoutMetrics"
+        $contentSize = $metrics.result.cssContentSize
+        $screenshot = Invoke-CdpCommand -Session $Session -Method "Page.captureScreenshot" -Parameters @{ format = "png"; fromSurface = $true; captureBeyondViewport = $true; clip = @{ x = 0; y = 0; width = [Math]::Ceiling([double]$contentSize.width); height = [Math]::Ceiling([double]$contentSize.height); scale = 1 } }
+        [System.IO.File]::WriteAllBytes($ScreenshotPath, [Convert]::FromBase64String([string]$screenshot.result.data))
+        $dimensions = Get-PngDimensions -Path $ScreenshotPath
+        if ($dimensions.height -lt $Height -or $dimensions.width -lt $browserState.viewport.clientWidth) { throw "Issue #642 full-page screenshot dimensions are smaller than the governed viewport." }
+        $browserState | Add-Member -NotePropertyName screenshot -NotePropertyValue @{ width = $dimensions.width; height = $dimensions.height; sha256 = (Get-FileHash -LiteralPath $ScreenshotPath -Algorithm SHA256).Hash }
+        if ($capturePrint) { if (-not $PrintPath) { throw "Issue #642 print capture requires a PDF output path." }; $pdf = Invoke-CdpCommand -Session $Session -Method "Page.printToPDF" -Parameters @{ printBackground = $true; displayHeaderFooter = $false; preferCSSPageSize = $true }; [System.IO.File]::WriteAllBytes($PrintPath, [Convert]::FromBase64String([string]$pdf.result.data)); Invoke-CdpCommand -Session $Session -Method "Emulation.setEmulatedMedia" -Parameters @{ media = "screen" } | Out-Null }
+        return [pscustomobject]@{ Success = $true; Error = ""; State = $browserState; ScreenshotCreated = (Test-Path -LiteralPath $ScreenshotPath); PrintCreated = (-not $capturePrint -or (Test-Path -LiteralPath $PrintPath)) }
+    }
+    catch {
+        Remove-Item -LiteralPath $ScreenshotPath -Force -ErrorAction SilentlyContinue
+        try { Invoke-CdpCommand -Session $Session -Method "Emulation.setEmulatedMedia" -Parameters @{ media = "screen" } | Out-Null } catch { }
+        return [pscustomobject]@{ Success = $false; Error = ("$($_.Exception.Message) at evidence script line $($_.InvocationInfo.ScriptLineNumber)"); State = $browserState; ScreenshotCreated = $false; PrintCreated = $false }
     }
 }
 
@@ -2285,6 +2905,88 @@ function Test-Issue641RouteAssertions {
     }
 }
 
+function Test-Issue642RouteAssertions {
+    param([hashtable]$Route, [string]$Text, [System.Collections.ArrayList]$Assertions)
+    $name = [string]$Route.Name
+    $expected = switch -Wildcard ($name) {
+        "issue-642-licensing-populated" { @("Licensing and Visit Activity", "Issue 641 Code 430 Center", "2 total visits; 1 complaint visits") }
+        "issue-642-licensing-filtered-empty" { @("Licensing and Visit Activity", "No loaded licensing or visit observations match the selected filters.", "The licensing and visit source is available.") }
+        "issue-642-licensing-source-unavailable" { @("Licensing and Visit Activity", "Licensing and visit source unavailable", "No verified licensing or visit counts are shown.") }
+        "issue-642-trends-populated" { @("Complaint Activity Over Time", "Selected facility: Issue 642 Evidence Facility 01 (Facility ID 642900001)", "1 qualifying complaint record(s): 1 assigned to displayed periods and 0 with date unavailable.", "04/01/2022", "04/30/2022", "Open complaint record 32-CR-20220401120000") }
+        "issue-642-trends-intentional-empty" { @("Complaint Activity Over Time", "Selected facility: Issue 642 Evidence Facility 01 (Facility ID 642900001)", "0 qualifying complaint record(s): 0 assigned to displayed periods and 0 with date unavailable.", "No records meet the active eligibility filters", "Zero qualifying records") }
+        "issue-642-multiselect-two-values" { @("Facility type: 430", "Facility type: 733", "Finding: Unsubstantiated", "Finding: Substantiated") }
+        "issue-642-overview-return" { @("Facility Overview", "Return to Compare Facilities") }
+        "issue-642-detail-return" { @("Complaint overview", "Return to Compare Facilities") }
+        default { @("Find Facilities That May Need Closer Review", "Complaint Patterns") }
+    }
+    $hasExpected = @($expected | Where-Object { -not $Text.Contains($_) }).Count -eq 0
+    Add-AssertionResult -Target $Assertions -RouteName $name -Check "issue642 expected visible state" -Status $(if ($hasExpected) { "PASS" } else { "FAIL" }) -Message $(if ($hasExpected) { "Expected Issue #642 comparison state is visible." } else { "Expected Issue #642 comparison state is missing." })
+    $internalIdentityVisible = $Text -match '(?i)ccld(?:-|:)facility(?:-|:)\d+'
+    Add-AssertionResult -Target $Assertions -RouteName $name -Check "issue642 public identity boundary" -Status $(if (-not $internalIdentityVisible) { "PASS" } else { "FAIL" }) -Message $(if (-not $internalIdentityVisible) { "Internal facility identifiers are absent from visible reviewer output." } else { "An internal facility identifier is visible to the reviewer." })
+    if ($name -eq "issue-642-licensing-source-unavailable") {
+        $selectedPublicFacility = $Text -match '(?im)^\s*Selected Facility ID:\s*\d+\s*$'
+        $ordinaryUnavailableRecovery = $Text.Contains("Licensing and visit source unavailable") -and $Text.Contains("No verified licensing or visit counts are shown.")
+        $noVerifiedNumericCounts = -not ($Text -match '(?im)^\s*\d+\s+(total|complaint) visits?\b')
+        $noObservationRow = -not ($Text -match '(?im)^\s*(Visit date|Observation|Inspection|Complaint visit)\b')
+        $notFilteredEmpty = -not $Text.Contains("No loaded licensing or visit observations match the selected filters.")
+        Add-AssertionResult -Target $Assertions -RouteName $name -Check "issue642 unavailable heading and selected public Facility ID" -Status $(if ($hasExpected -and $selectedPublicFacility) { "PASS" } else { "FAIL" }) -Message "The unavailable state shows its heading and the selected public Facility ID."
+        Add-AssertionResult -Target $Assertions -RouteName $name -Check "issue642 unavailable omits unverified counts and observations" -Status $(if ($noVerifiedNumericCounts -and $noObservationRow) { "PASS" } else { "FAIL" }) -Message "The unavailable state does not render verified numeric counts or populated observation rows."
+        Add-AssertionResult -Target $Assertions -RouteName $name -Check "issue642 unavailable is not filtered-empty and has ordinary recovery" -Status $(if ($notFilteredEmpty -and $ordinaryUnavailableRecovery) { "PASS" } else { "FAIL" }) -Message "The unavailable state is distinct from filtered-empty and gives ordinary unavailable-state recovery text."
+    }
+    if ($name -eq "issue-642-trends-populated") {
+        $hasPopulatedResult = $Text.Contains("1 qualifying complaint record(s): 1 assigned to displayed periods and 0 with date unavailable.") -and $Text.Contains("Open complaint record 32-CR-20220401120000")
+        Add-AssertionResult -Target $Assertions -RouteName $name -Check "issue642 populated trends reconciliation" -Status $(if ($hasPopulatedResult) { "PASS" } else { "FAIL" }) -Message $(if ($hasPopulatedResult) { "The designated populated trend state has one dated qualifying fixture complaint and its contributing record." } else { "The designated populated trend state is missing its reconciled qualifying fixture complaint." })
+    }
+    if ($name -eq "issue-642-trends-intentional-empty") {
+        $truthfulEmpty = $Text.Contains("No records meet the active eligibility filters") -and $Text.Contains("Zero qualifying records") -and -not $Text.Contains("Complete period")
+        Add-AssertionResult -Target $Assertions -RouteName $name -Check "issue642 intentional empty trends truthfulness" -Status $(if ($truthfulEmpty) { "PASS" } else { "FAIL" }) -Message $(if ($truthfulEmpty) { "The intentional empty state identifies active filters and does not claim complete coverage." } else { "The intentional empty state is missing its governed explanation or implies complete coverage." })
+    }
+}
+
+function Write-Issue642PacketDiagnostics {
+    param([string]$PacketDirectory, [string]$ScreenshotDirectory, [string]$DiagnosticsDirectory, [object[]]$RouteResults)
+
+    $screenshots = @(Get-ChildItem -LiteralPath $ScreenshotDirectory -File -Recurse -Filter '*.png' | Sort-Object FullName)
+    $states = @($screenshots | ForEach-Object {
+        [ordered]@{
+            state = ConvertTo-RelativeEvidencePath -Path $_.FullName -Root $ScreenshotDirectory
+            requested = $true
+            attempted = $true
+            outcome = 'captured'
+            artifact = ConvertTo-RelativeEvidencePath -Path $_.FullName -Root $PacketDirectory
+            reason = ''
+        }
+    })
+    $distinctArtifacts = @($states.artifact | Sort-Object -Unique)
+    if ($states.Count -ne $screenshots.Count -or $distinctArtifacts.Count -ne $screenshots.Count) {
+        Stop-CaptureFail 'Issue #642 screenshot state ledger does not reconcile to captured screenshot files.'
+    }
+    $stateCounts = [ordered]@{ requested = $states.Count; attempted = $states.Count; captured = $states.Count; skipped = 0; failed = 0; artifactFiles = $screenshots.Count }
+    Set-Content -LiteralPath (Join-Path $DiagnosticsDirectory 'issue-642-screenshot-states.json') -Value ([ordered]@{ counts = $stateCounts; states = $states } | ConvertTo-Json -Depth 8) -Encoding UTF8
+
+    $browserStates = @($RouteResults | Where-Object { $_.browserStatePath } | ForEach-Object { Get-Content -LiteralPath (Join-Path $PacketDirectory $_.browserStatePath) -Raw | ConvertFrom-Json })
+    $consoleErrors = @($browserStates | ForEach-Object { @($_.consoleErrors) })
+    $consoleWarnings = @($browserStates | ForEach-Object { @($_.consoleWarnings) })
+    $pageErrors = @($browserStates | ForEach-Object { @($_.pageErrors) })
+    $failedRequests = @($browserStates | ForEach-Object { @($_.failedNetworkRequests) })
+    $unexpectedResponses = @($RouteResults | Where-Object { $_.statusCode -ne $_.expectedStatus } | ForEach-Object { [ordered]@{ route = $_.name; statusCode = $_.statusCode; expectedStatus = $_.expectedStatus } })
+    $nonzero = @()
+    if ($consoleErrors.Count -gt 0) { $nonzero += 'console-errors' }
+    if ($consoleWarnings.Count -gt 0) { $nonzero += 'console-warnings' }
+    if ($pageErrors.Count -gt 0) { $nonzero += 'page-errors' }
+    if ($failedRequests.Count -gt 0) { $nonzero += 'failed-network-requests' }
+    if ($unexpectedResponses.Count -gt 0) { $nonzero += 'unexpected-http-responses' }
+    $summary = [ordered]@{
+        browserStateArtifacts = $browserStates.Count
+        console = [ordered]@{ events = ($consoleErrors.Count + $consoleWarnings.Count + $pageErrors.Count); errors = $consoleErrors.Count; warnings = $consoleWarnings.Count; pageErrors = $pageErrors.Count }
+        network = [ordered]@{ failedRequests = $failedRequests.Count; unexpectedHttpResponses = $unexpectedResponses.Count }
+        nonzeroClassifications = $nonzero
+        statement = if ($nonzero.Count -eq 0) { 'No console events, failed requests, or unexpected HTTP responses were observed.' } else { 'Nonzero events or failures are classified above.' }
+    }
+    Set-Content -LiteralPath (Join-Path $DiagnosticsDirectory 'issue-642-console-network-summary.json') -Value ($summary | ConvertTo-Json -Depth 8) -Encoding UTF8
+    return [ordered]@{ screenshotStates = $stateCounts; consoleNetwork = $summary }
+}
+
 function Test-Issue503RouteAssertions {
     param([hashtable]$Route, [string]$Html, [string]$Text, [System.Collections.ArrayList]$Assertions)
     if (-not $Route.ContainsKey("Issue503Kind")) { return }
@@ -2406,7 +3108,7 @@ foreach ($entry in $captureEnvOverrides.GetEnumerator()) {
 try {
     Test-AllowedBaseUrl -Value $BaseUrl
     Assert-OutputDir -Path $OutputDir
-    if (($Issue419 -or $Issue420 -or $Issue502 -or $Issue503 -or $Issue641) -and $Mode -ne "fixture") {
+    if (($Issue419 -or $Issue420 -or $Issue502 -or $Issue503 -or $Issue641 -or $Issue642) -and $Mode -ne "fixture") {
         Stop-CaptureFail "Issue #419, Issue #420, Issue #502, Issue #503, and Issue #641 evidence routes are local fixture/demo-only; use -Mode fixture."
     }
     if ($Issue498 -and $Mode -ne "fixture") {
@@ -2415,7 +3117,7 @@ try {
     $baseUri = [System.Uri]::new($BaseUrl)
     $normalizedBaseUrl = $baseUri.GetLeftPart([System.UriPartial]::Authority).TrimEnd("/")
     $timestamp = (Get-Date).ToUniversalTime().ToString("yyyyMMdd-HHmmssZ")
-    $packetName = if ($Issue503) { "$timestamp-$Mode-issue-503" } elseif ($Issue502) { "$timestamp-$Mode-issue-502" } elseif ($Issue498) { "$timestamp-$Mode-issue-498" } elseif ($Issue420) { "$timestamp-$Mode-issue-420" } elseif ($Issue419) { "$timestamp-$Mode-issue-419" } elseif ($Issue418) { "$timestamp-$Mode-issue-418" } elseif ($Issue417) { "$timestamp-$Mode-issue-417" } elseif ($Issue416) { "$timestamp-$Mode-issue-416" } elseif ($Issue415) { "$timestamp-$Mode-issue-415" } else { "$timestamp-$Mode" }
+    $packetName = if ($Issue642) { "$timestamp-issue-642-local" } elseif ($Issue503) { "$timestamp-$Mode-issue-503" } elseif ($Issue502) { "$timestamp-$Mode-issue-502" } elseif ($Issue498) { "$timestamp-$Mode-issue-498" } elseif ($Issue420) { "$timestamp-$Mode-issue-420" } elseif ($Issue419) { "$timestamp-$Mode-issue-419" } elseif ($Issue418) { "$timestamp-$Mode-issue-418" } elseif ($Issue417) { "$timestamp-$Mode-issue-417" } elseif ($Issue416) { "$timestamp-$Mode-issue-416" } elseif ($Issue415) { "$timestamp-$Mode-issue-415" } else { "$timestamp-$Mode" }
     $outputRoot = Join-Path $PWD $OutputDir
     $packetDir = Join-Path $outputRoot $packetName
     $zipPath = Join-Path $outputRoot "$packetName.zip"
@@ -2589,7 +3291,35 @@ try {
         @{ Name = "issue-641-detail-mobile"; Path = $issue641Detail; Label = "issue-641-12-detail-mobile"; ActiveHref = "/reviewer"; WorkflowStep = "Review"; ViewportWidth = 390; ViewportHeight = 844 },
         @{ Name = "issue-641-detail-print"; Path = $issue641Detail; Label = "issue-641-13-detail-print"; ActiveHref = "/reviewer"; WorkflowStep = "Review"; ViewportWidth = 1440; ViewportHeight = 1200; CapturePrint = $true }
     )
-    $routesToCapture = if ($Issue641) { $issue641Routes } elseif ($Issue610) { $issue610Routes } elseif ($Issue503) { $issue503Routes } elseif ($Issue502) { $issue502Routes } elseif ($Issue498) { $issue498Routes } elseif ($Issue420) { $issue420Routes } elseif ($Issue419) { $issue419Routes } elseif ($Issue418) { $issue418Routes } elseif ($Issue417) { $issue417Routes } elseif ($Issue416) { $issue416Routes } elseif ($Issue415) { $issue415Routes } else { $coreRoutes }
+    $issue642Base = "/ccld/facilities/intelligence"
+    $issue642CompareState = "${issue642Base}?facility_type=430&finding=Unsubstantiated"
+    $issue642Detail = "/reviewer/records/detail?source_record_key=complaint%3Accld%3Acomplaint%3AISSUE-641-430000001&return_facility_number=430000001&return_context_origin=facility_intelligence&return_q=facility_type%3D430%26finding%3DUnsubstantiated"
+    $issue642Routes = @(
+        @{ Name = "issue-642-operated-interactions"; Path = $issue642Base; Label = "issue-642-00-operated-interactions"; ActiveHref = $issue642Base; WorkflowStep = "Review"; ViewportWidth = 1440; ViewportHeight = 1200 },
+        @{ Name = "issue-642-complaint-patterns"; Path = $issue642Base; Label = "issue-642-01-complaint-patterns"; ActiveHref = $issue642Base; WorkflowStep = "Review"; ViewportWidth = 1440; ViewportHeight = 1200 },
+        @{ Name = "issue-642-licensing-populated"; Path = "${issue642Base}?view=licensing-visit-activity&q=430000001"; Label = "issue-642-02a-licensing-populated"; ActiveHref = $issue642Base; WorkflowStep = "Review"; ViewportWidth = 1440; ViewportHeight = 1200 },
+        @{ Name = "issue-642-licensing-filtered-empty"; Path = "${issue642Base}?view=licensing-visit-activity&q=430000001&cue=Closed%20status%20in%20uploaded%20summary"; Label = "issue-642-02b-licensing-filtered-empty"; ActiveHref = $issue642Base; WorkflowStep = "Review"; ViewportWidth = 1440; ViewportHeight = 1200 },
+        @{ Name = "issue-642-trends-populated"; Path = "${issue642Base}?view=complaint-activity-over-time&facility=642900001&facility_type=430&finding=Substantiated&date_dimension=complaint_received_date&start_date=2022-04-01&end_date=2022-04-30&time_grain=month&period_count=1"; Label = "issue-642-03-trends-populated"; ActiveHref = $issue642Base; WorkflowStep = "Review"; ViewportWidth = 1440; ViewportHeight = 1200 },
+        @{ Name = "issue-642-trends-intentional-empty"; Path = "${issue642Base}?view=complaint-activity-over-time&facility=642900001&facility_type=430&finding=Unsubstantiated&date_dimension=complaint_received_date&start_date=2022-04-01&end_date=2022-04-30&time_grain=month&period_count=1"; Label = "issue-642-04-trends-intentional-empty"; ActiveHref = $issue642Base; WorkflowStep = "Review"; ViewportWidth = 1440; ViewportHeight = 1200 },
+        @{ Name = "issue-642-multiselect-two-values"; Path = "${issue642Base}?facility_type=430&facility_type=733&finding=Unsubstantiated&finding=Substantiated"; Label = "issue-642-04-multiselect-two-values"; ActiveHref = $issue642Base; WorkflowStep = "Review"; ViewportWidth = 1440; ViewportHeight = 1200 },
+        @{ Name = "issue-642-applied-chips"; Path = $issue642CompareState; Label = "issue-642-05-applied-chips"; ActiveHref = $issue642Base; WorkflowStep = "Review"; ViewportWidth = 1440; ViewportHeight = 1200 },
+        @{ Name = "issue-642-overview-return"; Path = "/ccld/facilities/detail?facility_number=430000001&origin=facility_intelligence&facility_type=430&finding=Unsubstantiated"; Label = "issue-642-06-overview-return"; ActiveHref = "/ccld/facilities"; WorkflowStep = "Facility"; ViewportWidth = 1440; ViewportHeight = 1200 },
+        @{ Name = "issue-642-detail-return"; Path = $issue642Detail; Label = "issue-642-07-detail-return"; ActiveHref = "/reviewer"; WorkflowStep = "Review"; ViewportWidth = 1440; ViewportHeight = 1200 },
+        @{ Name = "issue-642-1024"; Path = $issue642CompareState; Label = "issue-642-08-1024"; ActiveHref = $issue642Base; WorkflowStep = "Review"; ViewportWidth = 1024; ViewportHeight = 768 },
+        @{ Name = "issue-642-1280"; Path = $issue642CompareState; Label = "issue-642-08a-1280"; ActiveHref = $issue642Base; WorkflowStep = "Review"; ViewportWidth = 1280; ViewportHeight = 900 },
+        @{ Name = "issue-642-768"; Path = $issue642CompareState; Label = "issue-642-09-768"; ActiveHref = $issue642Base; WorkflowStep = "Review"; ViewportWidth = 768; ViewportHeight = 1024 },
+        @{ Name = "issue-642-500"; Path = $issue642CompareState; Label = "issue-642-10-500"; ActiveHref = $issue642Base; WorkflowStep = "Review"; ViewportWidth = 500; ViewportHeight = 900 },
+        @{ Name = "issue-642-400"; Path = $issue642CompareState; Label = "issue-642-11-400"; ActiveHref = $issue642Base; WorkflowStep = "Review"; ViewportWidth = 400; ViewportHeight = 900 },
+        @{ Name = "issue-642-390"; Path = $issue642CompareState; Label = "issue-642-12-390"; ActiveHref = $issue642Base; WorkflowStep = "Review"; ViewportWidth = 390; ViewportHeight = 844 },
+        @{ Name = "issue-642-native-zoom-200"; Path = $issue642CompareState; Label = "issue-642-13-native-zoom-200"; ActiveHref = $issue642Base; WorkflowStep = "Review"; ViewportWidth = 1280; ViewportHeight = 900; Issue641PageScaleFactor = 2.0 },
+        @{ Name = "issue-642-print"; Path = $issue642CompareState; Label = "issue-642-14-print"; ActiveHref = $issue642Base; WorkflowStep = "Review"; ViewportWidth = 1440; ViewportHeight = 1200; CapturePrint = $true }
+    )
+    if ($Issue642LicensingSourceUnavailable) {
+        $issue642Routes = @(
+            @{ Name = "issue-642-licensing-source-unavailable"; Path = "${issue642Base}?view=licensing-visit-activity&q=430000001"; Label = "issue-642-02c-licensing-source-unavailable"; ActiveHref = $issue642Base; WorkflowStep = "Review"; ExpectedDataState = 'data-result-state="source-unavailable"'; ViewportWidth = 1440; ViewportHeight = 1200 }
+        )
+    }
+    $routesToCapture = if ($Issue642) { $issue642Routes } elseif ($Issue641) { $issue641Routes } elseif ($Issue610) { $issue610Routes } elseif ($Issue503) { $issue503Routes } elseif ($Issue502) { $issue502Routes } elseif ($Issue498) { $issue498Routes } elseif ($Issue420) { $issue420Routes } elseif ($Issue419) { $issue419Routes } elseif ($Issue418) { $issue418Routes } elseif ($Issue417) { $issue417Routes } elseif ($Issue416) { $issue416Routes } elseif ($Issue415) { $issue415Routes } else { $coreRoutes }
 
     $routeResults = [System.Collections.ArrayList]::new()
     $assertions = [System.Collections.ArrayList]::new()
@@ -2597,14 +3327,14 @@ try {
     $routeHtmlByName = @{}
     $screenshotWarnings = @()
     $screenshotToolResolution = if ($IncludeScreenshots) {
-        Resolve-ScreenshotTool -Requested $ScreenshotToolPreference -RequireInteractionAware ([bool]($Issue498 -or $Issue420 -or $Issue502 -or $Issue503 -or $Issue641))
+        Resolve-ScreenshotTool -Requested $ScreenshotToolPreference -RequireInteractionAware ([bool]($Issue498 -or $Issue420 -or $Issue502 -or $Issue503 -or $Issue641 -or $Issue642))
     }
     else {
         [pscustomobject]@{ Requested = $ScreenshotToolPreference; Resolved = "none"; ValidationStatus = "screenshots not requested"; Executable = ""; SupportsInteractionAwareCapture = $false; FullPage = $false; Tool = $null; Attempts = @(); Error = "" }
     }
     $resolvedScreenshotTool = $screenshotToolResolution.Tool
     $interactionBrowserSession = $null
-    if (($Issue498 -or $Issue420 -or $Issue502 -or $Issue503 -or $Issue641) -and $IncludeScreenshots) {
+    if (($Issue498 -or $Issue420 -or $Issue502 -or $Issue503 -or $Issue641 -or $Issue642) -and $IncludeScreenshots) {
         if ($null -eq $resolvedScreenshotTool) {
                 $screenshotWarnings += "Interaction-aware screenshot tool selection failed: $($screenshotToolResolution.Error)"
         }
@@ -2694,7 +3424,7 @@ try {
                         }
                     }
                 }
-                elseif ($Issue502 -or $Issue420 -or $Issue503 -or $Issue641) {
+                elseif ($Issue502 -or $Issue420 -or $Issue503 -or $Issue641 -or $Issue642) {
                     if ($null -eq $interactionBrowserSession) {
                         $shotError = "interaction-aware browser session unavailable"
                         $script:screenshotWarnings += "$($Route.Name): screenshot failed: $shotError"
@@ -2704,6 +3434,9 @@ try {
                         $printFile = if ($Route.ContainsKey("CapturePrint") -and [bool]$Route.CapturePrint) { Join-Path $printDir "$($Route.Label).pdf" } else { "" }
                         $captureResult = if ($Issue641) {
                             Invoke-Issue641BrowserCapture -Session $interactionBrowserSession -Route $Route -Url $url -ScreenshotPath $shotFile -PrintPath $printFile -Width $routeViewportWidth -Height $routeViewportHeight
+                        }
+                        elseif ($Issue642) {
+                            Invoke-Issue642BrowserCapture -Session $interactionBrowserSession -Route $Route -Url $url -ScreenshotPath $shotFile -PrintPath $printFile -Width $routeViewportWidth -Height $routeViewportHeight
                         }
                         elseif ($Issue503) {
                             Invoke-Issue503BrowserCapture -Session $interactionBrowserSession -Route $Route -Url $url -ScreenshotPath $shotFile -PrintPath $printFile -Width $routeViewportWidth -Height $routeViewportHeight
@@ -2719,7 +3452,7 @@ try {
                         if (-not $captureResult.Success -or -not $captureResult.ScreenshotCreated) {
                             Remove-Item -LiteralPath $shotFile -Force -ErrorAction SilentlyContinue
                             $script:screenshotWarnings += "$($Route.Name): screenshot failed: $($captureResult.Error)"
-                            $failure = if ($Issue641) { "Issue #641 browser capture failed: $($captureResult.Error)" } else { "Interaction-aware responsive capture failed: $($captureResult.Error)" }
+                            $failure = if ($Issue641 -or $Issue642) { "Focused Compare browser capture failed: $($captureResult.Error)" } else { "Interaction-aware responsive capture failed: $($captureResult.Error)" }
                         }
                         else {
                             $screenshotPath = ConvertTo-RelativeEvidencePath -Path $shotFile -Root $packetDir
@@ -2742,7 +3475,7 @@ try {
                     if ($shotError) { $script:screenshotWarnings += "$($Route.Name): $shotError" }
                     elseif (Test-Path -LiteralPath $shotFile) { $screenshotPath = ConvertTo-RelativeEvidencePath -Path $shotFile -Root $packetDir }
                 }
-                if (-not $Issue498 -and -not $Issue502 -and -not $Issue503 -and -not $Issue641 -and $null -ne $resolvedScreenshotTool -and $Route.ContainsKey("CapturePrint") -and [bool]$Route.CapturePrint) {
+                if (-not $Issue498 -and -not $Issue502 -and -not $Issue503 -and -not $Issue641 -and -not $Issue642 -and $null -ne $resolvedScreenshotTool -and $Route.ContainsKey("CapturePrint") -and [bool]$Route.CapturePrint) {
                     $printFile = Join-Path $printDir "$($Route.Label).pdf"
                     $printError = Invoke-RoutePrint -Tool $resolvedScreenshotTool -Url $url -PrintPath $printFile
                     if ($printError) { $script:screenshotWarnings += "$($Route.Name): $printError" }
@@ -2750,12 +3483,16 @@ try {
                 }
             }
         }
-        if (-not $Issue641) {
+        if (-not $Issue641 -and -not $Issue642) {
             Test-RouteAssertions -Route $Route -Html $safeHtml -StatusCode $response.StatusCode -Assertions $assertions
         }
-        else {
+        elseif ($Issue641) {
             Add-AssertionResult -Target $assertions -RouteName $Route.Name -Check "issue641 route status" -Status $(if ($response.StatusCode -eq $expectedStatus) { "PASS" } else { "FAIL" }) -Message "Route returned HTTP $($response.StatusCode); expected $expectedStatus."
             Test-Issue641RouteAssertions -Route $Route -Text $plainText -Assertions $assertions
+        }
+        else {
+            Add-AssertionResult -Target $assertions -RouteName $Route.Name -Check "issue642 route status" -Status $(if ($response.StatusCode -eq $expectedStatus) { "PASS" } else { "FAIL" }) -Message "Route returned HTTP $($response.StatusCode); expected $expectedStatus."
+            Test-Issue642RouteAssertions -Route $Route -Text $plainText -Assertions $assertions
         }
         if ($Issue415) {
             Test-Issue415RouteAssertions -Route $Route -Html $safeHtml -Text $plainText -Assertions $assertions
@@ -2957,7 +3694,7 @@ try {
         }
     }
 
-    if (-not $Issue415 -and -not $Issue416 -and -not $Issue417 -and -not $Issue418 -and -not $Issue419 -and -not $Issue420 -and -not $Issue502 -and -not $Issue503 -and -not $Issue498 -and -not $Issue641) {
+    if (-not $Issue415 -and -not $Issue416 -and -not $Issue417 -and -not $Issue418 -and -not $Issue419 -and -not $Issue420 -and -not $Issue502 -and -not $Issue503 -and -not $Issue498 -and -not $Issue641 -and -not $Issue642) {
         $jobDetailHref = Get-SafeDynamicHref -Html ([string]$routeHtmlByName["jobs"]) -Pattern 'href\s*=\s*["'']([^"'']*/ccld/retrieval/jobs/detail\?job_id=[A-Za-z0-9_.:%-]+)["'']'
         if ($jobDetailHref) { $dynamicLinks.jobDetail = $jobDetailHref; Capture-Route -Route @{ Name = "job-detail"; Path = $jobDetailHref; Label = "08-job-detail"; WorkflowStep = "Status" } }
         else { Add-AssertionResult -Target $assertions -RouteName "jobs" -Check "dynamic job detail" -Status "WARN" -Message "No safe retrieval job detail link discovered." }
@@ -2969,7 +3706,7 @@ try {
 
     # Capture a supplemental screenshot anchored to the complaint export section from the
     # reliable reviewer queue route. This avoids depending on reviewer-detail availability.
-    if (-not $Issue415 -and -not $Issue416 -and -not $Issue417 -and -not $Issue418 -and -not $Issue419 -and -not $Issue420 -and -not $Issue502 -and -not $Issue503 -and -not $Issue498 -and -not $Issue641 -and $IncludeScreenshots -and $null -ne $resolvedScreenshotTool) {
+    if (-not $Issue415 -and -not $Issue416 -and -not $Issue417 -and -not $Issue418 -and -not $Issue419 -and -not $Issue420 -and -not $Issue502 -and -not $Issue503 -and -not $Issue498 -and -not $Issue641 -and -not $Issue642 -and $IncludeScreenshots -and $null -ne $resolvedScreenshotTool) {
         $reviewerExportAnchorUrl = (Join-RouteUrl -Base $normalizedBaseUrl -Path "/reviewer") + "#complaint-export-controls"
         $reviewerExportShotFile = Join-Path $screenshotDir "05-reviewer-complaint-exports.png"
         $reviewerExportShotError = Invoke-RouteScreenshot -Tool $resolvedScreenshotTool -Url $reviewerExportAnchorUrl -ScreenshotPath $reviewerExportShotFile
@@ -3457,7 +4194,7 @@ This packet supersedes neither the historical rejected packet nor any acceptance
     $gitStatusText = if ($workingTreeClean) { "clean" } else { $gitStatus }
     Set-Content -LiteralPath (Join-Path $diagnosticsDir "git-status.txt") -Value $gitStatusText -Encoding UTF8
     Set-Content -LiteralPath (Join-Path $diagnosticsDir "git-log.txt") -Value ((git log --oneline -n 5 2>$null) -join "`n") -Encoding UTF8
-    $focusedCommandSuffix = if ($Issue641) { " -Issue641" } elseif ($Issue503) { " -Issue503" } elseif ($Issue502) { " -Issue502" } elseif ($Issue498) { " -Issue498" } elseif ($Issue420) { " -Issue420" } elseif ($Issue419) { " -Issue419" } elseif ($Issue418) { " -Issue418" } elseif ($Issue417) { " -Issue417" } elseif ($Issue416) { " -Issue416" } elseif ($Issue415) { " -Issue415" } else { "" }
+    $focusedCommandSuffix = if ($Issue642) { " -Issue642" } elseif ($Issue641) { " -Issue641" } elseif ($Issue503) { " -Issue503" } elseif ($Issue502) { " -Issue502" } elseif ($Issue498) { " -Issue498" } elseif ($Issue420) { " -Issue420" } elseif ($Issue419) { " -Issue419" } elseif ($Issue418) { " -Issue418" } elseif ($Issue417) { " -Issue417" } elseif ($Issue416) { " -Issue416" } elseif ($Issue415) { " -Issue415" } else { "" }
     Set-Content -LiteralPath (Join-Path $diagnosticsDir "capture-command.txt") -Value "capture-hosted-ui-evidence.ps1 -BaseUrl $normalizedBaseUrl -Mode $Mode -OutputDir $OutputDir -ViewportWidth $ViewportWidth -ViewportHeight $ViewportHeight -TimeoutSeconds $TimeoutSeconds -ScreenshotToolPreference $ScreenshotToolPreference$focusedCommandSuffix" -Encoding UTF8
     Set-Content -LiteralPath (Join-Path $diagnosticsDir "environment-summary.txt") -Value @(
         "mode=$Mode",
@@ -3480,6 +4217,7 @@ This packet supersedes neither the historical rejected packet nor any acceptance
         "issue503FocusedCapture=$([bool]$Issue503)",
         "issue498FocusedCapture=$([bool]$Issue498)",
         "issue641FocusedCapture=$([bool]$Issue641)",
+        "issue642FocusedCapture=$([bool]$Issue642)",
         "browserZoomControl=not controlled by this script; use ViewportWidth/ViewportHeight for supplemental narrow-width or 200-percent-review approximation only",
         "evidencePurpose=$evidencePurpose"
     ) -Encoding UTF8
@@ -3543,6 +4281,10 @@ scripts/validate_hosted_ui_acceptance.py.
         Set-Content -LiteralPath (Join-Path $packetDir "validation-summary.md") -Value "# Functional validation summary`n`nRoute failures: $($issue641ValidationSummary.routeFailures)`nAssertion failures: $($issue641ValidationSummary.assertionFailures)`nFeature assertion failures: $($issue641ValidationSummary.featureAssertionFailures)`nScreenshot failures: $($issue641ValidationSummary.screenshotFailures)`nFunctional gate: $($issue641ValidationSummary.status)`nOverall hosted UI acceptance: NOT_ACCEPTED`n`nThis summary cannot establish visual or owner acceptance." -Encoding UTF8
         if ($featureFailures -gt 0) { Stop-CaptureFail "Issue #641 feature assertion failures prevent packet publication." }
     }
+    $issue642PacketDiagnostics = $null
+    if ($Issue642) {
+        $issue642PacketDiagnostics = Write-Issue642PacketDiagnostics -PacketDirectory $packetDir -ScreenshotDirectory $screenshotDir -DiagnosticsDirectory $diagnosticsDir -RouteResults @($routeResults)
+    }
     $outputCounts = [ordered]@{
         screenshots   = Get-EvidenceFileCount -Path $screenshotDir -Filter "*.png"
         html          = Get-EvidenceFileCount -Path $htmlDir -Filter "*.html"
@@ -3560,6 +4302,7 @@ scripts/validate_hosted_ui_acceptance.py.
         issue502      = if ($Issue502) { @($routesToCapture).Count } else { 0 }
         issue503      = if ($Issue503) { @($routesToCapture).Count } else { 0 }
         issue498      = if ($Issue498) { @($routesToCapture).Count } else { 0 }
+        issue642      = if ($Issue642) { @($routesToCapture).Count } else { 0 }
     }
     $focusedIssueScope = @()
     foreach ($issueEntry in @(
@@ -3573,7 +4316,8 @@ scripts/validate_hosted_ui_acceptance.py.
         [pscustomobject]@{ Enabled = $Issue502; Reference = "#502" },
         [pscustomobject]@{ Enabled = $Issue503; Reference = "#503" },
         [pscustomobject]@{ Enabled = $Issue610; Reference = "#610" },
-        [pscustomobject]@{ Enabled = $Issue641; Reference = "#641" }
+        [pscustomobject]@{ Enabled = $Issue641; Reference = "#641" },
+        [pscustomobject]@{ Enabled = $Issue642; Reference = "#642" }
     )) {
         if ([bool]$issueEntry.Enabled) { $focusedIssueScope += [string]$issueEntry.Reference }
     }
@@ -3607,6 +4351,7 @@ scripts/validate_hosted_ui_acceptance.py.
         issue498               = [ordered]@{ enabled = [bool]$Issue498; routeCount = @($routesToCapture).Count; scenarios = @($routesToCapture | ForEach-Object { $_.Name }); zoomLimitation = "The 720-pixel viewport scenario approximates 200-percent reflow only; exact true browser zoom remains manual visual evidence."; printArtifact = @($routeResults | Where-Object { $_.printPath } | ForEach-Object { $_.printPath }) }
         issue610               = [ordered]@{ enabled = [bool]$Issue610; routeCount = @($routesToCapture).Count; scenarios = @($routesToCapture | ForEach-Object { $_.Name }); printSettings = "Portrait; scale 100%; default margins; headers and footers off; background graphics on."; printArtifact = @($routeResults | Where-Object { $_.printPath } | ForEach-Object { $_.printPath }) }
         issue641               = [ordered]@{ enabled = [bool]$Issue641; routeCount = @($routesToCapture).Count; scenarios = @($routesToCapture | ForEach-Object { $_.Name }); evidenceGates = @($issue641GateResults); gateArtifact = if ($Issue641) { "issue-641-evidence-gates.csv" } else { "" }; summaryArtifact = if ($Issue641) { "issue-641-evidence-summary.md" } else { "" }; measuredPageScale = if ($Issue641) { "1280x900 at visualViewport scale 2" } else { "" }; visualAcceptance = "PENDING_INDEPENDENT_VISUAL_REVIEW"; printArtifact = @($routeResults | Where-Object { $_.printPath } | ForEach-Object { $_.printPath }) }
+        issue642               = [ordered]@{ enabled = [bool]$Issue642; routeCount = if ($Issue642) { @($routesToCapture).Count } else { 0 }; scenarios = if ($Issue642) { @($routesToCapture | ForEach-Object { $_.Name }) } else { @() }; controlledInteraction = "Navigation, staged public Facility ID, multi-value state, canonical continuation, return context, responsive, focus, print"; screenshotStateArtifact = if ($Issue642) { 'diagnostics/issue-642-screenshot-states.json' } else { '' }; screenshotStates = if ($Issue642) { $issue642PacketDiagnostics.screenshotStates } else { @{} }; consoleNetworkSummaryArtifact = if ($Issue642) { 'diagnostics/issue-642-console-network-summary.json' } else { '' }; consoleNetwork = if ($Issue642) { $issue642PacketDiagnostics.consoleNetwork } else { @{} }; visualAcceptance = "PENDING_INDEPENDENT_VISUAL_REVIEW"; ownerAcceptance = "PENDING_OWNER_DECISION"; printArtifact = @($routeResults | Where-Object { $_.printPath } | ForEach-Object { $_.printPath }) }
         acceptance             = [ordered]@{
             schemaVersion = "recordstracker.hosted-ui-acceptance.v1"
             governanceIssue = "#648"

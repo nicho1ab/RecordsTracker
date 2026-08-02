@@ -38,10 +38,10 @@ class FacilityTrendFilters:
     end_date: date | None = None
     date_dimension: str = "complaint_received_date"
     facility: str = ""
-    facility_type: str = ""
-    geography: str = ""
-    finding: str = ""
-    serious_topic: str = ""
+    facility_type: str | tuple[str, ...] = ()
+    geography: str | tuple[str, ...] = ()
+    finding: str | tuple[str, ...] = ()
+    serious_topic: str | tuple[str, ...] = ()
     time_grain: str = "month"
     period_count: int = 12
 
@@ -228,14 +228,12 @@ def _base_filter_matches(
         ),
     ):
         return False
-    if filters.facility_type and not _contains_filter(
-        filters.facility_type,
-        (complaint.facility_type,),
+    if _filter_values(filters.facility_type) and not _any_contains_filter(
+        _filter_values(filters.facility_type), (complaint.facility_type,)
     ):
         return False
-    return not filters.geography or _contains_filter(
-        filters.geography,
-        (complaint.geography,),
+    return not _filter_values(filters.geography) or _any_contains_filter(
+        _filter_values(filters.geography), (complaint.geography,)
     )
 
 
@@ -243,14 +241,30 @@ def _qualifying_filter_matches(
     complaint: FacilityTrendComplaint,
     filters: FacilityTrendFilters,
 ) -> bool:
-    if filters.finding and _normalized_text(filters.finding) != _normalized_text(
-        complaint.finding
-    ):
+    findings = _filter_values(filters.finding)
+    if findings and _normalized_text(complaint.finding) not in {
+        _normalized_text(value) for value in findings
+    }:
         return False
-    return not filters.serious_topic or _contains_filter(
-        filters.serious_topic,
-        complaint.serious_topics,
-    )
+    topics = _filter_values(filters.serious_topic)
+    return not topics or _any_contains_filter(topics, complaint.serious_topics)
+
+
+def _filter_values(value: str | tuple[str, ...]) -> tuple[str, ...]:
+    values = (value,) if isinstance(value, str) else value
+    seen: set[str] = set()
+    normalized: list[str] = []
+    for item in values:
+        cleaned = item.strip()
+        key = cleaned.casefold()
+        if cleaned and key not in seen:
+            seen.add(key)
+            normalized.append(cleaned)
+    return tuple(normalized)
+
+
+def _any_contains_filter(filters: tuple[str, ...], values: tuple[str, ...]) -> bool:
+    return any(_contains_filter(filter_value, values) for filter_value in filters)
 
 
 def _contains_filter(filter_value: str, values: tuple[str, ...]) -> bool:

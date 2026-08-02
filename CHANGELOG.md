@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- Updated Compare Facilities for Issue #642 with six-link mobile navigation,
+  staged governed facility selection, checkbox multi-select filters, canonical
+  state continuity, and safe Compare return actions without changing result
+  density, contributing complaints, or location presentation.
 - Added the Issue #632 portable-path publication contract. Generic named-user
   Windows, macOS, and Linux paths now fail through one redacted rule set across
   Git-tracked text, local and CI PR validation, guarded PR-body repair, hosted

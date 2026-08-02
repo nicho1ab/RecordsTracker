@@ -95,11 +95,11 @@ class FacilityIntelligenceReadFilters:
     start_date: str | None = None
     end_date: str | None = None
     date_dimension: str = "complaint_received_date"
-    facility_type: str = ""
-    geography: str = ""
-    finding: str = ""
-    serious_topic: str = ""
-    coverage: str = "all"
+    facility_type: str | tuple[str, ...] = ()
+    geography: str | tuple[str, ...] = ()
+    finding: str | tuple[str, ...] = ()
+    serious_topic: str | tuple[str, ...] = ()
+    coverage: str | tuple[str, ...] = ()
     sort: str = "priority"
 
 
@@ -520,7 +520,8 @@ def list_facility_intelligence_page(
         raise ValueError(
             "Facility intelligence accepts one import batch filter mode."
         )
-    if filters.coverage not in {"all", "available", "partial", "unavailable"}:
+    coverage_values = _filter_values(filters.coverage)
+    if any(value not in {"available", "partial", "unavailable"} for value in coverage_values):
         raise ValueError("Facility intelligence coverage filter is not supported.")
     if filters.sort not in {
         "priority",
@@ -564,11 +565,11 @@ def list_facility_intelligence_page(
         (
             filters.start_date is not None,
             filters.end_date is not None,
-            bool(filters.facility_type.strip()),
-            bool(filters.geography.strip()),
-            bool(filters.finding.strip()),
-            bool(filters.serious_topic),
-            filters.coverage != "all",
+            bool(_filter_values(filters.facility_type)),
+            bool(_filter_values(filters.geography)),
+            bool(_filter_values(filters.finding)),
+            bool(_filter_values(filters.serious_topic)),
+            bool(coverage_values),
         )
     )
     base_identity_facts = _facility_intelligence_complaint_facts(
@@ -981,27 +982,33 @@ def _facility_intelligence_complaint_facts(
             where_clauses.append(activity_date >= filters.start_date)
         if filters.end_date is not None:
             where_clauses.append(activity_date <= filters.end_date)
-        normalized_finding = " ".join(filters.finding.casefold().split())
-        if normalized_finding:
-            where_clauses.append(
-                func.lower(func.trim(finding)) == normalized_finding
-            )
-        if filters.serious_topic:
+        normalized_findings = _normalized_filter_values(filters.finding)
+        if normalized_findings:
+            where_clauses.append(func.lower(func.trim(finding)).in_(normalized_findings))
+        if _filter_values(filters.serious_topic):
             where_clauses.append(serious_topic_match)
-        normalized_type = " ".join(filters.facility_type.casefold().split())
-        if normalized_type:
+        normalized_types = _normalized_filter_values(filters.facility_type)
+        if normalized_types:
             where_clauses.append(
-                func.lower(func.trim(facility_type)).like(
-                    f"%{_escaped_like_value(normalized_type)}%",
-                    escape="\\",
+                or_(
+                    *(
+                        func.lower(func.trim(facility_type)).like(
+                            f"%{_escaped_like_value(value)}%", escape="\\"
+                        )
+                        for value in normalized_types
+                    )
                 )
             )
-        normalized_geography = " ".join(filters.geography.casefold().split())
-        if normalized_geography:
+        normalized_geographies = _normalized_filter_values(filters.geography)
+        if normalized_geographies:
             where_clauses.append(
-                func.lower(func.trim(geography)).like(
-                    f"%{_escaped_like_value(normalized_geography)}%",
-                    escape="\\",
+                or_(
+                    *(
+                        func.lower(func.trim(geography)).like(
+                            f"%{_escaped_like_value(value)}%", escape="\\"
+                        )
+                        for value in normalized_geographies
+                    )
                 )
             )
     if projection == "hydration":
@@ -1108,15 +1115,18 @@ def _facility_intelligence_facilities(
         func.sum(facts.c.missing_dates).label("missing_date_count"),
         source_available_count,
     ).group_by(facts.c.facility_identity)
-    if filters.coverage == "available":
-        statement = statement.having(source_available_count == complaint_count)
-    elif filters.coverage == "partial":
-        statement = statement.having(
-            source_available_count > 0,
-            source_available_count < complaint_count,
+    coverage_values = _filter_values(filters.coverage)
+    coverage_conditions = []
+    if "available" in coverage_values:
+        coverage_conditions.append(source_available_count == complaint_count)
+    if "partial" in coverage_values:
+        coverage_conditions.append(
+            and_(source_available_count > 0, source_available_count < complaint_count)
         )
-    elif filters.coverage == "unavailable":
-        statement = statement.having(source_available_count == 0)
+    if "unavailable" in coverage_values:
+        coverage_conditions.append(source_available_count == 0)
+    if coverage_conditions:
+        statement = statement.having(or_(*coverage_conditions))
     return statement.cte("facility_intelligence_facilities")
 
 
@@ -1130,15 +1140,18 @@ def _facility_intelligence_count_facilities(
     statement = select(facts.c.facility_identity).group_by(
         facts.c.facility_identity
     )
-    if filters.coverage == "available":
-        statement = statement.having(source_available_count == complaint_count)
-    elif filters.coverage == "partial":
-        statement = statement.having(
-            source_available_count > 0,
-            source_available_count < complaint_count,
+    coverage_values = _filter_values(filters.coverage)
+    coverage_conditions = []
+    if "available" in coverage_values:
+        coverage_conditions.append(source_available_count == complaint_count)
+    if "partial" in coverage_values:
+        coverage_conditions.append(
+            and_(source_available_count > 0, source_available_count < complaint_count)
         )
-    elif filters.coverage == "unavailable":
-        statement = statement.having(source_available_count == 0)
+    if "unavailable" in coverage_values:
+        coverage_conditions.append(source_available_count == 0)
+    if coverage_conditions:
+        statement = statement.having(or_(*coverage_conditions))
     return statement.cte("facility_intelligence_count_facilities")
 
 
@@ -1801,10 +1814,10 @@ def _substantiated_text_expression(value: Any) -> Any:
 def _facility_intelligence_serious_topic_expression(
     complaint: Any,
     complaint_id: Any,
-    requested_topic: str,
+    requested_topic: str | tuple[str, ...],
 ) -> Any:
-    normalized_topic = " ".join(requested_topic.casefold().split())
-    if not normalized_topic:
+    requested_topics = _normalized_filter_values(requested_topic)
+    if not requested_topics:
         return literal(True)
     allegation = hosted_source_derived_records.alias(
         "facility_intelligence_serious_allegation"
@@ -1813,9 +1826,9 @@ def _facility_intelligence_serious_topic_expression(
     category_matches = [
         category == source_category
         for source_category, label in _FACILITY_INTELLIGENCE_SERIOUS_CATEGORY_LABELS.items()
-        if normalized_topic in " ".join(label.casefold().split())
+        if " ".join(label.casefold().split()) in requested_topics
     ]
-    cue_requested = normalized_topic in "possible keyword cue"
+    cue_requested = "possible keyword cue" in requested_topics
     allegation_text = func.lower(
         func.coalesce(_json_text(allegation, "allegation_text"), "")
     )
@@ -1845,6 +1858,22 @@ def _facility_intelligence_serious_topic_expression(
         _json_text(allegation, "complaint_id") == complaint_id,
         or_(*matches),
     ).exists()
+
+
+def _filter_values(value: str | tuple[str, ...]) -> tuple[str, ...]:
+    values = (value,) if isinstance(value, str) else value
+    normalized: list[str] = []
+    for item in values:
+        cleaned = " ".join(item.split())
+        if cleaned and cleaned.casefold() != "all" and cleaned.casefold() not in {
+            existing.casefold() for existing in normalized
+        }:
+            normalized.append(cleaned)
+    return tuple(normalized)
+
+
+def _normalized_filter_values(value: str | tuple[str, ...]) -> tuple[str, ...]:
+    return tuple(item.casefold() for item in _filter_values(value))
 
 
 def _facility_intelligence_geography(facility: Any) -> Any:

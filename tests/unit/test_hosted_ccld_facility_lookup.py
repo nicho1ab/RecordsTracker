@@ -61,6 +61,7 @@ from ccld_complaints.hosted_app.reset_reload_dry_run import (
 from ccld_complaints.hosted_app.reviewer_created_state import hosted_reviewer_created_state
 from ccld_complaints.hosted_app.reviewer_ui import (
     LOCAL_REVIEWER_UI_SCOPE,
+    build_local_test_reviewer_ui_context,
     reviewer_ui_context_for_connection,
 )
 from ccld_complaints.hosted_app.seeded_import import (
@@ -76,6 +77,9 @@ TEST_SCOPE = LOCAL_REVIEWER_UI_SCOPE
 APPROVED_PROGRAM_REFERENCE_RESOURCE_ID = "c9df723a-437f-4dcd-be37-ec73ae518bb9"
 CANONICAL_LICENSE_ACTIVITY_PATH = (
     f"{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}?view=licensing-visit-activity"
+)
+ISSUE_642_LICENSE_SIGNALS = Path(
+    "tests/fixtures/public_source_facilities/ccld_program_facilities_tiny.csv"
 )
 
 
@@ -1662,6 +1666,70 @@ def test_ccld_facility_review_hub_has_one_deterministic_primary_next_action() ->
     assert_no_secret_html(html)
 
 
+def test_unavailable_directory_overview_renders_governed_compare_return_only() -> None:
+    complaint = CcldFacilityComplaintContext(
+        source_record_key="complaint:ccld:complaint:issue-642",
+        stable_complaint_id="issue-642-complaint",
+        complaint_control_number="ISSUE-642-900001",
+        subject="Synthetic local evidence complaint",
+        activity_date="2022-04-07",
+        finding="Unsubstantiated",
+        detail_href="/reviewer/records/detail?source%5Frecord%5Fkey=issue-642",
+        source_url_href="",
+        source_available=False,
+    )
+    compare_context = CcldFacilityReviewContext(
+        facility_name="Issue 642 Evidence Facility",
+        facility_type="430",
+        loaded_complaint_record_count=1,
+        start_date="1900-01-01",
+        end_date="2022-04-07",
+        source_unavailable_count=1,
+        complaints=(complaint,),
+        origin="facility_intelligence",
+        route_query_values=(
+            ("origin", "facility_intelligence"),
+            ("facility_type", "430"),
+            ("facility_type", "733"),
+            ("finding", "Substantiated"),
+            ("finding", "Unsubstantiated"),
+            ("start_date", "1900-01-01"),
+            ("sort", "complaint_count"),
+            ("continuation", "valid-cursor"),
+        ),
+    )
+    html = render_ccld_facility_review_hub_page(
+        "642900001",
+        no_reference_facility_source(),
+        review_context=compare_context,
+    )
+
+    assert "Facility-directory record not available." in html
+    assert "Return to Compare Facilities" in html
+    assert (
+        "facility_type=430&amp;facility_type=733&amp;finding=Substantiated&amp;"
+        "finding=Unsubstantiated&amp;start_date=1900-01-01&amp;"
+        "sort=complaint_count&amp;continuation=valid-cursor#facility-intelligence-results"
+        in html
+    )
+    assert (
+        'href="/ccld/facilities/intelligence?facility_type=430&amp;facility_type=733&amp;'
+        "finding=Substantiated&amp;finding=Unsubstantiated&amp;start_date=1900-01-01&amp;"
+        "sort=complaint_count&amp;continuation=valid-cursor#facility-intelligence-results\""
+        in html
+    )
+
+    ordinary_html = render_ccld_facility_review_hub_page(
+        "642900001",
+        no_reference_facility_source(),
+        review_context=CcldFacilityReviewContext(
+            loaded_complaint_record_count=1,
+            complaints=(complaint,),
+        ),
+    )
+    assert "Return to Compare Facilities" not in ordinary_html
+
+
 def test_ccld_facility_overview_zero_complaint_state_keeps_one_action(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
@@ -1837,6 +1905,101 @@ def test_ccld_facility_review_priority_page_empty_state_is_safe() -> None:
     assert_no_secret_html(html)
 
 
+def test_issue_642_licensing_fixture_has_populated_and_filtered_empty_states(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv(FACILITY_REVIEW_SIGNALS_CSVS_ENV, str(ISSUE_642_LICENSE_SIGNALS))
+    context = build_local_test_reviewer_ui_context()
+
+    populated_status, _populated_type, populated_body = route_response(
+        f"{CANONICAL_LICENSE_ACTIVITY_PATH}&q=430000001",
+        page_data_mode="fixture-demo",
+        reviewer_ui_context=context,
+    )
+    empty_status, _empty_type, empty_body = route_response(
+        f"{CANONICAL_LICENSE_ACTIVITY_PATH}&q=430000001"
+        "&cue=Closed+status+in+uploaded+summary",
+        page_data_mode="fixture-demo",
+        reviewer_ui_context=context,
+    )
+
+    populated_html = populated_body.decode("utf-8")
+    empty_html = empty_body.decode("utf-8")
+    assert populated_status == 200
+    assert "Issue 641 Code 430 Center" in populated_html
+    assert "2 total visits; 1 complaint visits" in populated_html
+    assert 'data-result-state="populated"' in populated_html
+    assert empty_status == 200
+    assert 'data-result-state="filtered-empty"' in empty_html
+    assert "No loaded licensing or visit observations match the selected filters." in empty_html
+    assert "The licensing and visit source is available." in empty_html
+
+
+def test_issue_642_licensing_source_unavailable_is_not_rendered_as_zero(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setenv(
+        FACILITY_REVIEW_SIGNALS_CSVS_ENV,
+        str(tmp_path / "intentionally-unavailable.csv"),
+    )
+
+    status, content_type, body = route_response(
+        f"{CANONICAL_LICENSE_ACTIVITY_PATH}&q=430000001",
+        page_data_mode="fixture-demo",
+        reviewer_ui_context=build_local_test_reviewer_ui_context(),
+    )
+
+    html = body.decode("utf-8")
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert 'data-result-state="source-unavailable"' in html
+    assert "Licensing and visit source unavailable" in html
+    assert "No verified licensing or visit counts are shown." in html
+    assert "Facilities with supported licensing or visit observations</dt>" not in html
+    assert "<table>" not in html
+
+
+def test_issue_642_licensing_search_uses_governed_directory_typeahead() -> None:
+    status, _content_type, body = route_response(
+        CANONICAL_LICENSE_ACTIVITY_PATH,
+        page_data_mode="fixture-demo",
+        reviewer_ui_context=build_local_test_reviewer_ui_context(),
+    )
+
+    html = body.decode("utf-8")
+    assert status == 200
+    assert 'data-facility-mode="licensing"' in html
+    assert f'data-facility-suggest-url="{CCLD_FACILITY_SUGGESTIONS_PATH}"' in html
+    assert 'id="facility-search-input" name="q" type="search"' in html
+    assert 'id="facility-suggestion-list"' in html
+    assert "No matches found." in html
+    assert "only stages its public Facility ID" in html
+
+
+@pytest.mark.parametrize("query", ("642900001", "Issue 642 Evidence Facility 01"))
+def test_issue_642_patterns_facility_is_findable_in_licensing_directory(
+    monkeypatch: pytest.MonkeyPatch,
+    query: str,
+) -> None:
+    monkeypatch.setenv("CCLD_HOSTED_PAGE_DATA_MODE", "fixture-demo")
+    monkeypatch.setenv("CCLD_HOSTED_TESTER_AUTH_MODE", "local-dev")
+    monkeypatch.setenv("CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH", "enabled")
+    monkeypatch.setenv("CCLD_HOSTED_ISSUE642_EVIDENCE_MODE", "enabled")
+
+    status, content_type, body = route_response(
+        f"{CCLD_FACILITY_SUGGESTIONS_PATH}?{urlencode({'q': query})}",
+        page_data_mode="fixture-demo",
+        reviewer_ui_context=build_local_test_reviewer_ui_context(),
+    )
+
+    payload = json.loads(body)
+    assert status == 200
+    assert content_type == "application/json; charset=utf-8"
+    assert payload["records"][0]["num"] == "642900001"
+    assert payload["records"][0]["n"] == "Issue 642 Evidence Facility 01"
+
+
 def test_legacy_licensing_activity_route_redirects_with_search_and_cues() -> None:
     legacy_path = (
         f"{CCLD_FACILITY_REVIEW_PRIORITY_PATH}?q=Alpha"
@@ -1956,8 +2119,8 @@ def test_ccld_facility_review_priority_page_orders_filters_and_links_to_hubs(
         "Last recorded visit before 2023": "Long gap since last visit",
     }
     for label, cue in expected_labels.items():
-        assert f'<input type="checkbox" name="cue" value="{cue}"' in html
-        assert f"<span>{label}</span>" in html
+        assert f'name="cue" value="{cue}"' in html
+        assert label in html
     assert "Priority cue" not in html
     assert "Check source" not in html
     assert "Possible delay" not in html
@@ -2093,19 +2256,19 @@ def test_ccld_facility_review_intelligence_dashboard_filters_sorts_and_links(
     assert content_type == "text/html; charset=utf-8"
     assert "Find Facilities That May Need Closer Review" in html
     assert "Which facilities may warrant review next?" not in html
-    filter_grid = _facility_intelligence_filter_grid(html)
-    assert filter_grid.labels == [
+    for label in (
         "Facility type",
         "Geography",
         "Complaint finding",
-        "Source coverage",
-        "Start date",
-        "End date",
-        "Date based on",
         "Serious review category",
-        "Sort by",
-    ]
-    assert filter_grid.field_count >= 9
+    ):
+        assert f"<legend>{label}</legend>" in html
+    assert "Source coverage" not in html
+    assert 'class="filter-control__label">Start date</span>' in html
+    assert 'class="filter-control__label">End date</span>' in html
+    assert 'class="filter-control__label">Relevant date</span>' in html
+    filter_grid = _facility_intelligence_filter_grid(html)
+    assert filter_grid.field_count >= 7
     assert '<label for="facility-intelligence-sort">Sort by</label>' in html
     _assert_primary_button(html, "Apply filters")
     assert "<details" not in html

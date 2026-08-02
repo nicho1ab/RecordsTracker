@@ -783,3 +783,17 @@ global navigation or Help content owned by Issues #502 and #503.
 The approved Checkpoint 3 reference frames carry this label:
 
 > Approved implementation reference — variance requires approval
+
+### RT-CF-642 — Compare Facilities controlled filter interaction
+
+- **Approved decision:** ordinary local links, expanded six-link mobile
+  navigation, native-checkbox progressive multi-selects, one staged Apply action,
+  repeated-key canonical URLs, and safe Compare return context.
+- **Accessibility requirement:** native fallback remains usable; enhanced controls
+  expose state and support Escape/focus return without replacing checkbox
+  semantics.
+- **Boundary:** no result hierarchy, contributing-inventory, location, or print
+  density change.
+- **Required evidence:** route/state matrix, responsive and native-zoom evidence,
+  keyboard/focus and print artifacts, plus independent visual and owner decisions
+  under the Issue #648 gate contract.

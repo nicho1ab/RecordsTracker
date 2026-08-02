@@ -15,6 +15,7 @@ from ccld_complaints.hosted_app.app import (
 from ccld_complaints.hosted_app.auth import HostedAccessScope
 from ccld_complaints.hosted_app.ccld_facility_lookup import (
     CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH,
+    render_staged_trend_facility_combobox,
 )
 from ccld_complaints.hosted_app.facility_trends import (
     COMPLETE_PERIOD,
@@ -33,6 +34,7 @@ from ccld_complaints.hosted_app.facility_trends import (
 from ccld_complaints.hosted_app.reviewer_ui import (
     LOCAL_REVIEWER_UI_SCOPE,
     REVIEWER_UI_FACILITY_TRENDS_PATH,
+    build_local_test_reviewer_ui_context,
     reviewer_ui_context_for_connection,
 )
 from ccld_complaints.hosted_app.seeded_import import (
@@ -46,6 +48,82 @@ OTHER_SCOPE = HostedAccessScope("seeded_corpus", "other-trend-corpus")
 CANONICAL_TRENDS_PATH = (
     f"{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}?view=complaint-activity-over-time"
 )
+ISSUE_642_POPULATED_TRENDS_PATH = (
+    f"{CANONICAL_TRENDS_PATH}&facility=642900001&facility_type=430"
+    "&finding=Substantiated&date_dimension=complaint_received_date"
+    "&start_date=2022-04-01&end_date=2022-04-30&time_grain=month&period_count=1"
+)
+ISSUE_642_INTENTIONAL_EMPTY_TRENDS_PATH = (
+    f"{CANONICAL_TRENDS_PATH}&facility=642900001&facility_type=430"
+    "&finding=Unsubstantiated&date_dimension=complaint_received_date"
+    "&start_date=2022-04-01&end_date=2022-04-30&time_grain=month&period_count=1"
+)
+
+
+def test_trend_combobox_keeps_popup_in_its_input_wrapper_and_before_filters() -> None:
+    markup = render_staged_trend_facility_combobox("")
+
+    assert markup.startswith('<div id="facility-selector-wrap"')
+    input_index = markup.index('id="facility-search-input"')
+    popup_index = markup.index('id="facility-suggestion-list"')
+    selection_index = markup.index('id="facility-trend-selection"')
+    assert input_index < popup_index < selection_index
+    assert markup.count('class="facility-combobox-outer"') == 1
+    assert markup.index('<div class="facility-combobox-outer"') < input_index
+    assert markup.index('</div>', popup_index) < selection_index
+
+
+def test_issue_642_populated_trends_fixture_has_one_reconciled_monthly_record(
+    monkeypatch: Any,
+) -> None:
+    context = _issue_642_evidence_context(monkeypatch)
+
+    status, content_type, body = route_response(
+        ISSUE_642_POPULATED_TRENDS_PATH,
+        reviewer_ui_context=context,
+    )
+
+    html = body.decode("utf-8")
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert "Selected facility: Issue 642 Evidence Facility 01 (Facility ID 642900001)" in html
+    assert (
+        "1 qualifying complaint record(s): 1 assigned to displayed periods and 0 "
+        "with date unavailable."
+    ) in html
+    assert "04/01/2022–04/30/2022" in html
+    assert "Complete period" in html
+    assert "Open complaint record 32-CR-20220401120000" in html
+    assert html.count("Open complaint record 32-CR-20220401120000") == 1
+    assert "Eligible records</dt><dd>1</dd>" in html
+    assert "Result</dt><dd>1</dd>" in html
+
+
+def test_issue_642_intentional_empty_trends_fixture_is_not_a_completeness_claim(
+    monkeypatch: Any,
+) -> None:
+    context = _issue_642_evidence_context(monkeypatch)
+
+    status, content_type, body = route_response(
+        ISSUE_642_INTENTIONAL_EMPTY_TRENDS_PATH,
+        reviewer_ui_context=context,
+    )
+
+    html = body.decode("utf-8")
+    assert status == 200
+    assert content_type == "text/html; charset=utf-8"
+    assert "Selected facility: Issue 642 Evidence Facility 01 (Facility ID 642900001)" in html
+    assert (
+        "0 qualifying complaint record(s): 0 assigned to displayed periods and 0 "
+        "with date unavailable."
+    ) in html
+    assert "No records meet the active eligibility filters" in html
+    assert "Zero qualifying records" in html
+    assert "No qualifying complaint records meet the selected filters." in html
+    assert "Complaint activity by month" not in html
+    assert "<table>" not in html
+    assert "Complete period" not in html
+    assert "Open complaint record" not in html
 
 
 def test_monthly_quarterly_grouping_boundaries_and_reconciliation() -> None:
@@ -281,7 +359,7 @@ def test_facility_trends_route_is_accessible_linked_compact_and_deduplicated() -
     assert "Anomaly cue and contributing counts" in html
     assert "Current period:" in html and "preceding period:" in html
     assert '<caption>' in html and '<th scope="col">' in html
-    assert '<label for="facility-trends-facility">' in html
+    assert '<label for="facility-search-input">Facility name or ID</label>' in html
     assert 'name="time_grain"' in html and 'name="period_count"' in html
     assert "Open complaint record A-1" in html
     assert html.count("Open complaint record A-1") == 1
@@ -455,6 +533,14 @@ def _trend_complaint(
         serious_topics=("Supervision topic",) if serious else (),
         detail_href=f"/reviewer/records/detail?source_record_key=complaint:{identity}",
     )
+
+
+def _issue_642_evidence_context(monkeypatch: Any) -> reviewer_ui.ReviewerUiContext:
+    monkeypatch.setenv("CCLD_HOSTED_PAGE_DATA_MODE", "fixture-demo")
+    monkeypatch.setenv("CCLD_HOSTED_TESTER_AUTH_MODE", "local-dev")
+    monkeypatch.setenv("CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH", "enabled")
+    monkeypatch.setenv("CCLD_HOSTED_ISSUE642_EVIDENCE_MODE", "enabled")
+    return build_local_test_reviewer_ui_context()
 
 
 def _trend_connection() -> Connection:

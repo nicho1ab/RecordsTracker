@@ -206,7 +206,6 @@ def _civic_ledger_header(links: str, runtime_mode: str, badge_class: str) -> str
           <span class="{badge_class}">{html.escape(runtime_mode)}</span>
         </div>
       </div>
-      <span class="civic-menu-label" aria-hidden="true">Menu</span>
       <nav class="civic-nav" aria-label="Primary navigation">
         <ul>
 {links}
@@ -255,12 +254,14 @@ def render_compare_facilities_views(active_view: str) -> str:
     items = []
     for view_id, label, href in COMPARE_FACILITIES_VIEWS:
         current = ' aria-current="page"' if view_id == active_view else ""
+        current_text = '<span class="sr-only">Current view: </span>' if current else ''
         items.append(
             f'          <li><a href="{html.escape(href, quote=True)}"{current}>'
+            f'{current_text}'
             f"{html.escape(label)}</a></li>"
         )
     return f"""      <nav class="compare-facilities-views" aria-label="Compare facility information">
-        <p><strong>Choose information to compare</strong></p>
+        <p><strong>Compare facility information</strong></p>
         <ul>
 {chr(10).join(items)}
         </ul>
@@ -2767,8 +2768,11 @@ SHARED_CSS = r"""
       font-weight: 800;
     }
     .facility-combobox-outer {
+      box-sizing: border-box;
+      display: block;
       max-width: min(42rem, 100%);
       position: relative;
+      width: 100%;
     }
     .facility-suggestions {
       background: var(--surface);
@@ -3001,15 +3005,10 @@ SHARED_CSS = r"""
     .civic-mode-panel {
       justify-content: flex-start;
     }
-    .civic-menu-label {
-      color: #f3d77d;
-      display: none;
-      font-weight: 650;
-    }
     .civic-nav ul {
       display: grid;
       gap: 0.75rem;
-      grid-template-columns: repeat(7, minmax(5rem, auto));
+      grid-template-columns: repeat(6, minmax(5rem, auto));
       list-style: none;
       margin: 0;
       padding: 0;
@@ -3063,13 +3062,177 @@ SHARED_CSS = r"""
       padding: 0;
     }
     .compare-facilities-views a {
+      border: 1px solid transparent;
+      border-left: 4px solid transparent;
       display: inline-block;
       font-weight: 650;
-      padding: 0.35rem 0;
+      padding: 0.42rem 0.6rem;
+      text-decoration-thickness: 0.12rem;
+      text-underline-offset: 0.2rem;
     }
     .compare-facilities-views a[aria-current="page"] {
-      text-decoration-thickness: 0.2rem;
-      text-underline-offset: 0.35rem;
+      background: #f6f1e7;
+      border-color: #b8b1a5;
+      border-left-color: #d5a21a;
+      color: #14283d;
+      text-decoration: none;
+    }
+    .compare-facilities-views a:focus-visible {
+      outline: 3px solid #d5a21a;
+      outline-offset: 2px;
+    }
+    .checkbox-multiselect__trigger {
+      display: none;
+    }
+    .checkbox-multiselect__panel fieldset {
+      border: 1px solid #b8b1a5;
+      margin: 0;
+      min-width: 0;
+      padding: 0.55rem;
+    }
+    .checkbox-multiselect__option {
+      align-items: flex-start;
+      column-gap: 0.45rem;
+      display: grid;
+      grid-template-columns: max-content minmax(0, 1fr);
+      line-height: 1.35;
+      min-width: 0;
+      overflow-wrap: anywhere;
+      padding: 0.2rem 0;
+      width: 100%;
+    }
+    .checkbox-multiselect__option input[type="checkbox"] {
+      align-self: start;
+      inline-size: auto;
+      margin: 0.2rem 0 0;
+      min-height: 0;
+      width: auto;
+    }
+    .checkbox-multiselect__option-label {
+      grid-column: 2;
+      max-width: 100%;
+      min-width: 0;
+      overflow-wrap: anywhere;
+      word-break: normal;
+    }
+    .checkbox-multiselect--enhanced {
+      position: relative;
+    }
+    .filter-control {
+      --filter-control-label-color: var(--muted);
+      --filter-control-label-size: 0.74rem;
+      --filter-control-label-weight: 700;
+      --filter-control-label-line-height: 1;
+      --filter-control-value-color: var(--muted);
+      --filter-control-value-size: 0.88rem;
+      --filter-control-value-line-height: 1.25;
+      --filter-control-gap: 0.2rem;
+      --filter-control-min-height: 2.5rem;
+      --filter-control-padding-block: 0.38rem;
+      --filter-control-padding-inline: 0.6rem;
+      --filter-control-border: 1px solid #b8b1a5;
+      --filter-control-radius: 4px;
+      --filter-control-background: #fffdf8;
+      min-width: 0;
+    }
+    .filter-control__label,
+    .checkbox-multiselect__label {
+      color: var(--filter-control-label-color);
+      font-size: var(--filter-control-label-size);
+      font-weight: var(--filter-control-label-weight);
+      line-height: var(--filter-control-label-line-height);
+      margin: 0;
+    }
+    .filter-control--multiselect .checkbox-multiselect__trigger {
+      align-items: start;
+      background: var(--filter-control-background);
+      border: var(--filter-control-border);
+      border-radius: var(--filter-control-radius);
+      color: #17212b;
+      cursor: pointer;
+      display: grid;
+      font: inherit;
+      gap: var(--filter-control-gap);
+      grid-template-columns: minmax(0, 1fr) max-content;
+      grid-template-rows: auto auto;
+      min-height: var(--filter-control-min-height);
+      padding: var(--filter-control-padding-block) var(--filter-control-padding-inline);
+      text-align: left;
+      width: 100%;
+    }
+    .filter-control--multiselect .checkbox-multiselect__label {
+      grid-column: 1;
+      grid-row: 1;
+      min-width: 0;
+    }
+    .filter-control--multiselect .checkbox-multiselect__summary {
+      color: var(--filter-control-value-color);
+      font-size: var(--filter-control-value-size);
+      grid-column: 1;
+      grid-row: 2;
+      line-height: var(--filter-control-value-line-height);
+      overflow-wrap: anywhere;
+      text-align: left;
+    }
+    .filter-control--multiselect .checkbox-multiselect__cue {
+      color: #8a6512;
+      flex: 0 0 auto;
+      font-size: 1.25rem;
+      grid-column: 2;
+      grid-row: 1 / span 2;
+      line-height: 1;
+      align-self: center;
+    }
+    .checkbox-multiselect--enhanced .checkbox-multiselect__panel {
+      background: #fffdf8;
+      border: 1px solid #6e7781;
+      box-shadow: 0 4px 12px rgb(23 33 43 / 18%);
+      inline-size: min(100%, 12rem);
+      left: 0;
+      max-height: min(20rem, 60vh);
+      max-width: 100%;
+      overflow: auto;
+      padding: 0.35rem;
+      position: absolute;
+      right: auto;
+      top: calc(100% + 0.2rem);
+      z-index: 5;
+    }
+    .checkbox-multiselect__trigger:focus-visible,
+    .checkbox-multiselect__option input:focus-visible {
+      outline: 3px solid #d5a21a;
+      outline-offset: 2px;
+    }
+    .applied-filter-chip {
+      align-items: center;
+      background: #fffdf8;
+      border: 1px solid #b8b1a5;
+      border-radius: 999px;
+      color: #17212b;
+      cursor: pointer;
+      display: none;
+      font: inherit;
+      gap: 0.35rem;
+      padding: 0.25rem 0.55rem;
+    }
+    .applied-filter-chip__fallback {
+      align-items: center;
+      border: 1px solid #b8b1a5;
+      border-radius: 999px;
+      color: #17212b;
+      display: inline-flex;
+      gap: 0.35rem;
+      padding: 0.25rem 0.55rem;
+    }
+    [data-facility-intelligence-chips-ready="true"] .applied-filter-chip {
+      display: inline-flex;
+    }
+    [data-facility-intelligence-chips-ready="true"] .applied-filter-chip__fallback {
+      display: none;
+    }
+    .applied-filter-chip:focus-visible {
+      outline: 3px solid #d5a21a;
+      outline-offset: 2px;
     }
     .intelligence-scope,
     .intelligence-filters,
@@ -3099,11 +3262,8 @@ SHARED_CSS = r"""
       margin-bottom: 0.75rem;
     }
     .civic-ledger-page .facility-intelligence-filter-grid {
-      gap: 0.2rem 0;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-    .civic-ledger-page .facility-intelligence-filter-grid p:nth-child(8) {
-      grid-column: auto;
+      gap: 0.85rem 1.5rem;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
     .civic-ledger-page .facility-intelligence-filter-grid label,
     .facility-intelligence-sort label {
@@ -3112,14 +3272,49 @@ SHARED_CSS = r"""
       font-weight: 600;
       margin-bottom: 0.25rem;
     }
+    .civic-ledger-page .facility-intelligence-filter-grid label.checkbox-multiselect__option {
+      align-items: flex-start;
+      column-gap: 0.45rem;
+      display: grid;
+      grid-template-columns: max-content minmax(0, 1fr);
+      margin-bottom: 0;
+    }
+    .civic-ledger-page .facility-intelligence-filter-grid label.filter-control--native {
+      display: block;
+      margin: 0;
+      position: relative;
+    }
+    .civic-ledger-page .facility-intelligence-filter-grid .filter-control__label {
+      left: 0.6rem;
+      margin: 0;
+      pointer-events: none;
+      position: absolute;
+      top: 0.42rem;
+      z-index: 1;
+    }
+    .civic-ledger-page .facility-intelligence-filter-grid label.checkbox-multiselect__option input[type="checkbox"] {
+      align-self: start;
+      inline-size: auto;
+      min-height: 0;
+      width: auto;
+    }
     .civic-ledger-page .facility-intelligence-filter-grid input,
     .civic-ledger-page .facility-intelligence-filter-grid select,
     .facility-intelligence-sort select {
       background: #fffdf8;
-      border-color: #b8b1a5;
-      border-radius: 4px;
-      min-height: 2.5rem;
+      border: var(--filter-control-border);
+      border-radius: var(--filter-control-radius);
+      min-height: var(--filter-control-min-height);
       width: 100%;
+    }
+    .civic-ledger-page .facility-intelligence-filter-grid .filter-control--native input,
+    .civic-ledger-page .facility-intelligence-filter-grid .filter-control--native select {
+      background: var(--filter-control-background);
+      color: var(--filter-control-value-color);
+      font-size: var(--filter-control-value-size);
+      line-height: var(--filter-control-value-line-height);
+      padding: 1rem var(--filter-control-padding-inline) var(--filter-control-padding-block);
+      text-align: left;
     }
     .civic-ledger-page button,
     .civic-ledger-page .button {
@@ -3146,6 +3341,7 @@ SHARED_CSS = r"""
       color: var(--muted);
       margin: 0;
     }
+    .intelligence-print-scope { display: none; }
     .applied-filters ul {
       display: flex;
       flex-wrap: wrap;
@@ -3160,7 +3356,6 @@ SHARED_CSS = r"""
       border: 1px solid #b8b1a5;
       border-radius: 999px;
       color: #17212b;
-      display: inline-flex;
       gap: 0.45rem;
       min-height: 2rem;
       padding: 0.35rem 0.75rem;
@@ -3673,45 +3868,24 @@ SHARED_CSS = r"""
       .civic-header__inner {
         grid-template-columns: minmax(12rem, 1fr) auto;
       }
-      .civic-menu-label {
-        display: inline;
-      }
       .civic-nav {
         grid-column: 1 / -1;
       }
       .civic-nav ul {
-        grid-template-columns: repeat(7, minmax(0, 1fr));
+        grid-template-columns: repeat(6, minmax(0, 1fr));
       }
-      .civic-ledger-page .facility-intelligence-filter-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-      }
-      .civic-ledger-page .facility-intelligence-filter-grid p:nth-child(8) {
-        grid-column: auto;
-      }
-      .facility-intelligence-row > article {
-        grid-template-areas:
-          "identity reason"
-          "source reviewer"
-          "actions actions";
-        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-      }
-      .facility-row-identity { grid-area: identity; }
-      .facility-row-reason { grid-area: reason; }
-      .facility-row-source { grid-area: source; }
-      .facility-row-reviewer { grid-area: reviewer; }
-      .facility-row-actions {
-        display: flex;
-        grid-area: actions;
-      }
-      .facility-row-actions .button {
-        width: auto;
-      }
+      .civic-ledger-page .facility-intelligence-filter-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
     @media (min-width: 1101px) {
       .facility-inventory-context {
         position: sticky;
         top: 0.5rem;
         z-index: 3;
+      }
+    }
+    @media (max-width: 900px) {
+      .civic-ledger-page .facility-intelligence-filter-grid {
+        grid-template-columns: minmax(0, 1fr);
       }
     }
     @media (max-width: 760px) {
@@ -3741,6 +3915,16 @@ SHARED_CSS = r"""
         padding-left: 0.15rem;
         padding-right: 0.15rem;
         white-space: normal;
+      }
+      .checkbox-multiselect--enhanced .checkbox-multiselect__panel {
+        box-shadow: none;
+        max-height: none;
+        position: static;
+      }
+      .facility-suggestions {
+        box-shadow: none;
+        margin-top: 0.25rem;
+        position: static;
       }
       .civic-ledger-page h1 {
         font-size: 1.35rem;
@@ -3835,6 +4019,13 @@ SHARED_CSS = r"""
       .worklist-controls, .worklist-action, .overview-source-action,
       .overview-tertiary-actions, .review-update-form {
         display: none !important;
+      }
+      .civic-ledger-page .intelligence-print-scope {
+        display: block;
+        border-block: 1px solid #000;
+        color: #000;
+        margin: 0 0 0.75rem;
+        padding: 0.45rem 0;
       }
       .facility-inventory-filters,
       .facility-inventory-actions,

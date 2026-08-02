@@ -181,3 +181,24 @@ and #420 adoption are complete at the bounded level recorded here. Issues #605,
 #606, and #610 consume this registry and helper layer without creating separate
 contract systems. Presentation details remain supersedable under #504, and
 independent #419 acceptance gates remain outside this issue.
+
+## Issue #642 controlled interaction adoption
+
+Issue #642 applies `RT-RC-001` and `RT-RC-005` to Compare Facilities local
+navigation, repeated-key filters, keyset continuity, and allowlisted Facility
+Overview/complaint-detail return context. It applies `RT-RC-003` to progressive
+native-checkbox disclosure, no-JavaScript fallback, Escape, focus restoration,
+and outside dismissal. It does not supersede result-inventory, source, identity,
+authorization, or print-content protections; #643 owns density and print length,
+#647 owns location, and #644 is not started.
+
+The Issue #642 evidence contract additionally rejects detached checkbox labels,
+detached Trends listboxes, page overflow, and keyboard-focus metadata without a
+visible in-viewport focus indicator. Print keeps the active canonical filter
+scope outside print-hidden interactive controls; this preserves print context
+without changing print-density or page-count authority.
+
+Licensing uses the governed directory for staged public-ID selection and tests
+populated, filtered-empty, and separately launched source-unavailable states
+without a production-visible simulation query. Card hierarchy and geometry
+remain Issue #643 concerns.

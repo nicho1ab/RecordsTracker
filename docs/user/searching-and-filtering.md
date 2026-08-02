@@ -69,9 +69,11 @@ useful intelligence origin, date, finding, serious-review, and coverage filters.
 
 Choose **Licensing and Visit Activity** to search supported public licensing,
 visit, citation, Plan of Correction, status, and capacity observations. Its
-filters name those conditions directly, including source-unavailable and
-multiple-observation states where the existing data supports them. Those
-observations do not establish complaint coverage. Choose **Complaint Activity
+facility suggestion field searches the broader governed directory by public
+Facility ID or name, so a facility can be selected even when no licensing or
+visit observation is loaded for it. Results distinguish matching observations,
+no observations matching the active filters, and an unavailable observation
+source. Those observations do not establish complaint coverage. Choose **Complaint Activity
 Over Time** to compare loaded complaint
 activity by month or quarter. These choices are links, not tabs, and the primary
 comparison evidence remains visible.
@@ -81,3 +83,29 @@ comparison evidence remains visible.
 Use `/ccld/facilities/intelligence?view=complaint-activity-over-time` to compare deduplicated loaded complaint activity by month or quarter for one facility or a filtered facility group. Filters cover facility, facility type, geography, finding/status, supported serious review topic, start date, end date, time grain, and a bounded period count. The former `/reviewer/facilities/trends` URL redirects here and preserves supported filters.
 
 Each period shows total complaints, substantiated/equivalent findings, serious-topic qualifying complaints, a compact coverage state, and direct links to contributing complaint records. An anomaly cue appears only when adjacent periods are complete and comparable: new activity is at least 3 complaints after 0; increased activity is at least 3 and at least twice the preceding count; decreased activity follows at least 3 complaints and is no more than half the preceding count. Incomplete, unavailable, partial, or otherwise non-comparable periods receive no anomaly cue.
+
+### Controlled Compare Facilities filters
+
+Compare Facilities has three ordinary-link views: Complaint Patterns, Licensing
+and Visit Activity, and Complaint Activity Over Time. The six global navigation
+links remain expanded on mobile; there is no separate Menu control. Complaint
+Patterns supports multiple Facility type, Geography, Finding, and Serious review
+category values. Its seven filter controls use visible labels inside the control:
+Facility type, Geography, Complaint finding, Start date, End date, Relevant date,
+and Serious review category. Licensing supports multiple observation cues. Trends
+supports multiple Facility type, Geography, Finding, and Serious review topics,
+plus one public Facility ID staged through its suggestion field.
+Licensing stages its directory selection through the same ordinary Apply action.
+
+Multi-value controls use native checkboxes. All is the default and is represented
+by absence of its query key; specific values use repeated keys, match within a
+field, and combine across active fields. Use the single Apply action after staging
+changes. Chips remove one value, Clear all restores view defaults, and a filter
+change resets keyset pagination while Previous and Next preserve canonical state.
+The Trends typeahead selection stages the public Facility ID and never submits
+automatically. Controls retain a no-JavaScript fieldset fallback; Escape closes
+an enhanced disclosure and restores focus. Print retains selected scope while
+hiding interactive controls. This interaction work does not shorten result cards,
+remove contributing complaints, reduce page height, or impose a print-page limit;
+those are Issue #643 concerns. Issue #647 location work and dependent #644 remain
+separate.
