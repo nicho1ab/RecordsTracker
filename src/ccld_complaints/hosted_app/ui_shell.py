@@ -3466,10 +3466,11 @@ SHARED_CSS = r"""
     }
     .facility-intelligence-row > article {
       display: grid;
-      gap: 1rem;
-      grid-template-columns: minmax(15rem, 1.05fr) minmax(20rem, 1.8fr) minmax(15rem, 1fr) minmax(11rem, 0.75fr) minmax(10rem, 0.7fr);
+      gap: 1.1rem;
+      grid-template-columns: minmax(0, 1fr);
       padding: 1rem;
     }
+    .facility-intelligence-card > * { min-width: 0; }
     .facility-intelligence-row :focus {
       scroll-margin-top: 9rem;
     }
@@ -3482,32 +3483,78 @@ SHARED_CSS = r"""
       background: #fbf7ef;
       box-shadow: inset 4px 0 0 #d5a21a;
     }
-    .facility-row-kicker,
-    .facility-row-source h4,
-    .facility-row-reviewer h4 {
+    .facility-row-kicker {
       color: var(--muted);
       font-size: 0.78rem;
       font-weight: 500;
       margin-bottom: 0.45rem;
     }
-    .facility-row-identity h3,
-    .facility-row-reason h4 {
+    .facility-card-header h3,
+    .facility-card-summary h4,
+    .facility-card-topics h4,
+    .facility-card-recommended h4 {
       font-size: 1rem;
       margin: 0 0 0.45rem;
     }
-    .facility-row-identity h3 {
+    .facility-card-header h3 {
       font-size: 1.12rem;
       font-weight: 700;
       line-height: 1.35;
     }
-    .facility-row-identity p,
-    .facility-row-reason p,
-    .facility-row-source p,
-    .facility-row-reviewer p {
+    .facility-card-header p {
       margin-bottom: 0.55rem;
     }
-    .ordering-explanation {
+    .facility-card-title {
+      align-items: start;
+      display: flex;
+      gap: 0.5rem;
+    }
+    .facility-card-title h3 {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+    .facility-card-title .copy-icon-button {
+      flex: 0 0 auto;
+    }
+    .facility-card-summary,
+    .facility-card-recommended {
+      border-top: 1px solid #d7d0c5;
+      padding-top: 0.85rem;
+    }
+    .facility-card-summary dl,
+    .facility-card-recommended dl {
+      display: grid;
+      gap: 0.6rem 1.25rem;
+      grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+      margin: 0;
+    }
+    .facility-card-summary dl > div,
+    .facility-card-recommended dl > div {
+      min-width: 0;
+    }
+    .facility-card-summary dt,
+    .facility-card-recommended dt {
+      color: var(--muted);
+      font-size: 0.8rem;
+      font-weight: 700;
+      margin: 0 0 0.2rem;
+    }
+    .facility-card-summary dd,
+    .facility-card-recommended dd {
+      margin: 0;
       overflow-wrap: anywhere;
+    }
+    .facility-card-topics ul {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    .facility-card-topics .review-chip {
+      display: inline-flex;
+      text-decoration: none;
     }
     .facility-row-source,
     .facility-row-reviewer {
@@ -3519,10 +3566,12 @@ SHARED_CSS = r"""
       gap: 0.4rem;
       padding: 0.75rem;
     }
-    .facility-row-actions {
-      align-content: start;
-      display: grid;
+    .facility-card-actions {
+      align-items: center;
+      display: flex;
+      flex-wrap: wrap;
       gap: 0.5rem;
+      justify-content: flex-start;
     }
     .facility-status-form {
       gap: 0.4rem;
@@ -3538,12 +3587,7 @@ SHARED_CSS = r"""
       padding: 0.45rem 0.55rem;
       width: 100%;
     }
-    .facility-row-source .button,
-    .facility-row-reviewer .button,
-    .facility-row-actions .button {
-      width: 100%;
-    }
-    .facility-row-actions .button-secondary {
+    .facility-card-actions .button-secondary {
       background: transparent;
       border-color: #817a70;
       color: #254f73;
@@ -3574,11 +3618,6 @@ SHARED_CSS = r"""
       background: #e7edf5;
       border-color: #82a6c7;
       color: #254f73;
-    }
-    .civic-ledger-page .facility-row-reviewer .badge-info {
-      background: #f5efe3;
-      border-color: #b8b1a5;
-      color: #17212b;
     }
     .civic-ledger-page .copy-icon-button,
     .copy-text-button {
@@ -3957,25 +3996,11 @@ SHARED_CSS = r"""
         min-width: 0;
       }
       .facility-intelligence-row > article {
-        display: grid;
-        grid-template-areas:
-          "identity"
-          "reason"
-          "source"
-          "reviewer"
-          "actions";
-        grid-template-columns: minmax(0, 1fr);
         padding: 0.75rem;
       }
-      .facility-row-actions {
-        display: grid;
-      }
-      .facility-row-actions .button {
-        width: min(100%, 14rem);
-      }
-      .facility-row-source,
-      .facility-row-reviewer {
-        min-width: 0;
+      .facility-card-summary dl,
+      .facility-card-recommended dl {
+        grid-template-columns: minmax(0, 1fr);
       }
       .intelligence-glossary-line {
         gap: 1rem;
@@ -4011,7 +4036,7 @@ SHARED_CSS = r"""
       .site-header, .civic-header, .guided-stepper, .site-footer, .civic-footer,
       .packet-draft-actions, .technical-details, .skip-link, .mode-panel,
       .copy-icon-button, .copy-text-control, .facility-intelligence-sort,
-      .facility-pagination, .facility-row-actions, .facility-status-form,
+      .facility-pagination, .facility-card-actions, .facility-status-form,
       .compare-facilities-views,
       .help-category-nav,
       .help-secondary-disclosure,
@@ -4095,15 +4120,11 @@ SHARED_CSS = r"""
       .civic-ledger-page .intelligence-filters,
       .civic-ledger-page .facility-intelligence-results,
       .civic-ledger-page .facility-intelligence-row,
-      .civic-ledger-page .facility-row-source,
-      .civic-ledger-page .facility-row-reviewer {
+      .civic-ledger-page .facility-intelligence-card {
         background: #fff !important;
         border-color: #000 !important;
         color: #000 !important;
         box-shadow: none !important;
-      }
-      .civic-ledger-page .facility-intelligence-row > article {
-        grid-template-columns: 1fr 1.5fr 1fr 1fr;
       }
       .civic-ledger-page .facility-inventory-context {
         position: static !important;

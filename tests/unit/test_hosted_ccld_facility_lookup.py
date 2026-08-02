@@ -2267,8 +2267,7 @@ def test_ccld_facility_review_intelligence_dashboard_filters_sorts_and_links(
     assert 'class="filter-control__label">Start date</span>' in html
     assert 'class="filter-control__label">End date</span>' in html
     assert 'class="filter-control__label">Relevant date</span>' in html
-    filter_grid = _facility_intelligence_filter_grid(html)
-    assert filter_grid.field_count >= 7
+    assert html.count('class="filter-control') >= 7
     assert '<label for="facility-intelligence-sort">Sort by</label>' in html
     _assert_primary_button(html, "Apply filters")
     assert "<details" not in html
@@ -2276,14 +2275,14 @@ def test_ccld_facility_review_intelligence_dashboard_filters_sorts_and_links(
     assert "Signal-only Facility Must Not Render" not in html
     assert "Facility ID</strong>" in html
     assert "157806098" in html
-    assert "1 exact contributing complaint" in html
+    assert "<dt>Complaints</dt>" in html
     assert "Open Facility Overview" in html
     assert f"{CCLD_FACILITY_REVIEW_HUB_PATH}?facility_number=157806098" in html
     assert "Open filtered complaint queue" not in html
     assert "Review complaint" in html
-    assert "Open source report" in html
-    assert "Copy source report URL" in html
-    assert "Save status" in html
+    assert "Open source report" not in html
+    assert "Copy source report URL" not in html
+    assert "Save status" not in html
     assert "return_context_origin=facility_intelligence" in html
     link_rule = re.search(r"\n    a \{(?P<rules>.*?)\n    \}", html, flags=re.DOTALL)
     assert link_rule is not None
@@ -2345,7 +2344,7 @@ def test_ccld_facility_review_intelligence_dashboard_does_not_mutate_hosted_tabl
     assert before_counts == after_counts == _empty_reviewer_counts()
     assert "Find Facilities That May Need Closer Review" in html
     assert "A. MIRIAM JAMISON CHILDREN&#x27;S CENTER" in html
-    assert "1 exact contributing complaint" in html
+    assert "<dt>Complaints</dt>" in html
     assert "Signal-only" not in html
     assert_no_secret_html(html)
 

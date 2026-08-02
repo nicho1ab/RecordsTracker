@@ -71,11 +71,12 @@ Use **Complaint Activity Over Time** from `/ccld/facilities/intelligence` when t
 
 Use `/ccld/facilities/intelligence` when the task starts across facilities. The
 dashboard applies complaint-level filters before reconciling facility counts,
-shows source coverage as available, partial, or unavailable, and renders one
-canonical facility inventory. Start with the selected first row under the
-visible governed ordering. Its source and reviewer-state regions refer to that
-row's deterministic next complaint, with actions to open the facility, complaint,
-or public source. These indicators describe only the authorized loaded corpus.
+shows concise facility cards, and renders one canonical facility inventory in
+Facility Overview. Start with the selected first card under the visible governed
+ordering. It has one deterministic recommended complaint and source-availability
+fact, with actions to open the facility or complaint; public-source actions and
+reviewer-created state remain in their canonical detail workflows. These
+indicators describe only the authorized loaded corpus.
 Use **Licensing and Visit Activity** for separate supported public licensing,
 visit, citation, Plan of Correction, status, and capacity observations; do not
 interpret that view as complaint coverage. The old

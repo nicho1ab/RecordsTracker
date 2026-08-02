@@ -138,6 +138,8 @@ param(
 
     [switch]$Issue642,
 
+    [switch]$Issue643,
+
     [switch]$Issue642LicensingSourceUnavailable
 )
 
@@ -151,6 +153,9 @@ elseif ($Issue641) {
 }
 elseif ($Issue642) {
     "Focused Issue #642 local fixture evidence for Compare Facilities navigation, staged filters, canonical state continuity, return context, responsive behavior, keyboard focus, and print controls."
+}
+elseif ($Issue643) {
+    "Focused Issue #643 local fixture evidence for the Complaint Patterns facility-card hierarchy, canonical contributor navigation, responsive reflow, native zoom, and populated print."
 }
 elseif ($Issue420) {
     "Focused issue #420 Facility Overview evidence for one canonical complaint inventory, truthful source and reviewer state, state-specific retrieval actions, responsive reflow, keyboard focus, and print."
@@ -1558,7 +1563,56 @@ function Invoke-Issue642BrowserCapture {
         }
         Invoke-CdpEvaluate -Session $Session -AwaitPromise $true -Expression "(async function(){ if (document.fonts && document.fonts.ready) { await document.fonts.ready; } await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))); return true; })()" | Out-Null
         $operatedStates = @()
-        if ([string]$Route.Name -eq "issue-642-operated-interactions") {
+        if ([string]$Route.Name -eq "issue-643-operated-interactions") {
+            $operatedRoot = Join-Path (Split-Path $ScreenshotPath -Parent) 'operated'
+            New-Item -ItemType Directory -Force -Path $operatedRoot | Out-Null
+            $baseUri = [System.Uri]::new($Url)
+            $baseUrl = $baseUri.GetLeftPart([System.UriPartial]::Authority)
+            $interactionScript = @'
+(async function () {
+  const card = document.querySelector('.facility-intelligence-card');
+  const name = card && card.querySelector('h3 a');
+  const copy = card && card.querySelector('button[aria-label*="Copy facility name"]');
+  const overview = card && Array.from(card.querySelectorAll('a')).find((a) => a.textContent.trim() === 'Open Facility Overview');
+  const complaint = card && Array.from(card.querySelectorAll('a')).find((a) => a.textContent.trim() === 'Review complaint');
+  const aggregate = card && card.querySelector('.facility-card-summary a');
+  if (!card || !name || !copy || !overview || !complaint || !aggregate) throw new Error('Issue #643 required card controls are missing.');
+  return { name: name.textContent.trim(), copyLabel: copy.getAttribute('aria-label'), nameHref: name.href, overviewHref: overview.href, complaintHref: complaint.href, aggregateHref: aggregate.href };
+})()
+'@
+            $card = Invoke-CdpEvaluate -Session $Session -AwaitPromise $true -Expression $interactionScript
+            $records = [System.Collections.ArrayList]::new()
+            $save = {
+                param([string]$Id, [string]$Selector, [string]$Method, [string]$Expected)
+                $before = Invoke-CdpEvaluate -Session $Session -Expression "({url:location.href, focus:(document.activeElement.id||document.activeElement.getAttribute('aria-label')||document.activeElement.textContent.trim()), navigation:performance.getEntriesByType('navigation').length})"
+                Invoke-CdpEvaluate -Session $Session -Expression "document.querySelector($($Selector | ConvertTo-Json -Compress)).focus(); true" | Out-Null
+                if ($Method -eq 'keyboard') { Invoke-CdpKeyPress -Session $Session -Key ' ' -Code 'Space' -VirtualKeyCode 32 } else { Invoke-CdpClickSelector -Session $Session -Selector $Selector }
+                Start-Sleep -Milliseconds 250
+                $after = Invoke-CdpEvaluate -Session $Session -Expression "({url:location.href, focus:(document.activeElement.id||document.activeElement.getAttribute('aria-label')||document.activeElement.textContent.trim()), navigation:performance.getEntriesByType('navigation').length})"
+                $path = Join-Path $operatedRoot "$Id.png"; Invoke-CdpCommand -Session $Session -Method 'Page.captureScreenshot' -Parameters @{ format='png'; fromSurface=$true; captureBeyondViewport=$true } | ForEach-Object { [IO.File]::WriteAllBytes($path, [Convert]::FromBase64String($_.result.data)) }
+                [void]$records.Add([ordered]@{ id=$Id; method=$Method; selector=$Selector; expected=$Expected; before=$before; after=$after; pass=($Method -eq 'keyboard' -and $Id -like '*copy*' ? ($before.url -eq $after.url) : $true) })
+            }
+            & $save 'issue-643-copy-keyboard' 'button[aria-label*="Copy facility name"]' 'keyboard' $card.name
+            & $save 'issue-643-copy-pointer' 'button[aria-label*="Copy facility name"]' 'pointer' $card.name
+            $navigate = {
+                param([string]$Id, [string]$Selector, [string]$ExpectedPath)
+                $before = Invoke-CdpEvaluate -Session $Session -Expression "({url:location.href,navigation:performance.getEntriesByType('navigation').length,focus:(document.activeElement.getAttribute('aria-label')||document.activeElement.textContent.trim())})"
+                Invoke-CdpClickSelector -Session $Session -Selector $Selector
+                Wait-CdpCondition -Session $Session -Expression "document.readyState === 'complete' && location.pathname.includes('$ExpectedPath')" -Description "$Id destination"
+                $destination = Invoke-CdpEvaluate -Session $Session -Expression "({url:location.href,navigation:performance.getEntriesByType('navigation').length,focus:(document.activeElement.getAttribute('aria-label')||document.activeElement.textContent.trim()),text:document.body.innerText})"
+                $destinationPath = Join-Path $operatedRoot "$Id-destination.png"; Invoke-CdpCommand -Session $Session -Method 'Page.captureScreenshot' -Parameters @{format='png';fromSurface=$true;captureBeyondViewport=$true} | ForEach-Object {[IO.File]::WriteAllBytes($destinationPath,[Convert]::FromBase64String($_.result.data))}
+                Invoke-CdpBrowserBack -Session $Session; Wait-CdpCondition -Session $Session -Expression "document.readyState === 'complete' && location.href === $($before.url | ConvertTo-Json -Compress)" -Description "$Id browser Back"
+                $back = Invoke-CdpEvaluate -Session $Session -Expression "({url:location.href,navigation:performance.getEntriesByType('navigation').length,focus:(document.activeElement.getAttribute('aria-label')||document.activeElement.textContent.trim()),cardVisible:!!document.querySelector('.facility-intelligence-card')})"
+                $backPath = Join-Path $operatedRoot "$Id-back.png"; Invoke-CdpCommand -Session $Session -Method 'Page.captureScreenshot' -Parameters @{format='png';fromSurface=$true;captureBeyondViewport=$true} | ForEach-Object {[IO.File]::WriteAllBytes($backPath,[Convert]::FromBase64String($_.result.data))}
+                [void]$records.Add([ordered]@{id=$Id;method='native-click-and-browser-back';selector=$Selector;before=$before;destination=$destination;back=$back;pass=($back.url -eq $before.url -and $back.cardVisible)})
+            }
+            & $navigate 'issue-643-facility-name' '.facility-intelligence-card h3 a' '/ccld/facilities/detail'
+            & $navigate 'issue-643-footer-overview' '.facility-intelligence-card .facility-card-actions a[aria-label^="Open Facility Overview"]' '/ccld/facilities/detail'
+            & $navigate 'issue-643-review-complaint' '.facility-intelligence-card .facility-card-actions a[aria-label^="Review complaint"]' '/reviewer/records/detail'
+            & $navigate 'issue-643-canonical-inventory' '.facility-intelligence-card .facility-card-summary a' '/ccld/facilities/detail'
+            Set-Content -LiteralPath (Join-Path (Split-Path $ScreenshotPath -Parent) '..\diagnostics\issue-643-operated-interactions.json') -Value (([ordered]@{ facility=$card; interactions=$records; limitation='Clipboard readback is browser-permission dependent; activation and no-navigation state are recorded.' }) | ConvertTo-Json -Depth 8) -Encoding UTF8
+        }
+        elseif ([string]$Route.Name -eq "issue-642-operated-interactions") {
             $baseUri = [System.Uri]::new($Url)
             $baseUrl = $baseUri.GetLeftPart([System.UriPartial]::Authority)
             $operatedStates = @(Invoke-Issue642OperatedInteractionCapture -Session $Session -BaseUrl $baseUrl -ScreenshotPath $ScreenshotPath)
@@ -2943,8 +2997,23 @@ function Test-Issue642RouteAssertions {
     }
 }
 
+function Test-Issue643RouteAssertions {
+    param([hashtable]$Route, [string]$Text, [System.Collections.ArrayList]$Assertions)
+    $name = [string]$Route.Name
+    $common = @('Find Facilities That May Need Closer Review', 'Complaint Patterns', 'Complaints', 'Recommended complaint', 'Open Facility Overview', 'Review complaint')
+    $hasCommon = @($common | Where-Object { -not $Text.Contains($_) }).Count -eq 0
+    Add-AssertionResult -Target $Assertions -RouteName $name -Check 'issue643 populated card contract' -Status $(if ($hasCommon) {'PASS'} else {'FAIL'}) -Message 'The populated Complaint Patterns card exposes its required summary, recommendation, and actions.'
+    $removed = @('Contributing complaint records', 'Source Record', 'Reviewer State', 'Save status', 'stable facility identity', 'exact facility identity')
+    $noRemoved = @($removed | Where-Object { $Text.Contains($_) }).Count -eq 0
+    Add-AssertionResult -Target $Assertions -RouteName $name -Check 'issue643 superseded card content absent' -Status $(if ($noRemoved) {'PASS'} else {'FAIL'}) -Message 'Superseded contributor, source, reviewer, and identity-panel copy is absent from the rendered comparison state.'
+    $sourceCount = ([regex]::Matches($Text, 'Source unavailable')).Count
+    if ($name -eq 'issue-643-source-unavailable') {
+        Add-AssertionResult -Target $Assertions -RouteName $name -Check 'issue643 source-unavailable presentation' -Status $(if ($sourceCount -gt 0 -and $noRemoved) {'PASS'} else {'FAIL'}) -Message 'The source-unavailable fixture state presents availability without a source panel or reviewer form.'
+    }
+}
+
 function Write-Issue642PacketDiagnostics {
-    param([string]$PacketDirectory, [string]$ScreenshotDirectory, [string]$DiagnosticsDirectory, [object[]]$RouteResults)
+    param([string]$PacketDirectory, [string]$ScreenshotDirectory, [string]$DiagnosticsDirectory, [object[]]$RouteResults, [string]$IssueNumber = '642')
 
     $screenshots = @(Get-ChildItem -LiteralPath $ScreenshotDirectory -File -Recurse -Filter '*.png' | Sort-Object FullName)
     $states = @($screenshots | ForEach-Object {
@@ -2959,10 +3028,10 @@ function Write-Issue642PacketDiagnostics {
     })
     $distinctArtifacts = @($states.artifact | Sort-Object -Unique)
     if ($states.Count -ne $screenshots.Count -or $distinctArtifacts.Count -ne $screenshots.Count) {
-        Stop-CaptureFail 'Issue #642 screenshot state ledger does not reconcile to captured screenshot files.'
+        Stop-CaptureFail "Issue #$IssueNumber screenshot state ledger does not reconcile to captured screenshot files."
     }
     $stateCounts = [ordered]@{ requested = $states.Count; attempted = $states.Count; captured = $states.Count; skipped = 0; failed = 0; artifactFiles = $screenshots.Count }
-    Set-Content -LiteralPath (Join-Path $DiagnosticsDirectory 'issue-642-screenshot-states.json') -Value ([ordered]@{ counts = $stateCounts; states = $states } | ConvertTo-Json -Depth 8) -Encoding UTF8
+    Set-Content -LiteralPath (Join-Path $DiagnosticsDirectory "issue-$IssueNumber-screenshot-states.json") -Value ([ordered]@{ counts = $stateCounts; states = $states } | ConvertTo-Json -Depth 8) -Encoding UTF8
 
     $browserStates = @($RouteResults | Where-Object { $_.browserStatePath } | ForEach-Object { Get-Content -LiteralPath (Join-Path $PacketDirectory $_.browserStatePath) -Raw | ConvertFrom-Json })
     $consoleErrors = @($browserStates | ForEach-Object { @($_.consoleErrors) })
@@ -2983,7 +3052,7 @@ function Write-Issue642PacketDiagnostics {
         nonzeroClassifications = $nonzero
         statement = if ($nonzero.Count -eq 0) { 'No console events, failed requests, or unexpected HTTP responses were observed.' } else { 'Nonzero events or failures are classified above.' }
     }
-    Set-Content -LiteralPath (Join-Path $DiagnosticsDirectory 'issue-642-console-network-summary.json') -Value ($summary | ConvertTo-Json -Depth 8) -Encoding UTF8
+    Set-Content -LiteralPath (Join-Path $DiagnosticsDirectory "issue-$IssueNumber-console-network-summary.json") -Value ($summary | ConvertTo-Json -Depth 8) -Encoding UTF8
     return [ordered]@{ screenshotStates = $stateCounts; consoleNetwork = $summary }
 }
 
@@ -3108,7 +3177,7 @@ foreach ($entry in $captureEnvOverrides.GetEnumerator()) {
 try {
     Test-AllowedBaseUrl -Value $BaseUrl
     Assert-OutputDir -Path $OutputDir
-    if (($Issue419 -or $Issue420 -or $Issue502 -or $Issue503 -or $Issue641 -or $Issue642) -and $Mode -ne "fixture") {
+    if (($Issue419 -or $Issue420 -or $Issue502 -or $Issue503 -or $Issue641 -or $Issue642 -or $Issue643) -and $Mode -ne "fixture") {
         Stop-CaptureFail "Issue #419, Issue #420, Issue #502, Issue #503, and Issue #641 evidence routes are local fixture/demo-only; use -Mode fixture."
     }
     if ($Issue498 -and $Mode -ne "fixture") {
@@ -3117,7 +3186,7 @@ try {
     $baseUri = [System.Uri]::new($BaseUrl)
     $normalizedBaseUrl = $baseUri.GetLeftPart([System.UriPartial]::Authority).TrimEnd("/")
     $timestamp = (Get-Date).ToUniversalTime().ToString("yyyyMMdd-HHmmssZ")
-    $packetName = if ($Issue642) { "$timestamp-issue-642-local" } elseif ($Issue503) { "$timestamp-$Mode-issue-503" } elseif ($Issue502) { "$timestamp-$Mode-issue-502" } elseif ($Issue498) { "$timestamp-$Mode-issue-498" } elseif ($Issue420) { "$timestamp-$Mode-issue-420" } elseif ($Issue419) { "$timestamp-$Mode-issue-419" } elseif ($Issue418) { "$timestamp-$Mode-issue-418" } elseif ($Issue417) { "$timestamp-$Mode-issue-417" } elseif ($Issue416) { "$timestamp-$Mode-issue-416" } elseif ($Issue415) { "$timestamp-$Mode-issue-415" } else { "$timestamp-$Mode" }
+    $packetName = if ($Issue643) { "$timestamp-issue-643-local" } elseif ($Issue642) { "$timestamp-issue-642-local" } elseif ($Issue503) { "$timestamp-$Mode-issue-503" } elseif ($Issue502) { "$timestamp-$Mode-issue-502" } elseif ($Issue498) { "$timestamp-$Mode-issue-498" } elseif ($Issue420) { "$timestamp-$Mode-issue-420" } elseif ($Issue419) { "$timestamp-$Mode-issue-419" } elseif ($Issue418) { "$timestamp-$Mode-issue-418" } elseif ($Issue417) { "$timestamp-$Mode-issue-417" } elseif ($Issue416) { "$timestamp-$Mode-issue-416" } elseif ($Issue415) { "$timestamp-$Mode-issue-415" } else { "$timestamp-$Mode" }
     $outputRoot = Join-Path $PWD $OutputDir
     $packetDir = Join-Path $outputRoot $packetName
     $zipPath = Join-Path $outputRoot "$packetName.zip"
@@ -3319,7 +3388,22 @@ try {
             @{ Name = "issue-642-licensing-source-unavailable"; Path = "${issue642Base}?view=licensing-visit-activity&q=430000001"; Label = "issue-642-02c-licensing-source-unavailable"; ActiveHref = $issue642Base; WorkflowStep = "Review"; ExpectedDataState = 'data-result-state="source-unavailable"'; ViewportWidth = 1440; ViewportHeight = 1200 }
         )
     }
-    $routesToCapture = if ($Issue642) { $issue642Routes } elseif ($Issue641) { $issue641Routes } elseif ($Issue610) { $issue610Routes } elseif ($Issue503) { $issue503Routes } elseif ($Issue502) { $issue502Routes } elseif ($Issue498) { $issue498Routes } elseif ($Issue420) { $issue420Routes } elseif ($Issue419) { $issue419Routes } elseif ($Issue418) { $issue418Routes } elseif ($Issue417) { $issue417Routes } elseif ($Issue416) { $issue416Routes } elseif ($Issue415) { $issue415Routes } else { $coreRoutes }
+    $issue643Base = "/ccld/facilities/intelligence"
+    # The unfiltered committed fixture deterministically contains populated cards,
+    # including source-unavailable records; no production or retrieval source is used.
+    $issue643Routes = @(
+        @{ Name = "issue-643-operated-interactions"; Path = $issue643Base; Label = "issue-643-00-operated-interactions"; ActiveHref = $issue643Base; WorkflowStep = "Review"; ViewportWidth = 1440; ViewportHeight = 1200 },
+        @{ Name = "issue-643-populated-desktop"; Path = $issue643Base; Label = "issue-643-01-populated-desktop"; ActiveHref = $issue643Base; WorkflowStep = "Review"; ViewportWidth = 1440; ViewportHeight = 1200 },
+        @{ Name = "issue-643-populated-1024"; Path = $issue643Base; Label = "issue-643-02-populated-1024"; ActiveHref = $issue643Base; WorkflowStep = "Review"; ViewportWidth = 1024; ViewportHeight = 900 },
+        @{ Name = "issue-643-populated-768"; Path = $issue643Base; Label = "issue-643-03-populated-768"; ActiveHref = $issue643Base; WorkflowStep = "Review"; ViewportWidth = 768; ViewportHeight = 1024 },
+        @{ Name = "issue-643-populated-500"; Path = $issue643Base; Label = "issue-643-04-populated-500"; ActiveHref = $issue643Base; WorkflowStep = "Review"; ViewportWidth = 500; ViewportHeight = 900 },
+        @{ Name = "issue-643-populated-400"; Path = $issue643Base; Label = "issue-643-05-populated-400"; ActiveHref = $issue643Base; WorkflowStep = "Review"; ViewportWidth = 400; ViewportHeight = 900 },
+        @{ Name = "issue-643-populated-390"; Path = $issue643Base; Label = "issue-643-06-populated-390"; ActiveHref = $issue643Base; WorkflowStep = "Review"; ViewportWidth = 390; ViewportHeight = 844 },
+        @{ Name = "issue-643-populated-zoom-200"; Path = $issue643Base; Label = "issue-643-07-populated-zoom-200"; ActiveHref = $issue643Base; WorkflowStep = "Review"; ViewportWidth = 1280; ViewportHeight = 900; Issue641PageScaleFactor = 2.0 },
+        @{ Name = "issue-643-populated-print"; Path = $issue643Base; Label = "issue-643-08-populated-print"; ActiveHref = $issue643Base; WorkflowStep = "Review"; ViewportWidth = 1440; ViewportHeight = 1200; CapturePrint = $true },
+        @{ Name = "issue-643-source-unavailable"; Path = "${issue643Base}?facility_type=733"; Label = "issue-643-09-source-unavailable"; ActiveHref = $issue643Base; WorkflowStep = "Review"; ViewportWidth = 1440; ViewportHeight = 1200 }
+    )
+    $routesToCapture = if ($Issue643) { $issue643Routes } elseif ($Issue642) { $issue642Routes } elseif ($Issue641) { $issue641Routes } elseif ($Issue610) { $issue610Routes } elseif ($Issue503) { $issue503Routes } elseif ($Issue502) { $issue502Routes } elseif ($Issue498) { $issue498Routes } elseif ($Issue420) { $issue420Routes } elseif ($Issue419) { $issue419Routes } elseif ($Issue418) { $issue418Routes } elseif ($Issue417) { $issue417Routes } elseif ($Issue416) { $issue416Routes } elseif ($Issue415) { $issue415Routes } else { $coreRoutes }
 
     $routeResults = [System.Collections.ArrayList]::new()
     $assertions = [System.Collections.ArrayList]::new()
@@ -3327,14 +3411,14 @@ try {
     $routeHtmlByName = @{}
     $screenshotWarnings = @()
     $screenshotToolResolution = if ($IncludeScreenshots) {
-        Resolve-ScreenshotTool -Requested $ScreenshotToolPreference -RequireInteractionAware ([bool]($Issue498 -or $Issue420 -or $Issue502 -or $Issue503 -or $Issue641 -or $Issue642))
+        Resolve-ScreenshotTool -Requested $ScreenshotToolPreference -RequireInteractionAware ([bool]($Issue498 -or $Issue420 -or $Issue502 -or $Issue503 -or $Issue641 -or $Issue642 -or $Issue643))
     }
     else {
         [pscustomobject]@{ Requested = $ScreenshotToolPreference; Resolved = "none"; ValidationStatus = "screenshots not requested"; Executable = ""; SupportsInteractionAwareCapture = $false; FullPage = $false; Tool = $null; Attempts = @(); Error = "" }
     }
     $resolvedScreenshotTool = $screenshotToolResolution.Tool
     $interactionBrowserSession = $null
-    if (($Issue498 -or $Issue420 -or $Issue502 -or $Issue503 -or $Issue641 -or $Issue642) -and $IncludeScreenshots) {
+    if (($Issue498 -or $Issue420 -or $Issue502 -or $Issue503 -or $Issue641 -or $Issue642 -or $Issue643) -and $IncludeScreenshots) {
         if ($null -eq $resolvedScreenshotTool) {
                 $screenshotWarnings += "Interaction-aware screenshot tool selection failed: $($screenshotToolResolution.Error)"
         }
@@ -3424,7 +3508,7 @@ try {
                         }
                     }
                 }
-                elseif ($Issue502 -or $Issue420 -or $Issue503 -or $Issue641 -or $Issue642) {
+                elseif ($Issue502 -or $Issue420 -or $Issue503 -or $Issue641 -or $Issue642 -or $Issue643) {
                     if ($null -eq $interactionBrowserSession) {
                         $shotError = "interaction-aware browser session unavailable"
                         $script:screenshotWarnings += "$($Route.Name): screenshot failed: $shotError"
@@ -3435,7 +3519,7 @@ try {
                         $captureResult = if ($Issue641) {
                             Invoke-Issue641BrowserCapture -Session $interactionBrowserSession -Route $Route -Url $url -ScreenshotPath $shotFile -PrintPath $printFile -Width $routeViewportWidth -Height $routeViewportHeight
                         }
-                        elseif ($Issue642) {
+                        elseif ($Issue642 -or $Issue643) {
                             Invoke-Issue642BrowserCapture -Session $interactionBrowserSession -Route $Route -Url $url -ScreenshotPath $shotFile -PrintPath $printFile -Width $routeViewportWidth -Height $routeViewportHeight
                         }
                         elseif ($Issue503) {
@@ -3463,7 +3547,7 @@ try {
                                 if ($LASTEXITCODE -ne 0) { throw 'Focused PDF page rendering failed.' }
                                 $printValidation = $renderedPagesJson | ConvertFrom-Json
                                 if ($printValidation.pageCount -le 0 -or @($printValidation.pages).Count -ne $printValidation.pageCount) { throw 'Focused rendered PDF page count does not reconcile.' }
-                                $printValidationName = if ($Issue503) { 'issue-503-print-validation.json' } else { 'issue-420-print-validation.json' }
+                                $printValidationName = if ($Issue643) { 'issue-643-print-validation.json' } elseif ($Issue503) { 'issue-503-print-validation.json' } else { 'issue-420-print-validation.json' }
                                 Set-Content -LiteralPath (Join-Path $packetDir $printValidationName) -Value ($printValidation | ConvertTo-Json -Depth 8) -Encoding UTF8
                                 $printPath = ConvertTo-RelativeEvidencePath -Path $printFile -Root $packetDir
                             }
@@ -3483,7 +3567,7 @@ try {
                 }
             }
         }
-        if (-not $Issue641 -and -not $Issue642) {
+        if (-not $Issue641 -and -not $Issue642 -and -not $Issue643) {
             Test-RouteAssertions -Route $Route -Html $safeHtml -StatusCode $response.StatusCode -Assertions $assertions
         }
         elseif ($Issue641) {
@@ -3491,8 +3575,8 @@ try {
             Test-Issue641RouteAssertions -Route $Route -Text $plainText -Assertions $assertions
         }
         else {
-            Add-AssertionResult -Target $assertions -RouteName $Route.Name -Check "issue642 route status" -Status $(if ($response.StatusCode -eq $expectedStatus) { "PASS" } else { "FAIL" }) -Message "Route returned HTTP $($response.StatusCode); expected $expectedStatus."
-            Test-Issue642RouteAssertions -Route $Route -Text $plainText -Assertions $assertions
+            Add-AssertionResult -Target $assertions -RouteName $Route.Name -Check $(if ($Issue643) {'issue643 route status'} else {'issue642 route status'}) -Status $(if ($response.StatusCode -eq $expectedStatus) { "PASS" } else { "FAIL" }) -Message "Route returned HTTP $($response.StatusCode); expected $expectedStatus."
+            if ($Issue643) { Test-Issue643RouteAssertions -Route $Route -Text $plainText -Assertions $assertions } else { Test-Issue642RouteAssertions -Route $Route -Text $plainText -Assertions $assertions }
         }
         if ($Issue415) {
             Test-Issue415RouteAssertions -Route $Route -Html $safeHtml -Text $plainText -Assertions $assertions
@@ -4284,6 +4368,9 @@ scripts/validate_hosted_ui_acceptance.py.
     $issue642PacketDiagnostics = $null
     if ($Issue642) {
         $issue642PacketDiagnostics = Write-Issue642PacketDiagnostics -PacketDirectory $packetDir -ScreenshotDirectory $screenshotDir -DiagnosticsDirectory $diagnosticsDir -RouteResults @($routeResults)
+    }
+    elseif ($Issue643) {
+        $issue642PacketDiagnostics = Write-Issue642PacketDiagnostics -PacketDirectory $packetDir -ScreenshotDirectory $screenshotDir -DiagnosticsDirectory $diagnosticsDir -RouteResults @($routeResults) -IssueNumber '643'
     }
     $outputCounts = [ordered]@{
         screenshots   = Get-EvidenceFileCount -Path $screenshotDir -Filter "*.png"

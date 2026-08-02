@@ -50,6 +50,8 @@ param(
 
     [switch]$Issue642,
 
+    [switch]$Issue643,
+
     [switch]$Issue642LicensingSourceUnavailable
 )
 
@@ -147,6 +149,7 @@ $captureArguments = @{
 if ($Issue502) { $captureArguments.Issue502 = $true }
 if ($Issue420) { $captureArguments.Issue420 = $true }
 if ($Issue642) { $captureArguments.Issue642 = $true }
+if ($Issue643) { $captureArguments.Issue643 = $true }
 if ($Issue642LicensingSourceUnavailable) {
     $captureArguments.Issue642 = $true
     $captureArguments.Issue642LicensingSourceUnavailable = $true
