@@ -118,6 +118,24 @@ class FacilityIntelligenceCursorAnchor:
 
 
 @dataclass(frozen=True)
+class FacilityIntelligenceRecommendationSeek:
+    """A server-validated priority anchor for one Review next unit."""
+
+    anchor: tuple[int | str, ...]
+    expected_total: int
+
+
+@dataclass(frozen=True)
+class FacilityIntelligenceRecommendationRead:
+    facility_identity: str
+    position: int
+    total: int
+    current_anchor: tuple[int | str, ...]
+    previous_anchor: tuple[int | str, ...] | None
+    next_anchor: tuple[int | str, ...] | None
+
+
+@dataclass(frozen=True)
 class FacilityIntelligenceFilterOptions:
     facility_types: tuple[str, ...] = ()
     geographies: tuple[str, ...] = ()
@@ -137,6 +155,8 @@ class FacilityIntelligencePageRead:
     next_anchor: FacilityIntelligenceCursorAnchor | None
     review_next_facility_identity: str | None
     filter_options: FacilityIntelligenceFilterOptions
+    recommendation: FacilityIntelligenceRecommendationRead | None = None
+    recommendation_records: tuple[SourceDerivedRecordRead, ...] = ()
 
 
 CCLD_CONNECTOR_NAME = "ccld_facility_reports"
@@ -510,6 +530,7 @@ def list_facility_intelligence_page(
     import_batch_ids: tuple[str, ...] | None = None,
     import_batch_query: Select[Any] | CompoundSelect[Any] | None = None,
     seek: FacilityIntelligenceSeek | None = None,
+    recommendation_seek: FacilityIntelligenceRecommendationSeek | None = None,
     excluded_source_record_keys: tuple[str, ...] = (),
 ) -> FacilityIntelligencePageRead:
     """Read one bounded facility page and only its contributing source rows."""
@@ -714,22 +735,42 @@ def list_facility_intelligence_page(
         if page_rows and last_position < total_matching
         else None
     )
-    priority_columns, priority_descending = _facility_intelligence_order_spec(
-        facilities,
-        "priority",
+    recommendation, recommendation_row = _facility_intelligence_recommendation(
+        connection,
+        facilities=facilities,
+        total_matching=total_matching,
+        seek=recommendation_seek,
     )
-    review_next_identity = connection.execute(
-        _facility_intelligence_bounded_limit(
-            select(facilities.c.facility_identity).order_by(
-            *_facility_intelligence_order_clauses(
-                priority_columns,
-                priority_descending,
-            )
+    recommendation_records = (
+        _facility_intelligence_hydrated_records(
+            connection,
+            filters=filters,
+            source_facility_ids=(
+                (str(recommendation_row["source_facility_id"]),)
+                if recommendation_row is not None
+                and recommendation_row["source_facility_id"] is not None
+                else ()
             ),
-            1,
-            dialect_name=connection.dialect.name,
+            facility_source_record_keys=(
+                (str(recommendation_row["facility_source_record_key"]),)
+                if recommendation_row is not None
+                and recommendation_row["facility_source_record_key"] is not None
+                else ()
+            ),
+            fallback_source_record_keys=(
+                (str(recommendation_row["representative_source_record_key"]),)
+                if recommendation_row is not None
+                and recommendation_row["source_facility_id"] is None
+                else ()
+            ),
+            import_batch_id=import_batch_id,
+            import_batch_ids=import_batch_ids,
+            import_batch_query=import_batch_query,
+            excluded_source_record_keys=excluded_source_record_keys,
         )
-    ).scalar_one_or_none()
+        if recommendation_row is not None
+        else ()
+    )
     return FacilityIntelligencePageRead(
         records=records,
         facility_identities=identities,
@@ -740,7 +781,7 @@ def list_facility_intelligence_page(
         previous_anchor=previous_anchor,
         next_anchor=next_anchor,
         review_next_facility_identity=(
-            str(review_next_identity) if review_next_identity is not None else None
+            recommendation.facility_identity if recommendation is not None else None
         ),
         filter_options=_facility_intelligence_filter_options(
             connection,
@@ -749,6 +790,72 @@ def list_facility_intelligence_page(
             import_batch_query=import_batch_query,
             excluded_source_record_keys=excluded_source_record_keys,
         ),
+        recommendation=recommendation,
+        recommendation_records=recommendation_records,
+    )
+
+
+def _facility_intelligence_recommendation(
+    connection: Connection,
+    *,
+    facilities: Any,
+    total_matching: int,
+    seek: FacilityIntelligenceRecommendationSeek | None,
+) -> tuple[FacilityIntelligenceRecommendationRead | None, RowMapping | None]:
+    """Read one priority-ranked facility and adjacent anchors without OFFSET."""
+    if not total_matching:
+        return None, None
+    columns, descending = _facility_intelligence_order_spec(facilities, "priority")
+    if seek is not None:
+        if seek.expected_total != total_matching:
+            raise ValueError("Review next recommendation is stale.")
+        position = _facility_intelligence_anchor_position(
+            connection, facilities, columns, descending, seek.anchor
+        )
+        selected_statement = select(facilities).where(
+            and_(*(
+                column == value for column, value in zip(columns, seek.anchor, strict=True)
+            ))
+        )
+    else:
+        position = 1
+        selected_statement = select(facilities).order_by(
+            *_facility_intelligence_order_clauses(columns, descending)
+        )
+    selected_row = connection.execute(
+        _facility_intelligence_bounded_limit(
+            selected_statement, 1, dialect_name=connection.dialect.name
+        )
+    ).mappings().one_or_none()
+    if selected_row is None:
+        raise ValueError("Review next recommendation is stale.")
+    anchor = _facility_intelligence_row_order_values(selected_row, columns)
+
+    def adjacent(direction: Literal["previous", "next"]) -> tuple[int | str, ...] | None:
+        statement = select(facilities).where(
+            _facility_intelligence_seek_predicate(
+                columns, descending, anchor, direction=direction
+            )
+        ).order_by(*_facility_intelligence_order_clauses(
+            columns, descending, reverse=direction == "previous"
+        ))
+        row = connection.execute(
+            _facility_intelligence_bounded_limit(
+                statement, 1, dialect_name=connection.dialect.name
+            )
+        ).mappings().one_or_none()
+        return _facility_intelligence_row_order_values(row, columns) if row else None
+
+    return (
+        FacilityIntelligenceRecommendationRead(
+            facility_identity=str(selected_row["facility_identity"]),
+            position=position,
+            total=total_matching,
+            current_anchor=_facility_intelligence_row_order_values(selected_row, columns),
+            previous_anchor=adjacent("previous"),
+            next_anchor=adjacent("next"),
+        ),
+        selected_row,
     )
 
 

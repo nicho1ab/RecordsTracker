@@ -241,3 +241,60 @@ FACILITY_INTELLIGENCE_CHIP_SCRIPT = r"""<script>
   initialize(document);
 }());
 </script>"""
+
+
+REVIEW_NEXT_SCRIPT = r"""<script>
+(function () {
+  'use strict';
+  if (window.__reviewNextControllerReady) { return; }
+  window.__reviewNextControllerReady = true;
+  var activeController = null;
+  var requestNumber = 0;
+  function controls(region) { return Array.prototype.slice.call(region.querySelectorAll('a.review-next-control')); }
+  function setPending(region, pending) {
+    region.setAttribute('aria-busy', pending ? 'true' : 'false');
+    controls(region).forEach(function (control) { control.setAttribute('aria-disabled', pending ? 'true' : 'false'); });
+  }
+  function replace(markup, url, historyMode, focus) {
+    var documentResponse = new DOMParser().parseFromString(markup, 'text/html');
+    var next = documentResponse.querySelector('#review-next-region');
+    var current = document.querySelector('#review-next-region');
+    if (!next || !current) { throw new Error('Missing canonical Review next region'); }
+    current.replaceWith(next.cloneNode(true));
+    if (historyMode === 'push') { history.pushState({ reviewNext: true }, '', url); }
+    if (historyMode === 'replace') { history.replaceState({ reviewNext: true }, '', next.dataset.currentUrl || url); }
+    if (focus) { var heading = document.querySelector('#review-next-heading'); if (heading) { heading.focus({ preventScroll: true }); } }
+  }
+  function update(url, historyMode, trigger, focus) {
+    var region = document.querySelector('#review-next-region');
+    if (!region) { return Promise.reject(new Error('Review next region is unavailable')); }
+    if (activeController) { activeController.abort(); }
+    activeController = new AbortController();
+    var currentRequest = ++requestNumber;
+    var scrollX = window.scrollX, scrollY = window.scrollY;
+    setPending(region, true);
+    return fetch(url, { credentials: 'same-origin', headers: { 'X-Requested-With': 'fetch' }, signal: activeController.signal })
+      .then(function (response) { if (!response.ok) { throw new Error('Review next update returned HTTP ' + response.status); } return response.text(); })
+      .then(function (markup) {
+        if (currentRequest !== requestNumber) { return; }
+        replace(markup, url, historyMode, focus);
+        window.scrollTo(scrollX, scrollY);
+      })
+      .catch(function (error) {
+        if (error.name === 'AbortError') { return; }
+        if (currentRequest !== requestNumber) { return; }
+        setPending(region, false);
+        var errorRegion = region.querySelector('#review-next-error');
+        if (errorRegion) { errorRegion.hidden = false; errorRegion.textContent = 'Could not update Review next. Use the available link to continue.'; }
+        if (trigger) { trigger.focus({ preventScroll: true }); }
+        console.error(error);
+      });
+  }
+  document.addEventListener('click', function (event) {
+    var control = event.target.closest('a.review-next-control');
+    if (!control || control.getAttribute('aria-disabled') === 'true' || !window.fetch) { return; }
+    event.preventDefault(); update(control.href, 'push', control, true);
+  });
+  window.addEventListener('popstate', function () { update(location.href, 'none', null, true); });
+}());
+</script>"""

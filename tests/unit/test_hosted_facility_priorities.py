@@ -1631,18 +1631,71 @@ def test_facility_intelligence_reads_only_current_page_and_uses_bounded_sql(
         for statement in statements
         if "facility_intelligence_hydration_references" in statement
     ]
-    assert len(hydration_statements) == 1
+    # The display page remains bounded; Issue #655 adds one separately bounded
+    # hydration for the server-selected Review next unit when it is off-page.
+    assert len(hydration_statements) == 2
+    assert captured_pages[0].recommendation is not None
+    assert len(captured_pages[0].recommendation_records) == 3
     assert "facility_id in" in hydration_statements[0]
     assert "source_record_key in" in hydration_statements[0]
     assert "substantiated_matches" not in hydration_statements[0]
     review_next_statements = [
         statement
         for statement in statements
-        if "select facility_intelligence_facilities.facility_identity from "
-        "facility_intelligence_facilities order by" in statement
+        if "facility_intelligence_facilities.substantiated_count desc" in statement
+        and "limit 1" in statement
     ]
-    assert len(review_next_statements) == 1
-    assert "limit 1" in review_next_statements[0]
+    assert review_next_statements
+
+
+def test_review_next_sequence_uses_server_generated_opaque_urls() -> None:
+    with _priority_connection() as connection:
+        for number, name, finding in (
+            ("100001", "Alpha Center", "Substantiated"),
+            ("200002", "Beta Center", "Substantiated"),
+            ("300003", "Gamma Center", "Unsubstantiated"),
+        ):
+            _insert_facility_bundle(
+                connection,
+                facility_number=number,
+                facility_name=name,
+                facility_type="Children's Center",
+                county="Kern",
+                complaints=(_complaint(f"SEQ-{number}", "2026-05-03", finding),),
+            )
+        context = reviewer_ui_context_for_connection(connection)
+        status, _content_type, body = route_response(
+            CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH,
+            reviewer_ui_context=context,
+        )
+        first_html = body.decode("utf-8")
+        next_match = re.search(r'rel="next" href="([^"]+)"', first_html)
+        assert status == 200
+        assert "Recommendation 1 of 3" in first_html
+        assert next_match is not None
+        assert "recommendation=" in unescape(next_match.group(1))
+        review_next_facility_match = re.search(
+            r'id="review-next-region".*?<footer class="facility-card-actions">'
+            r'<a class="button" href="([^"]+)"',
+            first_html,
+            flags=re.DOTALL,
+        )
+        assert review_next_facility_match is not None
+        assert "recommendation=" in unescape(review_next_facility_match.group(1))
+        status, _content_type, body = route_response(
+            unescape(next_match.group(1)), reviewer_ui_context=context
+        )
+        middle_html = body.decode("utf-8")
+        assert status == 200
+        assert "Recommendation 2 of 3" in middle_html
+        assert 'rel="prev"' in middle_html
+        assert 'rel="next"' in middle_html
+        status, _content_type, body = route_response(
+            f"{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}?recommendation=tampered",
+            reviewer_ui_context=context,
+        )
+    assert status == 400
+    assert "Review next recommendation state is invalid." in body.decode("utf-8")
 
 
 def test_facility_intelligence_pagination_preserves_authorization_and_batch_isolation() -> None:

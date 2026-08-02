@@ -2236,8 +2236,8 @@ def _render_facility_overview_summary(
             f'aria-label="Current review context">{context_items}</ul>'
         )
     compare_return = (
-        _render_facility_origin_context(review_context)
-        if not directory_available and review_context.origin == "facility_intelligence"
+        f'<p><a class="button button-secondary" href="{_escape(_compare_facilities_return_href(review_context))}">Return to Compare Facilities</a></p>'
+        if review_context.origin == "facility_intelligence"
         else ""
     )
     all_href = _facility_overview_href(record.facility_number, review_context)

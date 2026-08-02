@@ -5,6 +5,7 @@ import re
 import shutil
 import subprocess
 from pathlib import Path
+from urllib.parse import parse_qs, urlsplit
 
 ROOT = Path(__file__).resolve().parents[2]
 CAPTURE_SCRIPT = ROOT / "scripts" / "capture-hosted-ui-evidence.ps1"
@@ -34,6 +35,113 @@ def powershell_function(function_name: str, next_function_name: str) -> str:
     start = script.index(f"function {function_name}")
     end = script.index(f"\nfunction {next_function_name}", start)
     return script[start:end]
+
+
+def run_optional_git_revision_resolution(
+    *,
+    origin_main: str | None = None,
+    local_main: str | None = None,
+    event_path: Path | None = None,
+) -> dict[str, object]:
+    resolver = powershell_function("Resolve-OptionalGitRevision", "Test-AllowedBaseUrl")
+    event_literal = "$null" if event_path is None else json.dumps(str(event_path))
+    origin_literal = json.dumps(origin_main or "")
+    local_literal = json.dumps(local_main or "")
+    mock_git = "\n".join(
+        (
+            "function git {",
+            "  param([Parameter(ValueFromRemainingArguments = $true)][string[]]$Arguments)",
+            "  $reference = $Arguments[-1]",
+            f"  if ($reference -eq 'origin/main^{{commit}}' -and {origin_literal}) {{",
+            f"    {origin_literal}; $global:LASTEXITCODE = 0; return",
+            "  }",
+            f"  if ($reference -eq 'main^{{commit}}' -and {local_literal}) {{",
+            f"    {local_literal}; $global:LASTEXITCODE = 0; return",
+            "  }",
+            "  $global:LASTEXITCODE = 128",
+            "}",
+        )
+    )
+    ps_script = (
+        resolver
+        + "\n"
+        + mock_git
+        + "\n"
+        + "Resolve-OptionalGitRevision -GitHubEventPath "
+        + event_literal
+        + " | ConvertTo-Json -Depth 6\n"
+    )
+    result = subprocess.run(
+        [powershell(), "-NoProfile", "-Command", ps_script],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert result.returncode == 0, plain_output(result)
+    return json.loads(result.stdout)
+
+
+def test_optional_git_revision_resolution_tolerates_missing_refs_without_stderr_value() -> None:
+    resolution = run_optional_git_revision_resolution()
+
+    assert resolution["Available"] is False
+    assert resolution["Sha"] == ""
+    assert resolution["Source"] == "unavailable"
+    assert resolution["Attempts"] == ["git:origin/main", "git:main"]
+
+
+def test_optional_git_revision_resolution_uses_valid_remote_then_local_ref() -> None:
+    remote_sha = "A" * 40
+    remote = run_optional_git_revision_resolution(origin_main=remote_sha, local_main="B" * 40)
+    local = run_optional_git_revision_resolution(local_main="C" * 40)
+
+    assert remote == {
+        "Available": True,
+        "Sha": remote_sha.lower(),
+        "Source": "git:origin/main",
+        "Attempts": [],
+    }
+    assert local["Available"] is True
+    assert local["Sha"] == ("C" * 40).lower()
+    assert local["Source"] == "git:main"
+    assert local["Attempts"] == ["git:origin/main"]
+
+
+def test_optional_git_revision_resolution_uses_only_valid_github_pull_request_base_metadata(
+    tmp_path: Path,
+) -> None:
+    valid_event = tmp_path / "event.json"
+    valid_event.write_text(
+        json.dumps({"pull_request": {"base": {"sha": "D" * 40}}}), encoding="utf-8"
+    )
+    invalid_event = tmp_path / "invalid-event.json"
+    invalid_event.write_text(
+        json.dumps({"pull_request": {"base": {"sha": "not-a-sha"}}}), encoding="utf-8"
+    )
+
+    valid = run_optional_git_revision_resolution(event_path=valid_event)
+    invalid = run_optional_git_revision_resolution(event_path=invalid_event)
+
+    assert valid["Available"] is True
+    assert valid["Sha"] == ("D" * 40).lower()
+    assert valid["Source"] == "github-event:pull_request.base.sha"
+    assert invalid["Available"] is False
+    assert invalid["Sha"] == ""
+    assert invalid["Source"] == "unavailable"
+    assert invalid["Attempts"][-1] == "github-event:pull_request.base.sha-invalid"
+
+
+def test_issue_655_base_revision_metadata_is_strict_or_explicitly_unavailable() -> None:
+    script = CAPTURE_SCRIPT.read_text(encoding="utf-8")
+
+    assert "function Resolve-OptionalGitRevision" in script
+    assert "git rev-parse --verify --quiet" in script
+    assert "2>$null" in script
+    assert "Issue #655 evidence requires an authoritative base SHA" in script
+    assert "-not $AllowUnavailable" in script
+    assert "baseShaStatus=if ($gitBaseResolution.Available)" in script
+    assert "(& git merge-base HEAD origin/main).Trim()" not in script
 
 
 def run_screenshot_tool_resolution(
@@ -2199,8 +2307,309 @@ def test_issue_642_operated_capture_uses_native_input_and_records_state_metadata
     ):
         assert expected in script
 
-    assert "point.x * [double]$point.scale" not in script
-    assert "point.y * [double]$point.scale" not in script
-    assert "Input.dispatchMouseEvent" in script
-    assert "mousePressed" in script
-    assert "mouseReleased" in script
+
+def test_issue_655_mode_declares_dedicated_routes_operations_and_packet_artifacts() -> None:
+    script = CAPTURE_SCRIPT.read_text(encoding="utf-8")
+    required = (
+        "function Invoke-Issue655BrowserCapture",
+        "function Test-Issue655RouteAssertions",
+        "function Write-Issue655PacketDiagnostics",
+        "issue-655-first-recommendation",
+        "issue-655-middle-recommendation",
+        "issue-655-last-recommendation",
+        "issue-655-one-item-sequence",
+        "issue-655-empty-sequence",
+        "issue-655-malformed-state",
+        "issue-655-stale-state-recovery",
+        "issue-655-pointer-next-first-middle",
+        "issue-655-keyboard-next-middle-last",
+        "a.review-next-control[rel=next]",
+        "a.review-next-control[rel=prev]",
+        "issue-655-browser-back",
+        "issue-655-browser-forward",
+        "Invoke-CdpBrowserForward",
+        "issue-655-interaction-index.json",
+        "issue-655-geometry.json",
+        "issue-655-focus-live-region.json",
+        "issue-655-screenshot-states.json",
+        "issue-655-console-network-summary.json",
+        "issue = '655'",
+        "Local fixture evidence only",
+    )
+    for expected in required:
+        assert expected in script
+    issue655_block = script[script.index("$issue655Routes"):script.index("$routesToCapture")]
+    assert "issue-643" not in issue655_block
+
+
+def test_issue_655_static_scenarios_use_server_supported_state_and_fail_closed_semantics() -> None:
+    script = CAPTURE_SCRIPT.read_text(encoding="utf-8")
+    routes = script[script.index("$issue655Routes"):script.index("$routesToCapture")]
+    assert "issue-655-middle-recommendation" in routes
+    assert "?recommendation=" in routes
+    assert "issue-655-one-item-sequence" in routes
+    assert "?facility_type=733" in routes
+    assert "issue-655-empty-sequence" in routes
+    assert "?start_date=2030-01-01" in routes
+    assert "facility=430000001" not in routes
+    assert "facility=000000000" not in routes
+    gate_start = script.index("function Test-Issue655StaticScenarioEvidence")
+    gate_end = script.index("function Write-Issue642PacketDiagnostics", gate_start)
+    gate = script[gate_start:gate_end]
+    for required in (
+        "positionNumber",
+        "previousAvailable",
+        "nextAvailable",
+        "inventoryCount",
+        "emptyStateText",
+        "middle scenario is not a rendered deterministic middle recommendation",
+        "one-item scenario is not exactly one rendered recommendation",
+        "empty scenario is not a governed empty recommendation and inventory state",
+        "middle, one-item, and empty screenshots must be distinct",
+    ):
+        assert required in gate
+    assert "complaintDefinition?.nextElementSibling?.textContent.trim()" in script
+    assert '.intelligence-message[aria-labelledby="facility-intelligence-empty-heading"]' in script
+    assert "emptyStateText:emptyState?.innerText.trim()||''" in script
+    assert "Test-Issue655StaticScenarioEvidence -PacketDirectory" in script
+
+
+def test_issue_655_proof_urls_are_absolute_and_keep_query_and_fragment_boundaries() -> None:
+    wrapper = WRAPPER_SCRIPT.read_text(encoding="utf-8")
+    assert "function New-Issue655ScenarioUri" in wrapper
+    assert "[System.UriBuilder]" in wrapper
+    cursor = "opaque-cursor"
+    scenarios = {
+        "middle": f"http://127.0.0.1:20000/ccld/facilities/intelligence?recommendation={cursor}#review-next-region",
+        "one-item": "http://127.0.0.1:20000/ccld/facilities/intelligence?facility_type=733",
+        "empty": "http://127.0.0.1:20000/ccld/facilities/intelligence?start_date=2030-01-01",
+    }
+    for name, value in scenarios.items():
+        parsed = urlsplit(value)
+        assert parsed.scheme == "http", name
+        assert parsed.netloc == "127.0.0.1:20000", name
+        assert parsed.path == "/ccld/facilities/intelligence", name
+    assert parse_qs(urlsplit(scenarios["middle"]).query)["recommendation"] == [cursor]
+    assert urlsplit(scenarios["middle"]).fragment == "review-next-region"
+    assert parse_qs(urlsplit(scenarios["one-item"]).query)["facility_type"] == ["733"]
+    assert parse_qs(urlsplit(scenarios["empty"]).query)["start_date"] == ["2030-01-01"]
+
+
+def test_issue_655_environment_summary_omits_legacy_issue_flags() -> None:
+    script = CAPTURE_SCRIPT.read_text(encoding="utf-8")
+    start = script.index("$environmentSummary = if ($Issue655)")
+    issue655_summary = script[start:script.index(") } else {", start)]
+    assert "issue=655" in issue655_summary
+    assert "issue642FocusedCapture" not in issue655_summary
+    assert "issue643FocusedCapture" not in issue655_summary
+
+
+def test_issue_655_packaging_gate_requires_independent_operated_inventory() -> None:
+    script = CAPTURE_SCRIPT.read_text(encoding="utf-8")
+    required_ids = (
+        "issue-655-pointer-next-first-middle",
+        "issue-655-keyboard-next-middle-last",
+        "issue-655-keyboard-previous-last-middle",
+        "issue-655-pointer-previous-middle-first",
+        "issue-655-browser-back",
+        "issue-655-browser-forward",
+        "issue-655-no-javascript-fallback",
+        "issue-655-direct-valid-url",
+        "issue-655-facility-overview-return",
+        "issue-655-complaint-detail-return",
+        "issue-655-concurrency-stale-response",
+        "issue-655-enhanced-request-failure",
+        "issue-655-reduced-motion",
+    )
+    gate_start = script.index("function Test-Issue655AcceptancePacket")
+    gate_end = script.index("function Invoke-CdpBrowserForward", gate_start)
+    gate = script[gate_start:gate_end]
+    inventory_start = script.index("function Get-Issue655RequiredInteractionIds")
+    inventory_end = script.index("function Test-Issue655AcceptancePacket", inventory_start)
+    inventory = script[inventory_start:inventory_end]
+    for interaction_id in required_ids:
+        assert interaction_id in inventory
+    assert "$id-browser-state.json" in gate
+    assert "required interaction '$id' is missing or duplicated" in gate
+    assert "Test-Issue655AcceptancePacket -PacketDirectory" in script
+    assert "Compress-Archive" in script
+    gate_call = script.index("Test-Issue655AcceptancePacket -PacketDirectory")
+    archive_call = script.index("Compress-Archive")
+    assert gate_call < archive_call
+
+
+def test_issue_655_hygiene_gate_rejects_legacy_artifacts_and_warnings() -> None:
+    script = CAPTURE_SCRIPT.read_text(encoding="utf-8")
+    gate_start = script.index("function Test-Issue655AcceptancePacket")
+    gate_end = script.index("function Invoke-CdpBrowserForward", gate_start)
+    gate = script[gate_start:gate_end]
+    assert "05-reviewer-complaint-exports.png" in gate
+    assert "unrelated WARN assertion" in gate
+    assert "-not $Issue655" in script
+    assert "issue-655-concurrency-stale-response.json" in script
+    assert "issue-655-enhanced-request-failure.json" in script
+    assert "issue-655-reduced-motion.json" in script
+
+
+def test_issue_655_detail_workflows_target_the_bounded_region_actions() -> None:
+    script = CAPTURE_SCRIPT.read_text(encoding="utf-8")
+    for helper in (
+        "function Get-Issue655CompactRecommendationState",
+        "function Resolve-Issue655CompactAction",
+        "function Invoke-Issue655ResolvedAction",
+        "function Wait-Issue655ExactDestination",
+    ):
+        assert helper in script
+    assert "document.querySelectorAll('#review-next-region')" in script
+    assert "region.querySelector('.facility-card-actions')" in script
+    assert "target.isConnected" in script
+    assert "visible||!focusable" in script
+    assert "location.pathname===expected.pathname" in script
+    assert "location.search===expected.search" in script
+    assert "location.hash===expected.hash" in script
+    assert "issue-655-facility-overview-return" in script
+    assert "issue-655-complaint-detail-return" in script
+    assert "facilityReturnTargetExpression" in script
+    assert "complaintReturnTargetExpression" in script
+    assert "document.querySelector('.facility-overview-summary')" in script
+    assert "document.querySelector('.reviewer-detail-context')" in script
+    assert "container.querySelectorAll('a[href]')" in script
+    assert "Issue #655 Facility Overview return target missing." in script
+    assert "Issue #655 Facility Overview return target ambiguous; count=" in script
+    assert "Issue #655 Facility Overview return context mismatch:" in script
+    assert "Issue #655 complaint-detail return target missing." in script
+    assert "document.querySelectorAll('a[href]')).filter" not in script
+
+
+def test_issue_655_detail_return_cursor_comparison_uses_active_action_urls() -> None:
+    script = CAPTURE_SCRIPT.read_text(encoding="utf-8")
+    for expected in (
+        "Resolve-Issue655CompactAction -Session $Session -Kind 'facility-overview'",
+        "Resolve-Issue655CompactAction -Session $Session -Kind 'complaint-detail'",
+        "Invoke-Issue655ResolvedAction -Session $Session -Kind 'facility-overview'",
+        "Invoke-Issue655ResolvedAction -Session $Session -Kind 'complaint-detail'",
+        "Wait-Issue655ExactDestination -Session $Session -InteractionId "
+        "'issue-655-facility-overview'",
+        "Wait-Issue655ExactDestination -Session $Session -InteractionId "
+        "'issue-655-complaint-detail'",
+        "const detail = new URL($($facilityBefore.actionUrl | ConvertTo-Json -Compress), "
+        "document.baseURI);",
+        "const detail = new URL($($complaintBefore.contextUrl | ConvertTo-Json -Compress), "
+        "document.baseURI);",
+        "const expectedRaw = raw(detail, 'recommendation');",
+        "const actualRaw = raw(url, 'recommendation');",
+        "const expectedDecoded = detail.searchParams.getAll('recommendation');",
+        "const actualDecoded = url.searchParams.getAll('recommendation');",
+        "expectedRaw.length !== 1 || actualRaw.length !== 1",
+        "expectedDecoded[0] !== actualDecoded[0]",
+        "expectedRaw=' + JSON.stringify(expectedRaw)",
+        "actualDecoded=' + JSON.stringify(actualDecoded)",
+        "if (key === 'recommendation') continue;",
+        "$facilityExpectedReturnUrl = ([string]$facilityBefore.url -replace '#.*$', '') + "
+        "'#facility-intelligence-results'",
+        "$complaintExpectedReturnUrl = ([string]$complaintBefore.url -replace '#.*$', '') + "
+        "'#facility-intelligence-results'",
+        "expectedReturnUrl=$facilityExpectedReturnUrl",
+        "expectedReturnUrl=$complaintExpectedReturnUrl",
+        "controlled-non-200-fetch-seam",
+    ):
+        assert expected in script
+
+
+def test_issue_655_exact_destination_timeout_preserves_complete_navigation_diagnostic() -> None:
+    script = CAPTURE_SCRIPT.read_text(encoding="utf-8")
+    helper_start = script.index("function Wait-Issue655ExactDestination")
+    helper_end = script.index("function Invoke-Issue642BrowserCapture", helper_start)
+    helper = script[helper_start:helper_end]
+    for field in (
+        "interactionId",
+        "stage:'destination-wait'",
+        "sourceUrl",
+        "expectedDestination",
+        "observedUrl",
+        "historyLength",
+        "readyState",
+        "title",
+        "activeElement",
+        "regionCount",
+        "targetCount",
+        "targetOuterHtml",
+        "targetHref",
+        "targetVisible",
+        "targetFocusable",
+        "targetRectangle",
+        "hitTestElement",
+        "regionBusy",
+        "navigationStages",
+        "responseStatus",
+        "consoleEvents",
+        "consoleErrors",
+        "consoleWarnings",
+        "recentNetworkEvents",
+        "relevantCdpException",
+        "scopedHtml",
+        "Page.captureScreenshot",
+    ):
+        assert field in helper
+
+
+def test_issue_655_rehearsal_uses_capture_path_without_packaging() -> None:
+    capture = CAPTURE_SCRIPT.read_text(encoding="utf-8")
+    wrapper = WRAPPER_SCRIPT.read_text(encoding="utf-8")
+    assert "[switch]$Issue655Rehearsal" in capture
+    assert "Test-Issue655AcceptancePacket -PacketDirectory" in capture
+    rehearsal_start = capture.index("if ($Issue655Rehearsal) {")
+    rehearsal_end = capture.index("$focusedIssueScope", rehearsal_start)
+    rehearsal = capture[rehearsal_start:rehearsal_end]
+    assert "rehearsal-summary.json" in rehearsal
+    assert "zipCreated=$false" in rehearsal
+    assert "ownerReviewCreated=$false" in rehearsal
+    assert "Compress-Archive" not in rehearsal
+    assert "[switch]$Issue655Rehearsal" in wrapper
+    assert "$captureArguments.Issue655Rehearsal = $true" in wrapper
+
+
+def test_evidence_wrapper_uses_bounded_stable_free_port_guard() -> None:
+    script = WRAPPER_SCRIPT.read_text(encoding="utf-8")
+    for expected in (
+        "function Get-PortListenerObservation",
+        "function Test-StableFreePort",
+        "function Write-PortObservations",
+        "RequiredConsecutiveFree = 3",
+        "IntervalMilliseconds = 250",
+        "MaximumObservations = 20",
+        "ObservationProvider",
+        "three consecutive listener-free observations",
+        "Transient listener observation cleared before launch.",
+    ):
+        assert expected in script
+
+    capture_script = CAPTURE_SCRIPT.read_text(encoding="utf-8")
+    assert "point.x * [double]$point.scale" not in capture_script
+    assert "point.y * [double]$point.scale" not in capture_script
+    assert "Input.dispatchMouseEvent" in capture_script
+    assert "mousePressed" in capture_script
+    assert "mouseReleased" in capture_script
+
+
+def test_issue_655_fixture_acquisition_uses_bounded_candidates_and_readiness() -> None:
+    script = WRAPPER_SCRIPT.read_text(encoding="utf-8")
+    required = (
+        "function Get-Issue655CandidatePorts",
+        "return @(20000..20009)",
+        "function Test-TaskOwnedFixtureReadiness",
+        "function Get-TaskOwnedProcessIds",
+        "function Stop-TaskOwnedFixture",
+        "foreach ($candidate in $candidatePorts | Select-Object -Unique)",
+        "Test-StableFreePort -LocalPort $candidate",
+        "launch collision or fixture-start failure",
+        "Issue #655 fixture acquisition exhausted",
+        "ISSUE655_PORT_ACQUISITION=",
+        "Join-Path ([System.IO.Path]::GetTempPath())",
+    )
+    for expected in required:
+        assert expected in script
+    assert script.index("Test-TaskOwnedFixtureReadiness") < script.index(
+        "$captureArguments = @{"
+    )
+    assert "Join-Path $OutputDir \"launcher-logs\"" not in script

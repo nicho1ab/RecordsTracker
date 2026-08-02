@@ -63,6 +63,7 @@ from ccld_complaints.hosted_app.ccld_facility_lookup import (
 from ccld_complaints.hosted_app.compare_facilities_controls import (
     CHECKBOX_MULTISELECT_SCRIPT,
     FACILITY_INTELLIGENCE_CHIP_SCRIPT,
+    REVIEW_NEXT_SCRIPT,
     render_checkbox_multiselect,
 )
 from ccld_complaints.hosted_app.ccld_retrieval_jobs import (
@@ -134,6 +135,7 @@ from ccld_complaints.hosted_app.source_derived_reads import (
     FacilityIntelligenceFilterOptions,
     FacilityIntelligencePageRead,
     FacilityIntelligenceReadFilters,
+    FacilityIntelligenceRecommendationSeek,
     FacilityIntelligenceSeek,
     SourceDerivedRecordRead,
 )
@@ -664,6 +666,7 @@ class FacilityIntelligenceFilters:
     coverage: str | tuple[str, ...] = ()
     sort: str = "priority"
     continuation: str = ""
+    recommendation: str = ""
 
 
 @dataclass(frozen=True)
@@ -1624,6 +1627,7 @@ def _facility_intelligence_response(
         )
     try:
         seek = _facility_intelligence_seek(filters)
+        recommendation_seek = _facility_intelligence_recommendation_seek(filters)
         source_context = context.workflow_shell_context.source_derived_api_context
         page = list_authorized_facility_intelligence_page(
             source_context.connection,
@@ -1631,11 +1635,22 @@ def _facility_intelligence_response(
             scope=source_context.scope,
             filters=_facility_intelligence_read_filters(filters),
             seek=seek,
+            recommendation_seek=recommendation_seek,
             excluded_source_record_keys=(
                 context.facility_intelligence_excluded_source_record_keys
             ),
         )
     except ValueError as error:
+        if str(error) == "Review next recommendation is stale.":
+            recovered = replace(filters, recommendation="")
+            return _facility_intelligence_response(
+                urlencode(_canonical_compare_facilities_query_values(recovered), doseq=True),
+                context,
+                status_message=(
+                    "The requested recommendation was no longer available. "
+                    "Showing the first available recommendation."
+                ),
+            )
         return _html_response(
             400,
             _render_facility_intelligence(
@@ -1702,6 +1717,18 @@ def _facility_intelligence_response(
             503,
             "Facility intelligence page hydration did not reconcile.",
         )
+    recommendation_summary = None
+    if page.recommendation_records:
+        recommendation_payload = _records_with_projected_facility_identity(
+            context,
+            [_source_derived_read_payload(record) for record in page.recommendation_records],
+        )
+        recommendation_summaries = _facility_priority_summaries(
+            recommendation_payload,
+            date_dimension=filters.date_dimension,
+        )
+        if len(recommendation_summaries) == 1:
+            recommendation_summary = recommendation_summaries[0]
     source_record_keys = tuple(
         dict.fromkeys(
             complaint.source_record_key
@@ -1735,6 +1762,8 @@ def _facility_intelligence_response(
             state_summaries=state_summaries,
             reviewer_state_available=reviewer_state_available,
             actor_label=_signed_in_actor_label(context),
+            recommendation=page.recommendation,
+            recommendation_summary=recommendation_summary,
             page_state=("limited-data" if evidence_state == "limited-data" else None),
             status_message=status_message,
             status_message_is_error=status_message_is_error,
@@ -2090,6 +2119,7 @@ def _facility_intelligence_filters(
         coverage=(),
         sort=sort_value,
         continuation=_first_form_value(query_values, "continuation").strip(),
+        recommendation=_first_form_value(query_values, "recommendation").strip(),
     )
 
 
@@ -2180,6 +2210,53 @@ def _facility_intelligence_seek(
         start_position=start_position,
         expected_total=expected_total,
     )
+
+
+def _facility_intelligence_recommendation_seek(
+    filters: FacilityIntelligenceFilters,
+) -> FacilityIntelligenceRecommendationSeek | None:
+    """Decode the server-generated opaque Review next priority anchor."""
+    token = filters.recommendation
+    if not token:
+        return None
+    if len(token) > 2_048:
+        raise ValueError("Review next recommendation state is invalid.")
+    try:
+        padded = token + "=" * (-len(token) % 4)
+        payload = json.loads(base64.b64decode(padded, altchars=b"-_", validate=True))
+    except (binascii.Error, json.JSONDecodeError, UnicodeDecodeError, ValueError):
+        raise ValueError("Review next recommendation state is invalid.") from None
+    if not isinstance(payload, dict) or set(payload) != {"v", "f", "a", "t"}:
+        raise ValueError("Review next recommendation state is invalid.")
+    anchor, total = payload["a"], payload["t"]
+    if (
+        payload["v"] != 1
+        or payload["f"] != _facility_intelligence_filter_fingerprint(filters)
+        or not isinstance(anchor, list)
+        or not _facility_intelligence_anchor_is_valid(anchor, "priority")
+        or not isinstance(total, int)
+        or isinstance(total, bool)
+        or total < 1
+    ):
+        raise ValueError("Review next recommendation state is invalid.")
+    return FacilityIntelligenceRecommendationSeek(anchor=tuple(anchor), expected_total=total)
+
+
+def _facility_intelligence_recommendation_cursor(
+    anchor: tuple[int | str, ...],
+    *,
+    total: int,
+    filters: FacilityIntelligenceFilters,
+) -> str:
+    payload = {
+        "v": 1,
+        "f": _facility_intelligence_filter_fingerprint(filters),
+        "a": list(anchor),
+        "t": total,
+    }
+    return base64.urlsafe_b64encode(
+        json.dumps(payload, separators=(",", ":")).encode("utf-8")
+    ).decode("ascii").rstrip("=")
 
 
 def _facility_intelligence_anchor_is_valid(
@@ -2507,6 +2584,8 @@ def _render_facility_intelligence(
     state_summaries: Mapping[str, Mapping[str, Any]],
     reviewer_state_available: bool,
     actor_label: str | None,
+    recommendation: Any | None = None,
+    recommendation_summary: FacilityPrioritySummary | None = None,
     page_state: str | None = None,
     continuation_error: str = "",
     status_message: str = "",
@@ -2527,6 +2606,11 @@ def _render_facility_intelligence(
         state_summaries=state_summaries,
         reviewer_state_available=reviewer_state_available,
         page_state=resolved_state,
+    )
+    recommendation_markup = _render_review_next_region(
+        recommendation_summary,
+        filters=filters,
+        recommendation=recommendation,
     )
     status_markup = _facility_intelligence_page_status(
         resolved_state,
@@ -2555,11 +2639,13 @@ def _render_facility_intelligence(
           {_render_facility_intelligence_print_scope(filters)}
           {status_markup}
           {status_feedback}
+          {recommendation_markup}
 {result_markup}
         </div>
         {_DETAIL_COPY_SCRIPT}
         {CHECKBOX_MULTISELECT_SCRIPT}
         {FACILITY_INTELLIGENCE_CHIP_SCRIPT}
+        {REVIEW_NEXT_SCRIPT}
         {_COMPARE_FACILITIES_FOCUS_SCRIPT}
 """,
     )
@@ -2859,6 +2945,8 @@ def _canonical_compare_facilities_query_values(
     active_continuation = continuation if continuation is not None else filters.continuation
     if active_continuation:
         values.append(("continuation", active_continuation))
+    if filters.recommendation:
+        values.append(("recommendation", filters.recommendation))
     return values
 
 
@@ -2907,6 +2995,105 @@ def _render_facility_intelligence_results(
 {orientation}
 {rows}
         </section>"""
+
+
+def _render_review_next_region(
+    summary: FacilityPrioritySummary | None,
+    *,
+    filters: FacilityIntelligenceFilters,
+    recommendation: Any | None,
+) -> str:
+    """Render the bounded, separately replaceable Review next region."""
+    if summary is None or recommendation is None or not summary.complaints:
+        return ""
+    complaint = summary.complaints[0]
+    facility_name = _compare_facilities_name(
+        summary.facility_name, summary.facility_number, summary.facility_identity
+    )
+    facility_id = _compare_facilities_public_id(
+        summary.facility_number, summary.facility_identity
+    )
+    control = (
+        complaint.complaint_control_number
+        if complaint.complaint_control_number != "unknown"
+        else complaint.stable_complaint_id
+    )
+    recommendation_filters = replace(
+        filters,
+        recommendation=_facility_intelligence_recommendation_cursor(
+            recommendation.current_anchor,
+            total=recommendation.total,
+            filters=filters,
+        ),
+    )
+    current_url = _facility_intelligence_current_href(recommendation_filters)
+    previous = (
+        _facility_intelligence_current_href(
+            replace(
+                filters,
+                recommendation=_facility_intelligence_recommendation_cursor(
+                    recommendation.previous_anchor, total=recommendation.total, filters=filters
+                ),
+            )
+        )
+        if recommendation.previous_anchor is not None
+        else ""
+    )
+    following = (
+        _facility_intelligence_current_href(
+            replace(
+                filters,
+                recommendation=_facility_intelligence_recommendation_cursor(
+                    recommendation.next_anchor, total=recommendation.total, filters=filters
+                ),
+            )
+        )
+        if recommendation.next_anchor is not None
+        else ""
+    )
+    previous_control = (
+        f'<a class="button button-secondary review-next-control" rel="prev" href="{_escape(previous)}" '
+        f'aria-label="Previous recommendation before {_escape(facility_name)}">Previous recommendation</a>'
+        if previous
+        else '<span class="button button-secondary review-next-control is-disabled" aria-disabled="true">Previous recommendation</span>'
+    )
+    next_control = (
+        f'<a class="button review-next-control" rel="next" href="{_escape(following)}" '
+        f'aria-label="Next recommendation after {_escape(facility_name)}">Next recommendation</a>'
+        if following
+        else '<span class="button review-next-control is-disabled" aria-disabled="true">Next recommendation</span>'
+    )
+    facility_href = _facility_intelligence_hub_href(summary, recommendation_filters)
+    complaint_href = _facility_intelligence_detail_href(
+        complaint,
+        summary,
+        recommendation_filters,
+    )
+    source_text = "Source available" if complaint.source_available else "Source unavailable"
+    announcement = (
+        f"Showing {facility_name}, complaint {control}, recommendation "
+        f"{recommendation.position} of {recommendation.total}."
+    )
+    return f'''        <section id="review-next-region" class="review-next-region" aria-labelledby="review-next-heading" data-current-url="{_escape(current_url)}" aria-busy="false">
+          <div class="review-next-region__header">
+            <div><h2 id="review-next-heading" tabindex="-1">Review next</h2><p class="review-next-position">Recommendation {recommendation.position} of {recommendation.total}</p></div>
+            <nav class="review-next-controls" aria-label="Review next recommendations">{previous_control}{next_control}</nav>
+          </div>
+          <p id="review-next-status" class="visually-hidden" role="status" aria-atomic="true">{_escape(announcement)}</p>
+          <p id="review-next-error" class="review-next-error" role="alert" hidden></p>
+          <article class="review-next-card" aria-labelledby="review-next-card-heading">
+            <h3 id="review-next-card-heading"><a href="{_escape(facility_href)}">{_escape(facility_name)}</a></h3>
+            <p><strong>Facility ID</strong> {_escape(facility_id)} <span aria-hidden="true">·</span> {_escape(_reviewer_value_text(summary.facility_type))} <span aria-hidden="true">·</span> {_escape(_reviewer_value_text(summary.geography))}</p>
+            <dl><div><dt>Recommended complaint</dt><dd>{_escape(control)}</dd></div><div><dt>Relevant activity</dt><dd>{_escape(_reviewer_value_text(complaint.activity_date, kind="date"))}</dd></div><div><dt>Finding</dt><dd>{_finding_badge(complaint.finding)}</dd></div><div><dt>Source</dt><dd>{_escape(source_text)}</dd></div></dl>
+            <footer class="facility-card-actions"><a class="button" href="{_escape(facility_href)}">Open Facility Overview</a><a class="button button-secondary" href="{_escape(complaint_href)}">Review complaint</a></footer>
+          </article>
+        </section>'''
+
+
+def _facility_intelligence_current_href(filters: FacilityIntelligenceFilters) -> str:
+    query = urlencode(_canonical_compare_facilities_query_values(filters), doseq=True)
+    suffix = f"?{query}" if query else ""
+    return f"{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}{suffix}#review-next-region"
 
 
 def _render_facility_intelligence_orientation(
@@ -3062,7 +3249,7 @@ def _render_facility_intelligence_result(
                 </header>
                 {_render_facility_intelligence_summary(summary, filters, next_complaint, result_id)}
                 {_render_facility_intelligence_topics(summary, filters, result_id)}
-                {_render_facility_intelligence_recommended_complaint(next_complaint, result_id)}
+                {_render_facility_intelligence_recommended_complaint(next_complaint, result_id, include_source=not selected)}
                 <footer class="facility-card-actions" aria-label="Actions for {_escape(facility_name)}">
                   {facility_action}
                   <a class="button button-secondary" href="{_escape(detail_href)}" aria-label="Review complaint for {_escape(facility_name)}">Review complaint</a>
@@ -3157,6 +3344,8 @@ def _facility_intelligence_topic_label(topic: str) -> str:
 def _render_facility_intelligence_recommended_complaint(
     complaint: FacilityPriorityComplaint,
     result_id: str,
+    *,
+    include_source: bool = True,
 ) -> str:
     control = (
         complaint.complaint_control_number
@@ -3164,13 +3353,18 @@ def _render_facility_intelligence_recommended_complaint(
         else complaint.stable_complaint_id
     )
     source = "Source available" if complaint.source_available else "Source unavailable"
+    source_markup = (
+        f'<div><dt>Source availability</dt><dd>{_review_chip_markup(source)}</dd></div>'
+        if include_source
+        else ""
+    )
     return f"""                <section class="facility-card-recommended" aria-labelledby="{result_id}-recommended-heading">
                   <h4 id="{result_id}-recommended-heading">Recommended complaint</h4>
                   <dl>
                     <div><dt>Complaint</dt><dd>{_escape(control)}</dd></div>
                     <div><dt>Relevant activity</dt><dd>{_escape(_reviewer_value_text(complaint.activity_date, kind='date'))}</dd></div>
                     <div><dt>Finding</dt><dd>{_facility_intelligence_finding_markup(complaint.finding)}</dd></div>
-                    <div><dt>Source availability</dt><dd>{_review_chip_markup(source)}</dd></div>
+                    {source_markup}
                   </dl>
                 </section>"""
 
@@ -3464,11 +3658,9 @@ def _facility_intelligence_hub_href(
     values: list[tuple[str, str]] = [
         ("facility_number", summary.facility_number),
         ("origin", "facility_intelligence"),
-    ] + _facility_intelligence_query_values(filters)
+    ] + _canonical_compare_facilities_query_values(filters)
     if inventory_filter:
         values.append(("inventory_filter", inventory_filter))
-    if filters.continuation:
-        values.append(("continuation", filters.continuation))
     return f"{CCLD_FACILITY_REVIEW_HUB_PATH}?{urlencode(values, doseq=True)}#facility-complaint-inventory"
 
 

@@ -140,6 +140,13 @@ param(
 
     [switch]$Issue643,
 
+    [switch]$Issue655,
+
+    [switch]$Issue655Rehearsal,
+
+    [ValidatePattern('^[A-Za-z0-9._-]+$')]
+    [string]$RehearsalRunName = 'run',
+
     [switch]$Issue642LicensingSourceUnavailable
 )
 
@@ -156,6 +163,9 @@ elseif ($Issue642) {
 }
 elseif ($Issue643) {
     "Focused Issue #643 local fixture evidence for the Complaint Patterns facility-card hierarchy, canonical contributor navigation, responsive reflow, native zoom, and populated print."
+}
+elseif ($Issue655) {
+    "Focused Issue #655 local fixture evidence for the bounded Review next region, canonical inventory preservation, responsive reflow, native zoom, and print suppression."
 }
 elseif ($Issue420) {
     "Focused issue #420 Facility Overview evidence for one canonical complaint inventory, truthful source and reviewer state, state-specific retrieval actions, responsive reflow, keyboard focus, and print."
@@ -198,6 +208,57 @@ $forbiddenMarkers = @(
 function Stop-CaptureFail {
     param([string]$Message)
     throw "[FAIL] $Message"
+}
+
+function Resolve-OptionalGitRevision {
+    param(
+        [string]$GitHubEventPath = [string]$env:GITHUB_EVENT_PATH
+    )
+
+    $attempts = @()
+    foreach ($reference in @('origin/main', 'main')) {
+        $output = @(& git rev-parse --verify --quiet "$reference^{commit}" 2>$null)
+        $exitCode = $LASTEXITCODE
+        $candidate = ($output -join '').Trim()
+        if ($exitCode -eq 0 -and $candidate -match '^[0-9a-fA-F]{40}$') {
+            return [pscustomobject]@{
+                Available = $true
+                Sha = $candidate.ToLowerInvariant()
+                Source = "git:$reference"
+                Attempts = @($attempts)
+            }
+        }
+        $attempts += "git:$reference"
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($GitHubEventPath) -and (Test-Path -LiteralPath $GitHubEventPath -PathType Leaf)) {
+        try {
+            $event = Get-Content -LiteralPath $GitHubEventPath -Raw | ConvertFrom-Json
+            $candidate = [string]$event.pull_request.base.sha
+            if ($candidate -match '^[0-9a-fA-F]{40}$') {
+                return [pscustomobject]@{
+                    Available = $true
+                    Sha = $candidate.ToLowerInvariant()
+                    Source = 'github-event:pull_request.base.sha'
+                    Attempts = @($attempts)
+                }
+            }
+            $attempts += 'github-event:pull_request.base.sha-invalid'
+        }
+        catch {
+            $attempts += 'github-event:pull_request.base.sha-unreadable'
+        }
+    }
+    elseif (-not [string]::IsNullOrWhiteSpace($GitHubEventPath)) {
+        $attempts += 'github-event:unavailable'
+    }
+
+    return [pscustomobject]@{
+        Available = $false
+        Sha = ''
+        Source = 'unavailable'
+        Attempts = @($attempts)
+    }
 }
 
 function Test-AllowedBaseUrl {
@@ -1540,6 +1601,368 @@ function Invoke-Issue642OperatedInteractionCapture {
     Test-Issue642FunctionalGate -States @($states) | Out-Null
     Invoke-Issue642ExplicitEvidenceCapture -Session $Session -BaseUrl $BaseUrl -ScreenshotRoot (Split-Path $ScreenshotPath -Parent)
     return @($states)
+}
+
+function Invoke-Issue655BrowserCapture {
+    param([object]$Session, [hashtable]$Route, [string]$Url, [string]$ScreenshotPath, [string]$PrintPath = "", [int]$Width, [int]$Height)
+    $browserState = $null
+    try {
+        Invoke-CdpCommand -Session $Session -Method 'Page.enable' | Out-Null
+        Invoke-CdpCommand -Session $Session -Method 'Runtime.enable' | Out-Null
+        Invoke-CdpCommand -Session $Session -Method 'Page.addScriptToEvaluateOnNewDocument' -Parameters @{ source = "window.__issue655ConsoleErrors=[];window.__issue655ConsoleWarnings=[];window.__issue655PageErrors=[];console.error=((o)=>function(){window.__issue655ConsoleErrors.push(Array.from(arguments).map(String).join(' '));return o.apply(console,arguments)})(console.error);console.warn=((o)=>function(){window.__issue655ConsoleWarnings.push(Array.from(arguments).map(String).join(' '));return o.apply(console,arguments)})(console.warn);addEventListener('error',(e)=>window.__issue655PageErrors.push(String(e.message||e.error||'error')));addEventListener('unhandledrejection',(e)=>window.__issue655PageErrors.push(String(e.reason||'unhandled rejection')));" } | Out-Null
+        Invoke-CdpCommand -Session $Session -Method 'Emulation.setDeviceMetricsOverride' -Parameters @{ width=$Width; height=$Height; deviceScaleFactor=1; mobile=$false; screenWidth=$Width; screenHeight=$Height } | Out-Null
+        if ([string]$Route.Issue655State -eq 'reduced-motion') { Invoke-CdpCommand -Session $Session -Method 'Emulation.setEmulatedMedia' -Parameters @{ media='screen'; features=@(@{name='prefers-reduced-motion'; value='reduce'}) } | Out-Null } else { Invoke-CdpCommand -Session $Session -Method 'Emulation.setEmulatedMedia' -Parameters @{ media='screen' } | Out-Null }
+        Invoke-CdpCommand -Session $Session -Method 'Page.navigate' -Parameters @{ url=$Url } | Out-Null
+        Wait-CdpCondition -Session $Session -Expression "document.readyState === 'complete'" -Description 'Issue #655 DOM readiness'
+        $operated = [System.Collections.ArrayList]::new()
+        $isMalformed = [string]$Route.Issue655State -eq 'malformed'
+        $isEmpty = [string]$Route.Issue655State -eq 'empty'
+        if (-not $isMalformed -and -not $isEmpty) {
+            Wait-CdpCondition -Session $Session -Expression "!!document.querySelector('#review-next-region')" -Description 'Issue #655 recommendation region'
+            $operationRoot = Join-Path (Split-Path $ScreenshotPath -Parent) 'operated'
+            $operationDiagnostics = Join-Path (Split-Path $ScreenshotPath -Parent) '..\diagnostics'
+            New-Item -ItemType Directory -Force -Path $operationRoot | Out-Null
+            if ([string]$Route.Issue655State -eq 'first') {
+                $record = {
+                    param([string]$Id, [string]$Selector, [string]$Method, [string]$Direction)
+                    $before = Invoke-CdpEvaluate -Session $Session -Expression "({url:location.href,position:document.querySelector('#review-next-region .review-next-position')?.textContent.trim(),facility:document.querySelector('#review-next-region h3')?.textContent.trim(),focus:(document.activeElement.id||document.activeElement.getAttribute('aria-label')||document.activeElement.textContent.trim()),scrollY:scrollY,navigation:performance.getEntriesByType('navigation').length})"
+                    if ($Method -eq 'keyboard') { Invoke-CdpEvaluate -Session $Session -Expression "document.querySelector($($Selector | ConvertTo-Json -Compress)).focus();true" | Out-Null; Invoke-CdpKeyPress -Session $Session -Key 'Enter' -Code 'Enter' -VirtualKeyCode 13 } else { Invoke-CdpClickSelector -Session $Session -Selector $Selector }
+                    Wait-CdpCondition -Session $Session -Expression "document.querySelector('#review-next-region') && document.querySelector('#review-next-region').getAttribute('aria-busy') !== 'true' && location.href !== $($before.url | ConvertTo-Json -Compress)" -Description "$Id enhanced completion"
+                    $after = Invoke-CdpEvaluate -Session $Session -Expression "({url:location.href,position:document.querySelector('#review-next-region .review-next-position')?.textContent.trim(),facility:document.querySelector('#review-next-region h3')?.textContent.trim(),focus:(document.activeElement.id||document.activeElement.getAttribute('aria-label')||document.activeElement.textContent.trim()),scrollY:scrollY,navigation:performance.getEntriesByType('navigation').length,announcement:document.querySelector('#review-next-region [role=status]')?.textContent.trim(),regionCount:document.querySelectorAll('#review-next-region').length})"
+                    $path = Join-Path $operationRoot "$Id.png"; Invoke-CdpCommand -Session $Session -Method 'Page.captureScreenshot' -Parameters @{format='png';fromSurface=$true;captureBeyondViewport=$true} | ForEach-Object {[IO.File]::WriteAllBytes($path,[Convert]::FromBase64String($_.result.data))}
+                    $entry=[ordered]@{ id=$Id; method=$Method; direction=$Direction; selector=$Selector; source=$before; destination=$after; fullDocumentNavigation=($before.navigation -ne $after.navigation); pass=($after.regionCount -eq 1 -and -not $after.fullDocumentNavigation -and $after.url -ne $before.url) }; Set-Content -LiteralPath (Join-Path $operationDiagnostics "$Id-browser-state.json") -Value ($entry|ConvertTo-Json -Depth 8) -Encoding UTF8; [void]$operated.Add($entry)
+                }
+                & $record 'issue-655-pointer-next-first-middle' 'a.review-next-control[rel=next]' 'pointer' 'next'
+                & $record 'issue-655-keyboard-next-middle-last' 'a.review-next-control[rel=next]' 'keyboard' 'next'
+                & $record 'issue-655-keyboard-previous-last-middle' 'a.review-next-control[rel=prev]' 'keyboard' 'previous'
+                & $record 'issue-655-pointer-previous-middle-first' 'a.review-next-control[rel=prev]' 'pointer' 'previous'
+                $directHref = Invoke-CdpEvaluate -Session $Session -Expression "document.querySelector('a.review-next-control[rel=next]').href"
+                Invoke-CdpCommand -Session $Session -Method 'Page.navigate' -Parameters @{url=$directHref} | Out-Null; Wait-CdpCondition -Session $Session -Expression "document.readyState === 'complete' && !!document.querySelector('#review-next-region')" -Description 'Issue #655 direct recommendation URL'
+                $directState=Invoke-CdpEvaluate -Session $Session -Expression "({url:location.href,position:document.querySelector('.review-next-position')?.textContent.trim(),facility:document.querySelector('.review-next-card h3')?.textContent.trim(),previous:document.querySelector('a.review-next-control[rel=prev]')?.href||'',next:document.querySelector('a.review-next-control[rel=next]')?.href||''})"; $directEntry=[ordered]@{id='issue-655-direct-valid-url';method='direct-navigation';destination=$directState;pass=($directState.url -eq $directHref)}; Set-Content -LiteralPath (Join-Path $operationDiagnostics 'issue-655-direct-valid-url-browser-state.json') -Value ($directEntry|ConvertTo-Json -Depth 8) -Encoding UTF8; [void]$operated.Add($directEntry)
+                Invoke-CdpCommand -Session $Session -Method 'Page.navigate' -Parameters @{url=$Url} | Out-Null; Wait-CdpCondition -Session $Session -Expression "document.readyState === 'complete' && !!document.querySelector('#review-next-region')" -Description 'Issue #655 fallback source'
+                $fallbackSource=Invoke-CdpEvaluate -Session $Session -Expression 'location.href'; Invoke-CdpEvaluate -Session $Session -Expression 'window.fetch = undefined; true' | Out-Null; Invoke-CdpClickSelector -Session $Session -Selector 'a.review-next-control[rel=next]'; Wait-CdpCondition -Session $Session -Expression "location.href !== $($fallbackSource|ConvertTo-Json -Compress) && document.readyState === 'complete'" -Description 'Issue #655 no-JavaScript fallback'
+                $fallbackDestination=Invoke-CdpEvaluate -Session $Session -Expression "({url:location.href,position:document.querySelector('.review-next-position')?.textContent.trim()})"; $fallbackEntry=[ordered]@{id='issue-655-no-javascript-fallback';method='native-anchor-with-fetch-disabled';sourceUrl=$fallbackSource;destination=$fallbackDestination;fullDocumentNavigation=$true;pass=($fallbackDestination.url -ne $fallbackSource)}; Set-Content -LiteralPath (Join-Path $operationDiagnostics 'issue-655-no-javascript-fallback-browser-state.json') -Value ($fallbackEntry|ConvertTo-Json -Depth 8) -Encoding UTF8; [void]$operated.Add($fallbackEntry)
+                # Every remaining workflow gets its own record and browser-state file.  These
+                # are intentionally not folded into a narrative "history" result: packaging
+                # validates the IDs independently.
+                $persist = {
+                    param([string]$Id, [object]$Entry)
+                    $shotPath = Join-Path $operationRoot "$Id.png"
+                    Invoke-CdpCommand -Session $Session -Method 'Page.captureScreenshot' -Parameters @{format='png';fromSurface=$true;captureBeyondViewport=$true} | ForEach-Object {[IO.File]::WriteAllBytes($shotPath,[Convert]::FromBase64String($_.result.data))}
+                    Set-Content -LiteralPath (Join-Path $operationDiagnostics "$Id-browser-state.json") -Value ($Entry | ConvertTo-Json -Depth 12) -Encoding UTF8
+                    [void]$operated.Add($Entry)
+                }
+                $openFirst = {
+                    Invoke-CdpCommand -Session $Session -Method 'Page.navigate' -Parameters @{url=$Url} | Out-Null
+                    Wait-CdpCondition -Session $Session -Expression "document.readyState === 'complete' && !!document.querySelector('#review-next-region')" -Description 'Issue #655 first recommendation reset'
+                }
+                # Browser Back and Forward are independently recorded after real enhanced transitions.
+                & $openFirst
+                Invoke-CdpClickSelector -Session $Session -Selector 'a.review-next-control[rel=next]'
+                Wait-CdpCondition -Session $Session -Expression "location.href !== $($Url | ConvertTo-Json -Compress) && document.querySelector('#review-next-region')?.getAttribute('aria-busy') !== 'true'" -Description 'Issue #655 history setup'
+                $historyMiddle = Invoke-CdpEvaluate -Session $Session -Expression '({url:location.href,position:document.querySelector(".review-next-position")?.textContent.trim(),facility:document.querySelector(".review-next-card h3")?.textContent.trim(),scrollY:scrollY,historyLength:history.length})'
+                Invoke-CdpBrowserBack -Session $Session
+                Wait-CdpCondition -Session $Session -Expression "location.href === $($Url | ConvertTo-Json -Compress) && document.querySelector('#review-next-region')?.getAttribute('aria-busy') !== 'true'" -Description 'Issue #655 browser Back'
+                $historyBack = Invoke-CdpEvaluate -Session $Session -Expression '({url:location.href,position:document.querySelector(".review-next-position")?.textContent.trim(),facility:document.querySelector(".review-next-card h3")?.textContent.trim(),focus:(document.activeElement.id||document.activeElement.textContent.trim()),scrollY:scrollY,historyLength:history.length})'
+                & $persist 'issue-655-browser-back' ([ordered]@{id='issue-655-browser-back';method='browser-back';source=$historyMiddle;destination=$historyBack;extraHistoryEntry=$false;pass=($historyBack.url -eq $Url)})
+                Invoke-CdpBrowserForward -Session $Session
+                Wait-CdpCondition -Session $Session -Expression "location.href === $($historyMiddle.url | ConvertTo-Json -Compress) && document.querySelector('#review-next-region')?.getAttribute('aria-busy') !== 'true'" -Description 'Issue #655 browser Forward'
+                $historyForward = Invoke-CdpEvaluate -Session $Session -Expression '({url:location.href,position:document.querySelector(".review-next-position")?.textContent.trim(),facility:document.querySelector(".review-next-card h3")?.textContent.trim(),focus:(document.activeElement.id||document.activeElement.textContent.trim()),scrollY:scrollY,historyLength:history.length})'
+                & $persist 'issue-655-browser-forward' ([ordered]@{id='issue-655-browser-forward';method='browser-forward';source=$historyBack;destination=$historyForward;extraHistoryEntry=$false;pass=($historyForward.url -eq $historyMiddle.url)})
+                # Detail links and their visible, application-provided return controls are exercised from the middle recommendation.
+                $facilityCompact = Get-Issue655CompactRecommendationState -Session $Session
+                $facilityAction = Resolve-Issue655CompactAction -Session $Session -Kind 'facility-overview'
+                if ($facilityCompact.facilityId -ne $facilityAction.facilityId) { throw 'Issue #655 Facility Overview action identity disagrees with the compact recommendation.' }
+                $facilityBefore = [ordered]@{url=$facilityCompact.url;actionUrl=$facilityAction.href;facility=$facilityCompact.facility;facilityId=$facilityCompact.facilityId;position=$facilityCompact.positionText;recommendationRaw=@();recommendationDecoded=@();target=$facilityAction}
+                Invoke-Issue655ResolvedAction -Session $Session -Kind 'facility-overview'
+                Wait-Issue655ExactDestination -Session $Session -InteractionId 'issue-655-facility-overview' -ExpectedUrl $facilityAction.href -ContainerSelector '.facility-overview-summary' -DiagnosticsDirectory $operationDiagnostics
+                $facilityDestination = Invoke-CdpEvaluate -Session $Session -Expression '({url:location.href,text:document.body.innerText,focus:(document.activeElement.id||document.activeElement.textContent.trim())})'
+                $facilityReturnTargetExpression = @"
+(() => {
+  const source = new URL($($facilityBefore.url | ConvertTo-Json -Compress), document.baseURI);
+  const detail = new URL($($facilityBefore.actionUrl | ConvertTo-Json -Compress), document.baseURI);
+  const raw = (candidate, key) => candidate.search.slice(1).split('&').filter((entry) => entry.split('=', 1)[0] === key).map((entry) => entry.slice(key.length + 1));
+  const container = document.querySelector('.facility-overview-summary');
+  if (!container) throw new Error('Issue #655 Facility Overview return target missing.');
+  const matches = Array.from(container.querySelectorAll('a[href]')).filter((anchor) => {
+    const url = new URL(anchor.href, document.baseURI);
+    return anchor.textContent.trim() === 'Return to Compare Facilities' && url.pathname === '/ccld/facilities/intelligence';
+  });
+  if (matches.length === 0) throw new Error('Issue #655 Facility Overview return target missing.');
+  if (matches.length !== 1) throw new Error('Issue #655 Facility Overview return target ambiguous; count=' + matches.length + '.');
+  const target = matches[0]; const url = new URL(target.href, document.baseURI);
+  for (const [key, value] of source.searchParams.entries()) {
+    if (key === 'recommendation') continue;
+    if (url.searchParams.get(key) !== value) throw new Error('Issue #655 Facility Overview return context mismatch: ' + key + '.');
+  }
+  const expectedRaw = raw(detail, 'recommendation'); const actualRaw = raw(url, 'recommendation');
+  const expectedDecoded = detail.searchParams.getAll('recommendation'); const actualDecoded = url.searchParams.getAll('recommendation');
+  if (expectedRaw.length !== 1 || actualRaw.length !== 1 || expectedDecoded.length !== 1 || actualDecoded.length !== 1 || expectedDecoded[0] !== actualDecoded[0]) {
+    throw new Error('Issue #655 Facility Overview return context mismatch: recommendation; expectedRaw=' + JSON.stringify(expectedRaw) + '; actualRaw=' + JSON.stringify(actualRaw) + '; expectedDecoded=' + JSON.stringify(expectedDecoded) + '; actualDecoded=' + JSON.stringify(actualDecoded) + '; sourceUrl=' + source.href + '; detailUrl=' + detail.href + '; returnUrl=' + url.href + '; position=' + $($facilityBefore.position | ConvertTo-Json -Compress) + '; facility=' + $($facilityBefore.facility | ConvertTo-Json -Compress) + '.');
+  }
+  if (url.hash !== '#facility-intelligence-results') throw new Error('Issue #655 Facility Overview return context mismatch: results-anchor.');
+  target.setAttribute('data-issue655-evidence-target', 'facility-return');
+  return {candidateCount:matches.length,text:target.textContent.trim(),accessibleName:target.getAttribute('aria-label') || target.textContent.trim(),pathname:url.pathname,search:url.search,hash:url.hash,container:container.className,visible:!!(target.getBoundingClientRect().width && target.getBoundingClientRect().height),focusable:target.tabIndex >= 0,recommendation:{expectedRaw,actualRaw,expectedDecoded,actualDecoded}};
+})()
+"@
+                $facilityReturnTarget = Invoke-CdpEvaluate -Session $Session -Expression $facilityReturnTargetExpression
+                Invoke-CdpClickSelector -Session $Session -Selector 'a[data-issue655-evidence-target=facility-return]'
+                $facilityExpectedReturnUrl = ([string]$facilityBefore.url -replace '#.*$', '') + '#facility-intelligence-results'
+                Wait-CdpCondition -Session $Session -Expression "document.readyState === 'complete' && location.href === $($facilityExpectedReturnUrl | ConvertTo-Json -Compress) && !!document.querySelector('#review-next-region') && document.querySelector('#review-next-region')?.getAttribute('aria-busy') !== 'true'" -Description 'Issue #655 Facility Overview return'
+                $facilityReturned = Invoke-CdpEvaluate -Session $Session -Expression '({url:location.href,facility:document.querySelector(".review-next-card h3")?.textContent.trim(),position:document.querySelector(".review-next-position")?.textContent.trim(),focus:(document.activeElement.id||document.activeElement.textContent.trim())})'
+                $facilityEntry = [ordered]@{id='issue-655-facility-overview-return';method='native-facility-overview-and-return';source=$facilityBefore;destination=$facilityDestination;returned=$facilityReturned;returnTarget=$facilityReturnTarget;expectedReturnUrl=$facilityExpectedReturnUrl;pass=($facilityDestination.text.Contains($facilityBefore.facility) -and $facilityReturned.url -eq $facilityExpectedReturnUrl -and $facilityReturned.facility -eq $facilityBefore.facility)}
+                & $persist 'issue-655-facility-overview-return' $facilityEntry; Set-Content -LiteralPath (Join-Path $operationDiagnostics 'issue-655-facility-overview-return.json') -Value ($facilityEntry|ConvertTo-Json -Depth 12) -Encoding UTF8
+                $complaintCompact = Get-Issue655CompactRecommendationState -Session $Session
+                $complaintAction = Resolve-Issue655CompactAction -Session $Session -Kind 'complaint-detail'
+                if (-not $complaintAction.sourceRecordKey.Contains([string]$complaintCompact.complaint)) { throw 'Issue #655 complaint-detail action identity disagrees with the compact recommendation.' }
+                $complaintContext = ([uri]$complaintAction.href).Query.TrimStart('?')
+                $returnQuery = [System.Web.HttpUtility]::ParseQueryString($complaintContext).Get('return_q')
+                $contextUrl = "$($normalizedBaseUrl)/ccld/facilities/intelligence?$returnQuery"
+                $complaintBefore = [ordered]@{url=$complaintCompact.url;actionUrl=$complaintAction.href;contextUrl=$contextUrl;returnQueryRaw=@($returnQuery);returnQueryDecoded=$returnQuery;facility=$complaintCompact.facility;complaint=$complaintCompact.complaint;position=$complaintCompact.positionText;recommendationRaw=@();recommendationDecoded=@();target=$complaintAction}
+                Invoke-Issue655ResolvedAction -Session $Session -Kind 'complaint-detail'
+                Wait-Issue655ExactDestination -Session $Session -InteractionId 'issue-655-complaint-detail' -ExpectedUrl $complaintAction.href -ContainerSelector '.reviewer-detail-context' -DiagnosticsDirectory $operationDiagnostics
+                $complaintDestination = Invoke-CdpEvaluate -Session $Session -Expression '({url:location.href,text:document.body.innerText,focus:(document.activeElement.id||document.activeElement.textContent.trim())})'
+                $complaintReturnTargetExpression = @"
+(() => {
+  const source = new URL($($complaintBefore.url | ConvertTo-Json -Compress), document.baseURI);
+  const detail = new URL($($complaintBefore.contextUrl | ConvertTo-Json -Compress), document.baseURI);
+  const raw = (candidate, key) => candidate.search.slice(1).split('&').filter((entry) => entry.split('=', 1)[0] === key).map((entry) => entry.slice(key.length + 1));
+  const container = document.querySelector('.reviewer-detail-context');
+  if (!container) throw new Error('Issue #655 complaint-detail return target missing.');
+  const matches = Array.from(container.querySelectorAll('a[href]')).filter((anchor) => {
+    const url = new URL(anchor.href, document.baseURI);
+    return anchor.textContent.trim().includes('Return to Compare Facilities') && url.pathname === '/ccld/facilities/intelligence';
+  });
+  if (matches.length === 0) throw new Error('Issue #655 complaint-detail return target missing.');
+  if (matches.length !== 1) throw new Error('Issue #655 complaint-detail return target ambiguous; count=' + matches.length + '.');
+  const target = matches[0]; const url = new URL(target.href, document.baseURI);
+  for (const [key, value] of source.searchParams.entries()) {
+    if (key === 'recommendation') continue;
+    if (url.searchParams.get(key) !== value) throw new Error('Issue #655 complaint-detail return context mismatch: ' + key + '.');
+  }
+  const expectedRaw = raw(detail, 'recommendation'); const actualRaw = raw(url, 'recommendation');
+  const expectedDecoded = detail.searchParams.getAll('recommendation'); const actualDecoded = url.searchParams.getAll('recommendation');
+  if (expectedRaw.length !== 1 || actualRaw.length !== 1 || expectedDecoded.length !== 1 || actualDecoded.length !== 1 || expectedDecoded[0] !== actualDecoded[0]) {
+    throw new Error('Issue #655 complaint-detail return context mismatch: recommendation; expectedRaw=' + JSON.stringify(expectedRaw) + '; actualRaw=' + JSON.stringify(actualRaw) + '; expectedDecoded=' + JSON.stringify(expectedDecoded) + '; actualDecoded=' + JSON.stringify(actualDecoded) + '; sourceUrl=' + source.href + '; detailUrl=' + detail.href + '; returnUrl=' + url.href + '; position=' + $($complaintBefore.position | ConvertTo-Json -Compress) + '; facility=' + $($complaintBefore.facility | ConvertTo-Json -Compress) + '; complaint=' + $($complaintBefore.complaint | ConvertTo-Json -Compress) + '.');
+  }
+  if (url.hash !== '#facility-intelligence-results') throw new Error('Issue #655 complaint-detail return context mismatch: results-anchor.');
+  target.setAttribute('data-issue655-evidence-target', 'complaint-return');
+  return {candidateCount:matches.length,text:target.textContent.trim(),accessibleName:target.getAttribute('aria-label') || target.textContent.trim(),pathname:url.pathname,search:url.search,hash:url.hash,container:container.className,visible:!!(target.getBoundingClientRect().width && target.getBoundingClientRect().height),focusable:target.tabIndex >= 0,recommendation:{expectedRaw,actualRaw,expectedDecoded,actualDecoded}};
+})()
+"@
+                $complaintReturnTarget = Invoke-CdpEvaluate -Session $Session -Expression $complaintReturnTargetExpression
+                Invoke-CdpClickSelector -Session $Session -Selector 'a[data-issue655-evidence-target=complaint-return]'
+                $complaintExpectedReturnUrl = ([string]$complaintBefore.url -replace '#.*$', '') + '#facility-intelligence-results'
+                Wait-CdpCondition -Session $Session -Expression "document.readyState === 'complete' && location.href === $($complaintExpectedReturnUrl | ConvertTo-Json -Compress) && !!document.querySelector('#review-next-region') && document.querySelector('#review-next-region')?.getAttribute('aria-busy') !== 'true'" -Description 'Issue #655 complaint detail return'
+                $complaintReturned = Invoke-CdpEvaluate -Session $Session -Expression '({url:location.href,facility:document.querySelector(".review-next-card h3")?.textContent.trim(),position:document.querySelector(".review-next-position")?.textContent.trim(),focus:(document.activeElement.id||document.activeElement.textContent.trim())})'
+                $complaintEntry = [ordered]@{id='issue-655-complaint-detail-return';method='native-complaint-detail-and-return';source=$complaintBefore;destination=$complaintDestination;returned=$complaintReturned;returnTarget=$complaintReturnTarget;expectedReturnUrl=$complaintExpectedReturnUrl;pass=($complaintDestination.text.Contains($complaintBefore.complaint) -and $complaintReturned.url -eq $complaintExpectedReturnUrl -and $complaintReturned.facility -eq $complaintBefore.facility)}
+                & $persist 'issue-655-complaint-detail-return' $complaintEntry; Set-Content -LiteralPath (Join-Path $operationDiagnostics 'issue-655-complaint-detail-return.json') -Value ($complaintEntry|ConvertTo-Json -Depth 12) -Encoding UTF8
+                # A controlled fetch seam makes abort/stale-response behavior deterministic without timing luck.
+                & $openFirst
+                Invoke-CdpEvaluate -Session $Session -Expression "window.__issue655Fetch=window.fetch;window.__issue655Concurrency={calls:[],aborted:false};window.fetch=(u,o)=>{let n=window.__issue655Concurrency.calls.length+1;window.__issue655Concurrency.calls.push({n:n,url:String(u)});if(n===1)return new Promise((r,j)=>o.signal.addEventListener('abort',()=>{window.__issue655Concurrency.aborted=true;j(new DOMException('aborted','AbortError'))}));return window.__issue655Fetch(u,o)};true" | Out-Null
+                Invoke-CdpClickSelector -Session $Session -Selector 'a.review-next-control[rel=next]'; Wait-CdpCondition -Session $Session -Expression "document.querySelector('#review-next-region').getAttribute('aria-busy') === 'true'" -Description 'Issue #655 concurrency request A'
+                Invoke-CdpEvaluate -Session $Session -Expression "document.querySelector('a.review-next-control[rel=next]').setAttribute('aria-disabled','false');true" | Out-Null
+                Invoke-CdpClickSelector -Session $Session -Selector 'a.review-next-control[rel=next]'; Wait-CdpCondition -Session $Session -Expression "document.querySelector('#review-next-region').getAttribute('aria-busy') !== 'true' && location.href !== $($Url | ConvertTo-Json -Compress)" -Description 'Issue #655 concurrency request B'
+                $concurrency = Invoke-CdpEvaluate -Session $Session -Expression '({calls:window.__issue655Concurrency.calls,aborted:window.__issue655Concurrency.aborted,url:location.href,regionCount:document.querySelectorAll("#review-next-region").length,focusableControls:Array.from(document.querySelectorAll("#review-next-region a.review-next-control")).filter(e=>e.getAttribute("aria-disabled")!=="true").length,facility:document.querySelector(".review-next-card h3")?.textContent.trim()})'
+                $concurrencyEntry=[ordered]@{id='issue-655-concurrency-stale-response';method='controlled-fetch-seam';diagnostic=$concurrency;pass=($concurrency.aborted -and $concurrency.calls.Count -eq 2 -and $concurrency.regionCount -eq 1)}; & $persist 'issue-655-concurrency-stale-response' $concurrencyEntry; Set-Content -LiteralPath (Join-Path $operationDiagnostics 'issue-655-concurrency-stale-response.json') -Value ($concurrencyEntry|ConvertTo-Json -Depth 12) -Encoding UTF8
+                # A non-200 response must leave the current region and URL intact and expose the ordinary link fallback.
+                & $openFirst
+                Invoke-CdpEvaluate -Session $Session -Expression "document.querySelector('a.review-next-control[rel=next]').scrollIntoView({block:'center',inline:'nearest'}); true" | Out-Null
+                $errorBefore=Invoke-CdpEvaluate -Session $Session -Expression '({url:location.href,scrollY:scrollY,historyLength:history.length})'
+                Invoke-CdpEvaluate -Session $Session -Expression "window.fetch=()=>Promise.resolve({ok:false,status:503});true" | Out-Null
+                Invoke-CdpClickSelector -Session $Session -Selector 'a.review-next-control[rel=next]'; Wait-CdpCondition -Session $Session -Expression "!document.querySelector('#review-next-error').hidden" -Description 'Issue #655 enhanced request failure'
+                $errorAfter=Invoke-CdpEvaluate -Session $Session -Expression '({url:location.href,scrollY:scrollY,historyLength:history.length,error:document.querySelector("#review-next-error")?.textContent.trim(),focus:(document.activeElement.id||document.activeElement.textContent.trim()),regionCount:document.querySelectorAll("#review-next-region").length,fallback:document.querySelector("a.review-next-control[rel=next]")?.href||""})'
+                $errorEntry=[ordered]@{id='issue-655-enhanced-request-failure';method='controlled-non-200-fetch-seam';source=$errorBefore;destination=$errorAfter;pass=($errorAfter.url -eq $errorBefore.url -and $errorAfter.historyLength -eq $errorBefore.historyLength -and $errorAfter.scrollY -eq $errorBefore.scrollY -and $errorAfter.regionCount -eq 1 -and [bool]$errorAfter.fallback)}; & $persist 'issue-655-enhanced-request-failure' $errorEntry; Set-Content -LiteralPath (Join-Path $operationDiagnostics 'issue-655-enhanced-request-failure.json') -Value ($errorEntry|ConvertTo-Json -Depth 12) -Encoding UTF8
+                & $openFirst
+                Invoke-CdpCommand -Session $Session -Method 'Emulation.setEmulatedMedia' -Parameters @{ media='screen'; features=@(@{name='prefers-reduced-motion'; value='reduce'}) } | Out-Null
+                $reducedBefore=Invoke-CdpEvaluate -Session $Session -Expression '({url:location.href,reduced:matchMedia("(prefers-reduced-motion: reduce)").matches,duration:getComputedStyle(document.querySelector(".review-next-card")).animationDuration})'
+                Invoke-CdpClickSelector -Session $Session -Selector 'a.review-next-control[rel=next]'; Wait-CdpCondition -Session $Session -Expression "location.href !== $($Url | ConvertTo-Json -Compress) && document.querySelector('#review-next-region').getAttribute('aria-busy') !== 'true'" -Description 'Issue #655 reduced motion interaction'
+                $reducedAfter=Invoke-CdpEvaluate -Session $Session -Expression '({url:location.href,reduced:matchMedia("(prefers-reduced-motion: reduce)").matches,duration:getComputedStyle(document.querySelector(".review-next-card")).animationDuration,transform:getComputedStyle(document.querySelector(".review-next-card")).transform,focus:(document.activeElement.id||document.activeElement.textContent.trim()),announcement:document.querySelector("#review-next-status")?.textContent.trim(),scrollY:scrollY})'
+                $reducedEntry=[ordered]@{id='issue-655-reduced-motion';method='native-pointer-with-emulated-reduced-motion';source=$reducedBefore;destination=$reducedAfter;pass=($reducedAfter.reduced -and $reducedAfter.url -ne $reducedBefore.url -and $reducedAfter.duration -eq '0s')}; & $persist 'issue-655-reduced-motion' $reducedEntry; Set-Content -LiteralPath (Join-Path $operationDiagnostics 'issue-655-reduced-motion.json') -Value ($reducedEntry|ConvertTo-Json -Depth 12) -Encoding UTF8
+                Set-Content -LiteralPath (Join-Path (Split-Path $ScreenshotPath -Parent) '..\diagnostics\issue-655-interaction-index.json') -Value (([ordered]@{ interactions=$operated; statement='Native CDP pointer and keyboard activation was used; no application functions were invoked directly.' }) | ConvertTo-Json -Depth 10) -Encoding UTF8
+            }
+        }
+        $browserState = Invoke-CdpEvaluate -Session $Session -Expression @"
+(() => { const region=document.querySelector('#review-next-region'); const rect=(e)=>e?({left:e.getBoundingClientRect().left,top:e.getBoundingClientRect().top,width:e.getBoundingClientRect().width,height:e.getBoundingClientRect().height}):null; const clientWidth=document.documentElement.clientWidth; const previous=region?.querySelector('a.review-next-control[rel=prev]'); const next=region?.querySelector('a.review-next-control[rel=next]'); const positionText=region?.querySelector('.review-next-position')?.textContent.trim()||''; const match=/Recommendation\s+(\d+)\s+of\s+(\d+)/.exec(positionText); const inventory=document.querySelector('#facility-intelligence-results'); const emptyState=document.querySelector('.intelligence-message[aria-labelledby="facility-intelligence-empty-heading"]'); const complaintDefinition=Array.from(region?.querySelectorAll('dt')||[]).find((term)=>term.textContent.trim()==='Recommended complaint'); return { routeName:'$($Route.Name)', url:location.href, status:$([int]$(if ($isMalformed) {400} else {200})), recommendation:{present:!!region,position:positionText,positionNumber:match?Number(match[1]):0,total:match?Number(match[2]):0,heading:region?.querySelector('h2')?.textContent.trim()||'',facility:region?.querySelector('h3')?.textContent.trim()||'',complaint:complaintDefinition?.nextElementSibling?.textContent.trim()||'',previous:previous?.href||'',next:next?.href||'',previousAvailable:!!previous,nextAvailable:!!next,controls:{previousRel:previous?.rel||'',nextRel:next?.rel||'',previousClass:previous?.className||'',nextClass:next?.className||''}}, inventoryCount:inventory?.querySelectorAll('li[id^="facility-intelligence-result-"]').length||0,emptyStateText:emptyState?.innerText.trim()||'', geometry:{clientWidth,scrollWidth:document.documentElement.scrollWidth,horizontalOverflow:document.documentElement.scrollWidth>clientWidth+1,region:rect(region),inventory:rect(inventory)}, accessibility:{headingCount:region?.querySelectorAll('h2').length||0,statusCount:region?.querySelectorAll('[role=status]').length||0,errorCount:region?.querySelectorAll('[role=alert]').length||0}, focus:(document.activeElement.id||document.activeElement.getAttribute('aria-label')||document.activeElement.textContent.trim()), consoleErrors:window.__issue655ConsoleErrors||[],consoleWarnings:window.__issue655ConsoleWarnings||[],pageErrors:window.__issue655PageErrors||[],failedNetworkRequests:[]}; })()
+"@
+        if ($browserState.geometry.horizontalOverflow) { throw 'Issue #655 geometry gate failed: horizontal overflow detected.' }
+        $browserState | Add-Member -NotePropertyName operated_states -NotePropertyValue $operated
+        $capturePrint = $Route.ContainsKey('CapturePrint') -and [bool]$Route.CapturePrint
+        if ($capturePrint) { Invoke-CdpCommand -Session $Session -Method 'Emulation.setEmulatedMedia' -Parameters @{media='print'} | Out-Null; $printHidden = Invoke-CdpEvaluate -Session $Session -Expression "getComputedStyle(document.querySelector('#review-next-region')).display === 'none'"; if (-not $printHidden) { throw 'Issue #655 print gate failed: Review next region remains visible.' }; $pdf=Invoke-CdpCommand -Session $Session -Method 'Page.printToPDF' -Parameters @{printBackground=$true;displayHeaderFooter=$false;preferCSSPageSize=$true}; [IO.File]::WriteAllBytes($PrintPath,[Convert]::FromBase64String([string]$pdf.result.data)); Invoke-CdpCommand -Session $Session -Method 'Emulation.setEmulatedMedia' -Parameters @{media='screen'} | Out-Null }
+        $metrics=Invoke-CdpCommand -Session $Session -Method 'Page.getLayoutMetrics'; $size=$metrics.result.cssContentSize; $shot=Invoke-CdpCommand -Session $Session -Method 'Page.captureScreenshot' -Parameters @{format='png';fromSurface=$true;captureBeyondViewport=$true;clip=@{x=0;y=0;width=[Math]::Ceiling([double]$size.width);height=[Math]::Ceiling([double]$size.height);scale=1}}; [IO.File]::WriteAllBytes($ScreenshotPath,[Convert]::FromBase64String([string]$shot.result.data)); $dimensions=Get-PngDimensions -Path $ScreenshotPath; $browserState | Add-Member -NotePropertyName screenshot -NotePropertyValue @{width=$dimensions.width;height=$dimensions.height;sha256=(Get-FileHash -LiteralPath $ScreenshotPath -Algorithm SHA256).Hash}; return [pscustomobject]@{Success=$true;Error='';State=$browserState;ScreenshotCreated=$true;PrintCreated=(-not $capturePrint -or (Test-Path -LiteralPath $PrintPath))}
+    } catch { Remove-Item -LiteralPath $ScreenshotPath -Force -ErrorAction SilentlyContinue; return [pscustomobject]@{Success=$false;Error="$($_.Exception.Message) at evidence script line $($_.InvocationInfo.ScriptLineNumber)";State=$browserState;ScreenshotCreated=$false;PrintCreated=$false} }
+}
+
+function Get-Issue655RequiredInteractionIds {
+    # This is the one authoritative operated-evidence contract for Issue #655.
+    # Keep history directions separate: a combined scenario cannot satisfy both.
+    return @(
+        'issue-655-pointer-next-first-middle',
+        'issue-655-keyboard-next-middle-last',
+        'issue-655-keyboard-previous-last-middle',
+        'issue-655-pointer-previous-middle-first',
+        'issue-655-browser-back',
+        'issue-655-browser-forward',
+        'issue-655-no-javascript-fallback',
+        'issue-655-direct-valid-url',
+        'issue-655-facility-overview-return',
+        'issue-655-complaint-detail-return',
+        'issue-655-concurrency-stale-response',
+        'issue-655-enhanced-request-failure',
+        'issue-655-reduced-motion'
+    )
+}
+
+function Test-Issue655AcceptancePacket {
+    param([string]$PacketDirectory, [string]$DiagnosticsDirectory, [System.Collections.ArrayList]$Assertions)
+
+    $indexPath = Join-Path $DiagnosticsDirectory 'issue-655-interaction-index.json'
+    if (-not (Test-Path -LiteralPath $indexPath)) { Stop-CaptureFail 'Issue #655 acceptance gate: interaction index is missing.' }
+    $index = Get-Content -LiteralPath $indexPath -Raw | ConvertFrom-Json
+    $entries = @($index.interactions)
+    $required = @(Get-Issue655RequiredInteractionIds)
+    foreach ($id in $required) {
+        $entry = @($entries | Where-Object { [string]$_.id -eq $id })
+        if ($entry.Count -ne 1) { Stop-CaptureFail "Issue #655 acceptance gate: required interaction '$id' is missing or duplicated." }
+        if (-not [bool]$entry[0].pass) { Stop-CaptureFail "Issue #655 acceptance gate: required interaction '$id' did not pass." }
+        $statePath = Join-Path $DiagnosticsDirectory "$id-browser-state.json"
+        if (-not (Test-Path -LiteralPath $statePath)) { Stop-CaptureFail "Issue #655 acceptance gate: browser-state artifact for '$id' is missing." }
+    }
+    foreach ($diagnostic in @(
+        'issue-655-facility-overview-return.json',
+        'issue-655-complaint-detail-return.json',
+        'issue-655-concurrency-stale-response.json',
+        'issue-655-enhanced-request-failure.json',
+        'issue-655-reduced-motion.json',
+        'issue-655-geometry.json',
+        'issue-655-focus-live-region.json',
+        'issue-655-console-network-summary.json',
+        'issue-655-screenshot-states.json'
+    )) {
+        if (-not (Test-Path -LiteralPath (Join-Path $DiagnosticsDirectory $diagnostic))) { Stop-CaptureFail "Issue #655 acceptance gate: required diagnostic '$diagnostic' is missing." }
+    }
+    $allFiles = @(Get-ChildItem -LiteralPath $PacketDirectory -Recurse -File)
+    $legacyFiles = @($allFiles | Where-Object { $_.Name -eq '05-reviewer-complaint-exports.png' -or $_.Name -match '(?i)issue[-_]?64[23]' })
+    if ($legacyFiles.Count -gt 0) { Stop-CaptureFail "Issue #655 acceptance gate: prohibited inherited artifact '$($legacyFiles[0].Name)' is present." }
+    $warnings = @($Assertions | Where-Object { [string]$_.status -eq 'WARN' })
+    if ($warnings.Count -gt 0) { Stop-CaptureFail "Issue #655 acceptance gate: unrelated WARN assertion '$($warnings[0].check)' is present." }
+    $ledger = Get-Content -LiteralPath (Join-Path $DiagnosticsDirectory 'issue-655-screenshot-states.json') -Raw | ConvertFrom-Json
+    $screenshotFiles = @(Get-ChildItem -LiteralPath (Join-Path $PacketDirectory 'screenshots') -Recurse -File -Filter '*.png')
+    if ([int]$ledger.counts.captured -ne $screenshotFiles.Count -or [int]$ledger.counts.artifactFiles -ne $screenshotFiles.Count) { Stop-CaptureFail 'Issue #655 acceptance gate: screenshot accounting does not reconcile.' }
+    $browserStates = @($allFiles | Where-Object { $_.Name -like 'issue-655-*-browser-state.json' })
+    if ($browserStates.Count -lt $required.Count) { Stop-CaptureFail 'Issue #655 acceptance gate: browser-state accounting is incomplete.' }
+    Test-Issue655StaticScenarioEvidence -PacketDirectory $PacketDirectory -DiagnosticsDirectory $DiagnosticsDirectory
+    $gate = [ordered]@{ status='PASS'; requiredInteractions=$required; interactionCount=$entries.Count; browserStateCount=$browserStates.Count; screenshotCount=$screenshotFiles.Count; warnings=$warnings.Count }
+    Set-Content -LiteralPath (Join-Path $DiagnosticsDirectory 'issue-655-acceptance-gate.json') -Value ($gate | ConvertTo-Json -Depth 6) -Encoding UTF8
+}
+
+function Invoke-CdpBrowserForward {
+    param([object]$Session)
+    $history = Invoke-CdpCommand -Session $Session -Method "Page.getNavigationHistory"
+    $index = [int]$history.result.currentIndex
+    if ($index -ge (@($history.result.entries).Count - 1)) { throw "Issue #655 Browser Forward has no next history entry." }
+    Invoke-CdpCommand -Session $Session -Method "Page.navigateToHistoryEntry" -Parameters @{ entryId = [int]$history.result.entries[$index + 1].id } | Out-Null
+}
+
+function Get-Issue655CompactRecommendationState {
+    param([object]$Session)
+    return Invoke-CdpEvaluate -Session $Session -Expression @'
+(() => {
+  const regions = Array.from(document.querySelectorAll('#review-next-region'));
+  if (regions.length !== 1) throw new Error('Issue #655 expected exactly one Review next region; count=' + regions.length);
+  const region = regions[0];
+  const positionText = region.querySelector('.review-next-position')?.textContent.trim() || '';
+  const position = /Recommendation\s+(\d+)\s+of\s+(\d+)/.exec(positionText);
+  const complaintTerms = Array.from(region.querySelectorAll('.review-next-card dt')).filter((term) => term.textContent.trim() === 'Recommended complaint');
+  if (complaintTerms.length !== 1) throw new Error('Issue #655 expected one compact complaint definition; count=' + complaintTerms.length);
+  const overview = Array.from(region.querySelectorAll('.facility-card-actions a[href]')).filter((anchor) => new URL(anchor.href, document.baseURI).pathname === '/ccld/facilities/detail');
+  if (overview.length !== 1) throw new Error('Issue #655 expected one compact Facility Overview action; count=' + overview.length);
+  const overviewUrl = new URL(overview[0].href, document.baseURI);
+  return {source:'#review-next-region',url:location.href,regionCount:regions.length,cardCount:region.querySelectorAll('.review-next-card').length,positionText,position:position?Number(position[1]):0,total:position?Number(position[2]):0,facility:region.querySelector('.review-next-card h3')?.textContent.trim()||'',facilityId:overviewUrl.searchParams.get('facility_number')||'',complaint:complaintTerms[0].nextElementSibling?.textContent.trim()||'',regionBusy:region.getAttribute('aria-busy')||'',regionText:region.innerText.trim(),regionHtml:region.outerHTML};
+})()
+'@
+}
+
+function Resolve-Issue655CompactAction {
+    param([object]$Session, [ValidateSet('facility-overview','complaint-detail')][string]$Kind)
+    $expectedPath = if ($Kind -eq 'facility-overview') { '/ccld/facilities/detail' } else { '/reviewer/records/detail' }
+    return Invoke-CdpEvaluate -Session $Session -Expression @"
+(() => {
+  const regions=Array.from(document.querySelectorAll('#review-next-region'));
+  if(regions.length!==1) throw new Error('Issue #655 action resolution requires one bounded region; count='+regions.length);
+  const region=regions[0]; const actions=region.querySelector('.facility-card-actions');
+  if(!actions) throw new Error('Issue #655 compact action container is missing.');
+  const matches=Array.from(actions.querySelectorAll('a[href]')).filter((anchor)=>new URL(anchor.href,document.baseURI).pathname===$($expectedPath | ConvertTo-Json -Compress));
+  if(matches.length!==1) throw new Error('Issue #655 compact $Kind action count='+matches.length);
+  const target=matches[0]; const url=new URL(target.href,document.baseURI); const rect=target.getBoundingClientRect(); const style=getComputedStyle(target);
+  const visible=target.isConnected&&style.display!=='none'&&style.visibility!=='hidden'&&rect.width>0&&rect.height>0;
+  const focusable=target.tabIndex>=0&&!target.hasAttribute('disabled')&&target.getAttribute('aria-disabled')!=='true';
+  if(!visible||!focusable) throw new Error('Issue #655 compact $Kind action is not visible and focusable.');
+  const hitTarget=document.elementFromPoint(rect.left+(rect.width/2),rect.top+(rect.height/2));
+  const snapshot={kind:$($Kind | ConvertTo-Json -Compress),source:'#review-next-region',count:matches.length,outerHtml:target.outerHTML,href:target.href,pathname:url.pathname,search:url.search,hash:url.hash,facilityId:url.searchParams.get('facility_number')||'',sourceRecordKey:url.searchParams.get('source_record_key')||'',visible,focusable,connected:target.isConnected,rect:{left:rect.left,top:rect.top,width:rect.width,height:rect.height},hitTestMatches:!!hitTarget&&(hitTarget===target||target.contains(hitTarget)),hitTestElement:hitTarget?.outerHTML||'',sourceUrl:location.href,historyLength:history.length};
+  target.setAttribute('data-issue655-resolved-action',$($Kind | ConvertTo-Json -Compress));
+  sessionStorage.setItem('issue655-evidence-resolved-action',JSON.stringify(snapshot));
+  return snapshot;
+})()
+"@
+}
+
+function Invoke-Issue655ResolvedAction {
+    param([object]$Session, [string]$Kind)
+    $kindJson = $Kind | ConvertTo-Json -Compress
+    Invoke-CdpEvaluate -Session $Session -Expression "(() => { const target=document.querySelector('a[data-issue655-resolved-action='+$kindJson+']'); if(!target||!target.isConnected) throw new Error('Issue #655 resolved $Kind action became disconnected before activation.'); sessionStorage.setItem('issue655-evidence-activation',JSON.stringify({kind:$kindJson,sourceUrl:location.href,targetHref:target.href,historyLength:history.length,readyState:document.readyState,activatedAt:new Date().toISOString()})); target.click(); return true; })()" | Out-Null
+}
+
+function Wait-Issue655ExactDestination {
+    param([object]$Session, [string]$InteractionId, [string]$ExpectedUrl, [string]$ContainerSelector, [string]$DiagnosticsDirectory)
+    $expectedJson = $ExpectedUrl | ConvertTo-Json -Compress; $containerJson = $ContainerSelector | ConvertTo-Json -Compress
+    $expression = "(() => { const expected=new URL($expectedJson,document.baseURI); return document.readyState==='complete'&&location.pathname===expected.pathname&&location.search===expected.search&&location.hash===expected.hash&&!!document.querySelector($containerJson); })()"
+    try { Wait-CdpCondition -Session $Session -Expression $expression -Description "Issue #655 $InteractionId exact destination" }
+    catch {
+        $diagnostic = Invoke-CdpEvaluate -Session $Session -Expression @"
+(() => {
+  const parseStored=(key)=>{try{return JSON.parse(sessionStorage.getItem(key)||'null')}catch{return null}};
+  const expected=new URL($expectedJson,document.baseURI);
+  const storedTarget=parseStored('issue655-evidence-resolved-action');
+  const activation=parseStored('issue655-evidence-activation');
+  const liveTarget=document.querySelector('[data-issue655-resolved-action]');
+  const rect=liveTarget?.getBoundingClientRect();
+  const style=liveTarget?getComputedStyle(liveTarget):null;
+  const hitTarget=rect?document.elementFromPoint(rect.left+(rect.width/2),rect.top+(rect.height/2)):null;
+  const navigation=performance.getEntriesByType('navigation')[0]||null;
+  const sourceUrl=activation?.sourceUrl||storedTarget?.sourceUrl||document.referrer||'';
+  const pathReady=location.pathname===expected.pathname;
+  const queryReady=location.search===expected.search;
+  const fragmentReady=location.hash===expected.hash;
+  const documentReady=document.readyState==='complete';
+  const containerReady=!!document.querySelector($containerJson);
+  return {
+    interactionId:$($InteractionId | ConvertTo-Json -Compress),stage:'destination-wait',sourceUrl,
+    expectedDestination:{href:expected.href,pathname:expected.pathname,search:expected.search,hash:expected.hash},
+    observedUrl:location.href,historyLength:history.length,readyState:document.readyState,title:document.title,
+    activeElement:document.activeElement?.outerHTML||'',regionCount:document.querySelectorAll('#review-next-region').length,
+    targetCount:document.querySelectorAll('[data-issue655-resolved-action]').length,
+    targetOuterHtml:liveTarget?.outerHTML||storedTarget?.outerHtml||'',targetHref:liveTarget?.href||storedTarget?.href||'',
+    targetVisible:liveTarget?liveTarget.isConnected&&style.display!=='none'&&style.visibility!=='hidden'&&rect.width>0&&rect.height>0:!!storedTarget?.visible,
+    targetFocusable:liveTarget?liveTarget.tabIndex>=0&&liveTarget.getAttribute('aria-disabled')!=='true':!!storedTarget?.focusable,
+    targetConnected:!!liveTarget?.isConnected,targetRectangle:rect?{left:rect.left,top:rect.top,width:rect.width,height:rect.height}:storedTarget?.rect||null,
+    hitTestMatches:liveTarget&&hitTarget?hitTarget===liveTarget||liveTarget.contains(hitTarget):storedTarget?.hitTestMatches||false,
+    hitTestElement:hitTarget?.outerHTML||storedTarget?.hitTestElement||'',regionBusy:document.querySelector('#review-next-region')?.getAttribute('aria-busy')||'',
+    navigationStages:{activationRecorded:!!activation,navigationStarted:!!sourceUrl&&location.href!==sourceUrl,urlTransitioned:!!sourceUrl&&location.href!==sourceUrl,responseStatus:navigation?.responseStatus||0,pathReady,queryReady,fragmentReady,documentReady,containerReady},
+    consoleEvents:window.__issue655ConsoleEvents||[],consoleErrors:window.__issue655ConsoleErrors||[],consoleWarnings:window.__issue655ConsoleWarnings||[],pageErrors:window.__issue655PageErrors||[],
+    recentNetworkEvents:Array.from(performance.getEntriesByType('resource')).slice(-20).map((entry)=>({name:entry.name,initiatorType:entry.initiatorType,responseStatus:entry.responseStatus||0,duration:entry.duration})),
+    containerSelector:$containerJson,containerPresent:containerReady,scopedHtml:document.querySelector('#review-next-region')?.outerHTML||document.querySelector($containerJson)?.outerHTML||document.body.outerHTML.slice(0,12000)
+  };
+})()
+"@
+        $diagnostic | Add-Member -NotePropertyName exception -NotePropertyValue $_.Exception.Message -Force
+        $diagnostic | Add-Member -NotePropertyName relevantCdpException -NotePropertyValue $_.Exception.ToString() -Force
+        $diagnosticPath = Join-Path $DiagnosticsDirectory "$InteractionId-timeout.json"
+        Set-Content -LiteralPath $diagnosticPath -Value ($diagnostic | ConvertTo-Json -Depth 10) -Encoding UTF8
+        $shot = Invoke-CdpCommand -Session $Session -Method 'Page.captureScreenshot' -Parameters @{format='png';fromSurface=$true;captureBeyondViewport=$true}
+        [IO.File]::WriteAllBytes((Join-Path $DiagnosticsDirectory "$InteractionId-timeout.png"),[Convert]::FromBase64String([string]$shot.result.data))
+        throw
+    }
 }
 
 function Invoke-Issue642BrowserCapture {
@@ -3012,6 +3435,51 @@ function Test-Issue643RouteAssertions {
     }
 }
 
+function Test-Issue655RouteAssertions {
+    param([hashtable]$Route, [string]$Text, [System.Collections.ArrayList]$Assertions)
+    $name = [string]$Route.Name
+    $state = [string]$Route.Issue655State
+    if ($state -eq 'malformed') {
+        $valid = $Text.Contains('Review next recommendation state is invalid.')
+        Add-AssertionResult -Target $Assertions -RouteName $name -Check 'issue655 malformed recommendation rejection' -Status $(if ($valid) {'PASS'} else {'FAIL'}) -Message 'A malformed recommendation state is rejected rather than replaced.'
+        return
+    }
+    if ($state -eq 'empty') {
+        $empty = $Text -match '(?i)No facilities match|No Review next recommendation'
+        Add-AssertionResult -Target $Assertions -RouteName $name -Check 'issue655 empty recommendation sequence' -Status $(if ($empty) {'PASS'} else {'FAIL'}) -Message 'The active filters produce a governed empty recommendation and inventory state.'
+        return
+    }
+    $region = $Text.Contains('Review next') -and $Text.Contains('Recommendation')
+    Add-AssertionResult -Target $Assertions -RouteName $name -Check 'issue655 bounded recommendation region' -Status $(if ($region) {'PASS'} else {'FAIL'}) -Message 'The bounded Review next region is present above the canonical inventory.'
+    $noScopeLeak = -not $Text.Contains('Contributing complaint records') -and -not $Text.Contains('Source Record') -and -not $Text.Contains('Reviewer State')
+    Add-AssertionResult -Target $Assertions -RouteName $name -Check 'issue655 card-scope boundary' -Status $(if ($noScopeLeak) {'PASS'} else {'FAIL'}) -Message 'The review-next region does not restore superseded card panels or contributor dumps.'
+}
+
+function Test-Issue655StaticScenarioEvidence {
+    param([string]$PacketDirectory, [string]$DiagnosticsDirectory)
+    $scenarios = @(
+        [ordered]@{ name='middle'; label='issue-655-02-middle' },
+        [ordered]@{ name='one-item'; label='issue-655-04-one-item' },
+        [ordered]@{ name='empty'; label='issue-655-05-empty' }
+    )
+    $states = @{}
+    foreach ($scenario in $scenarios) {
+        $statePath = Join-Path $DiagnosticsDirectory "$($scenario.label)-browser-state.json"
+        $textPath = Join-Path (Join-Path $PacketDirectory 'text') "$($scenario.label).txt"
+        if (-not (Test-Path -LiteralPath $statePath) -or -not (Test-Path -LiteralPath $textPath)) { Stop-CaptureFail "Issue #655 scenario gate: $($scenario.name) browser-state or text artifact is missing." }
+        $states[$scenario.name] = [ordered]@{ state=(Get-Content -LiteralPath $statePath -Raw | ConvertFrom-Json); text=(Get-Content -LiteralPath $textPath -Raw) }
+    }
+    $middle = $states['middle'].state; $one = $states['one-item'].state; $empty = $states['empty'].state
+    if (-not $middle.recommendation.present -or [int]$middle.recommendation.positionNumber -le 1 -or [int]$middle.recommendation.positionNumber -ge [int]$middle.recommendation.total -or -not [bool]$middle.recommendation.previousAvailable -or -not [bool]$middle.recommendation.nextAvailable -or [string]::IsNullOrWhiteSpace([string]$middle.recommendation.facility) -or [string]::IsNullOrWhiteSpace([string]$middle.recommendation.complaint) -or -not $states['middle'].text.Contains([string]$middle.recommendation.facility)) { Stop-CaptureFail 'Issue #655 scenario gate: middle scenario is not a rendered deterministic middle recommendation.' }
+    if (-not $one.recommendation.present -or [int]$one.recommendation.positionNumber -ne 1 -or [int]$one.recommendation.total -ne 1 -or [bool]$one.recommendation.previousAvailable -or [bool]$one.recommendation.nextAvailable -or [int]$one.inventoryCount -ne 1 -or [string]::IsNullOrWhiteSpace([string]$one.recommendation.facility) -or [string]::IsNullOrWhiteSpace([string]$one.recommendation.complaint) -or -not $states['one-item'].text.Contains([string]$one.recommendation.facility)) { Stop-CaptureFail 'Issue #655 scenario gate: one-item scenario is not exactly one rendered recommendation.' }
+    if ([bool]$empty.recommendation.present -or [int]$empty.recommendation.total -ne 0 -or [int]$empty.inventoryCount -ne 0 -or [bool]$empty.recommendation.previousAvailable -or [bool]$empty.recommendation.nextAvailable -or [string]::IsNullOrWhiteSpace([string]$empty.emptyStateText) -or -not ($empty.emptyStateText -match '(?i)No facilities match|No Review next recommendation')) { Stop-CaptureFail 'Issue #655 scenario gate: empty scenario is not a governed empty recommendation and inventory state.' }
+    $hashes = @($middle.screenshot.sha256, $one.screenshot.sha256, $empty.screenshot.sha256)
+    if ($hashes | Where-Object { [string]::IsNullOrWhiteSpace([string]$_) } | Select-Object -First 1) { Stop-CaptureFail 'Issue #655 scenario gate: scenario screenshot hash is missing.' }
+    if (@($hashes | Sort-Object -Unique).Count -ne 3) { Stop-CaptureFail 'Issue #655 scenario gate: middle, one-item, and empty screenshots must be distinct.' }
+    $gate = [ordered]@{ status='PASS'; middle=@{position=$middle.recommendation.positionNumber;total=$middle.recommendation.total;facility=$middle.recommendation.facility;complaint=$middle.recommendation.complaint}; oneItem=@{position=$one.recommendation.positionNumber;total=$one.recommendation.total;facility=$one.recommendation.facility;complaint=$one.recommendation.complaint}; empty=@{recommendationPresent=$empty.recommendation.present;inventoryCount=$empty.inventoryCount;emptyStateText=$empty.emptyStateText}; screenshotHashes=$hashes }
+    Set-Content -LiteralPath (Join-Path $DiagnosticsDirectory 'issue-655-static-scenario-gate.json') -Value ($gate | ConvertTo-Json -Depth 8) -Encoding UTF8
+}
+
 function Write-Issue642PacketDiagnostics {
     param([string]$PacketDirectory, [string]$ScreenshotDirectory, [string]$DiagnosticsDirectory, [object[]]$RouteResults, [string]$IssueNumber = '642')
 
@@ -3054,6 +3522,19 @@ function Write-Issue642PacketDiagnostics {
     }
     Set-Content -LiteralPath (Join-Path $DiagnosticsDirectory "issue-$IssueNumber-console-network-summary.json") -Value ($summary | ConvertTo-Json -Depth 8) -Encoding UTF8
     return [ordered]@{ screenshotStates = $stateCounts; consoleNetwork = $summary }
+}
+
+function Write-Issue655PacketDiagnostics {
+    param([string]$PacketDirectory, [string]$ScreenshotDirectory, [string]$DiagnosticsDirectory, [object[]]$RouteResults)
+    $base = Write-Issue642PacketDiagnostics -PacketDirectory $PacketDirectory -ScreenshotDirectory $ScreenshotDirectory -DiagnosticsDirectory $DiagnosticsDirectory -RouteResults $RouteResults -IssueNumber '655'
+    $browserStates = @($RouteResults | Where-Object { $_.browserStatePath } | ForEach-Object { Get-Content -LiteralPath (Join-Path $PacketDirectory $_.browserStatePath) -Raw | ConvertFrom-Json })
+    $geometry = @($browserStates | ForEach-Object { $_.geometry })
+    $focus = @($browserStates | ForEach-Object { [ordered]@{ route=$_.routeName; focusedElement=$_.focus; position=$_.recommendation.position; operatedStates=@($_.operated_states) } })
+    Set-Content -LiteralPath (Join-Path $DiagnosticsDirectory 'issue-655-geometry.json') -Value ([ordered]@{ routes=$geometry; statement='Geometry is captured from the rendered local-fixture document; horizontal overflow fails the capture.' } | ConvertTo-Json -Depth 10) -Encoding UTF8
+    Set-Content -LiteralPath (Join-Path $DiagnosticsDirectory 'issue-655-focus-live-region.json') -Value ([ordered]@{ routes=$focus; statement='Focus and polite live-region state are recorded after operated replacement.' } | ConvertTo-Json -Depth 10) -Encoding UTF8
+    $interactionPath = Join-Path $DiagnosticsDirectory 'issue-655-interaction-index.json'
+    $interactionCount = if (Test-Path -LiteralPath $interactionPath) { @((Get-Content -LiteralPath $interactionPath -Raw | ConvertFrom-Json).interactions).Count } else { 0 }
+    return [ordered]@{ screenshotStates=$base.screenshotStates; consoleNetwork=$base.consoleNetwork; browserStates=$browserStates.Count; interactionCount=$interactionCount; geometryArtifact='diagnostics/issue-655-geometry.json'; focusLiveArtifact='diagnostics/issue-655-focus-live-region.json'; interactionIndexArtifact='diagnostics/issue-655-interaction-index.json'; facilityReturnArtifact='diagnostics/issue-655-facility-overview-return.json'; complaintReturnArtifact='diagnostics/issue-655-complaint-detail-return.json'; concurrencyArtifact='diagnostics/issue-655-concurrency-stale-response.json'; enhancedErrorArtifact='diagnostics/issue-655-enhanced-request-failure.json'; reducedMotionArtifact='diagnostics/issue-655-reduced-motion.json' }
 }
 
 function Test-Issue503RouteAssertions {
@@ -3176,7 +3657,7 @@ foreach ($entry in $captureEnvOverrides.GetEnumerator()) {
 
 try {
     Test-AllowedBaseUrl -Value $BaseUrl
-    Assert-OutputDir -Path $OutputDir
+    if (-not $Issue655Rehearsal) { Assert-OutputDir -Path $OutputDir }
     if (($Issue419 -or $Issue420 -or $Issue502 -or $Issue503 -or $Issue641 -or $Issue642 -or $Issue643) -and $Mode -ne "fixture") {
         Stop-CaptureFail "Issue #419, Issue #420, Issue #502, Issue #503, and Issue #641 evidence routes are local fixture/demo-only; use -Mode fixture."
     }
@@ -3186,8 +3667,18 @@ try {
     $baseUri = [System.Uri]::new($BaseUrl)
     $normalizedBaseUrl = $baseUri.GetLeftPart([System.UriPartial]::Authority).TrimEnd("/")
     $timestamp = (Get-Date).ToUniversalTime().ToString("yyyyMMdd-HHmmssZ")
-    $packetName = if ($Issue643) { "$timestamp-issue-643-local" } elseif ($Issue642) { "$timestamp-issue-642-local" } elseif ($Issue503) { "$timestamp-$Mode-issue-503" } elseif ($Issue502) { "$timestamp-$Mode-issue-502" } elseif ($Issue498) { "$timestamp-$Mode-issue-498" } elseif ($Issue420) { "$timestamp-$Mode-issue-420" } elseif ($Issue419) { "$timestamp-$Mode-issue-419" } elseif ($Issue418) { "$timestamp-$Mode-issue-418" } elseif ($Issue417) { "$timestamp-$Mode-issue-417" } elseif ($Issue416) { "$timestamp-$Mode-issue-416" } elseif ($Issue415) { "$timestamp-$Mode-issue-415" } else { "$timestamp-$Mode" }
-    $outputRoot = Join-Path $PWD $OutputDir
+    if ($Issue655Rehearsal -and -not $Issue655) { throw 'Issue655Rehearsal requires Issue655.' }
+    if ($Issue655Rehearsal) {
+        $tempRoot = [IO.Path]::GetFullPath([IO.Path]::GetTempPath())
+        $resolvedOutput = [IO.Path]::GetFullPath($OutputDir)
+        if (-not $resolvedOutput.StartsWith($tempRoot, [StringComparison]::OrdinalIgnoreCase)) { throw 'Issue #655 rehearsal output must stay under the temporary directory.' }
+    }
+    $packetName = if ($Issue655Rehearsal) { "issue-655-rehearsal-$RehearsalRunName" } elseif ($Issue655) { "$timestamp-issue-655-local" } elseif ($Issue643) { "$timestamp-issue-643-local" } elseif ($Issue642) { "$timestamp-issue-642-local" } elseif ($Issue503) { "$timestamp-$Mode-issue-503" } elseif ($Issue502) { "$timestamp-$Mode-issue-502" } elseif ($Issue498) { "$timestamp-$Mode-issue-498" } elseif ($Issue420) { "$timestamp-$Mode-issue-420" } elseif ($Issue419) { "$timestamp-$Mode-issue-419" } elseif ($Issue418) { "$timestamp-$Mode-issue-418" } elseif ($Issue417) { "$timestamp-$Mode-issue-417" } elseif ($Issue416) { "$timestamp-$Mode-issue-416" } elseif ($Issue415) { "$timestamp-$Mode-issue-415" } else { "$timestamp-$Mode" }
+    $outputRoot = if ([IO.Path]::IsPathRooted($OutputDir)) {
+        [IO.Path]::GetFullPath($OutputDir)
+    } else {
+        [IO.Path]::GetFullPath((Join-Path $PWD $OutputDir))
+    }
     $packetDir = Join-Path $outputRoot $packetName
     $zipPath = Join-Path $outputRoot "$packetName.zip"
     $htmlDir = Join-Path $packetDir "html"
@@ -3403,7 +3894,25 @@ try {
         @{ Name = "issue-643-populated-print"; Path = $issue643Base; Label = "issue-643-08-populated-print"; ActiveHref = $issue643Base; WorkflowStep = "Review"; ViewportWidth = 1440; ViewportHeight = 1200; CapturePrint = $true },
         @{ Name = "issue-643-source-unavailable"; Path = "${issue643Base}?facility_type=733"; Label = "issue-643-09-source-unavailable"; ActiveHref = $issue643Base; WorkflowStep = "Review"; ViewportWidth = 1440; ViewportHeight = 1200 }
     )
-    $routesToCapture = if ($Issue643) { $issue643Routes } elseif ($Issue642) { $issue642Routes } elseif ($Issue641) { $issue641Routes } elseif ($Issue610) { $issue610Routes } elseif ($Issue503) { $issue503Routes } elseif ($Issue502) { $issue502Routes } elseif ($Issue498) { $issue498Routes } elseif ($Issue420) { $issue420Routes } elseif ($Issue419) { $issue419Routes } elseif ($Issue418) { $issue418Routes } elseif ($Issue417) { $issue417Routes } elseif ($Issue416) { $issue416Routes } elseif ($Issue415) { $issue415Routes } else { $coreRoutes }
+    # Issue #655 is deliberately independent of Issue #643's card evidence.
+    # The recommendation cursor is server-generated during operated capture;
+    # static routes establish the canonical and exceptional server responses.
+    $issue655Base = "/ccld/facilities/intelligence"
+    $issue655Routes = @(
+        @{ Name = "issue-655-first-recommendation"; Path = $issue655Base; Label = "issue-655-01-first"; ActiveHref = $issue655Base; WorkflowStep = "Review"; Issue655State = "first"; ViewportWidth = 1440; ViewportHeight = 1200 },
+        @{ Name = "issue-655-middle-recommendation"; Path = "${issue655Base}?recommendation=eyJ2IjoxLCJmIjoiNGY1M2NkYTE4YzJiYWEwYzAzNTRiYjVmOWEzZWNiZTVlZDEyYWI0ZDhlMTFiYTg3M2MyZjExMTYxMjAyYjk0NSIsImEiOlswLDEsMCwiMjAyMi0wNC0wNyIsImEuIG1pcmlhbSBqYW1pc29uIGNoaWxkcmVuJ3MgY2VudGVyIiwiY2NsZDpmYWNpbGl0eToxNTc4MDYwOTgiXSwidCI6NH0"; Label = "issue-655-02-middle"; ActiveHref = $issue655Base; WorkflowStep = "Review"; Issue655State = "middle"; ViewportWidth = 1440; ViewportHeight = 1200; Operated = $true },
+        @{ Name = "issue-655-last-recommendation"; Path = $issue655Base; Label = "issue-655-03-last"; ActiveHref = $issue655Base; WorkflowStep = "Review"; Issue655State = "last"; ViewportWidth = 1440; ViewportHeight = 1200; Operated = $true },
+        @{ Name = "issue-655-one-item-sequence"; Path = "${issue655Base}?facility_type=733"; Label = "issue-655-04-one-item"; ActiveHref = $issue655Base; WorkflowStep = "Review"; Issue655State = "one-item"; ViewportWidth = 1440; ViewportHeight = 1200 },
+        @{ Name = "issue-655-empty-sequence"; Path = "${issue655Base}?start_date=2030-01-01"; Label = "issue-655-05-empty"; ActiveHref = $issue655Base; WorkflowStep = "Review"; Issue655State = "empty"; ViewportWidth = 1440; ViewportHeight = 1200 },
+        @{ Name = "issue-655-source-unavailable"; Path = "${issue655Base}?facility_type=733"; Label = "issue-655-06-source-unavailable"; ActiveHref = $issue655Base; WorkflowStep = "Review"; Issue655State = "source-unavailable"; ViewportWidth = 1440; ViewportHeight = 1200 },
+        @{ Name = "issue-655-malformed-state"; Path = "${issue655Base}?recommendation=tampered"; Label = "issue-655-07-malformed"; ActiveHref = $issue655Base; WorkflowStep = "Review"; Issue655State = "malformed"; ExpectedStatus = 400; ViewportWidth = 1440; ViewportHeight = 1200 },
+        @{ Name = "issue-655-stale-state-recovery"; Path = "${issue655Base}?facility_type=430"; Label = "issue-655-08-stale"; ActiveHref = $issue655Base; WorkflowStep = "Review"; Issue655State = "stale"; ViewportWidth = 1440; ViewportHeight = 1200; Operated = $true },
+        @{ Name = "issue-655-filtered-sequence"; Path = "${issue655Base}?facility_type=430&finding=Substantiated"; Label = "issue-655-09-filtered"; ActiveHref = $issue655Base; WorkflowStep = "Review"; Issue655State = "filtered"; ViewportWidth = 1024; ViewportHeight = 900 },
+        @{ Name = "issue-655-continuation-state"; Path = "${issue655Base}?facility_type=430&result_cursor=eyJ2IjoxfQ"; Label = "issue-655-10-continuation"; ActiveHref = $issue655Base; WorkflowStep = "Review"; Issue655State = "continuation"; ViewportWidth = 390; ViewportHeight = 844 },
+        @{ Name = "issue-655-reduced-motion"; Path = $issue655Base; Label = "issue-655-11-reduced-motion"; ActiveHref = $issue655Base; WorkflowStep = "Review"; Issue655State = "reduced-motion"; ViewportWidth = 400; ViewportHeight = 900; Operated = $true },
+        @{ Name = "issue-655-print"; Path = $issue655Base; Label = "issue-655-12-print"; ActiveHref = $issue655Base; WorkflowStep = "Review"; Issue655State = "print"; ViewportWidth = 1440; ViewportHeight = 1200; CapturePrint = $true }
+    )
+    $routesToCapture = if ($Issue655) { $issue655Routes } elseif ($Issue643) { $issue643Routes } elseif ($Issue642) { $issue642Routes } elseif ($Issue641) { $issue641Routes } elseif ($Issue610) { $issue610Routes } elseif ($Issue503) { $issue503Routes } elseif ($Issue502) { $issue502Routes } elseif ($Issue498) { $issue498Routes } elseif ($Issue420) { $issue420Routes } elseif ($Issue419) { $issue419Routes } elseif ($Issue418) { $issue418Routes } elseif ($Issue417) { $issue417Routes } elseif ($Issue416) { $issue416Routes } elseif ($Issue415) { $issue415Routes } else { $coreRoutes }
 
     $routeResults = [System.Collections.ArrayList]::new()
     $assertions = [System.Collections.ArrayList]::new()
@@ -3411,14 +3920,14 @@ try {
     $routeHtmlByName = @{}
     $screenshotWarnings = @()
     $screenshotToolResolution = if ($IncludeScreenshots) {
-        Resolve-ScreenshotTool -Requested $ScreenshotToolPreference -RequireInteractionAware ([bool]($Issue498 -or $Issue420 -or $Issue502 -or $Issue503 -or $Issue641 -or $Issue642 -or $Issue643))
+        Resolve-ScreenshotTool -Requested $ScreenshotToolPreference -RequireInteractionAware ([bool]($Issue498 -or $Issue420 -or $Issue502 -or $Issue503 -or $Issue641 -or $Issue642 -or $Issue643 -or $Issue655))
     }
     else {
         [pscustomobject]@{ Requested = $ScreenshotToolPreference; Resolved = "none"; ValidationStatus = "screenshots not requested"; Executable = ""; SupportsInteractionAwareCapture = $false; FullPage = $false; Tool = $null; Attempts = @(); Error = "" }
     }
     $resolvedScreenshotTool = $screenshotToolResolution.Tool
     $interactionBrowserSession = $null
-    if (($Issue498 -or $Issue420 -or $Issue502 -or $Issue503 -or $Issue641 -or $Issue642 -or $Issue643) -and $IncludeScreenshots) {
+    if (($Issue498 -or $Issue420 -or $Issue502 -or $Issue503 -or $Issue641 -or $Issue642 -or $Issue643 -or $Issue655) -and $IncludeScreenshots) {
         if ($null -eq $resolvedScreenshotTool) {
                 $screenshotWarnings += "Interaction-aware screenshot tool selection failed: $($screenshotToolResolution.Error)"
         }
@@ -3508,7 +4017,7 @@ try {
                         }
                     }
                 }
-                elseif ($Issue502 -or $Issue420 -or $Issue503 -or $Issue641 -or $Issue642 -or $Issue643) {
+                elseif ($Issue502 -or $Issue420 -or $Issue503 -or $Issue641 -or $Issue642 -or $Issue643 -or $Issue655) {
                     if ($null -eq $interactionBrowserSession) {
                         $shotError = "interaction-aware browser session unavailable"
                         $script:screenshotWarnings += "$($Route.Name): screenshot failed: $shotError"
@@ -3518,6 +4027,9 @@ try {
                         $printFile = if ($Route.ContainsKey("CapturePrint") -and [bool]$Route.CapturePrint) { Join-Path $printDir "$($Route.Label).pdf" } else { "" }
                         $captureResult = if ($Issue641) {
                             Invoke-Issue641BrowserCapture -Session $interactionBrowserSession -Route $Route -Url $url -ScreenshotPath $shotFile -PrintPath $printFile -Width $routeViewportWidth -Height $routeViewportHeight
+                        }
+                        elseif ($Issue655) {
+                            Invoke-Issue655BrowserCapture -Session $interactionBrowserSession -Route $Route -Url $url -ScreenshotPath $shotFile -PrintPath $printFile -Width $routeViewportWidth -Height $routeViewportHeight
                         }
                         elseif ($Issue642 -or $Issue643) {
                             Invoke-Issue642BrowserCapture -Session $interactionBrowserSession -Route $Route -Url $url -ScreenshotPath $shotFile -PrintPath $printFile -Width $routeViewportWidth -Height $routeViewportHeight
@@ -3547,7 +4059,7 @@ try {
                                 if ($LASTEXITCODE -ne 0) { throw 'Focused PDF page rendering failed.' }
                                 $printValidation = $renderedPagesJson | ConvertFrom-Json
                                 if ($printValidation.pageCount -le 0 -or @($printValidation.pages).Count -ne $printValidation.pageCount) { throw 'Focused rendered PDF page count does not reconcile.' }
-                                $printValidationName = if ($Issue643) { 'issue-643-print-validation.json' } elseif ($Issue503) { 'issue-503-print-validation.json' } else { 'issue-420-print-validation.json' }
+                                $printValidationName = if ($Issue655) { 'issue-655-print-validation.json' } elseif ($Issue643) { 'issue-643-print-validation.json' } elseif ($Issue503) { 'issue-503-print-validation.json' } else { 'issue-420-print-validation.json' }
                                 Set-Content -LiteralPath (Join-Path $packetDir $printValidationName) -Value ($printValidation | ConvertTo-Json -Depth 8) -Encoding UTF8
                                 $printPath = ConvertTo-RelativeEvidencePath -Path $printFile -Root $packetDir
                             }
@@ -3559,7 +4071,7 @@ try {
                     if ($shotError) { $script:screenshotWarnings += "$($Route.Name): $shotError" }
                     elseif (Test-Path -LiteralPath $shotFile) { $screenshotPath = ConvertTo-RelativeEvidencePath -Path $shotFile -Root $packetDir }
                 }
-                if (-not $Issue498 -and -not $Issue502 -and -not $Issue503 -and -not $Issue641 -and -not $Issue642 -and $null -ne $resolvedScreenshotTool -and $Route.ContainsKey("CapturePrint") -and [bool]$Route.CapturePrint) {
+                if (-not $Issue498 -and -not $Issue502 -and -not $Issue503 -and -not $Issue641 -and -not $Issue642 -and -not $Issue655 -and $null -ne $resolvedScreenshotTool -and $Route.ContainsKey("CapturePrint") -and [bool]$Route.CapturePrint) {
                     $printFile = Join-Path $printDir "$($Route.Label).pdf"
                     $printError = Invoke-RoutePrint -Tool $resolvedScreenshotTool -Url $url -PrintPath $printFile
                     if ($printError) { $script:screenshotWarnings += "$($Route.Name): $printError" }
@@ -3567,12 +4079,16 @@ try {
                 }
             }
         }
-        if (-not $Issue641 -and -not $Issue642 -and -not $Issue643) {
+        if (-not $Issue641 -and -not $Issue642 -and -not $Issue643 -and -not $Issue655) {
             Test-RouteAssertions -Route $Route -Html $safeHtml -StatusCode $response.StatusCode -Assertions $assertions
         }
         elseif ($Issue641) {
             Add-AssertionResult -Target $assertions -RouteName $Route.Name -Check "issue641 route status" -Status $(if ($response.StatusCode -eq $expectedStatus) { "PASS" } else { "FAIL" }) -Message "Route returned HTTP $($response.StatusCode); expected $expectedStatus."
             Test-Issue641RouteAssertions -Route $Route -Text $plainText -Assertions $assertions
+        }
+        elseif ($Issue655) {
+            Add-AssertionResult -Target $assertions -RouteName $Route.Name -Check 'issue655 route status' -Status $(if ($response.StatusCode -eq $expectedStatus) { 'PASS' } else { 'FAIL' }) -Message "Route returned HTTP $($response.StatusCode); expected $expectedStatus."
+            Test-Issue655RouteAssertions -Route $Route -Text $plainText -Assertions $assertions
         }
         else {
             Add-AssertionResult -Target $assertions -RouteName $Route.Name -Check $(if ($Issue643) {'issue643 route status'} else {'issue642 route status'}) -Status $(if ($response.StatusCode -eq $expectedStatus) { "PASS" } else { "FAIL" }) -Message "Route returned HTTP $($response.StatusCode); expected $expectedStatus."
@@ -3778,7 +4294,7 @@ try {
         }
     }
 
-    if (-not $Issue415 -and -not $Issue416 -and -not $Issue417 -and -not $Issue418 -and -not $Issue419 -and -not $Issue420 -and -not $Issue502 -and -not $Issue503 -and -not $Issue498 -and -not $Issue641 -and -not $Issue642) {
+    if (-not $Issue415 -and -not $Issue416 -and -not $Issue417 -and -not $Issue418 -and -not $Issue419 -and -not $Issue420 -and -not $Issue502 -and -not $Issue503 -and -not $Issue498 -and -not $Issue641 -and -not $Issue642 -and -not $Issue655) {
         $jobDetailHref = Get-SafeDynamicHref -Html ([string]$routeHtmlByName["jobs"]) -Pattern 'href\s*=\s*["'']([^"'']*/ccld/retrieval/jobs/detail\?job_id=[A-Za-z0-9_.:%-]+)["'']'
         if ($jobDetailHref) { $dynamicLinks.jobDetail = $jobDetailHref; Capture-Route -Route @{ Name = "job-detail"; Path = $jobDetailHref; Label = "08-job-detail"; WorkflowStep = "Status" } }
         else { Add-AssertionResult -Target $assertions -RouteName "jobs" -Check "dynamic job detail" -Status "WARN" -Message "No safe retrieval job detail link discovered." }
@@ -3790,7 +4306,7 @@ try {
 
     # Capture a supplemental screenshot anchored to the complaint export section from the
     # reliable reviewer queue route. This avoids depending on reviewer-detail availability.
-    if (-not $Issue415 -and -not $Issue416 -and -not $Issue417 -and -not $Issue418 -and -not $Issue419 -and -not $Issue420 -and -not $Issue502 -and -not $Issue503 -and -not $Issue498 -and -not $Issue641 -and -not $Issue642 -and $IncludeScreenshots -and $null -ne $resolvedScreenshotTool) {
+    if (-not $Issue415 -and -not $Issue416 -and -not $Issue417 -and -not $Issue418 -and -not $Issue419 -and -not $Issue420 -and -not $Issue502 -and -not $Issue503 -and -not $Issue498 -and -not $Issue641 -and -not $Issue642 -and -not $Issue655 -and $IncludeScreenshots -and $null -ne $resolvedScreenshotTool) {
         $reviewerExportAnchorUrl = (Join-RouteUrl -Base $normalizedBaseUrl -Path "/reviewer") + "#complaint-export-controls"
         $reviewerExportShotFile = Join-Path $screenshotDir "05-reviewer-complaint-exports.png"
         $reviewerExportShotError = Invoke-RouteScreenshot -Tool $resolvedScreenshotTool -Url $reviewerExportAnchorUrl -ScreenshotPath $reviewerExportShotFile
@@ -4276,11 +4792,32 @@ This packet supersedes neither the historical rejected packet nor any acceptance
     $gitStatus = (git status --short 2>$null) -join "`n"
     $workingTreeClean = [string]::IsNullOrWhiteSpace($gitStatus)
     $gitStatusText = if ($workingTreeClean) { "clean" } else { $gitStatus }
+    $gitBaseResolution = if ($Issue655) { Resolve-OptionalGitRevision } else { $null }
+    if ($Issue655 -and -not $gitBaseResolution.Available -and -not $AllowUnavailable) {
+        Stop-CaptureFail "Issue #655 evidence requires an authoritative base SHA. Attempted: $($gitBaseResolution.Attempts -join ', ')."
+    }
+    $gitBaseSha = if ($gitBaseResolution -and $gitBaseResolution.Available) { $gitBaseResolution.Sha } else { '' }
+    $gitBaseSource = if ($gitBaseResolution) { $gitBaseResolution.Source } else { '' }
+    $gitBaseAttempts = if ($gitBaseResolution) { @($gitBaseResolution.Attempts) } else { @() }
     Set-Content -LiteralPath (Join-Path $diagnosticsDir "git-status.txt") -Value $gitStatusText -Encoding UTF8
     Set-Content -LiteralPath (Join-Path $diagnosticsDir "git-log.txt") -Value ((git log --oneline -n 5 2>$null) -join "`n") -Encoding UTF8
-    $focusedCommandSuffix = if ($Issue642) { " -Issue642" } elseif ($Issue641) { " -Issue641" } elseif ($Issue503) { " -Issue503" } elseif ($Issue502) { " -Issue502" } elseif ($Issue498) { " -Issue498" } elseif ($Issue420) { " -Issue420" } elseif ($Issue419) { " -Issue419" } elseif ($Issue418) { " -Issue418" } elseif ($Issue417) { " -Issue417" } elseif ($Issue416) { " -Issue416" } elseif ($Issue415) { " -Issue415" } else { "" }
+    $focusedCommandSuffix = if ($Issue655) { " -Issue655" } elseif ($Issue642) { " -Issue642" } elseif ($Issue641) { " -Issue641" } elseif ($Issue503) { " -Issue503" } elseif ($Issue502) { " -Issue502" } elseif ($Issue498) { " -Issue498" } elseif ($Issue420) { " -Issue420" } elseif ($Issue419) { " -Issue419" } elseif ($Issue418) { " -Issue418" } elseif ($Issue417) { " -Issue417" } elseif ($Issue416) { " -Issue416" } elseif ($Issue415) { " -Issue415" } else { "" }
     Set-Content -LiteralPath (Join-Path $diagnosticsDir "capture-command.txt") -Value "capture-hosted-ui-evidence.ps1 -BaseUrl $normalizedBaseUrl -Mode $Mode -OutputDir $OutputDir -ViewportWidth $ViewportWidth -ViewportHeight $ViewportHeight -TimeoutSeconds $TimeoutSeconds -ScreenshotToolPreference $ScreenshotToolPreference$focusedCommandSuffix" -Encoding UTF8
-    Set-Content -LiteralPath (Join-Path $diagnosticsDir "environment-summary.txt") -Value @(
+    $environmentSummary = if ($Issue655) { @(
+        'issue=655',
+        "mode=$Mode",
+        "branch=$gitBranch",
+        "head=$gitCommit",
+        "baseSha=$gitBaseSha",
+        "baseShaSource=$gitBaseSource",
+        "baseUrl=$normalizedBaseUrl",
+        "viewport=${ViewportWidth}x${ViewportHeight}",
+        "screenshotToolResolved=$($screenshotToolResolution.Resolved)",
+        "interactionAwareCapture=$([bool]$screenshotToolResolution.SupportsInteractionAwareCapture)",
+        "routeCount=$(@($routesToCapture).Count)",
+        'diagnostics=issue-655-interaction-index.json,issue-655-geometry.json,issue-655-focus-live-region.json,issue-655-console-network-summary.json',
+        'limitation=local-fixture evidence only; not deployed-host evidence'
+    ) } else { @(
         "mode=$Mode",
         "baseUrl=$normalizedBaseUrl",
         "viewport=${ViewportWidth}x${ViewportHeight}",
@@ -4304,7 +4841,8 @@ This packet supersedes neither the historical rejected packet nor any acceptance
         "issue642FocusedCapture=$([bool]$Issue642)",
         "browserZoomControl=not controlled by this script; use ViewportWidth/ViewportHeight for supplemental narrow-width or 200-percent-review approximation only",
         "evidencePurpose=$evidencePurpose"
-    ) -Encoding UTF8
+    ) }
+    Set-Content -LiteralPath (Join-Path $diagnosticsDir "environment-summary.txt") -Value $environmentSummary -Encoding UTF8
 
     $readmeText = @"
 CCLD RecordsTracker hosted UI evidence packet
@@ -4372,6 +4910,9 @@ scripts/validate_hosted_ui_acceptance.py.
     elseif ($Issue643) {
         $issue642PacketDiagnostics = Write-Issue642PacketDiagnostics -PacketDirectory $packetDir -ScreenshotDirectory $screenshotDir -DiagnosticsDirectory $diagnosticsDir -RouteResults @($routeResults) -IssueNumber '643'
     }
+    elseif ($Issue655) {
+        $issue642PacketDiagnostics = Write-Issue655PacketDiagnostics -PacketDirectory $packetDir -ScreenshotDirectory $screenshotDir -DiagnosticsDirectory $diagnosticsDir -RouteResults @($routeResults)
+    }
     $outputCounts = [ordered]@{
         screenshots   = Get-EvidenceFileCount -Path $screenshotDir -Filter "*.png"
         html          = Get-EvidenceFileCount -Path $htmlDir -Filter "*.html"
@@ -4390,6 +4931,15 @@ scripts/validate_hosted_ui_acceptance.py.
         issue503      = if ($Issue503) { @($routesToCapture).Count } else { 0 }
         issue498      = if ($Issue498) { @($routesToCapture).Count } else { 0 }
         issue642      = if ($Issue642) { @($routesToCapture).Count } else { 0 }
+        issue655      = if ($Issue655) { @($routesToCapture).Count } else { 0 }
+    }
+    if ($Issue655Rehearsal) {
+        Test-Issue655AcceptancePacket -PacketDirectory $packetDir -DiagnosticsDirectory $diagnosticsDir -Assertions $assertions
+        $rehearsalSummary = [ordered]@{mode='issue-655-rehearsal';run=$RehearsalRunName;routes=@($routeResults).Count;assertions=@($assertions).Count;assertionFailures=@($assertionFailures).Count;routeFailures=@($routeFailures).Count;screenshotFailures=@($screenshotFailures).Count;interactions=$issue642PacketDiagnostics.interactionCount;output=$packetDir;zipCreated=$false;ownerReviewCreated=$false}
+        Set-Content -LiteralPath (Join-Path $packetDir 'rehearsal-summary.json') -Value ($rehearsalSummary | ConvertTo-Json -Depth 6) -Encoding UTF8
+        Write-Host "ISSUE655_REHEARSAL_PATH=$packetDir"
+        Write-Host "ISSUE655_REHEARSAL_RESULT=PASS"
+        exit 0
     }
     $focusedIssueScope = @()
     foreach ($issueEntry in @(
@@ -4404,7 +4954,8 @@ scripts/validate_hosted_ui_acceptance.py.
         [pscustomobject]@{ Enabled = $Issue503; Reference = "#503" },
         [pscustomobject]@{ Enabled = $Issue610; Reference = "#610" },
         [pscustomobject]@{ Enabled = $Issue641; Reference = "#641" },
-        [pscustomobject]@{ Enabled = $Issue642; Reference = "#642" }
+        [pscustomobject]@{ Enabled = $Issue642; Reference = "#642" },
+        [pscustomobject]@{ Enabled = $Issue655; Reference = "#655" }
     )) {
         if ([bool]$issueEntry.Enabled) { $focusedIssueScope += [string]$issueEntry.Reference }
     }
@@ -4439,6 +4990,7 @@ scripts/validate_hosted_ui_acceptance.py.
         issue610               = [ordered]@{ enabled = [bool]$Issue610; routeCount = @($routesToCapture).Count; scenarios = @($routesToCapture | ForEach-Object { $_.Name }); printSettings = "Portrait; scale 100%; default margins; headers and footers off; background graphics on."; printArtifact = @($routeResults | Where-Object { $_.printPath } | ForEach-Object { $_.printPath }) }
         issue641               = [ordered]@{ enabled = [bool]$Issue641; routeCount = @($routesToCapture).Count; scenarios = @($routesToCapture | ForEach-Object { $_.Name }); evidenceGates = @($issue641GateResults); gateArtifact = if ($Issue641) { "issue-641-evidence-gates.csv" } else { "" }; summaryArtifact = if ($Issue641) { "issue-641-evidence-summary.md" } else { "" }; measuredPageScale = if ($Issue641) { "1280x900 at visualViewport scale 2" } else { "" }; visualAcceptance = "PENDING_INDEPENDENT_VISUAL_REVIEW"; printArtifact = @($routeResults | Where-Object { $_.printPath } | ForEach-Object { $_.printPath }) }
         issue642               = [ordered]@{ enabled = [bool]$Issue642; routeCount = if ($Issue642) { @($routesToCapture).Count } else { 0 }; scenarios = if ($Issue642) { @($routesToCapture | ForEach-Object { $_.Name }) } else { @() }; controlledInteraction = "Navigation, staged public Facility ID, multi-value state, canonical continuation, return context, responsive, focus, print"; screenshotStateArtifact = if ($Issue642) { 'diagnostics/issue-642-screenshot-states.json' } else { '' }; screenshotStates = if ($Issue642) { $issue642PacketDiagnostics.screenshotStates } else { @{} }; consoleNetworkSummaryArtifact = if ($Issue642) { 'diagnostics/issue-642-console-network-summary.json' } else { '' }; consoleNetwork = if ($Issue642) { $issue642PacketDiagnostics.consoleNetwork } else { @{} }; visualAcceptance = "PENDING_INDEPENDENT_VISUAL_REVIEW"; ownerAcceptance = "PENDING_OWNER_DECISION"; printArtifact = @($routeResults | Where-Object { $_.printPath } | ForEach-Object { $_.printPath }) }
+        issue655               = [ordered]@{ enabled = [bool]$Issue655; mode = 'local-fixture'; branch = $gitBranch; head = $gitCommit; baseSha = $gitBaseSha; baseShaSource = $gitBaseSource; baseShaAttempts = $gitBaseAttempts; routeCount = if ($Issue655) { @($routesToCapture).Count } else { 0 }; scenarios = if ($Issue655) { @($routesToCapture | ForEach-Object { $_.Name }) } else { @() }; screenshotStateArtifact = if ($Issue655) { 'diagnostics/issue-655-screenshot-states.json' } else { '' }; screenshotStates = if ($Issue655) { $issue642PacketDiagnostics.screenshotStates } else { @{} }; browserStateCount = if ($Issue655) { $issue642PacketDiagnostics.browserStates } else { 0 }; geometryDiagnosticsArtifact = if ($Issue655) { $issue642PacketDiagnostics.geometryArtifact } else { '' }; focusLiveRegionDiagnosticsArtifact = if ($Issue655) { $issue642PacketDiagnostics.focusLiveArtifact } else { '' }; interactionIndexArtifact = if ($Issue655) { $issue642PacketDiagnostics.interactionIndexArtifact } else { '' }; consoleNetworkSummaryArtifact = if ($Issue655) { 'diagnostics/issue-655-console-network-summary.json' } else { '' }; consoleNetwork = if ($Issue655) { $issue642PacketDiagnostics.consoleNetwork } else { @{} }; evidenceLimitations = 'Local fixture evidence only; it does not establish deployed-host acceptance.'; visualAcceptance = 'PENDING_INDEPENDENT_VISUAL_REVIEW'; ownerAcceptance = 'PENDING_OWNER_DECISION'; printArtifact = @($routeResults | Where-Object { $_.printPath } | ForEach-Object { $_.printPath }) }
         acceptance             = [ordered]@{
             schemaVersion = "recordstracker.hosted-ui-acceptance.v1"
             governanceIssue = "#648"
@@ -4459,6 +5011,30 @@ scripts/validate_hosted_ui_acceptance.py.
         output                 = [ordered]@{ packetDirectory = ConvertTo-RelativeEvidencePath -Path $packetDir -Root $PWD; zipPacket = ConvertTo-RelativeEvidencePath -Path $zipPath -Root $PWD; manifest = "manifest.json"; fileIndex = "file-index.json"; routeStatusCsv = "route-status.csv"; routeAssertionsCsv = "route-assertions.csv"; textMarkers = "route-text-markers.txt"; counts = $outputCounts }
         evidencePurpose        = $evidencePurpose
         safety                 = [ordered]@{ getOnly = $true; formsSubmitted = $false; retrievalSubmitted = $false; reviewerStateMutated = $false; importsOrReloadsRun = $false; productionAuthRequired = $false; responseHeadersCaptured = $false; cookiesCaptured = $false; environmentValuesCaptured = $false }
+    }
+    if ($Issue655) {
+        $manifest = [ordered]@{
+            issue = '655'
+            mode = 'local-fixture'
+            generatedAt = (Get-Date).ToUniversalTime().ToString('o')
+            baseUrl = $normalizedBaseUrl
+            git = [ordered]@{ branch=$gitBranch; head=$gitCommit; baseSha=$gitBaseSha; baseShaSource=$gitBaseSource; baseShaAttempts=$gitBaseAttempts; baseShaStatus=if ($gitBaseResolution.Available) { 'available' } else { 'unavailable' }; workingTreeClean=[bool]$workingTreeClean }
+            routes = @($routeResults)
+            routeCount = @($routeResults).Count
+            assertions = @($assertions)
+            assertionCount = @($assertions).Count
+            assertionFailures = @($assertionFailures).Count
+            screenshots = $issue642PacketDiagnostics.screenshotStates
+            browserStateCount = $issue642PacketDiagnostics.browserStates
+            accessibilityArtifactCount = Get-EvidenceFileCount -Path $accessibilityDir
+            printArtifactCount = Get-EvidenceFileCount -Path $printDir -Filter '*.pdf'
+            artifacts = [ordered]@{ interactionIndex=$issue642PacketDiagnostics.interactionIndexArtifact; geometry=$issue642PacketDiagnostics.geometryArtifact; focusLiveRegion=$issue642PacketDiagnostics.focusLiveArtifact; facilityOverviewReturn=$issue642PacketDiagnostics.facilityReturnArtifact; complaintDetailReturn=$issue642PacketDiagnostics.complaintReturnArtifact; concurrency=$issue642PacketDiagnostics.concurrencyArtifact; enhancedError=$issue642PacketDiagnostics.enhancedErrorArtifact; reducedMotion=$issue642PacketDiagnostics.reducedMotionArtifact; acceptanceGate='diagnostics/issue-655-acceptance-gate.json'; consoleNetwork='diagnostics/issue-655-console-network-summary.json'; fileIndex='file-index.json'; routeAssertions='route-assertions.csv' }
+            consoleNetwork = $issue642PacketDiagnostics.consoleNetwork
+            fixture = [ordered]@{ identities='committed local fixture runtime'; recommendationState='server-generated opaque state'; source='local fixture only' }
+            evidenceLimitations = 'This is local fixture evidence only; it is not deployed-host evidence.'
+            acceptance = [ordered]@{ visual='PENDING_INDEPENDENT_VISUAL_REVIEW'; owner='PENDING_OWNER_DECISION'; overall='NOT_ACCEPTED'; automationMayAccept=$false }
+            safety = [ordered]@{ getOnly=$true; formsSubmitted=$false; reviewerStateMutated=$false; productionAuthRequired=$false }
+        }
     }
     Set-Content -LiteralPath (Join-Path $packetDir "manifest.json") -Value ($manifest | ConvertTo-Json -Depth 8) -Encoding UTF8
     if ($Issue641) {
@@ -4489,6 +5065,12 @@ scripts/validate_hosted_ui_acceptance.py.
         notice = "Automation must not complete this file or synthesize owner acceptance."
     }
     Set-Content -LiteralPath (Join-Path $reviewDir "owner-acceptance.json") -Value ($ownerAcceptanceTemplate | ConvertTo-Json -Depth 5) -Encoding UTF8
+
+    # Fail closed before file indexing and ZIP creation.  An incomplete #655
+    # interaction inventory is a partial packet, never a successful capture.
+    if ($Issue655) {
+        Test-Issue655AcceptancePacket -PacketDirectory $packetDir -DiagnosticsDirectory $diagnosticsDir -Assertions $assertions
+    }
 
     $indexedPacketFiles = @(Test-EvidencePacketFiles -PacketDirectory $packetDir)
     $fileIndex = [ordered]@{

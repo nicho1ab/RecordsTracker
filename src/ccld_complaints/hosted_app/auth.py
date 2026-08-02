@@ -23,6 +23,7 @@ from ccld_complaints.hosted_app.source_derived_reads import (
     CcldSourceDerivedRequestLookup,
     FacilityIntelligencePageRead,
     FacilityIntelligenceReadFilters,
+    FacilityIntelligenceRecommendationSeek,
     FacilityIntelligenceSeek,
     SourceDerivedComplaintBundleResult,
     SourceDerivedRecordListResult,
@@ -1024,6 +1025,7 @@ def list_authorized_facility_intelligence_page(
     scope: HostedAccessScope,
     filters: FacilityIntelligenceReadFilters,
     seek: FacilityIntelligenceSeek | None = None,
+    recommendation_seek: FacilityIntelligenceRecommendationSeek | None = None,
     excluded_source_record_keys: tuple[str, ...] = (),
 ) -> FacilityIntelligencePageRead:
     require_permission(
@@ -1037,6 +1039,7 @@ def list_authorized_facility_intelligence_page(
         filters=filters,
         import_batch_query=_authorized_source_import_batch_query(scope),
         seek=seek,
+        recommendation_seek=recommendation_seek,
         excluded_source_record_keys=excluded_source_record_keys,
     )
 
