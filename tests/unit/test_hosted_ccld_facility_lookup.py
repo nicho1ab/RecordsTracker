@@ -1730,6 +1730,43 @@ def test_unavailable_directory_overview_renders_governed_compare_return_only() -
     assert "Return to Compare Facilities" not in ordinary_html
 
 
+def test_directory_overview_renders_governed_compare_return_with_recommendation() -> None:
+    record = CcldFacilityLookupRecord(
+        facility_number="642900001",
+        facility_name="Issue 655 Return Context Facility",
+        city="Sacramento",
+        state="CA",
+        county="Sacramento",
+        zip_code="95814",
+        facility_type="Children's Center",
+        program_type="Child Care",
+        capacity="24",
+        status="Licensed",
+        closed_date="",
+    )
+    review_context = CcldFacilityReviewContext(
+        loaded_complaint_record_count=1,
+        origin="facility_intelligence",
+        route_query_values=(
+            ("origin", "facility_intelligence"),
+            ("facility_type", "430"),
+            ("recommendation", "opaque-server-state"),
+        ),
+    )
+
+    html = facility_lookup._render_facility_overview_summary(  # noqa: SLF001
+        record,
+        review_context,
+    )
+
+    assert "Return to Compare Facilities" in html
+    assert (
+        'href="/ccld/facilities/intelligence?facility_type=430&amp;'
+        "recommendation=opaque-server-state#facility-intelligence-results\""
+        in html
+    )
+
+
 def test_ccld_facility_overview_zero_complaint_state_keeps_one_action(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,

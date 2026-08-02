@@ -3393,6 +3393,28 @@ SHARED_CSS = r"""
     .facility-intelligence-results {
       padding: 0;
     }
+    .review-next-region {
+      border: 1px solid #b8b1a5;
+      margin: 1rem 0;
+      min-width: 0;
+      overflow: hidden;
+      padding: 1rem;
+    }
+    .review-next-region__header {
+      align-items: start;
+      display: flex;
+      gap: 1rem;
+      justify-content: space-between;
+    }
+    .review-next-region h2, .review-next-card h3 { margin: 0; }
+    .review-next-position { color: var(--muted); font-weight: 700; margin: 0.3rem 0 0; }
+    .review-next-controls { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .review-next-card { animation: review-next-enter 180ms ease-out; border-top: 1px solid #d7d0c5; margin-top: 0.85rem; min-width: 0; padding-top: 0.85rem; }
+    .review-next-card dl { display: grid; gap: 0.6rem 1.25rem; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); margin: 0.85rem 0; }
+    .review-next-card dt { color: var(--muted); font-size: 0.8rem; font-weight: 700; margin-bottom: 0.2rem; }
+    .review-next-card dd { margin: 0; overflow-wrap: anywhere; }
+    .review-next-error { color: #9f281c; font-weight: 700; }
+    @keyframes review-next-enter { from { opacity: 0; transform: translateX(0.75rem); } to { opacity: 1; transform: translateX(0); } }
     .facility-intelligence-results__header {
       align-items: end;
       display: flex;
@@ -3977,6 +3999,10 @@ SHARED_CSS = r"""
         display: grid;
         gap: 0.75rem;
       }
+      .review-next-region__header { display: grid; }
+      .review-next-controls { width: 100%; }
+      .review-next-control { flex: 1 1 12rem; text-align: center; }
+      .review-next-card dl { grid-template-columns: minmax(0, 1fr); }
       .facility-intelligence-sort {
         min-width: 0;
       }
@@ -4037,6 +4063,7 @@ SHARED_CSS = r"""
       .packet-draft-actions, .technical-details, .skip-link, .mode-panel,
       .copy-icon-button, .copy-text-control, .facility-intelligence-sort,
       .facility-pagination, .facility-card-actions, .facility-status-form,
+      .review-next-region,
       .compare-facilities-views,
       .help-category-nav,
       .help-secondary-disclosure,
@@ -4167,6 +4194,9 @@ SHARED_CSS = r"""
         break-inside: avoid;
         page-break-inside: avoid;
       }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .review-next-card { animation: none; }
     }
     @media (max-width: 760px) {
       h1 {

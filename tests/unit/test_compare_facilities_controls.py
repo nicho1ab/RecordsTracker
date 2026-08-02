@@ -1,6 +1,7 @@
 from ccld_complaints.hosted_app.compare_facilities_controls import (
     CHECKBOX_MULTISELECT_SCRIPT,
     FACILITY_INTELLIGENCE_CHIP_SCRIPT,
+    REVIEW_NEXT_SCRIPT,
     render_checkbox_multiselect,
 )
 from ccld_complaints.hosted_app.ui_shell import SHARED_CSS
@@ -70,6 +71,15 @@ def test_filter_chip_enhancement_uses_canonical_fallback_and_history_updates() -
     assert "fullDocumentNavigation" in FACILITY_INTELLIGENCE_CHIP_SCRIPT
     assert "focusAfterRemoval" in FACILITY_INTELLIGENCE_CHIP_SCRIPT
     assert "initializeCheckboxMultiselect" in FACILITY_INTELLIGENCE_CHIP_SCRIPT
+
+
+def test_review_next_enhancement_is_bounded_and_cancels_stale_requests() -> None:
+    assert "#review-next-region" in REVIEW_NEXT_SCRIPT
+    assert "AbortController" in REVIEW_NEXT_SCRIPT
+    assert "requestNumber" in REVIEW_NEXT_SCRIPT
+    assert "history.pushState" in REVIEW_NEXT_SCRIPT
+    assert "window.addEventListener('popstate'" in REVIEW_NEXT_SCRIPT
+    assert "#facility-intelligence-dynamic-region" not in REVIEW_NEXT_SCRIPT
     assert (
         ".facility-suggestions {\n"
         "        box-shadow: none;\n"
