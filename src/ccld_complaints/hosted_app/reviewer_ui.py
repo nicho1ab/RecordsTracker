@@ -1,4 +1,4 @@
-# ruff: noqa: E501
+# ruff: noqa: E501, I001
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ import json
 import os
 import re
 from collections import Counter
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass, replace
 from datetime import UTC, date, datetime
 from pathlib import Path
@@ -53,9 +53,17 @@ from ccld_complaints.hosted_app.ccld_facility_lookup import (
     CCLD_FACILITY_REVIEW_PRIORITY_PATH,
     CCLD_RECORD_REQUEST_PATH,
     CcldFacilityComplaintContext,
+    CcldFacilityReferenceSource,
     CcldFacilityReviewContext,
+    facility_reference_from_source_derived_records,
     load_active_ccld_facility_reference,
     render_ccld_facility_review_priority_page,
+    render_staged_trend_facility_combobox,
+)
+from ccld_complaints.hosted_app.compare_facilities_controls import (
+    CHECKBOX_MULTISELECT_SCRIPT,
+    FACILITY_INTELLIGENCE_CHIP_SCRIPT,
+    render_checkbox_multiselect,
 )
 from ccld_complaints.hosted_app.ccld_retrieval_jobs import (
     hosted_ccld_retrieval_jobs,
@@ -649,11 +657,11 @@ class FacilityIntelligenceFilters:
     start_date: str | None = None
     end_date: str | None = None
     date_dimension: str = "complaint_received_date"
-    facility_type: str = ""
-    geography: str = ""
-    finding: str = ""
-    serious_topic: str = ""
-    coverage: str = "all"
+    facility_type: str | tuple[str, ...] = ()
+    geography: str | tuple[str, ...] = ()
+    finding: str | tuple[str, ...] = ()
+    serious_topic: str | tuple[str, ...] = ()
+    coverage: str | tuple[str, ...] = ()
     sort: str = "priority"
     continuation: str = ""
 
@@ -762,6 +770,8 @@ def build_local_test_reviewer_ui_context() -> ReviewerUiContext:
             load_seeded_corpus_artifact(LOCAL_REVIEWER_UI_FIXTURE)
         )
     )
+    if _issue_642_evidence_fixture_enabled():
+        artifact = _with_local_issue_642_pagination_fixture_records(artifact)
     excluded_source_record_keys = tuple(
         f"complaint:{complaint_id}"
         for record in artifact.records
@@ -1001,6 +1011,128 @@ def _with_local_issue_641_visual_fixture_records(
         + (
             "Three deterministic Issue #641 identity/type records are available only "
             "in the explicit local fixture/demo reviewer context.",
+        ),
+        records=artifact.records + tuple(fixture_records),
+    )
+
+
+def _issue_642_evidence_fixture_enabled(
+    environ: Mapping[str, str] | None = None,
+) -> bool:
+    """Permit the pagination corpus only for the explicit local evidence launch."""
+    values = os.environ if environ is None else environ
+    return (
+        values.get("CCLD_HOSTED_PAGE_DATA_MODE") == "fixture-demo"
+        and values.get("CCLD_HOSTED_TESTER_AUTH_MODE") == "local-dev"
+        and values.get("CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH") == "enabled"
+        and values.get("CCLD_HOSTED_ISSUE642_EVIDENCE_MODE") == "enabled"
+    )
+
+
+def _with_local_issue_642_pagination_fixture_records(
+    artifact: SeededCorpusArtifact,
+) -> SeededCorpusArtifact:
+    """Add 26 deterministic, public-safe rows solely for Issue #642 evidence."""
+    source_record = next(
+        (
+            record
+            for record in artifact.records
+            if isinstance(record, Mapping)
+            and isinstance(record.get("facility"), Mapping)
+            and isinstance(record.get("source_document"), Mapping)
+            and isinstance(record.get("complaint"), Mapping)
+        ),
+        None,
+    )
+    if source_record is None:
+        raise ValueError("Local Issue #642 fixtures require one seeded complaint bundle.")
+
+    fixture_records: list[Mapping[str, Any]] = []
+    for offset in range(1, 27):
+        facility_number = f"642900{offset:03d}"
+        facility_type = "430" if offset % 2 else "733"
+        bundle = copy.deepcopy(source_record)
+        facility = cast(dict[str, Any], bundle["facility"])
+        source_document = cast(dict[str, Any], bundle["source_document"])
+        complaint = cast(dict[str, Any], bundle["complaint"])
+        allegations = cast(list[dict[str, Any]], bundle.get("allegations", []))
+        events = cast(list[dict[str, Any]], bundle.get("events", []))
+        audits = cast(list[dict[str, Any]], bundle.get("extraction_audit", []))
+        facility_id = f"ccld:facility:{facility_number}"
+        document_id = f"ccld:document:{facility_number}:issue-642-evidence"
+        public_complaint_id = f"32-CR-202204{offset:02d}120000"
+        complaint_id = f"ccld:complaint:{public_complaint_id}"
+        facility.update(
+            {
+                "facility_id": facility_id,
+                "external_facility_number": facility_number,
+                "facility_name": f"Issue 642 Evidence Facility {offset:02d}",
+                "facility_type": facility_type,
+                "county": "Evidence County",
+            }
+        )
+        source_document.update(
+            {
+                "document_id": document_id,
+                "facility_id": facility_id,
+                "source_url": "unavailable",
+                "raw_path": "tests/fixtures/hosted_seeded_corpus/local_issue_642.json",
+            }
+        )
+        complaint.update(
+            {
+                "complaint_id": complaint_id,
+                "facility_id": facility_id,
+                "document_id": document_id,
+                "complaint_control_number": public_complaint_id,
+                "finding": "Substantiated" if offset % 2 else "Unsubstantiated",
+            }
+        )
+        for index, allegation in enumerate(allegations, start=1):
+            allegation.update(
+                {
+                    "allegation_id": f"ccld:allegation:{public_complaint_id}:{index}",
+                    "complaint_id": complaint_id,
+                    "finding": complaint["finding"],
+                }
+            )
+        for index, event in enumerate(events, start=1):
+            event.update(
+                {
+                    "event_id": f"ccld:event:{public_complaint_id}:{index}",
+                    "complaint_id": complaint_id,
+                }
+            )
+        for audit in audits:
+            audit.update(
+                {
+                    "audit_id": f"ccld:audit:{public_complaint_id}:facility_number",
+                    "document_id": document_id,
+                    "extracted_value": facility_number,
+                }
+            )
+        fixture_records.append(bundle)
+
+    record_counts = dict(artifact.record_counts)
+    for record_type, increment in (
+        ("facility", 26),
+        ("source_document", 26),
+        ("complaint", 26),
+        ("allegation", 52),
+        ("event", 26),
+        ("extraction_audit", 26),
+    ):
+        record_counts[record_type] = record_counts.get(record_type, 0) + increment
+    return replace(
+        artifact,
+        source_artifact_identity=(
+            f"{artifact.source_artifact_identity} + local Issue #642 pagination evidence fixtures"
+        ),
+        record_counts=record_counts,
+        warnings=artifact.warnings
+        + (
+            "Twenty-six deterministic Issue #642 pagination rows are available only "
+            "to the explicitly enabled local fixture/demo evidence invocation.",
         ),
         records=artifact.records + tuple(fixture_records),
     )
@@ -1701,7 +1833,7 @@ def build_facility_review_context(
             complaints,
         )
         coverage = _facility_intelligence_coverage(summary, filters)
-        if filters.coverage != "all" and coverage.status != filters.coverage:
+        if _filter_values(filters.coverage) and coverage.status not in _filter_values(filters.coverage):
             complaints = ()
     if not complaints:
         return CcldFacilityReviewContext(
@@ -1873,18 +2005,11 @@ def _facility_hub_route_query_values(
     *,
     origin: str,
 ) -> tuple[tuple[str, str], ...]:
-    values = {
-        "origin": origin,
-        "start_date": filters.start_date or "",
-        "end_date": filters.end_date or "",
-        "date_dimension": filters.date_dimension,
-        "facility_type": filters.facility_type,
-        "geography": filters.geography,
-        "finding": filters.finding,
-        "serious_topic": filters.serious_topic,
-        "coverage": filters.coverage if filters.coverage != "all" else "",
-    }
-    return tuple((key, value) for key, value in values.items() if value)
+    values: list[tuple[str, str]] = []
+    if origin == "facility_intelligence":
+        values.append(("origin", origin))
+    values.extend(_canonical_compare_facilities_query_values(filters))
+    return tuple(values)
 
 
 def _facility_hub_inventory_filter(
@@ -1929,25 +2054,19 @@ def _facility_hub_active_filters(
                 f"{_reviewer_value_text(filters.end_date or 'unknown', kind='date')}",
             )
         )
-    for label, value in (
-        ("Facility type", filters.facility_type),
-        ("Geography", filters.geography),
-        ("Finding", filters.finding),
-        ("Serious-review category", filters.serious_topic),
+    for label, selected in (
+        ("Facility type", _filter_values(filters.facility_type)),
+        ("Geography", _filter_values(filters.geography)),
+        ("Finding", _filter_values(filters.finding)),
+        ("Serious-review category", _filter_values(filters.serious_topic)),
     ):
-        if value:
-            values.append((label, value))
-    if filters.coverage != "all":
-        values.append(("Source coverage", filters.coverage.title()))
+        values.extend((label, value) for value in selected)
     return tuple(values)
 
 
 def _facility_intelligence_filters(
     query_values: Mapping[str, list[str]],
 ) -> FacilityIntelligenceFilters:
-    coverage = _first_form_value(query_values, "coverage").strip().casefold()
-    if coverage not in {"all", "available", "partial", "unavailable"}:
-        coverage = "all"
     sort_value = _first_form_value(query_values, "sort").strip().casefold()
     if sort_value not in {"priority", "complaint_count", "recent_activity", "facility_name"}:
         sort_value = "priority"
@@ -1962,13 +2081,44 @@ def _facility_intelligence_filters(
             query_values,
             default="complaint_received_date",
         ),
-        facility_type=_first_form_value(query_values, "facility_type"),
-        geography=_first_form_value(query_values, "geography"),
-        finding=_first_form_value(query_values, "finding"),
-        serious_topic=_first_form_value(query_values, "serious_topic"),
-        coverage=coverage,
+        facility_type=_query_filter_values(query_values, "facility_type"),
+        geography=_query_filter_values(query_values, "geography"),
+        finding=_query_filter_values(query_values, "finding"),
+        serious_topic=_query_filter_values(query_values, "serious_topic"),
+        # Retain the field for legacy construction paths, but ignore the retired
+        # primary-filter query parameter so saved links remain harmless.
+        coverage=(),
         sort=sort_value,
         continuation=_first_form_value(query_values, "continuation").strip(),
+    )
+
+
+def _filter_values(value: str | tuple[str, ...]) -> tuple[str, ...]:
+    values = (value,) if isinstance(value, str) else value
+    result: list[str] = []
+    for item in values:
+        cleaned = " ".join(item.split())
+        if cleaned and cleaned.casefold() != "all" and cleaned.casefold() not in {
+            existing.casefold() for existing in result
+        }:
+            result.append(cleaned)
+    return tuple(result)
+
+
+def _query_filter_values(
+    query_values: Mapping[str, list[str]],
+    key: str,
+    *,
+    allowed: tuple[str, ...] | None = None,
+) -> tuple[str, ...]:
+    values = _filter_values(tuple(query_values.get(key, ())))
+    if allowed is None:
+        return values
+    allowed_by_key = {value.casefold(): value for value in allowed}
+    return tuple(
+        allowed_by_key[value.casefold()]
+        for value in values
+        if value.casefold() in allowed_by_key
     )
 
 
@@ -2125,15 +2275,9 @@ def _facility_intelligence_summaries(
 ) -> list[FacilityIntelligenceSummary]:
     results: list[FacilityIntelligenceSummary] = []
     for summary in all_summaries:
-        if not source_filters_applied and not _facility_priority_text_matches(
-            summary.facility_type,
-            filters.facility_type,
-        ):
+        if not source_filters_applied and not _any_filter_matches(summary.facility_type, filters.facility_type):
             continue
-        if not source_filters_applied and not _facility_priority_text_matches(
-            summary.geography,
-            filters.geography,
-        ):
+        if not source_filters_applied and not _any_filter_matches(summary.geography, filters.geography):
             continue
         complaints = tuple(
             complaint
@@ -2148,7 +2292,7 @@ def _facility_intelligence_summaries(
             complaints,
         )
         coverage = _facility_intelligence_coverage(filtered_summary, filters)
-        if filters.coverage != "all" and coverage.status != filters.coverage:
+        if _filter_values(filters.coverage) and coverage.status not in _filter_values(filters.coverage):
             continue
         results.append(
             FacilityIntelligenceSummary(
@@ -2174,15 +2318,17 @@ def _facility_intelligence_complaint_matches(
             return False
         if filters.end_date is not None and complaint.activity_date > filters.end_date:
             return False
-    if filters.finding and complaint.finding.casefold().strip() != filters.finding.casefold().strip():
+    findings = _filter_values(filters.finding)
+    if findings and complaint.finding.casefold().strip() not in {
+        value.casefold().strip() for value in findings
+    }:
         return False
-    if filters.serious_topic:
-        needle = " ".join(filters.serious_topic.casefold().split())
-        if not any(
-            needle in " ".join(topic.casefold().split())
-            for topic in complaint.serious_topics
-        ):
-            return False
+    topics = _filter_values(filters.serious_topic)
+    if topics and not any(
+        any(" ".join(value.casefold().split()) in " ".join(topic.casefold().split()) for topic in complaint.serious_topics)
+        for value in topics
+    ):
+        return False
     return True
 
 
@@ -2402,14 +2548,18 @@ def _render_facility_intelligence(
         {render_compare_facilities_views('complaint-patterns')}
         <section class="intelligence-scope" aria-label="Loaded complaint corpus scope">
           <p>{_facility_intelligence_scope_text(total_authorized_facility_count, filters)}</p>
-          <p>Ordered by governed priority factors. Exact reasons appear in each row.</p>
+          <p>Suggested review order uses the visible factors listed in each row.</p>
         </section>
         {_render_facility_intelligence_filters(filters, filter_options)}
-        <p class="intelligence-glossary-line">{_glossary_term('Substantiated', 'A finding label shown in a public CCLD complaint record.', 'intelligence-substantiated')}</p>
-        {status_markup}
-        {status_feedback}
+        <div id="facility-intelligence-dynamic-region" aria-live="polite">
+          {_render_facility_intelligence_print_scope(filters)}
+          {status_markup}
+          {status_feedback}
 {result_markup}
+        </div>
         {_DETAIL_COPY_SCRIPT}
+        {CHECKBOX_MULTISELECT_SCRIPT}
+        {FACILITY_INTELLIGENCE_CHIP_SCRIPT}
         {_COMPARE_FACILITIES_FOCUS_SCRIPT}
 """,
     )
@@ -2516,71 +2666,40 @@ def _render_facility_intelligence_filters(
     filters: FacilityIntelligenceFilters,
     filter_options: FacilityIntelligenceFilterOptions,
 ) -> str:
-    facility_types = _substantiated_filter_options(
-        filter_options.facility_types,
-        current=filters.facility_type,
-        display_label=_facility_type_filter_option_label,
+    facility_types = tuple(
+        (value, _facility_type_filter_option_label(value))
+        for value in filter_options.facility_types
     )
-    geographies = _substantiated_filter_options(
-        filter_options.geographies,
-        current=filters.geography,
-    )
-    findings = _substantiated_filter_options(
-        filter_options.findings,
-        current=filters.finding,
-    )
-    serious_topics = _substantiated_filter_options(
-        filter_options.serious_topics,
-        current=filters.serious_topic,
-    )
+    geographies = tuple((value, value) for value in filter_options.geographies)
+    findings = tuple((value, value) for value in filter_options.findings)
+    serious_topics = tuple((value, value) for value in filter_options.serious_topics)
     return f"""        <section class="intelligence-filters" aria-labelledby="facility-intelligence-filters-heading">
           <h2 id="facility-intelligence-filters-heading">Filter facilities</h2>
-          <form class="compact-filter-form" method="get" action="{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}">
+          <form class="compact-filter-form" method="get" action="{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}#facility-intelligence-results">
             <div class="facility-intelligence-filter-grid">
-              <p>
-                <label for="facility-intelligence-facility-type">Facility type</label>
-                <select id="facility-intelligence-facility-type" name="facility_type">{_facility_intelligence_filter_options(filters.facility_type, facility_types, 'All facility types')}</select>
-              </p>
-              <p>
-                <label for="facility-intelligence-geography">Geography</label>
-                <select id="facility-intelligence-geography" name="geography">{_facility_intelligence_filter_options(filters.geography, geographies, 'All geographies')}</select>
-              </p>
-              <p>
-                <label for="facility-intelligence-finding">Complaint finding</label>
-                <select id="facility-intelligence-finding" name="finding">{_facility_intelligence_filter_options(filters.finding, findings, 'All findings')}</select>
-              </p>
-              <p>
-                <label for="facility-intelligence-coverage">Source coverage</label>
-                <select id="facility-intelligence-coverage" name="coverage">
-                  {_facility_intelligence_option(filters.coverage, 'all', 'All coverage states')}
-                  {_facility_intelligence_option(filters.coverage, 'available', 'Available for all contributing records')}
-                  {_facility_intelligence_option(filters.coverage, 'partial', 'Partial')}
-                  {_facility_intelligence_option(filters.coverage, 'unavailable', 'Unavailable for all contributing records')}
-                </select>
-              </p>
-              <p>
-                <label for="facility-intelligence-start-date">Start date</label>
-                <input id="facility-intelligence-start-date" name="start_date" type="date" value="{_escape(filters.start_date or '')}">
-              </p>
-              <p>
-                <label for="facility-intelligence-end-date">End date</label>
-                <input id="facility-intelligence-end-date" name="end_date" type="date" value="{_escape(filters.end_date or '')}">
-              </p>
-              <p>
-                <label for="facility-intelligence-date-dimension">Date based on</label>
+              <div>{render_checkbox_multiselect(control_id='facility-intelligence-facility-type', name='facility_type', label='Facility type', options=facility_types, selected=_filter_values(filters.facility_type), all_label='All facility types')}</div>
+              <div>{render_checkbox_multiselect(control_id='facility-intelligence-geography', name='geography', label='Geography', options=geographies, selected=_filter_values(filters.geography), all_label='All geographies')}</div>
+              <div>{render_checkbox_multiselect(control_id='facility-intelligence-finding', name='finding', label='Complaint finding', options=findings, selected=_filter_values(filters.finding), all_label='All findings')}</div>
+              <label class="filter-control filter-control--native" for="facility-intelligence-date-dimension">
+                <span class="filter-control__label">Relevant date</span>
                 <select id="facility-intelligence-date-dimension" name="date_dimension">{_date_dimension_options(filters.date_dimension, include_latest=True)}</select>
-              </p>
-              <p>
-                <label for="facility-intelligence-serious-topic">Serious review category</label>
-                <select id="facility-intelligence-serious-topic" name="serious_topic">{_facility_intelligence_filter_options(filters.serious_topic, serious_topics, 'No category selected')}</select>
-              </p>
+              </label>
+              <label class="filter-control filter-control--native" for="facility-intelligence-start-date">
+                <span class="filter-control__label">Start date</span>
+                <input id="facility-intelligence-start-date" name="start_date" type="date" value="{_escape(filters.start_date or '')}">
+              </label>
+              <label class="filter-control filter-control--native" for="facility-intelligence-end-date">
+                <span class="filter-control__label">End date</span>
+                <input id="facility-intelligence-end-date" name="end_date" type="date" value="{_escape(filters.end_date or '')}">
+              </label>
+              <div>{render_checkbox_multiselect(control_id='facility-intelligence-serious-topic', name='serious_topic', label='Serious review category', options=serious_topics, selected=_filter_values(filters.serious_topic), all_label='All serious review categories')}</div>
             </div>
-            <input type="hidden" name="sort" value="{_escape(filters.sort)}">
             <div class="form-actions">
               <button class="button" type="submit">Apply filters</button>
-              <a class="button-link" href="{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}">Clear all</a>
+              <a class="button-link" href="{_escape(_facility_intelligence_clear_all_href(filters))}">Clear all</a>
             </div>
           </form>
+          {_render_facility_intelligence_applied_filters(filters)}
         </section>"""
 
 
@@ -2600,31 +2719,64 @@ def _render_facility_intelligence_applied_filters(
     if not active:
         return '<p class="applied-filter-empty">No additional filters applied.</p>'
     chips = "\n".join(
-        f'<li><a class="applied-filter-chip" href="{_escape(_facility_intelligence_clear_filter_href(filters, key))}" '
-        f'aria-label="Clear { _escape(label) } filter"><span>{_escape(label)}: {_escape(value)}</span><span aria-hidden="true">×</span></a></li>'
+        _render_facility_intelligence_filter_chip(filters, key, label, value)
         for key, label, value in active
     )
     return f"""            <div class="applied-filters" aria-labelledby="applied-filters-heading">
-              <h3 id="applied-filters-heading" class="sr-only">Applied filters</h3>
+              <h3 id="applied-filters-heading" class="sr-only" tabindex="-1">Applied filters</h3>
               <ul>
 {chips}
               </ul>
-            </div>"""
+    </div>"""
+
+
+def _render_facility_intelligence_filter_chip(
+    filters: FacilityIntelligenceFilters,
+    key: str,
+    label: str,
+    value: str,
+) -> str:
+    """Render a canonical no-JavaScript link plus its enhanced removal button."""
+    href = _escape(_facility_intelligence_clear_filter_href(filters, key, value))
+    text = f"{_escape(label)}: {_escape(value)}"
+    remove_label = f"Remove {_escape(label)} {_escape(value)} filter"
+    return (
+        '<li data-facility-intelligence-filter-chip>'
+        f'<a class="applied-filter-chip__fallback" href="{href}">{text} <span aria-hidden="true">×</span></a>'
+        f'<button class="applied-filter-chip" type="button" data-filter-chip-remove aria-label="{remove_label}" data-filter-chip-href="{href}"><span>{text}</span><span aria-hidden="true">×</span></button>'
+        "</li>"
+    )
+
+
+def _render_facility_intelligence_print_scope(
+    filters: FacilityIntelligenceFilters,
+) -> str:
+    """Keep the applied comparison scope readable after print hides controls."""
+    active = _facility_intelligence_active_filters(filters)
+    values = "; ".join(f"{label}: {value}" for _, label, value in active)
+    scope = values or "No additional filters applied."
+    return (
+        '<section class="intelligence-print-scope" aria-label="Applied filters">'
+        f"<strong>Applied filters:</strong> {_escape(scope)}"
+        "</section>"
+    )
 
 
 def _facility_intelligence_active_filters(
     filters: FacilityIntelligenceFilters,
 ) -> tuple[tuple[str, str, str], ...]:
     values: list[tuple[str, str, str]] = []
+    for key, label, selected in (
+        ("facility_type", "Facility type", _filter_values(filters.facility_type)),
+        ("geography", "Geography", _filter_values(filters.geography)),
+        ("finding", "Finding", _filter_values(filters.finding)),
+        ("serious_topic", "Serious category", _filter_values(filters.serious_topic)),
+    ):
+        values.extend((key, label, value) for value in selected)
     for key, label, value in (
-        ("facility_type", "Facility type", filters.facility_type),
-        ("geography", "Geography", filters.geography),
-        ("finding", "Finding", filters.finding),
-        ("coverage", "Source coverage", "" if filters.coverage == "all" else filters.coverage.title()),
         ("start_date", "Start date", _reviewer_value_text(filters.start_date, kind="date") if filters.start_date else ""),
         ("end_date", "End date", _reviewer_value_text(filters.end_date, kind="date") if filters.end_date else ""),
-        ("date_dimension", "Date based on", date_dimension_label(filters.date_dimension) if filters.date_dimension != "complaint_received_date" else ""),
-        ("serious_topic", "Serious category", filters.serious_topic),
+        ("date_dimension", "Relevant date", date_dimension_label(filters.date_dimension) if filters.date_dimension != "complaint_received_date" else ""),
         ("sort", "Sort", _facility_intelligence_sort_label(filters.sort) if filters.sort != "priority" else ""),
     ):
         if value:
@@ -2635,17 +2787,27 @@ def _facility_intelligence_active_filters(
 def _facility_intelligence_clear_filter_href(
     filters: FacilityIntelligenceFilters,
     clear_key: str,
+    clear_value: str,
 ) -> str:
-    values = _facility_intelligence_query_values(filters)
-    values.pop(clear_key, None)
-    query = urlencode(values)
+    serialized_value = {
+        "start_date": filters.start_date or "",
+        "end_date": filters.end_date or "",
+        "date_dimension": filters.date_dimension,
+        "sort": filters.sort,
+    }.get(clear_key, clear_value)
+    values = [
+        (key, value)
+        for key, value in _facility_intelligence_query_values(filters)
+        if key != clear_key or value.casefold() != serialized_value.casefold()
+    ]
+    query = urlencode(values, doseq=True)
     return f"{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}?{query}" if query else CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH
 
 
 def _facility_intelligence_first_page_href(
     filters: FacilityIntelligenceFilters,
 ) -> str:
-    query = urlencode(_facility_intelligence_query_values(filters))
+    query = urlencode(_facility_intelligence_query_values(filters), doseq=True)
     return (
         f"{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}?{query}"
         if query
@@ -2657,34 +2819,51 @@ def _facility_intelligence_navigation_href(
     filters: FacilityIntelligenceFilters,
     continuation: str,
 ) -> str:
-    values = _facility_intelligence_query_values(filters)
-    values["continuation"] = continuation
-    return f"{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}?{urlencode(values)}"
+    values = _canonical_compare_facilities_query_values(
+        filters,
+        continuation=continuation,
+    )
+    return f"{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}?{urlencode(values, doseq=True)}#facility-intelligence-results"
 
 
 def _facility_intelligence_query_values(
     filters: FacilityIntelligenceFilters,
-) -> dict[str, str]:
-    values = {
-        "date_dimension": filters.date_dimension,
-        "sort": filters.sort,
-    }
-    for key, value in (
-        ("start_date", filters.start_date or ""),
-        ("end_date", filters.end_date or ""),
-        ("facility_type", filters.facility_type),
-        ("geography", filters.geography),
-        ("finding", filters.finding),
-        ("serious_topic", filters.serious_topic),
-        ("coverage", "" if filters.coverage == "all" else filters.coverage),
+) -> list[tuple[str, str]]:
+    values: list[tuple[str, str]] = []
+    for key, selected in (
+        ("facility_type", _filter_values(filters.facility_type)),
+        ("geography", _filter_values(filters.geography)),
+        ("finding", _filter_values(filters.finding)),
+        ("serious_topic", _filter_values(filters.serious_topic)),
     ):
-        if value:
-            values[key] = value
-    if values["date_dimension"] == "complaint_received_date":
-        values.pop("date_dimension")
-    if values["sort"] == "priority":
-        values.pop("sort")
+        values.extend((key, value) for value in selected)
+    values.extend(
+        (key, value)
+        for key, value in (("start_date", filters.start_date or ""), ("end_date", filters.end_date or ""))
+        if value
+    )
+    if filters.date_dimension != "complaint_received_date":
+        values.append(("date_dimension", filters.date_dimension))
+    if filters.sort != "priority":
+        values.append(("sort", filters.sort))
     return values
+
+
+def _canonical_compare_facilities_query_values(
+    filters: FacilityIntelligenceFilters,
+    *,
+    continuation: str | None = None,
+) -> list[tuple[str, str]]:
+    """Serialize supported Compare Facilities state without losing repeats."""
+    values = _facility_intelligence_query_values(filters)
+    active_continuation = continuation if continuation is not None else filters.continuation
+    if active_continuation:
+        values.append(("continuation", active_continuation))
+    return values
+
+
+def _facility_intelligence_clear_all_href(filters: FacilityIntelligenceFilters) -> str:
+    return CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH
 
 
 def _facility_intelligence_option(current: str, value: str, label: str) -> str:
@@ -2720,7 +2899,7 @@ def _render_facility_intelligence_results(
             else "No facility rows are rendered."
         )
         rows = f'<p class="intelligence-results-empty">{_escape(empty_text)}</p>'
-    return f"""        <section id="facility-intelligence-results" class="facility-intelligence-results" aria-labelledby="facility-intelligence-results-heading" aria-describedby="facility-intelligence-position">
+    return f"""        <section id="facility-intelligence-results" class="facility-intelligence-results" aria-labelledby="facility-intelligence-results-heading" aria-describedby="facility-intelligence-position" tabindex="-1">
           <div class="facility-intelligence-results__header">
             <h2 id="facility-intelligence-results-heading">Facility results</h2>
             {sort_form}
@@ -2759,7 +2938,6 @@ def _render_facility_intelligence_orientation(
             <div class="facility-inventory-context__summary">
               <p id="facility-intelligence-position" class="facility-result-position">{_escape(position)}</p>
               <p class="facility-order-description">{_escape(_facility_intelligence_order_description(filters.sort))}</p>
-              {_render_facility_intelligence_applied_filters(filters)}
             </div>
             <nav class="facility-pagination" aria-label="Facility result pages">
               {previous_control}
@@ -2813,14 +2991,14 @@ def _facility_intelligence_order_description(sort_value: str) -> str:
 def _render_facility_intelligence_sort(filters: FacilityIntelligenceFilters) -> str:
     hidden = "\n".join(
         f'<input type="hidden" name="{_escape(key)}" value="{_escape(value)}">'
-        for key, value in _facility_intelligence_query_values(filters).items()
+        for key, value in _facility_intelligence_query_values(filters)
         if key != "sort"
     )
     return f"""<form class="facility-intelligence-sort" method="get" action="{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}">
               {hidden}
               <label for="facility-intelligence-sort">Sort by</label>
               <select id="facility-intelligence-sort" name="sort" onchange="this.form.submit()">
-                {_facility_intelligence_option(filters.sort, 'priority', 'Governed priority')}
+                {_facility_intelligence_option(filters.sort, 'priority', 'Suggested review order')}
                 {_facility_intelligence_option(filters.sort, 'complaint_count', 'Complaint count')}
                 {_facility_intelligence_option(filters.sort, 'recent_activity', 'Recent activity')}
                 {_facility_intelligence_option(filters.sort, 'facility_name', 'Facility name')}
@@ -2831,11 +3009,11 @@ def _render_facility_intelligence_sort(filters: FacilityIntelligenceFilters) -> 
 
 def _facility_intelligence_sort_label(value: str) -> str:
     return {
-        "priority": "Governed priority",
+        "priority": "Suggested review order",
         "complaint_count": "Complaint count",
         "recent_activity": "Recent activity",
         "facility_name": "Facility name",
-    }.get(value, "Governed priority")
+    }.get(value, "Suggested review order")
 
 
 def _render_facility_intelligence_result(
@@ -2926,9 +3104,7 @@ def _render_facility_intelligence_badges(item: FacilityIntelligenceSummary) -> s
             key=str.casefold,
         )
     )
-    flag_markup = "".join(
-        f"<li>{_review_chip_markup(label)}</li>" for label in labels
-    )
+    flag_markup = "".join(f"<li>{_review_chip_markup(label)}</li>" for label in labels)
     return f"""                <ul class="flag-list" aria-label="Finding and review flags">
                   {flag_markup}
                 </ul>"""
@@ -2944,8 +3120,7 @@ def _facility_intelligence_ordering_explanation(
         else "Latest complaint date unavailable"
     )
     complaint_label = "complaint" if summary.complaint_count == 1 else "complaints"
-    base = f"{summary.complaint_count} exact contributing {complaint_label}; {substantiated}; {latest}."
-    return base
+    return f"{summary.complaint_count} exact contributing {complaint_label}; {substantiated}; {latest}."
 
 
 def _facility_intelligence_substantiated_text(
@@ -3009,16 +3184,16 @@ def _render_facility_intelligence_status_control(
         _render_status_option(status, selected=status == current_status)
         for status in REVIEWER_STATUS_VALUES
     )
-    hidden_values = {
-        "source_record_key": complaint.source_record_key,
-        "return_context_origin": "facility_intelligence",
-        **_facility_intelligence_query_values(filters),
-    }
+    hidden_values = [
+        ("source_record_key", complaint.source_record_key),
+        ("return_context_origin", "facility_intelligence"),
+        *_facility_intelligence_query_values(filters),
+    ]
     if filters.continuation:
-        hidden_values["continuation"] = filters.continuation
+        hidden_values.append(("continuation", filters.continuation))
     hidden = "\n".join(
         f'<input type="hidden" name="{_escape(key)}" value="{_escape(value)}">'
-        for key, value in hidden_values.items()
+        for key, value in hidden_values
     )
     control_id = f"{result_id}-reviewer-status"
     label_id = f"{control_id}-label"
@@ -3141,6 +3316,10 @@ def _facility_intelligence_detail_href(
             start_date=filters.start_date,
             end_date=filters.end_date,
             context_origin="facility_intelligence",
+            search_query=urlencode(
+                _canonical_compare_facilities_query_values(filters),
+                doseq=True,
+            ),
             lookup_facility_name=_compare_facilities_source_name(
                 summary.facility_name,
                 summary.facility_number,
@@ -3174,23 +3353,13 @@ def _facility_intelligence_hub_href(
     summary: FacilityPrioritySummary,
     filters: FacilityIntelligenceFilters,
 ) -> str:
-    values = {
-        "facility_number": summary.facility_number,
-        "origin": "facility_intelligence",
-        "date_dimension": filters.date_dimension,
-    }
-    for key, value in (
-        ("start_date", filters.start_date or ""),
-        ("end_date", filters.end_date or ""),
-        ("facility_type", filters.facility_type),
-        ("geography", filters.geography),
-        ("finding", filters.finding),
-        ("serious_topic", filters.serious_topic),
-        ("coverage", filters.coverage if filters.coverage != "all" else ""),
-    ):
-        if value:
-            values[key] = value
-    return f"{CCLD_FACILITY_REVIEW_HUB_PATH}?{urlencode(values)}"
+    values: list[tuple[str, str]] = [
+        ("facility_number", summary.facility_number),
+        ("origin", "facility_intelligence"),
+    ] + _facility_intelligence_query_values(filters)
+    if filters.continuation:
+        values.append(("continuation", filters.continuation))
+    return f"{CCLD_FACILITY_REVIEW_HUB_PATH}?{urlencode(values, doseq=True)}#{_facility_intelligence_result_id(summary)}"
 
 
 def _facility_intelligence_result_id(summary: FacilityPrioritySummary) -> str:
@@ -3542,18 +3711,26 @@ def _facility_overview_detail_href(
     route_query_values: tuple[tuple[str, str], ...],
     inventory_filter: str,
 ) -> str:
-    return_query = dict(route_query_values)
-    if inventory_filter != "all":
-        return_query["inventory_filter"] = inventory_filter
+    opened_from_compare = ("origin", "facility_intelligence") in route_query_values
+    return_query_values = tuple(
+        (key, value)
+        for key, value in route_query_values
+        if key != "origin"
+    )
+    if not opened_from_compare and inventory_filter != "all":
+        return_query_values += (("inventory_filter", inventory_filter),)
+    return_query = dict(return_query_values)
     return _reviewer_detail_href(
         complaint.source_record_key,
         CcldQueueReturnContext(
             facility_number=summary.facility_number,
             start_date=return_query.get("start_date"),
             end_date=return_query.get("end_date"),
-            context_origin="facility_overview",
+            context_origin=(
+                "facility_intelligence" if opened_from_compare else "facility_overview"
+            ),
             lookup_facility_name=summary.facility_name,
-            search_query=urlencode(return_query),
+            search_query=urlencode(return_query_values, doseq=True),
         ),
     ).replace("source_record_key", "source%5Frecord%5Fkey")
 
@@ -3795,6 +3972,11 @@ def _facility_priority_text_matches(value: str, filter_value: str) -> bool:
         return True
     normalized_value = " ".join(value.casefold().split())
     return normalized_filter in normalized_value
+
+
+def _any_filter_matches(value: str, requested: str | tuple[str, ...]) -> bool:
+    values = _filter_values(requested)
+    return not values or any(_facility_priority_text_matches(value, item) for item in values)
 
 
 def _sort_facility_priority_summaries(
@@ -4223,10 +4405,10 @@ def _facility_trend_filters(
             default="complaint_received_date",
         ),
         facility=_first_form_value(query_values, "facility"),
-        facility_type=_first_form_value(query_values, "facility_type"),
-        geography=_first_form_value(query_values, "geography"),
-        finding=_first_form_value(query_values, "finding"),
-        serious_topic=_first_form_value(query_values, "serious_topic"),
+        facility_type=_query_filter_values(query_values, "facility_type"),
+        geography=_query_filter_values(query_values, "geography"),
+        finding=_query_filter_values(query_values, "finding"),
+        serious_topic=_query_filter_values(query_values, "serious_topic"),
         time_grain=grain,
         period_count=_bounded_query_int(
             query_values,
@@ -4370,11 +4552,6 @@ def _render_facility_trends(
     all_complaints: list[FacilityTrendComplaint],
     actor_label: str | None,
 ) -> str:
-    rows = "\n".join(_render_facility_trend_period(period) for period in result.periods)
-    rows += "\n" + _render_facility_trend_date_unavailable_row(
-        result,
-        date_dimension=filters.date_dimension,
-    )
     period_label = "quarter" if filters.time_grain == "quarter" else "month"
     qualifying_complaints = [
         complaint
@@ -4396,6 +4573,11 @@ def _render_facility_trends(
         query_start=filters.start_date.isoformat() if filters.start_date else None,
         query_end=filters.end_date.isoformat() if filters.end_date else None,
     )
+    results_markup = _render_facility_trend_results(
+        result,
+        filters=filters,
+        period_label=period_label,
+    )
     return _page(
         title="Compare Facilities",
         heading="Find Facilities That May Need Closer Review",
@@ -4410,9 +4592,42 @@ def _render_facility_trends(
         </section>
         {_render_facility_trend_filter_form(filters, all_complaints)}
         {aggregate_context}
-        <section aria-labelledby="facility-trends-results-heading">
+        {results_markup}
+        {_render_facility_trend_rules()}
+        <nav class="form-actions" aria-label="Complaint trend next actions">
+          <a class="button button-secondary" href="{REVIEWER_UI_RECORDS_PATH}">Return to Complaint Worklist</a>
+          <a class="button button-secondary" href="{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}">Return to Complaint Patterns</a>
+        </nav>
+""",
+    )
+
+
+def _render_facility_trend_results(
+    result: FacilityTrendResult,
+    *,
+    filters: FacilityTrendFilters,
+    period_label: str,
+) -> str:
+    reconciliation = (
+        f"{result.qualifying_complaint_count} qualifying complaint record(s): "
+        f"{result.dated_qualifying_complaint_count} assigned to displayed periods and "
+        f"{len(result.date_unavailable_complaints)} with date unavailable."
+    )
+    if result.qualifying_complaint_count == 0:
+        return f"""        <section id="facility-trends-results" class="empty-state-card" aria-labelledby="facility-trends-results-heading" tabindex="-1">
+          <h2 id="facility-trends-results-heading">No qualifying complaint records meet the selected filters.</h2>
+          <p><span class="status-badge">Zero qualifying records</span></p>
+          <p>{reconciliation}</p>
+          <p>Change or clear filters to compare complaint activity. This empty result does not establish that the facility has no complaints.</p>
+        </section>"""
+    rows = "\n".join(_render_facility_trend_period(period) for period in result.periods)
+    rows += "\n" + _render_facility_trend_date_unavailable_row(
+        result,
+        date_dimension=filters.date_dimension,
+    )
+    return f"""        <section id="facility-trends-results" aria-labelledby="facility-trends-results-heading" tabindex="-1">
           <h2 id="facility-trends-results-heading">Complaint activity by {period_label}</h2>
-          <p>{result.qualifying_complaint_count} qualifying complaint record(s): {result.dated_qualifying_complaint_count} assigned to displayed periods and {len(result.date_unavailable_complaints)} with date unavailable.</p>
+          <p>{reconciliation}</p>
           <table>
             <caption>Deduplicated complaint activity, coverage states, and deterministic anomaly cues</caption>
             <thead>
@@ -4430,71 +4645,27 @@ def _render_facility_trends(
 {rows}
             </tbody>
           </table>
-        </section>
-        {_render_facility_trend_rules()}
-        <nav class="form-actions" aria-label="Complaint trend next actions">
-          <a class="button button-secondary" href="{REVIEWER_UI_RECORDS_PATH}">Return to Complaint Worklist</a>
-          <a class="button button-secondary" href="{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}">Return to Complaint Patterns</a>
-        </nav>
-""",
-    )
+        </section>"""
 
 
 def _render_facility_trend_filter_form(
     filters: FacilityTrendFilters,
     all_complaints: list[FacilityTrendComplaint],
 ) -> str:
-    facility_options = _substantiated_filter_options(
-        value
-        for item in all_complaints
-        for value in (
-            _compare_facilities_source_name(item.facility_name, item.facility_number),
-            _compare_facilities_public_id(item.facility_number),
-        )
-        if value
-    )
-    facility_type_options = _substantiated_filter_options(
-        item.facility_type for item in all_complaints
-    )
-    geography_options = _substantiated_filter_options(
-        item.geography for item in all_complaints
-    )
-    finding_options = _substantiated_filter_options(
-        item.finding for item in all_complaints
-    )
-    serious_topic_options = _substantiated_filter_options(
-        topic for item in all_complaints for topic in item.serious_topics
-    )
+    facility_type_options = _filter_option_pairs(item.facility_type for item in all_complaints)
+    geography_options = _filter_option_pairs(item.geography for item in all_complaints)
+    finding_options = _filter_option_pairs(item.finding for item in all_complaints)
+    serious_topic_options = _filter_option_pairs(topic for item in all_complaints for topic in item.serious_topics)
     return f"""        <section class="quiet-section" aria-labelledby="facility-trends-filters-heading">
           <h2 id="facility-trends-filters-heading">Choose facilities and periods</h2>
-          <form class="compact-filter-form" method="get" action="{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}">
+          <form class="compact-filter-form" method="get" action="{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}#facility-trends-results">
             <input type="hidden" name="view" value="complaint-activity-over-time">
             <div class="facility-intelligence-filter-grid">
-              <p>
-                <label for="facility-trends-facility">Facility name or ID</label>
-                <input id="facility-trends-facility" name="facility" value="{_escape(filters.facility)}" list="facility-trends-facilities" autocomplete="off">
-                <datalist id="facility-trends-facilities">{facility_options}</datalist>
-              </p>
-              <p>
-                <label for="facility-trends-facility-type">Facility type</label>
-                <input id="facility-trends-facility-type" name="facility_type" value="{_escape(filters.facility_type)}" list="facility-trends-facility-types">
-                <datalist id="facility-trends-facility-types">{facility_type_options}</datalist>
-              </p>
-              <p>
-                <label for="facility-trends-geography">Geography</label>
-                <input id="facility-trends-geography" name="geography" value="{_escape(filters.geography)}" list="facility-trends-geographies">
-                <datalist id="facility-trends-geographies">{geography_options}</datalist>
-              </p>
-              <p>
-                <label for="facility-trends-finding">Finding or status</label>
-                <input id="facility-trends-finding" name="finding" value="{_escape(filters.finding)}" list="facility-trends-findings">
-                <datalist id="facility-trends-findings">{finding_options}</datalist>
-              </p>
-              <p>
-                <label for="facility-trends-serious-topic">Serious review topic</label>
-                <input id="facility-trends-serious-topic" name="serious_topic" value="{_escape(filters.serious_topic)}" list="facility-trends-serious-topics">
-                <datalist id="facility-trends-serious-topics">{serious_topic_options}</datalist>
-              </p>
+              {render_staged_trend_facility_combobox(filters.facility, facility_name=_selected_trend_facility_name(filters.facility, all_complaints))}
+              {render_checkbox_multiselect(control_id="facility-trends-type", name="facility_type", label="Facility type", options=facility_type_options, selected=_filter_values(filters.facility_type))}
+              {render_checkbox_multiselect(control_id="facility-trends-geography", name="geography", label="Geography", options=geography_options, selected=_filter_values(filters.geography))}
+              {render_checkbox_multiselect(control_id="facility-trends-finding", name="finding", label="Finding or status", options=finding_options, selected=_filter_values(filters.finding))}
+              {render_checkbox_multiselect(control_id="facility-trends-serious-topic", name="serious_topic", label="Serious review topic", options=serious_topic_options, selected=_filter_values(filters.serious_topic))}
               <p>
                 <label for="facility-trends-date-dimension">Date used for this trend</label>
                 <select id="facility-trends-date-dimension" name="date_dimension">{_date_dimension_options(filters.date_dimension)}</select>
@@ -4523,10 +4694,15 @@ def _render_facility_trend_filter_form(
             </div>
             <div class="form-actions">
               <button class="button" type="submit">Compare complaint activity</button>
-              <a class="button button-secondary" href="{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}?view=complaint-activity-over-time">Clear filters</a>
+              <a class="button button-secondary" href="{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}?view=complaint-activity-over-time#facility-trends-results">Clear filters</a>
             </div>
           </form>
+          {CHECKBOX_MULTISELECT_SCRIPT}
         </section>"""
+
+
+def _filter_option_pairs(values: Iterable[str]) -> tuple[tuple[str, str], ...]:
+    return tuple((value, value) for value in sorted({value.strip() for value in values if value.strip()}, key=str.casefold))
 
 
 def _facility_trend_option(current: str, value: str, label: str) -> str:
@@ -6307,6 +6483,19 @@ def _substantiated_source_records_response(
         payload[_AUTHORIZED_SOURCE_RECORD_MARKER] = record
         payloads.append(payload)
     return 200, payloads
+
+
+def facility_reference_for_reviewer_context(
+    context: ReviewerUiContext,
+) -> CcldFacilityReferenceSource:
+    """Project the authorized governed facility rows for comparison typeaheads."""
+    status, payloads = _substantiated_source_records_response(context)
+    if status != 200 or isinstance(payloads, bytes):
+        return facility_reference_from_source_derived_records(
+            (),
+            notice="Authorized facility directory records could not be read.",
+        )
+    return facility_reference_from_source_derived_records(payloads)
 
 
 def _source_derived_error_body(code: str, message: str) -> bytes:
@@ -9785,11 +9974,26 @@ def _date_range_for_days_back(reference_date: datetime, days_back: int) -> tuple
         Tuple of (start_date_str, end_date_str) in YYYY-MM-DD format.
     """
     from datetime import timedelta
+
     if reference_date.tzinfo is None:
         reference_date = reference_date.replace(tzinfo=UTC)
     end_date = reference_date.date()
     start_date = end_date - timedelta(days=days_back - 1)
     return (start_date.isoformat(), end_date.isoformat())
+
+
+def _selected_trend_facility_name(
+    facility: str,
+    complaints: list[FacilityTrendComplaint],
+) -> str | None:
+    """Return one exact public facility match for persistent trend-filter context."""
+    facility_number = facility.strip()
+    names = {
+        complaint.facility_name
+        for complaint in complaints
+        if complaint.facility_number == facility_number
+    }
+    return next(iter(names)) if len(names) == 1 else None
 
 
 def _last_30_days_complaint_export_href(reference_date: datetime) -> str:
@@ -11854,6 +12058,8 @@ def _render_detail_tertiary_actions(
     return_label = (
         "Return to Facility Overview"
         if return_context.context_origin == "facility_overview"
+        else "Return to Compare Facilities"
+        if return_context.context_origin == "facility_intelligence"
         else "Return to Complaint Worklist"
     )
     return f"""<div class="overview-tertiary-actions" aria-label="Additional reviewer actions">
@@ -11934,6 +12140,8 @@ def _render_detail_context_row(
     return_label = (
         "Return to Facility Overview"
         if return_context.context_origin == "facility_overview"
+        else "Return to Compare Facilities"
+        if return_context.context_origin == "facility_intelligence"
         else "Return to Complaint Worklist"
     )
     return f"""<nav class="reviewer-detail-context" aria-label="Review context">
@@ -12369,6 +12577,11 @@ def _render_detail_navigation(
 ) -> str:
     detail_href = _reviewer_detail_href(source_record_key, return_context)
     ccld_request_href = _ccld_request_href(related_records, return_context)
+    return_label = (
+        "&larr; Return to Compare Facilities"
+        if return_context.context_origin == "facility_intelligence"
+        else "&larr; Back to queue"
+    )
     next_record_href = _next_priority_record_href(source_record_key, related_records, return_context)
     packet_links = _detail_navigation_packet_items(return_context)
     feedback_href = _feedback_href(
@@ -12384,7 +12597,7 @@ def _render_detail_navigation(
             carries the Facility ID, date range, and lookup or manual-entry
             context back to the queue so refreshed reviewer-created cues appear there.</p>
             <ul>
-                <li><a href="{_escape(ccld_request_href)}">&larr; Back to queue</a></li>
+                <li><a href="{_escape(ccld_request_href)}">{return_label}</a></li>
                 <li><a href="{_escape(next_record_href)}">Open next recommended record from this context</a></li>
 {packet_links}
                 <li><a href="{CCLD_FACILITY_LOOKUP_PATH}">Find another CCLD facility</a></li>
@@ -13984,6 +14197,13 @@ def _ccld_request_href(
     related_records: list[Mapping[str, Any]],
     return_context: CcldQueueReturnContext | None = None,
 ) -> str:
+    if return_context is not None and return_context.context_origin == "facility_intelligence":
+        query = return_context.search_query or ""
+        return (
+            f"{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}?{query}#facility-intelligence-results"
+            if query
+            else f"{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}#facility-intelligence-results"
+        )
     if (
         return_context is not None
         and return_context.context_origin == "facility_overview"

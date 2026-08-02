@@ -134,6 +134,7 @@ from ccld_complaints.hosted_app.reviewer_ui import (
     build_facility_review_context,
     complaint_export_attachment_filename,
     default_local_test_reviewer_ui_context,
+    facility_reference_for_reviewer_context,
     local_test_reviewer_actor,
     reviewer_ui_context_for_connection,
     route_reviewer_ui_response,
@@ -1195,6 +1196,20 @@ def route_response(
                     )
                 return route_ccld_facility_lookup_response(path)
             if parsed_path == CCLD_FACILITY_SUGGESTIONS_PATH:
+                if os.environ.get("CCLD_HOSTED_ISSUE642_EVIDENCE_MODE") == "enabled":
+                    issue642_context = _default_reviewer_context_for_mode(
+                        active_auth_config,
+                        active_page_data_mode,
+                        reviewer_ui_context,
+                    )
+                    if issue642_context is None:
+                        return _postgres_setup_required_response(
+                            "Issue #642 facility directory context required"
+                        )
+                    return route_ccld_facility_lookup_response_with_source(
+                        path,
+                        facility_reference_for_reviewer_context(issue642_context),
+                    )
                 return route_ccld_facility_lookup_response(path)
             active_ccld_context = _default_ccld_context_for_mode(
                 active_auth_config,

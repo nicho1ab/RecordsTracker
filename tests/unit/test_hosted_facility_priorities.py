@@ -65,6 +65,24 @@ CANONICAL_PRIORITY_PATH = (
 )
 
 
+def test_compare_facilities_print_scope_is_outside_print_hidden_filters() -> None:
+    context = reviewer_ui.build_local_test_reviewer_ui_context()
+    path = (
+        f"{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}?facility_type=430"
+        "&finding=Unsubstantiated"
+    )
+    status, _content_type, body = route_response(path, reviewer_ui_context=context)
+    html = body.decode("utf-8")
+
+    assert status == 200
+    scope = '<section class="intelligence-print-scope" aria-label="Applied filters">'
+    filters_end = html.index('</section>', html.index('<section class="intelligence-filters"'))
+    scope_index = html.index(scope)
+    empty_index = html.index("No facilities match these filters")
+    assert filters_end < scope_index < empty_index
+    assert "<strong>Applied filters:</strong> Facility type: 430; Finding: Unsubstantiated" in html
+
+
 def test_facility_priorities_orders_by_visible_factors_and_links_to_records() -> None:
     with _priority_connection() as connection:
         _insert_facility_bundle(
@@ -462,11 +480,12 @@ def test_facility_intelligence_filters_reconciles_and_preserves_drilldown_contex
     assert "05/01/2026" in html
     assert "/ccld/facilities/detail?facility_number=100001" in html
     assert "origin=facility_intelligence" in html
-    assert "date_dimension=complaint_received_date" in html
+    assert "date_dimension=complaint_received_date" not in html
     assert "finding=Substantiated" in html
     assert "serious_topic=Supervision%2Btopic" not in html
     assert "serious_topic=Supervision+topic" in html
-    assert "coverage=available" in html
+    assert "coverage=available" not in html
+    assert "Source coverage" not in html
     assert "start_date=2026-05-01" in html
     assert "end_date=2026-05-31" in html
     assert "return_context_origin=facility_intelligence" in html
@@ -533,11 +552,13 @@ def test_facility_intelligence_coverage_missing_date_empty_and_invalid_range_sta
     assert partial_status == unavailable_status == empty_status == 200
     assert invalid_status == 400
     assert "Partial Center" in partial_html
-    assert "Unavailable Center" not in partial_html
+    assert "Unavailable Center" in partial_html
     assert "Partial source coverage" in partial_html
     assert "Unavailable Center" in unavailable_html
-    assert "Partial Center" not in unavailable_html
+    assert "Partial Center" in unavailable_html
     assert "Source unavailable" in unavailable_html
+    assert "coverage=partial" not in partial_html
+    assert "coverage=unavailable" not in unavailable_html
     assert "No facilities match these filters" in empty_html
     assert "Clear one filter or clear all filters" in empty_html
     assert "Start date must be on or before end date." in invalid_html
@@ -611,8 +632,64 @@ def test_facility_intelligence_accessible_structure_and_safe_language() -> None:
     assert status == 200
     assert '<main id="main-content"' in html
     assert '<form class="compact-filter-form" method="get"' in html
-    assert '<label for="facility-intelligence-facility-type">' in html
-    assert '<label for="facility-intelligence-coverage">' in html
+    assert '<legend>Facility type</legend>' in html
+    assert 'Source coverage' not in html
+    for control_id, label in (
+        ("facility-intelligence-facility-type", "Facility type"),
+        ("facility-intelligence-geography", "Geography"),
+        ("facility-intelligence-finding", "Complaint finding"),
+        ("facility-intelligence-start-date", "Start date"),
+        ("facility-intelligence-end-date", "End date"),
+        ("facility-intelligence-date-dimension", "Relevant date"),
+        ("facility-intelligence-serious-topic", "Serious review category"),
+    ):
+        assert label in html
+        assert control_id in html
+    assert 'class="filter-control filter-control--native"' in html
+    assert 'class="filter-control__label">Relevant date</span>' in html
+    assert (
+        html.count('class="filter-control filter-control--multiselect checkbox-multiselect"')
+        == 4
+    )
+    assert html.count('class="filter-control filter-control--native"') == 3
+    assert html.count('class="checkbox-multiselect__label"') >= 4
+    assert html.count('class="checkbox-multiselect__summary"') >= 4
+    filter_form = html.split('<form class="compact-filter-form"', 1)[1].split("</form>", 1)[0]
+    assert [
+        filter_form.index(control_id)
+        for control_id in (
+            "facility-intelligence-facility-type",
+            "facility-intelligence-geography",
+            "facility-intelligence-finding",
+            "facility-intelligence-date-dimension",
+            "facility-intelligence-start-date",
+            "facility-intelligence-end-date",
+            "facility-intelligence-serious-topic",
+        )
+    ] == sorted(
+        filter_form.index(control_id)
+        for control_id in (
+            "facility-intelligence-facility-type",
+            "facility-intelligence-geography",
+            "facility-intelligence-finding",
+            "facility-intelligence-date-dimension",
+            "facility-intelligence-start-date",
+            "facility-intelligence-end-date",
+            "facility-intelligence-serious-topic",
+        )
+    )
+    for label in (
+        "Facility type",
+        "Geography",
+        "Complaint finding",
+        "Start date",
+        "End date",
+        "Relevant date",
+        "Serious review category",
+    ):
+        assert html.index(label) < html.index("Apply filters")
+    assert 'type="date"' in html
+    assert 'name="date_dimension"' in html
     assert '<button class="button" type="submit">Apply filters</button>' in html
     assert 'aria-label="Finding and review flags"' in html
     assert 'aria-current="page" href="/ccld/facilities/intelligence">Compare Facilities</a>' in html
@@ -627,7 +704,8 @@ def test_facility_intelligence_accessible_structure_and_safe_language() -> None:
     assert "<details" not in html
     assert "No substantiated count" not in html
     assert "Review public records" in html
-    assert 'data-term-id="intelligence-substantiated">Substantiated</dfn>' in html
+    assert 'class="intelligence-glossary-line"' not in html
+    assert 'data-term-id="intelligence-substantiated">Substantiated</dfn>' not in html
     assert "CCLD finding term" not in html
     assert "Find a Facility" in html
     assert "Complaint Worklist" in html
@@ -645,6 +723,8 @@ def test_facility_intelligence_accessible_structure_and_safe_language() -> None:
     assert ".site-header, .civic-header" in html
     assert ".copy-icon-button, .copy-text-control" in html
     assert ".facility-row-actions" in html
+    assert "gap: 0.85rem 1.5rem;" in html
+    assert "@media (max-width: 900px)" in html
     assert "license number" not in normalized
     assert "legal conclusion" not in normalized
     assert "facility-wide conclusion" not in normalized
@@ -691,11 +771,41 @@ def test_facility_intelligence_approved_state_variants_and_filter_recovery() -> 
     assert "No facilities match these filters" in filtered_html
     assert "1 facility · Loaded complaint corpus" in filtered_html
     assert "Showing 0–0 of 0 facilities" in filtered_html
-    assert 'aria-label="Clear Geography filter"' in filtered_html
+    assert 'aria-label="Remove Geography Nowhere filter"' in filtered_html
+    assert 'class="applied-filter-chip__fallback"' in filtered_html
     assert ">Clear all</a>" in filtered_html
     assert "Loading facilities" in loading_html
     assert 'aria-busy="true"' in loading_html
     assert "Loading source-backed ordering reasons" in loading_html
+
+
+def test_facility_intelligence_filter_chips_keep_canonical_no_script_removal_urls() -> None:
+    filters = reviewer_ui.FacilityIntelligenceFilters(
+        facility_type=("430", "733"),
+        start_date="2026-08-12",
+        end_date="2026-08-20",
+        date_dimension="first_investigation_activity_date",
+    )
+
+    markup = reviewer_ui._render_facility_intelligence_applied_filters(filters)
+
+    assert 'data-filter-chip-remove' in markup
+    assert 'aria-label="Remove Facility type 430 filter"' in markup
+    assert 'aria-label="Remove Start date 08/12/2026 filter"' in markup
+    assert 'aria-label="Remove End date 08/20/2026 filter"' in markup
+    assert 'aria-label="Remove Relevant date First investigation activity date filter"' in markup
+    assert "facility_type=733" in reviewer_ui._facility_intelligence_clear_filter_href(
+        filters, "facility_type", "430"
+    )
+    assert "start_date=" not in reviewer_ui._facility_intelligence_clear_filter_href(
+        filters, "start_date", "08/12/2026"
+    )
+    assert "end_date=" not in reviewer_ui._facility_intelligence_clear_filter_href(
+        filters, "end_date", "08/20/2026"
+    )
+    assert "date_dimension=" not in reviewer_ui._facility_intelligence_clear_filter_href(
+        filters, "date_dimension", "First investigation activity date"
+    )
 
 
 def test_facility_intelligence_binds_source_and_reviewer_actions_to_next_complaint() -> None:
@@ -929,15 +1039,12 @@ def test_local_issue_641_fixture_renders_raw_type_identity_and_detail_parity() -
     assert "Issue 641 Code 430 Center" in raw_430_html
     assert "430000001" in raw_430_html
     assert "Source code 430 — label not verified" in raw_430_html
-    assert "grid-template-columns: repeat(3, minmax(0, 1fr));" in raw_430_html
-    assert ".facility-intelligence-filter-grid p:nth-child(8)" in raw_430_html
-    assert "grid-column: auto;" in raw_430_html
-    assert (
-        '<option value="430" selected="selected">'
-        "Source code 430 — label not verified</option>"
-    ) in raw_430_html
-    assert '<option value="733">Source code 733 — label not verified</option>' in raw_430_html
-    assert '<option value="Children&#x27;s Center">Children&#x27;s Center</option>' in raw_430_html
+    assert "grid-template-columns: repeat(2, minmax(0, 1fr));" in raw_430_html
+    assert "gap: 0.85rem 1.5rem;" in raw_430_html
+    assert "@media (max-width: 900px)" in raw_430_html
+    assert 'name="facility_type" value="430" checked' in raw_430_html
+    assert 'name="facility_type" value="733"' in raw_430_html
+    assert "Children&#x27;s Center" in raw_430_html
 
     raw_733_status, _raw_733_content_type, raw_733_body = route_response(
         f"{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}?facility_type=733",
@@ -1133,14 +1240,10 @@ def test_facility_intelligence_projects_raw_type_codes_and_labels_all_options() 
 
     assert status == 200
     assert "Source code 733 — label not verified" in html
-    assert '<option value="430">Source code 430 — label not verified</option>' in html
-    assert (
-        '<option value="733" selected="selected">'
-        "Source code 733 — label not verified</option>"
-    ) in html
-    assert '<option value="Kern">Kern</option>' in html
-    assert '<option value="Unsubstantiated">Unsubstantiated</option>' in html
-    assert re.search(r'<option value="[^"]+"></option>', html) is None
+    assert 'name="facility_type" value="430"' in html
+    assert 'name="facility_type" value="733" checked' in html
+    assert 'name="geography" value="Kern"' in html
+    assert 'name="finding" value="Unsubstantiated"' in html
     assert "No serious-review category" not in html
 
 
@@ -1778,7 +1881,7 @@ def test_facility_hub_reuses_intelligence_aggregates_state_and_tie_order() -> No
                 "&origin=facility_intelligence"
                 "&date_dimension=complaint_received_date"
                 "&start_date=2026-04-01&end_date=2026-05-31"
-                "&coverage=partial"
+                "&coverage=partial&finding=Substantiated&finding=Unsubstantiated"
             ),
             page_data_mode="postgres",
             ccld_record_request_ui_context=(
@@ -1798,14 +1901,26 @@ def test_facility_hub_reuses_intelligence_aggregates_state_and_tie_order() -> No
                 ccld_record_request_context_for_reviewer_context(reviewer_context)
             ),
         )
+        empty_status, _, empty_body = route_response(
+            (
+                f"{CCLD_FACILITY_REVIEW_HUB_PATH}?facility_number=100001"
+                "&origin=facility_intelligence&coverage=available"
+            ),
+            page_data_mode="postgres",
+            ccld_record_request_ui_context=(
+                ccld_record_request_context_for_reviewer_context(reviewer_context)
+            ),
+        )
         after = _table_counts(connection)
 
     html = body.decode("utf-8")
     filtered_html = filtered_body.decode("utf-8")
+    empty_html = empty_body.decode("utf-8")
     normalized = " ".join(html.casefold().split())
 
     assert status == 200
     assert filtered_status == 200
+    assert empty_status == 200
     assert content_type == "text/html; charset=utf-8"
     assert after == before
     assert "<h2 id=\"facility-hub-heading\">" in html
@@ -1849,9 +1964,21 @@ def test_facility_hub_reuses_intelligence_aggregates_state_and_tie_order() -> No
     assert 'aria-label="Copy complaint or control number"' in html
     assert 'aria-label="Copy complaint date"' in html
     assert 'aria-label="Copy original CCLD report URL"' in html
-    assert "return_context_origin=facility_overview" in html
+    detail_match = re.search(
+        r'<a class="button" href="([^"]+)">Review complaint A-1</a>',
+        html,
+    )
+    assert detail_match is not None
+    detail_query = parse_qs(urlsplit(unescape(detail_match.group(1))).query)
+    assert detail_query["return_context_origin"] == ["facility_intelligence"]
+    compare_query = parse_qs(detail_query["return_q"][0])
+    assert compare_query["finding"] == ["Substantiated", "Unsubstantiated"]
+    assert "coverage" not in compare_query
     assert "return_q=" in filtered_html
-    assert "inventory_filter%3Dsource%253Aunavailable" in filtered_html
+    assert "inventory_filter%3Dsource%253Aunavailable" not in filtered_html
+    assert "No loaded complaints match the current facility review filters." not in empty_html
+    assert "Alpha Center" in empty_html
+    assert "coverage=available" not in empty_html
     assert 'class="inline-glossary-term"' in html
     assert 'data-term-id="facility-inventory-finding-' in html
     assert "function createDefinitions()" in html

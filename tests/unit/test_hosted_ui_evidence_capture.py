@@ -174,6 +174,7 @@ def test_capture_script_declares_parameters_routes_and_outputs() -> None:
         "Issue498",
         "Issue610",
         "Issue641",
+        "Issue642",
         "manifest.json",
         "file-index.json",
         "reviews/independent-visual-review.json",
@@ -196,6 +197,10 @@ def test_capture_script_declares_parameters_routes_and_outputs() -> None:
         "issue-503-route-fragment-inventory.csv",
         "issue-503-approved-versus-rendered.csv",
         "issue-503-ui-gates.csv",
+        "issue-642-complaint-patterns",
+        "Invoke-Issue642BrowserCapture",
+        "Test-Issue642RouteAssertions",
+        "nativeCheckboxControls",
         "route-text-markers.txt",
         "keyboard flow text",
         "accessibility",
@@ -1440,6 +1445,11 @@ def test_wrapper_script_uses_existing_modes_and_prints_process_guidance() -> Non
         "run-hosted-complaint-retrieval-demo.ps1",
         "run-hosted-scaffold.ps1",
         "capture-hosted-ui-evidence.ps1",
+        "PythonExecutable",
+        "-WorkingDirectory $PWD",
+        "-RedirectStandardOutput $launcherStdout",
+        "-RedirectStandardError $launcherStderr",
+        "launcher exited with code",
         "URL to open:",
         "Started process ID:",
         "Stop command: Stop-Process -Id",
@@ -2052,3 +2062,145 @@ def test_ui_evidence_documentation_links_commands_and_review_context() -> None:
     assert "capture-hosted-ui-evidence.ps1" in testing_doc
     assert "capture-hosted-ui-evidence.ps1" in changelog
     assert "run-and-capture-hosted-ui-evidence.ps1" in guide
+
+
+def test_capture_rejects_prohibited_published_hostname() -> None:
+    stop_capture_fail = powershell_function("Stop-CaptureFail", "Test-AllowedBaseUrl")
+    allowed_base_url = powershell_function("Test-AllowedBaseUrl", "Assert-OutputDir")
+    ps_script = (
+        stop_capture_fail
+        + "\n"
+        + allowed_base_url
+        + "\ntry { Test-AllowedBaseUrl -Value 'https://test.recordtracker.xyz' } "
+        + "catch { $_.Exception.Message }\n"
+    )
+    result = subprocess.run(
+        [powershell(), "-NoProfile", "-Command", ps_script],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert result.returncode == 0, plain_output(result)
+    assert "Refusing non-local URL 'test.recordtracker.xyz'" in plain_output(result)
+
+
+def test_issue_642_operated_capture_uses_native_input_and_records_state_metadata() -> None:
+    script = CAPTURE_SCRIPT.read_text(encoding="utf-8")
+
+    for expected in (
+        "function Invoke-CdpClickSelector",
+        "Input.dispatchMouseEvent",
+        "function Invoke-CdpReplaceFocusedText",
+        "Input.insertText",
+        "function Invoke-Issue642OperatedInteractionCapture",
+        "function Assert-Issue642MultiSelectVisualReadiness",
+        "function Assert-Issue642TypeaheadVisualReadiness",
+        "function Invoke-Issue642FocusEvidenceCapture",
+        "function Test-Issue642FunctionalGate",
+        "interaction_mode:'operated'",
+        "issue642-typeahead-open",
+        "issue642-typeahead-no-match",
+        "issue642-typeahead-selected",
+        "issue642-typeahead-escape",
+        "issue642-multiselect-two-selected",
+        "issue642-multiselect-chip-removed",
+        "issue642-multiselect-all-restored",
+        "issue642-multiselect-escape",
+        "issue642-pagination-previous",
+        "issue642-pagination-filter-change",
+        "issue642-pagination-continuation-removed",
+        "issue642-pagination-first-page-reset",
+        "issue642-facility-overview-return",
+        "issue642-facility-overview-browser-back",
+        "issue642-complaint-detail-return",
+        "issue642-complaint-detail-browser-back",
+        "issue-642-operated-interactions",
+        "issue-642-trends-populated",
+        "issue-642-trends-intentional-empty",
+        "facility=642900001&facility_type=430&finding=Substantiated",
+        "start_date=2022-04-01&end_date=2022-04-30",
+        "issue642 populated trends reconciliation",
+        "issue642 intentional empty trends truthfulness",
+        "No records meet the active eligibility filters",
+        "wait suggestion response",
+        "verify repeated query and no continuation",
+        "mouseMoved",
+        "Required operated control failed hit testing",
+        "coordinateFormula",
+        (
+            "no visual-viewport scale, device scale, screenshot-pixel, "
+            "or browser-window conversion is applied"
+        ),
+        "issue-642-native-200-operating.json",
+        "function Invoke-CdpFocusByTabTraversal",
+        "focus traversal did not reach the required rendered target",
+        "LastFocusTraversal",
+        "focusableCount + 1",
+        "focus_traversal",
+        "requested_zoom",
+        "observed_zoom",
+        "native-200% keyboard navigation did not reach the rendered multi-select trigger",
+        "Invoke-CdpSpaceActivation -Session $Session",
+        "trigger.getAttribute('aria-controls')",
+        "style.display!=='none'",
+        "style.visibility!=='hidden'",
+        "labelRect.left>=panelRect.left-2&&labelRect.right<=panelRect.right+2",
+        "labelRect.left>boxRect.right&&gap>=0&&gap<=16",
+        "meaningfulWidth=labelRect.width>=Math.min(64,rowRect.width*0.35)",
+        "label.scrollWidth>label.clientWidth+2",
+        "panel_background:panelStyle.backgroundColor",
+        "long_label_ok:longLabelOk",
+        "longRow=rows.find((row)=>row.text&&row.text.includes('Source code 430'))",
+        "issue-642-complaint-patterns-multiselect-long-label",
+        "issue-642-multiselect-layout.json",
+        "input.parentElement===popup.parentElement",
+        "input.nextElementSibling===popup",
+        "input_rect:{left:inputRect.left,top:inputRect.top,right:inputRect.right,bottom:inputRect.bottom",
+        "popup_rect:{left:popupRect.left,top:popupRect.top,right:popupRect.right,bottom:popupRect.bottom",
+        "visible listbox layout",
+        "issue-642-typeahead-popup-layout.json",
+        "issue-642-focus-evidence.json",
+        "focus-local-navigation",
+        "focus-typeahead-input",
+        "focus-typeahead-option",
+        "focus-multiselect-trigger",
+        "focus-multiselect-checkbox",
+        "focus-apply",
+        "focus-clear",
+        "focus-chip-removal",
+        "focus-previous",
+        "focus-next",
+        "function Write-Issue642PacketDiagnostics",
+        "issue-642-screenshot-states.json",
+        "issue-642-console-network-summary.json",
+        "screenshotStateArtifact",
+        "consoleNetworkSummaryArtifact",
+        "consoleWarnings",
+        "issue642 unavailable heading and selected public Facility ID",
+        "issue642 unavailable omits unverified counts and observations",
+        "issue642 unavailable is not filtered-empty and has ordinary recovery",
+        "filterControlDefinitions",
+        "Relevant date",
+        "filter-control--native",
+        "issue-642-licensing-populated",
+        "issue-642-licensing-filtered-empty",
+        "issue-642-licensing-source-unavailable",
+        "issue-642-licensing-typeahead-id",
+        "issue-642-licensing-typeahead-name",
+        "issue-642-licensing-typeahead-no-match",
+        "issue-642-complaint-patterns-1280",
+        "data-result-state=\"source-unavailable\"",
+        "native_appearance",
+        "cue_contrast",
+        "trigger_control",
+        "focus_visible",
+        "inside_trigger",
+    ):
+        assert expected in script
+
+    assert "point.x * [double]$point.scale" not in script
+    assert "point.y * [double]$point.scale" not in script
+    assert "Input.dispatchMouseEvent" in script
+    assert "mousePressed" in script
+    assert "mouseReleased" in script

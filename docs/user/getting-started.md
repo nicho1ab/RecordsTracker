@@ -197,7 +197,11 @@ window, minimum counts, supported indicators, and rows per page. Treat this page
 as an explainable review-ordering aid over loaded records, not a hidden score,
 public-source completeness claim, legal priority, or facility-wide finding.
 Choose **Licensing and Visit Activity** for supported public licensing, visit,
-citation, Plan of Correction, status, and capacity observations, or **Complaint
+citation, Plan of Correction, status, and capacity observations. Its facility
+suggestions search the governed directory by public Facility ID or name even
+when the selected facility has no loaded observation row. The page distinguishes
+matching observations, no filter matches, and an unavailable observation source.
+Choose **Complaint
 Activity Over Time** for monthly/quarterly complaint
 comparisons. These views do not create a second facility inventory.
 Missing local/test values should be described as not available in the local/test
@@ -374,3 +378,16 @@ Do not rely on color alone when reviewing exported findings or status fields. Ke
 The dataset is derived from public source reports. The public portal remains the source of record.
 
 Live fetched records reflect what the public site returned at the time of retrieval. Public reports may later change, be corrected, become unavailable, or use layouts the current extractor does not fully understand. Delay review flags are screening aids only and do not prove that an investigation was delayed.
+
+## Compare Facilities interaction
+
+Use the expanded six-link navigation and choose one of the three Compare
+Facilities views. Multi-value filters retain native checkbox semantics: keep All
+for no restriction or choose specific values and use Apply. Each active value has
+a removal link and Clear all restores the selected view defaults. Trends stages a
+public Facility ID from the governed suggestion field until Apply; a display name
+is never the identity authority. Escape closes an enhanced filter and focus moves
+to results after a state-changing GET. Compare-origin Facility Overview and
+complaint-detail links return only to allowlisted Compare state. Printing retains
+selected scope but hides interactive controls. Result density and location
+presentation are intentionally outside this interaction work.

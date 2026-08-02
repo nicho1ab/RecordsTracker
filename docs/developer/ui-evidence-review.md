@@ -275,6 +275,10 @@ Start fixture/mock mode in one terminal:
 .\scripts\run-hosted-complaint-retrieval-demo.ps1 -Port 8010
 ```
 
+When that command is run from a secondary worktree, pass the already verified
+primary-repository Python executable with `-PythonExecutable`; the launcher
+does not fall back to `python` from `PATH`.
+
 Capture evidence from another terminal:
 
 ```powershell
@@ -302,6 +306,10 @@ For local review, the wrapper can start one hosted mode and capture evidence aft
 ```powershell
 .\scripts\run-and-capture-hosted-ui-evidence.ps1 -Mode fixture -Port 8010 -KillExistingPortProcess
 ```
+
+In a secondary worktree, also pass the verified primary-repository Python
+executable with `-PythonExecutable`. The wrapper records the launcher stdout
+and stderr under its ignored evidence-output root if readiness fails.
 
 The wrapper prints the URL, process ID, stop command, evidence packet path, and
 evidence ZIP path. Use `-KillExistingPortProcess` only when you intentionally
@@ -451,3 +459,18 @@ Evidence captures include explicit route labels for packet preview and draft var
 - `packet-draft-context`: A draft route capture made with facility/date query context. Drafts intentionally hide the workflow rail for print/copy; evidence assertions should mark the draft workflow-step check as `PASS` with a message describing the intentional skip.
 
 These route captures are route-level UI evidence for reviewing screen content, route behavior, and packet-preparation context. Review backend retrieval status and export persistence through the dedicated job, database, and operator evidence paths.
+
+## Issue #642 evidence scope
+
+Issue #642 captures the three Compare views, six-link mobile navigation, staged
+typeahead and checkbox states, applied chips, pagination and return-context
+round-trips, required responsive/native-zoom scenarios, keyboard focus, print,
+console, network, and an approved-design variance matrix. Its packet follows the
+Issue #648 four-gate contract: automation may satisfy structural and functional
+evidence, while independent visual review and owner acceptance remain pending
+human decisions. Do not add page-height, contributing-record-count, or
+print-page-count ceilings to #642 evidence; those are #643 concerns.
+
+Licensing evidence records populated, filtered-empty, and a separately launched
+source-unavailable state, plus governed-directory searches by public ID, name,
+and no-match text. Card geometry is not an Issue #642 evidence criterion.

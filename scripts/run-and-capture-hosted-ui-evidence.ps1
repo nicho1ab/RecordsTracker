@@ -14,10 +14,17 @@ Local port to bind. Defaults to 8003 for live, 8010 for fixture, and 8000 for sc
 Evidence output root. Defaults to data/processed/ui-evidence.
 .PARAMETER KillExistingPortProcess
 Stop any process listening on the chosen local port before launch.
+.PARAMETER PythonExecutable
+Verified Python executable to pass to the fixture/demo launcher. Required for a
+secondary worktree that has no local virtual environment.
 .PARAMETER Issue502
 Capture the focused Issue #502 Home and Find a Facility evidence packet.
 .PARAMETER Issue420
 Capture the focused Issue #420 Facility Overview evidence packet.
+.PARAMETER Issue642
+Capture the focused Issue #642 Compare Facilities interaction evidence packet.
+.PARAMETER Issue642LicensingSourceUnavailable
+Launch the separate Issue #642 fixture state with the Licensing source absent.
 .EXAMPLE
 .\scripts\run-and-capture-hosted-ui-evidence.ps1 -Mode fixture -Port 8010 -KillExistingPortProcess
 .EXAMPLE
@@ -35,9 +42,15 @@ param(
 
     [switch]$KillExistingPortProcess,
 
+    [string]$PythonExecutable = "",
+
     [switch]$Issue502,
 
-    [switch]$Issue420
+    [switch]$Issue420,
+
+    [switch]$Issue642,
+
+    [switch]$Issue642LicensingSourceUnavailable
 )
 
 $ErrorActionPreference = "Stop"
@@ -64,10 +77,20 @@ $scriptPath = switch ($Mode) {
     default { ".\scripts\run-hosted-scaffold.ps1" }
 }
 
+if ($Mode -eq "fixture" -and [string]::IsNullOrWhiteSpace($PythonExecutable)) {
+    $worktreePython = Join-Path $PWD ".venv\Scripts\python.exe"
+    if (Test-Path -LiteralPath $worktreePython -PathType Leaf) {
+        $PythonExecutable = $worktreePython
+    }
+    else {
+        throw "Fixture mode requires -PythonExecutable when the current worktree has no local virtual environment."
+    }
+}
+
 $shell = (Get-Command pwsh -ErrorAction SilentlyContinue)
 if (-not $shell) { $shell = Get-Command powershell -ErrorAction Stop }
 
-$process = Start-Process -FilePath $shell.Source -ArgumentList @(
+$launcherArguments = @(
     "-NoProfile",
     "-ExecutionPolicy",
     "Bypass",
@@ -75,7 +98,18 @@ $process = Start-Process -FilePath $shell.Source -ArgumentList @(
     $scriptPath,
     "-Port",
     [string]$Port
-) -WindowStyle Hidden -PassThru
+)
+if ($Mode -eq "fixture") {
+    $launcherArguments += @("-PythonExecutable", $PythonExecutable)
+    if ($Issue642) { $launcherArguments += "-Issue642Evidence" }
+    if ($Issue642LicensingSourceUnavailable) { $launcherArguments += "-Issue642LicensingSourceUnavailable" }
+}
+$launcherLogDir = Join-Path $OutputDir "launcher-logs"
+New-Item -ItemType Directory -Force -Path $launcherLogDir | Out-Null
+$launcherLogPrefix = "{0}-{1}" -f $Mode, (Get-Date).ToUniversalTime().ToString("yyyyMMdd-HHmmssZ")
+$launcherStdout = Join-Path $launcherLogDir "$launcherLogPrefix.stdout.log"
+$launcherStderr = Join-Path $launcherLogDir "$launcherLogPrefix.stderr.log"
+$process = Start-Process -FilePath $shell.Source -ArgumentList $launcherArguments -WorkingDirectory $PWD -RedirectStandardOutput $launcherStdout -RedirectStandardError $launcherStderr -WindowStyle Hidden -PassThru
 
 $deadline = (Get-Date).AddSeconds(30)
 $ready = $false
@@ -90,8 +124,14 @@ while ((Get-Date) -lt $deadline) {
 }
 
 if (-not $ready) {
+    $process.Refresh()
     Write-Host "Started process ID: $($process.Id)"
     Write-Host "Stop command: Stop-Process -Id $($process.Id)"
+    Write-Host "Launcher stdout: $launcherStdout"
+    Write-Host "Launcher stderr: $launcherStderr"
+    if ($process.HasExited) {
+        throw "Hosted app launcher exited with code $($process.ExitCode) before $baseUrl/ became ready."
+    }
     throw "Hosted app did not respond at $baseUrl/ before timeout."
 }
 
@@ -106,6 +146,11 @@ $captureArguments = @{
 }
 if ($Issue502) { $captureArguments.Issue502 = $true }
 if ($Issue420) { $captureArguments.Issue420 = $true }
+if ($Issue642) { $captureArguments.Issue642 = $true }
+if ($Issue642LicensingSourceUnavailable) {
+    $captureArguments.Issue642 = $true
+    $captureArguments.Issue642LicensingSourceUnavailable = $true
+}
 & .\scripts\capture-hosted-ui-evidence.ps1 @captureArguments
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
