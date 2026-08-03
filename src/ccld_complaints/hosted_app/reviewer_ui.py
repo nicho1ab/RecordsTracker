@@ -2970,7 +2970,12 @@ def _render_facility_intelligence_results(
     page_state: str,
 ) -> str:
     sort_form = _render_facility_intelligence_sort(filters)
-    orientation = _render_facility_intelligence_orientation(filters, pagination)
+    top_orientation = _render_facility_intelligence_orientation(
+        filters, pagination, location="top"
+    )
+    bottom_orientation = _render_facility_intelligence_orientation(
+        filters, pagination, location="bottom"
+    )
     if page_state == "loading":
         rows = """          <div class="intelligence-loading-row" aria-hidden="true">
             <div><strong>Loading facilities</strong><span>Loading source-backed ordering reasons…</span></div>
@@ -2992,8 +2997,9 @@ def _render_facility_intelligence_results(
             <h2 id="facility-intelligence-results-heading">Facility results</h2>
             {sort_form}
           </div>
-{orientation}
+{top_orientation}
 {rows}
+{bottom_orientation}
         </section>"""
 
 
@@ -3099,6 +3105,8 @@ def _facility_intelligence_current_href(filters: FacilityIntelligenceFilters) ->
 def _render_facility_intelligence_orientation(
     filters: FacilityIntelligenceFilters,
     pagination: FacilityIntelligencePagination,
+    *,
+    location: str,
 ) -> str:
     position = (
         f"Showing {pagination.first_position}–{pagination.last_position} of "
@@ -3121,12 +3129,15 @@ def _render_facility_intelligence_orientation(
             pagination.total_matching,
         ),
     )
-    return f"""          <div class="facility-inventory-context">
+    position_id = ' id="facility-intelligence-position"' if location == "top" else ""
+    location_class = f" facility-inventory-context--{location}"
+    navigation_label = f"{location.capitalize()} facility result pages"
+    return f"""          <div class="facility-inventory-context{location_class}">
             <div class="facility-inventory-context__summary">
-              <p id="facility-intelligence-position" class="facility-result-position">{_escape(position)}</p>
+              <p{position_id} class="facility-result-position">{_escape(position)}</p>
               <p class="facility-order-description">{_escape(_facility_intelligence_order_description(filters.sort))}</p>
             </div>
-            <nav class="facility-pagination" aria-label="Facility result pages">
+            <nav class="facility-pagination" aria-label="{_escape(navigation_label)}">
               {previous_control}
               {next_control}
             </nav>

@@ -1333,6 +1333,78 @@ def test_facility_intelligence_pagination_boundaries_and_exact_position_wording(
                 assert 'aria-disabled="true">Next</span>' in final_html
 
 
+def test_complaint_patterns_bottom_pagination_matches_top_and_preserves_state() -> None:
+    with _priority_connection() as connection:
+        _insert_facility_population(connection, 51)
+        context = reviewer_ui_context_for_connection(connection)
+        status, _content_type, body = route_response(
+            (
+                f"{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}"
+                "?facility_type=Children%27s+Center&geography=Kern"
+                "&finding=Unsubstantiated&start_date=2026-05-01"
+                "&end_date=2026-05-28&sort=facility_name"
+            ),
+            reviewer_ui_context=context,
+        )
+        first_html = body.decode("utf-8")
+        def pagination_hrefs(markup: str, label: str) -> list[str]:
+            return [
+                unescape(value)
+                for value in re.findall(
+                    rf'<a class="button button-secondary facility-pagination__control" '
+                    rf'href="([^"]+)" aria-label="{label} facilities,[^"]+">{label}</a>',
+                    markup,
+                )
+            ]
+        first_next = pagination_hrefs(first_html, "Next")
+
+        assert status == 200
+        assert first_html.count('aria-label="Top facility result pages"') == 1
+        assert first_html.count('aria-label="Bottom facility result pages"') == 1
+        assert first_html.count("Showing 1–25 of 51 facilities") == 2
+        assert first_html.count('aria-disabled="true">Previous</span>') == 2
+        assert len(first_next) == 2
+        assert first_next[0] == first_next[1]
+        assert first_next[0].endswith("#facility-intelligence-results")
+        for value in (
+            "facility_type=Children%27s+Center",
+            "geography=Kern",
+            "finding=Unsubstantiated",
+            "start_date=2026-05-01",
+            "end_date=2026-05-28",
+            "sort=facility_name",
+            "continuation=",
+        ):
+            assert value in first_next[0]
+
+        middle_status, _middle_type, middle_body = route_response(
+            first_next[0], reviewer_ui_context=context
+        )
+        middle_html = middle_body.decode("utf-8")
+        middle_previous = pagination_hrefs(middle_html, "Previous")
+        middle_next = pagination_hrefs(middle_html, "Next")
+        assert middle_status == 200
+        assert len(middle_previous) == len(middle_next) == 2
+        assert middle_previous[0] == middle_previous[1]
+        assert middle_next[0] == middle_next[1]
+
+        final_status, _final_type, final_body = route_response(
+            middle_next[0], reviewer_ui_context=context
+        )
+        final_html = final_body.decode("utf-8")
+        assert final_status == 200
+        assert len(pagination_hrefs(final_html, "Previous")) == 2
+        assert pagination_hrefs(final_html, "Next") == []
+        assert final_html.count('aria-disabled="true">Next</span>') == 2
+
+        for view in ("licensing-visit-activity", "complaint-activity-over-time"):
+            other_status, _other_type, other_body = route_response(
+                f"{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}?view={view}",
+                reviewer_ui_context=context,
+            )
+            assert other_status == 200
+            assert 'aria-label="Bottom facility result pages"' not in other_body.decode("utf-8")
+
 def test_facility_intelligence_seek_pages_have_no_duplicates_or_omissions() -> None:
     with _priority_connection() as connection:
         _insert_facility_population(connection, 51)
