@@ -1681,7 +1681,7 @@ def test_reviewer_packet_preview_renders_context_and_is_non_mutating() -> None:
     assert "Date range: 08/01/2022 to 08/31/2022" in brief_html
     assert "Records included: 1" in brief_html
     assert "Packet readiness: Ready for packet use" in brief_html
-    assert "source: CCLD source available" in brief_html
+    assert "source: Source available" in brief_html
     assert "This brief is a preparation aid, not a legal report or conclusion." in brief_html
     assert "Review dates and source link when a date or timing cue needs review." in brief_html
     assert COMPLAINT_KEY not in brief_html
@@ -1694,7 +1694,7 @@ def test_reviewer_packet_preview_renders_context_and_is_non_mutating() -> None:
     assert "Unsubstantiated" in html
     assert "Note added" in html
     assert "Review dates and source link" in html
-    assert "CCLD source available" in html
+    assert "Source available" in html
     assert "Facility ID" in html
     assert "Complaint received" in html
     assert "First investigation activity" in html
@@ -2032,7 +2032,7 @@ def test_reviewer_packet_draft_renders_print_copy_content_without_mutation(
     )
     assert "active facility/date context, included record count" in normalized_guidance_html
     assert "Review before copying or printing" in guidance_html
-    assert "CCLD source available means a public CCLD source link" in guidance_html
+    assert "Source available means a public CCLD source link" in guidance_html
     assert "unavailable CCLD source links" in normalized_guidance_html
     assert "Correction-readiness before copying or printing" in guidance_html
     assert (
@@ -2438,14 +2438,14 @@ def test_reviewer_ui_landing_uses_plain_missing_values_and_source_cues() -> None
     assert content_type == "text/html; charset=utf-8"
     assert "No value recorded" in record_html
     assert record_html.count("Date not listed") == 3
-    assert "Source not available" in record_html
+    assert "Source unavailable" in record_html
     assert ">unknown<" not in record_html
     assert "raw_path" not in record_html
     assert "raw_sha256" not in record_html
     assert_no_secret_html(html)
 
 
-def test_reviewer_ui_landing_displays_each_primary_review_flag_once_as_a_badge() -> None:
+def test_reviewer_ui_landing_hides_the_120_day_screening_cue() -> None:
     with _seeded_connection() as connection:
         original_values = dict(
             connection.execute(
@@ -2470,9 +2470,8 @@ def test_reviewer_ui_landing_displays_each_primary_review_flag_once_as_a_badge()
     record_html = html[record_start : html.index("</article>", record_start)]
 
     assert status == 200
-    assert record_html.count("120+ day gap") == 1
-    assert 'class="review-chip badge-attention badge-attention--warning"' in record_html
-    assert "Possible delay indicator" not in record_html
+    assert "120+ day gap" not in record_html
+    assert "analytical timing screening cue" not in record_html
     assert_no_secret_html(html)
 
 def test_reviewer_priority_prefers_records_without_reviewer_created_state_then_flags() -> None:
@@ -2720,13 +2719,19 @@ def test_reviewer_ui_detail_shows_attorney_tier_and_hides_support_details() -> N
         not in html
     )
     assert 'title="The outcome or status shown in the public complaint record."' not in html
-    assert 'data-definition="The outcome or status shown in the public complaint record."' in html
+    assert (
+        'data-definition="The source-derived finding or complaint status shown '
+        'in the public complaint record."' in html
+    )
     assert "function createDefinitions()" in html
     assert "var baseId = 'inline-glossary-definition-' + safeTermId" in html
     assert ".inline-glossary-term" in html
     assert "border-bottom: 1px dotted currentColor" in html
     assert ".inline-glossary-definition.is-visible" in html
-    assert "The outcome or status shown in the public complaint record." in html
+    assert (
+        "The source-derived finding or complaint status shown in the public "
+        "complaint record." in html
+    )
     assert (
         "A source-reported finding that the allegation was not substantiated "
         "in the public complaint record."
@@ -2990,7 +2995,7 @@ def test_reviewer_ui_detail_surfaces_stored_duration_date_conflict_once() -> Non
     assert 'role="note"' in timing_html
     assert "days_received_to_report" not in timing_html
     assert "120+ day gap" not in timing_html
-    assert html.count("120+ day gap") == 1
+    assert "120+ day gap" not in html
 
 
 @pytest.mark.parametrize(

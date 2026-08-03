@@ -133,7 +133,7 @@ def test_facility_priorities_orders_by_visible_factors_and_links_to_records() ->
     assert html.index("Alpha Center") < html.index("Gamma Center") < html.index("Beta Center")
     assert "2 deduplicated loaded complaint record(s)." in html
     assert "1 source-derived substantiated/equivalent finding(s)." in html
-    assert "strongest available flag is 120+ days" in html
+    assert "120+ days" not in html
     assert "1 complaint record(s) missing an original public report link." in html
     assert "Open Complaint Worklist" in html
     assert "Return to Complaint Worklist" in html
@@ -2101,7 +2101,7 @@ def test_facility_hub_reuses_intelligence_aggregates_state_and_tie_order() -> No
     assert html.count('class="facility-inventory-item is-recommended"') == 1
     for control_number in ("A-1", "A-2", "A-3", "A-4"):
         assert f"Review complaint {control_number}" in html
-    assert html.count("120+ day gap") == 1
+    assert "120+ day gap" not in html
     assert html.count("Supervision topic") >= 1
     assert "Get Additional Records" in html
     assert "<details" not in html

@@ -32,12 +32,12 @@ def test_serious_topics_worklist_lists_deterministic_categories_without_narrativ
     with _connection() as connection:
         for index, (category, _expected_topic) in enumerate(
             (
-                ("Abuse or mistreatment", "Mistreatment-topic"),
-                ("Neglect", "Care-omission topic"),
-                ("Inadequate supervision", "Supervision topic"),
-                ("Medication or medical care", "Medication/medical-care topic"),
-                ("Runaway or AWOL", "Runaway/AWOL topic"),
-                ("Staff conduct", "Staff-conduct topic"),
+                ("Abuse or mistreatment", "Mistreatment"),
+                ("Neglect", "Care omission"),
+                ("Inadequate supervision", "Supervision"),
+                ("Medication or medical care", "Medication or medical care"),
+                ("Runaway or AWOL", "Runaway or AWOL"),
+                ("Staff conduct", "Staff misconduct"),
             ),
             start=1,
         ):
@@ -76,12 +76,12 @@ def test_serious_topics_worklist_lists_deterministic_categories_without_narrativ
     assert "Complaint-time record" in html
     assert "No conflicting source values" in html
     for expected in (
-        "Mistreatment-topic",
-        "Care-omission topic",
-        "Supervision topic",
-        "Medication/medical-care topic",
-        "Runaway/AWOL topic",
-        "Staff-conduct topic",
+        "Mistreatment",
+        "Care omission",
+        "Supervision",
+        "Medication or medical care",
+        "Runaway or AWOL",
+        "Staff misconduct",
         "Abuse or mistreatment",
         "Neglect",
         "Inadequate supervision",
@@ -93,6 +93,15 @@ def test_serious_topics_worklist_lists_deterministic_categories_without_narrativ
         "Open original public report for 32-CR-20240101000000",
     ):
         assert expected in html
+    for internal_identifier in (
+        "Mistreatment-topic",
+        "Care-omission topic",
+        "Supervision topic",
+        "Medication/medical-care topic",
+        "Runaway/AWOL topic",
+        "Staff-conduct topic",
+    ):
+        assert internal_identifier not in html
     assert "DO NOT SHOW deterministic narrative" not in html
     assert "raw_path" not in html
     assert "provider_subject" not in html
@@ -185,7 +194,8 @@ def test_serious_topics_structured_category_takes_precedence_over_keyword_text()
     cue_html = cue_body.decode("utf-8")
 
     assert source_status == 200
-    assert "Care-omission topic" in source_html
+    assert "Care omission" in source_html
+    assert "Neglect" in source_html
     assert "Source category" in source_html
     assert "Review topic" in source_html
     assert "keyword-assisted allegation_text" not in source_html
@@ -295,7 +305,9 @@ def test_serious_topics_deduplicates_multiple_matching_allegations_for_one_compl
     assert status == 200
     assert "Showing 1-1 of 1 matching serious-topic complaint record(s); 1 total qualifying" in html
     assert html.count("Open complaint review workspace") == 1
-    assert "Staff-conduct topic" in html
+    assert "Staff misconduct" in html
+    assert "Staff conduct" in html
+    assert "Staff-conduct topic" not in html
     assert "DO NOT SHOW" not in html
 
 
