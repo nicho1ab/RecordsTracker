@@ -108,6 +108,8 @@ The Trends typeahead selection stages the public Facility ID and never submits
 automatically. Controls retain a no-JavaScript fieldset fallback; Escape closes
 an enhanced disclosure and restores focus. Print retains selected scope while
 hiding interactive controls. Complaint Patterns uses concise facility cards;
-its full contributor inventory remains in Facility Overview. This does not
-change Licensing and Visit Activity, Complaint Activity Over Time, or pagination
-placement. Issue #647 location work and dependent #644 remain separate.
+its full contributor inventory remains in Facility Overview. Its result range
+and Previous and Next controls appear above and below the facility cards, with
+the same active state preserved in either location. Licensing and Visit Activity
+and Complaint Activity Over Time do not use this bottom pagination region.
+Issue #647 location work and dependent #644 remain separate.
