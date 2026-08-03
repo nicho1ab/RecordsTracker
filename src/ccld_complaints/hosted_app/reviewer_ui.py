@@ -118,6 +118,11 @@ from ccld_complaints.hosted_app.reviewer_created_state_routes import (
     ReviewerCreatedStateApiContext,
     route_reviewer_created_state_api_response,
 )
+from ccld_complaints.hosted_app.reviewer_semantics import (
+    ReviewerSemanticDomain,
+    is_complaint_status_value,
+    reviewer_semantic_presentation,
+)
 from ccld_complaints.hosted_app.reviewer_workflow_shell import (
     REVIEWER_WORKFLOW_API_PREFIX,
     ReviewerWorkflowShellContext,
@@ -3090,7 +3095,7 @@ def _render_review_next_region(
           <article class="review-next-card" aria-labelledby="review-next-card-heading">
             <h3 id="review-next-card-heading"><a href="{_escape(facility_href)}">{_escape(facility_name)}</a></h3>
             <p><strong>Facility ID</strong> {_escape(facility_id)} <span aria-hidden="true">·</span> {_escape(_reviewer_value_text(summary.facility_type))} <span aria-hidden="true">·</span> {_escape(_reviewer_value_text(summary.geography))}</p>
-            <dl><div><dt>Recommended complaint</dt><dd>{_escape(control)}</dd></div><div><dt>Relevant activity</dt><dd>{_escape(_reviewer_value_text(complaint.activity_date, kind="date"))}</dd></div><div><dt>Finding</dt><dd>{_finding_badge(complaint.finding)}</dd></div><div><dt>Source</dt><dd>{_escape(source_text)}</dd></div></dl>
+            <dl><div><dt>Recommended complaint</dt><dd>{_escape(control)}</dd></div><div><dt>Relevant activity</dt><dd>{_escape(_reviewer_value_text(complaint.activity_date, kind="date"))}</dd></div><div><dt>{_escape(_finding_field_label(complaint.finding))}</dt><dd>{_finding_badge(complaint.finding)}</dd></div><div><dt>Source</dt><dd>{_escape(source_text)}</dd></div></dl>
             <footer class="facility-card-actions"><a class="button" href="{_escape(facility_href)}">Open Facility Overview</a><a class="button button-secondary" href="{_escape(complaint_href)}">Review complaint</a></footer>
           </article>
         </section>'''
@@ -3342,14 +3347,7 @@ def _render_facility_intelligence_topics(
 
 
 def _facility_intelligence_topic_label(topic: str) -> str:
-    return {
-        "Mistreatment-topic": "Mistreatment",
-        "Care-omission topic": "Care omission",
-        "Supervision topic": "Supervision",
-        "Medication/medical-care topic": "Medication or medical care",
-        "Runaway/AWOL topic": "Runaway or AWOL",
-        "Staff-conduct topic": "Staff misconduct",
-    }.get(topic, topic)
+    return reviewer_semantic_presentation("review_topic", topic).label
 
 
 def _render_facility_intelligence_recommended_complaint(
@@ -3365,7 +3363,7 @@ def _render_facility_intelligence_recommended_complaint(
     )
     source = "Source available" if complaint.source_available else "Source unavailable"
     source_markup = (
-        f'<div><dt>Source availability</dt><dd>{_review_chip_markup(source)}</dd></div>'
+        f'<div><dt>Source availability</dt><dd>{_semantic_chip_markup("source_availability", source)}</dd></div>'
         if include_source
         else ""
     )
@@ -3374,22 +3372,18 @@ def _render_facility_intelligence_recommended_complaint(
                   <dl>
                     <div><dt>Complaint</dt><dd>{_escape(control)}</dd></div>
                     <div><dt>Relevant activity</dt><dd>{_escape(_reviewer_value_text(complaint.activity_date, kind='date'))}</dd></div>
-                    <div><dt>Finding</dt><dd>{_facility_intelligence_finding_markup(complaint.finding)}</dd></div>
+                    <div><dt>{_escape(_finding_field_label(complaint.finding))}</dt><dd>{_facility_intelligence_finding_markup(complaint.finding)}</dd></div>
                     {source_markup}
                   </dl>
                 </section>"""
 
 
 def _facility_intelligence_finding_markup(finding: str) -> str:
-    if finding.strip().casefold() in {
-        "active",
-        "pending",
-        "uninvestigated",
-        "not determined",
-        "not yet determined",
-    }:
-        return '<span class="finding-badge finding-badge--unavailable">Finding not provided</span>'
     return _finding_badge(finding)
+
+
+def _finding_field_label(finding: str) -> str:
+    return "Complaint status" if is_complaint_status_value(finding) else "Complaint finding"
 
 
 def _render_facility_intelligence_badges(item: FacilityIntelligenceSummary) -> str:
@@ -3415,7 +3409,21 @@ def _render_facility_intelligence_badges(item: FacilityIntelligenceSummary) -> s
             key=str.casefold,
         )
     )
-    flag_markup = "".join(f"<li>{_review_chip_markup(label)}</li>" for label in labels)
+    flag_markup = "".join(
+        f"<li>{_reviewer_semantic_markup('finding', label)}</li>"
+        for label in labels
+        if label.strip().casefold() in {"substantiated", "unsubstantiated", "inconclusive"}
+    )
+    flag_markup += "".join(
+        f"<li>{_semantic_chip_markup('timing_screening_cue', label)}</li>"
+        for label in labels
+        if label.endswith("day gap")
+    )
+    flag_markup += "".join(
+        f"<li>{_semantic_chip_markup('review_topic', label)}</li>"
+        for label in labels
+        if label in {topic for complaint in summary.complaints for topic in complaint.serious_topics}
+    )
     return f"""                <ul class="flag-list" aria-label="Finding and review flags">
                   {flag_markup}
                 </ul>"""
@@ -3455,7 +3463,7 @@ def _render_facility_intelligence_source_region(
         else complaint.stable_complaint_id
     )
     if complaint.source_available and complaint.source_url_href:
-        source_badge = _review_chip_markup("Source available")
+        source_badge = _semantic_chip_markup("source_availability", "Source available")
         open_action = (
             f'<a class="button button-secondary" href="{_escape(complaint.source_url_href)}" '
             f'aria-label="Open source report for complaint {_escape(control)}">Open source report</a>'
@@ -3465,7 +3473,7 @@ def _render_facility_intelligence_source_region(
             complaint.source_url_href,
         )
     else:
-        source_badge = _review_chip_markup("Source unavailable")
+        source_badge = _semantic_chip_markup("source_availability", "Source unavailable")
         open_action = '<span class="button button-disabled" aria-disabled="true">Source unavailable</span>'
         source_value = '<span class="copy-feedback" data-copy-status aria-live="polite">Copy unavailable</span>'
     return f"""                <section class="facility-row-source" aria-label="Source record for complaint {_escape(control)}">
@@ -3598,7 +3606,7 @@ def _facility_intelligence_contributor_item(
         else complaint.stable_complaint_id
     )
     date_text = _reviewer_value_text(complaint.activity_date, kind="date")
-    source_label = "CCLD source available" if complaint.source_available else "Source not available"
+    source_label = "Source available" if complaint.source_available else "Source unavailable"
     metadata = [_escape(date_text), _finding_badge(complaint.finding)]
     metadata.extend(_escape(topic) for topic in complaint.serious_topics)
     metadata.append(_escape(source_label))
@@ -4169,7 +4177,7 @@ def _facility_priority_complaint_sort_key(
 
 
 def _source_priority_strongest_delay(values: Mapping[str, Any]) -> int:
-    for days in (120, 90, 60, 30):
+    for days in (90, 60, 30):
         if values.get(f"review_delay_over_{days}_days") is True:
             return days
     return 0
@@ -5475,7 +5483,12 @@ def _serious_topic_item_matches_filters(
         return False
     if filters.topic and not _text_filter_matches(
         filters.topic,
-        (item["category_labels"], item["source_categories"], item["matched_terms"]),
+        (
+            item["category_labels"],
+            _serious_topic_display_labels(item["category_labels"]),
+            item["source_categories"],
+            item["matched_terms"],
+        ),
     ):
         return False
     if filters.match_basis == "source-category" and "Source category" not in item["match_bases"]:
@@ -5599,8 +5612,8 @@ def _render_serious_topic_row(item: Mapping[str, str]) -> str:
           <th scope="row">{_escape(_reviewer_value_text(item['facility_display']))}<span class="helper-text">{_escape(item['facility_identity_context'])}. {_escape(item['facility_identity_conflicts'])}.</span></th>
           <td>{_copyable_value("Facility ID", item['facility_number'])}</td>
           <td>{_escape(_reviewer_value_text(item['complaint_date_display']))}</td>
-          <td>{_escape(_reviewer_value_text(item['finding_value']))}</td>
-          <td>{_escape(item['category_labels'])}</td>
+          <td>{_finding_badge(item['finding_value'])}</td>
+          <td>{_escape(_serious_topic_display_labels(item['category_labels']))}</td>
           <td>{_escape(item['match_bases'])}</td>
           <td>{_escape(matched)}</td>
           <td>{_escape(_reviewer_value_text(item['source_categories']))}</td>
@@ -5609,6 +5622,14 @@ def _render_serious_topic_row(item: Mapping[str, str]) -> str:
           <td>{_serious_topic_source_link(item)}</td>
           <td><a class="button" href="{_escape(item['detail_href'])}">Open complaint review workspace</a></td>
         </tr>"""
+
+
+def _serious_topic_display_labels(labels: str) -> str:
+    return "; ".join(
+        reviewer_semantic_presentation("review_topic", label).label
+        for label in labels.split(";")
+        if label.strip()
+    )
 
 
 def _render_serious_topics_filter_basis(filters: SeriousTopicsFilters) -> str:
@@ -5655,7 +5676,11 @@ def _render_serious_topics_filter_form(
         item["geography"] for item in all_items
     )
     topic_options = _substantiated_filter_options(
-        tuple(_SERIOUS_TOPIC_CATEGORY_LABELS.values()) + ("Possible keyword cue",)
+        tuple(
+            reviewer_semantic_presentation("review_topic", label).label
+            for label in _SERIOUS_TOPIC_CATEGORY_LABELS.values()
+        )
+        + ("Possible keyword cue",)
     )
     return f"""        <section class="quiet-section" aria-labelledby="serious-topics-filters-heading">
           <h2 id="serious-topics-filters-heading">Filter and sort</h2>
@@ -7721,7 +7746,7 @@ def _render_packet_draft(
                         <p>This preparation draft gathers the included complaint-record summaries, reviewer-attention counts, source-record cues, reviewer-created status/note cues, and a static copyable packet summary for manual browser copy or print.</p>
                         <p><strong>Packet readiness means review readiness only.</strong> The draft can be ready for manual review, browser copy, or browser print after the tester confirms the active facility/date context, included record count, important loaded record values, CCLD source-record access, reviewer-created status/note cues, and possible correction-readiness concerns.</p>
                         <p><strong>Review before copying or printing:</strong> check records flagged for reviewer attention, records missing reviewer-created status/note cues, important loaded record values, unavailable CCLD source links, and any wording that seems wrong, incomplete, confusing, or risky.</p>
-                        <p>CCLD source available means a public CCLD source link is available to help check important loaded record values.</p>
+                        <p>Source available means a public CCLD source link is available to help check important loaded record values.</p>
                         <p><strong>Correction-readiness before copying or printing:</strong> if a loaded record value looks wrong or incomplete, open the CCLD source record if a date or source cue needs review and capture the possible correction concern in a reviewer-created note or feedback item for now. This draft does not change loaded records, alter loaded values, or submit correction decisions.</p>
                         <p>If copy/print preparation content seems wrong, incomplete, confusing, or risky, Send feedback before using this draft.</p>
                     </details>
@@ -7754,7 +7779,7 @@ def _render_packet_draft(
                             <dd>{state_counts['with_notes']}</dd>
                             <dt>Records with review flags</dt>
                             <dd>{_packet_review_flag_count(records)}</dd>
-                            <dt>Records with CCLD source available</dt>
+                            <dt>Records with Source available</dt>
                             <dd>{traceability_counts['complete']}</dd>
                             <dt>Records ready for preparation review</dt>
                             <dd>{readiness_counts['ready']}</dd>
@@ -8646,7 +8671,6 @@ def _queue_review_cue_counts(
         ("30+ day gap", sum(1 for values in original_values if values.get("review_delay_over_30_days") is True)),
         ("60+ day gap", sum(1 for values in original_values if values.get("review_delay_over_60_days") is True)),
         ("90+ day gap", sum(1 for values in original_values if values.get("review_delay_over_90_days") is True)),
-        ("120+ day gap", sum(1 for values in original_values if values.get("review_delay_over_120_days") is True)),
         ("Missing first activity", sum(1 for values in original_values if _missing_first_activity_warning(values))),
         ("Missing source date", sum(1 for values in original_values if _has_missing_source_date(values))),
         ("Source unavailable", sum(1 for item in records if _source_unavailable_for_queue_item(item))),
@@ -8983,8 +9007,12 @@ def _render_packet_preview_record(
     detail_href = _reviewer_detail_href(source_record_key, return_context)
     label = _display_value(original_values.get("complaint_control_number") or source_record_key)
     badge_items = "\n".join(
-        f'              <li><span class="{_review_flag_chip_class(badge)}">{_escape(badge)}</span></li>'
-        for badge in _packet_preview_record_badges(original_values, source_document, state_summary)
+        f"              <li>{_reviewer_semantic_markup(domain, value)}</li>"
+        for domain, value in _packet_preview_record_badges(
+            original_values,
+            source_document,
+            state_summary,
+        )
     )
     return f"""        <article class="result-card work-item packet-preview-record" aria-labelledby="packet-record-{_escape(source_record_key)}-heading">
           <div>
@@ -9022,15 +9050,18 @@ def _packet_preview_record_badges(
     original_values: Mapping[str, Any],
     source_document: Mapping[str, Any],
     state_summary: Mapping[str, Any],
-) -> tuple[str, ...]:
-    badges: list[str] = []
+) -> tuple[tuple[ReviewerSemanticDomain, str], ...]:
+    badges: list[tuple[ReviewerSemanticDomain, str]] = []
     finding = _optional_string(original_values, "finding")
     if finding and finding != "unknown":
-        badges.append(finding)
-    badges.append(_latest_status_text(state_summary))
-    badges.append(_card_note_presence_text(state_summary))
-    badges.extend(_review_flag_labels(original_values))
-    badges.append(_source_availability_label(source_document))
+        badges.append(("finding", finding))
+    badges.append(("reviewer_workflow_state", _latest_status_text(state_summary)))
+    badges.append(("labeled_source_fact", _card_note_presence_text(state_summary)))
+    badges.extend(
+        ("timing_screening_cue", label)
+        for label in _review_flag_labels(original_values)
+    )
+    badges.append(("source_availability", _source_availability_label(source_document)))
     return tuple(dict.fromkeys(badges))
 
 
@@ -9865,7 +9896,7 @@ def _packet_readiness_cue(
     if _packet_needs_source_check(item):
         cues.append("Needs reviewer attention before copy/print")
     else:
-        cues.append("CCLD source available for preparation review")
+        cues.append("Source available for preparation review")
     if _packet_needs_reviewer_attention(state_summary):
         cues.append("Reviewer-created status/note attention suggested")
     else:
@@ -9903,7 +9934,7 @@ def _packet_review_flags_markup(flags: str) -> str:
     if flags == "No review flags are visible from loaded record values.":
         return _escape(flags)
     return " ".join(
-        _review_chip_markup(flag.strip())
+        _semantic_chip_markup("timing_screening_cue", flag.strip())
         for flag in flags.split(";")
         if flag.strip()
     )
@@ -9972,9 +10003,9 @@ def _packet_inclusion_reasons(
         if original_values.get("report_date_used_as_proxy") is True:
             reasons.append("Report date proxy cue.")
     if _has_visible_traceability_document(source_document):
-        reasons.append("CCLD source available.")
+        reasons.append("Source available.")
     else:
-        reasons.append("Source not available; needs reviewer attention.")
+        reasons.append("Source unavailable; needs reviewer attention.")
     finding = _optional_string(original_values, "finding")
     if finding and finding != "unknown":
         reasons.append(f"Finding value shown: {finding}.")
@@ -10538,7 +10569,7 @@ def _render_detail_review_flags_section(original_values: Mapping[str, Any]) -> s
       <p>No review flags are visible from loaded fields.</p>
     </section>"""
     items = "\n".join(
-        f'        <li><span class="{_review_flag_chip_class(label)}">{_escape(label)}</span></li>'
+        f"        <li>{_semantic_chip_markup('timing_screening_cue', label)}</li>"
         for label in flags
     )
     return f"""<section class="detail-card" aria-labelledby="detail-review-flags-heading">
@@ -11200,7 +11231,7 @@ def _render_worklist_reviewer_state(summary: Mapping[str, Any]) -> str:
     if latest_status:
         parts.append(
             '<p><span class="worklist-field-label">Review status</span>'
-            f"{_review_chip_markup(_REVIEWER_STATUS_LABELS.get(latest_status, latest_status))}</p>"
+            f"{_semantic_chip_markup('reviewer_workflow_state', latest_status)}</p>"
         )
     note_count = _summary_int(summary, "note_count")
     if note_count:
@@ -11225,7 +11256,7 @@ def _render_worklist_source_action(
             f'aria-label="Open source report for complaint {_escape(control_number)}">'
             "Open source report</a>"
         )
-    return '<span class="source-unavailable">Source not available</span>'
+    return '<span class="source-unavailable">Source unavailable</span>'
 
 
 def _render_worklist_date(label: str, value: object, field_name: str) -> str:
@@ -11237,7 +11268,7 @@ def _render_worklist_review_flags(original_values: Mapping[str, Any]) -> str:
     if not flags:
         return ""
     items = "".join(
-        f'<li><span class="{_review_flag_chip_class(label)}">{_escape(label)}</span></li>'
+        f"<li>{_semantic_chip_markup('timing_screening_cue', label)}</li>"
         for label in flags
     )
     return f"""<div class="worklist-review-flags"><span class="worklist-field-label">Review flags</span><ul class="flag-list" aria-label="Review flags">{items}</ul></div>"""
@@ -11245,9 +11276,7 @@ def _render_worklist_review_flags(original_values: Mapping[str, Any]) -> str:
 
 def _worklist_source_chip(source_document: Mapping[str, Any]) -> str:
     label = _source_availability_label(source_document)
-    if label == "CCLD source available":
-        return f'<span class="review-chip source-chip">{_escape(label)}</span>'
-    return _review_chip_markup(label)
+    return _semantic_chip_markup("source_availability", label)
 
 
 def _worklist_copyable_value(label: str, value: str) -> str:
@@ -11262,12 +11291,24 @@ def _render_queue_record_badges(
     note_presence_text: str,
     original_values: Mapping[str, Any],
 ) -> str:
-    labels = [finding, reviewer_status_text, note_presence_text]
-    labels.extend(_review_flag_labels(original_values))
     badges = " ".join(
-        _review_chip_markup(label)
-        for label in labels
-        if label and label != "unknown"
+        markup
+        for markup in (
+            _reviewer_semantic_markup("finding", finding)
+            if finding and finding != "unknown"
+            else "",
+            _semantic_chip_markup("reviewer_workflow_state", reviewer_status_text)
+            if reviewer_status_text
+            else "",
+            _semantic_chip_markup("labeled_source_fact", note_presence_text)
+            if note_presence_text
+            else "",
+            *(
+                _semantic_chip_markup("timing_screening_cue", label)
+                for label in _review_flag_labels(original_values)
+            ),
+        )
+        if markup
     )
     return f'<p class="queue-record-badges">{badges}</p>'
 
@@ -11317,8 +11358,8 @@ def _source_traceability_cue(source_document: Mapping[str, Any]) -> str:
 
 def _source_availability_label(source_document: Mapping[str, Any]) -> str:
     if _source_url_available(source_document):
-        return "CCLD source available"
-    return "Source not available"
+        return "Source available"
+    return "Source unavailable"
 
 
 def _source_url_available(source_document: Mapping[str, Any]) -> bool:
@@ -11377,7 +11418,6 @@ def _has_delay_flag(original_values: Mapping[str, Any]) -> bool:
             "review_delay_over_30_days",
             "review_delay_over_60_days",
             "review_delay_over_90_days",
-            "review_delay_over_120_days",
         )
     )
 
@@ -11426,7 +11466,7 @@ def _render_review_flag_chips(
     if not flags:
         return '<p class="sr-note">No review flags are visible from loaded record values.</p>'
     items = "\n".join(
-        f'                            <li><span class="{_review_flag_chip_class(label)}">{_escape(label)}</span></li>'
+        f"                            <li>{_semantic_chip_markup('timing_screening_cue', label)}</li>"
         for label in flags
     )
     return f"""                        <p class="sr-note">Review flags</p>
@@ -11435,61 +11475,39 @@ def _render_review_flag_chips(
                         </ul>"""
 
 
-def _review_flag_chip_class(label: str) -> str:
-    if label in {
-        "Source unavailable",
-        "Missing source date",
-        "Missing first activity",
-        "Date mismatch",
-        "Source narrative missing",
-        "Source link unavailable",
-    }:
-        return "review-chip badge-danger"
-    if label in {"CCLD source available", "Source available"}:
-        return "review-chip source-chip"
-    if label.strip().casefold() in {"substantiated", "unsubstantiated", "inconclusive"}:
-        return "review-chip badge-info"
-    if label.endswith("day gap"):
-        return "review-chip badge-attention badge-attention--warning"
-    workflow_state_labels = (
-        "No status",
-        "No note",
-        "Note added",
-        *_REVIEWER_STATUS_LABELS.values(),
+def _semantic_chip_markup(domain: ReviewerSemanticDomain, value: object) -> str:
+    presentation = reviewer_semantic_presentation(domain, value)
+    marker_class = (
+        f"review-chip__marker review-chip__marker--{presentation.marker}"
+        if presentation.marker
+        else ""
     )
-    if label in workflow_state_labels:
-        if label == "No note":
-            return "review-chip badge-info badge-info--note"
-        return "review-chip badge-info badge-info--status"
-    return "review-chip"
-
-
-def _review_chip_markup(label: str) -> str:
-    marker_class = _review_chip_marker_class(label)
     marker = (
         f'<span class="{marker_class}" aria-hidden="true"></span>'
         if marker_class
         else ""
     )
-    return f'<span class="{_review_flag_chip_class(label)}">{marker}{_escape(label)}</span>'
+    accessible_name = (
+        f' aria-label="{_escape(presentation.accessible_label)}"'
+        if presentation.accessible_label
+        else ""
+    )
+    return f'<span class="{presentation.component_class}"{accessible_name}>{marker}{_escape(presentation.label)}</span>'
 
 
-def _review_chip_marker_class(label: str) -> str:
-    if label.strip().casefold() in {"substantiated", "unsubstantiated", "inconclusive"}:
-        return "review-chip__marker review-chip__marker--finding"
-    if label.endswith("day gap"):
-        return "review-chip__marker review-chip__marker--warning"
-    if label == "No note":
-        return "review-chip__marker review-chip__marker--note"
-    if label in {"No status", *_REVIEWER_STATUS_LABELS.values()}:
-        return "review-chip__marker review-chip__marker--status"
-    return ""
+def _reviewer_semantic_markup(domain: ReviewerSemanticDomain, value: object) -> str:
+    if domain == "finding":
+        return _finding_badge(str(value))
+    return _semantic_chip_markup(domain, value)
+
+
+def _review_chip_markup(label: str) -> str:
+    return _semantic_chip_markup("labeled_source_fact", label)
 
 
 def _review_flag_labels(original_values: Mapping[str, Any]) -> tuple[str, ...]:
     flags: list[str] = []
     for field_name, label in (
-        ("review_delay_over_120_days", "120+ day gap"),
         ("review_delay_over_90_days", "90+ day gap"),
         ("review_delay_over_60_days", "60+ day gap"),
         ("review_delay_over_30_days", "30+ day gap"),
@@ -11768,11 +11786,13 @@ def _render_detail(
 def _render_detail_heading_context(original_values: Mapping[str, Any]) -> str:
     complaint_number = _optional_string(original_values, "complaint_control_number")
     finding = _optional_string(original_values, "finding")
+    field_label = _finding_field_label(finding)
+    field_value = _finding_badge(finding)
     return (
         '<p class="detail-heading-context">'
         f"Complaint {_copyable_value('Complaint/control number', complaint_number)} &middot; "
-        f'{_glossary_term("Complaint finding", "The outcome or status shown in the public complaint record.", "detail-complaint-finding")}: '
-        f"{_finding_definition_term(finding)}"
+        f'{_glossary_term(field_label, "The source-derived finding or complaint status shown in the public complaint record.", "detail-complaint-finding")}: '
+        f"{field_value}"
         "</p>"
     )
 
@@ -11796,7 +11816,7 @@ def _render_complaint_overview_card(
             <div>
               <h2 id="complaint-overview-card-heading">What happened</h2>
               <p class="complaint-subject">{_escape(subject)}</p>
-              <p class="finding-context-line">{_glossary_term("Complaint finding", "The outcome or status shown in the public complaint record.", "overview-complaint-finding")} {_finding_badge(finding)}</p>
+              <p class="finding-context-line">{_glossary_term(_finding_field_label(finding), "The source-derived finding or complaint status shown in the public complaint record.", "overview-complaint-finding")} {_finding_badge(finding)}</p>
             </div>
             <div class="overview-source-action">
               {_source_action_link(source_document)}
@@ -11927,12 +11947,15 @@ def _render_historical_deficiencies(values: tuple[PresentationValue, ...]) -> st
 
 def _source_availability_chip(source_document: Mapping[str, Any]) -> str:
     if _source_url_available(source_document):
-        return '<span class="review-chip source-chip">CCLD source available</span>'
+        return _semantic_chip_markup("source_availability", "Source available")
     return ""
 
 
 def _finding_definition_term(finding: str) -> str:
-    normalized = finding.strip().casefold()
+    presentation = reviewer_semantic_presentation("finding", finding)
+    if not presentation.is_canonical:
+        return _escape(presentation.label)
+    normalized = presentation.label.casefold()
     definitions = {
         "unsubstantiated": "A source-reported finding that the allegation was not substantiated in the public complaint record.",
         "substantiated": "A source-reported finding that the allegation was substantiated in the public complaint record.",
@@ -11940,18 +11963,23 @@ def _finding_definition_term(finding: str) -> str:
     }
     definition = definitions.get(normalized)
     if definition is None:
-        return _escape(finding)
+        return _escape(presentation.label)
     term_id = "finding-" + normalized.replace(" ", "-")
     return _glossary_term(finding, definition, term_id)
 
 
 def _finding_badge(finding: str) -> str:
+    if is_complaint_status_value(finding):
+        return _semantic_chip_markup("complaint_status", finding)
+    presentation = reviewer_semantic_presentation("finding", finding)
+    if not presentation.is_canonical:
+        return _semantic_chip_markup("labeled_source_fact", presentation.label)
     marker = (
-        f'<span class="finding-badge__marker finding-badge__marker--{_escape(_finding_badge_marker(finding))}" aria-hidden="true"></span>'
+        f'<span class="finding-badge__marker finding-badge__marker--{_escape(_finding_badge_marker(presentation.label))}" aria-hidden="true"></span>'
     )
     return (
-        f'<span class="{_finding_badge_class(finding)}">'
-        f"{marker}{_finding_definition_term(finding)}</span>"
+        f'<span class="{_finding_badge_class(presentation.label)}">'
+        f"{marker}{_finding_definition_term(presentation.label)}</span>"
     )
 
 
@@ -13106,7 +13134,7 @@ def _source_action_link(source_document: Mapping[str, Any]) -> str:
     source_url = source_document.get("source_url")
     if _source_url_available(source_document):
         return f'<a class="button" href="{_escape(str(source_url))}" target="_blank" rel="noopener noreferrer">Open source report</a>'
-    return '<span class="button button-disabled" aria-disabled="true">Source not available</span>'
+    return '<span class="button button-disabled" aria-disabled="true">Source unavailable</span>'
 
 
 def _timeline_first_activity_value(original_values: Mapping[str, Any]) -> str:
