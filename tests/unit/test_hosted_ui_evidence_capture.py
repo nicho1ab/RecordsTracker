@@ -1224,6 +1224,7 @@ def test_browser_exit_zero_without_required_output_is_governed_failure(
     candidate_test = powershell_function(
         "Test-ScreenshotToolCandidate", "Resolve-ScreenshotTool"
     )
+    route_screenshot = powershell_function("Invoke-RouteScreenshot", "Invoke-RoutePrint")
     png_dimensions = powershell_function("Get-PngDimensions", "Invoke-Issue502BrowserCapture")
     executable = tmp_path / "browser.exe"
     empty_png = tmp_path / "empty.png"
@@ -1232,7 +1233,10 @@ def test_browser_exit_zero_without_required_output_is_governed_failure(
 {png_dimensions}
 {output_failure}
 {candidate_test}
+{route_screenshot}
 $TimeoutSeconds = 1
+$ViewportWidth = 1
+$ViewportHeight = 1
 $executable = {json.dumps(str(executable))}
 $emptyPng = {json.dumps(str(empty_png))}
 $validPng = {json.dumps(str(valid_png))}
@@ -1243,12 +1247,55 @@ $pngBytes = [byte[]](
   73,72,68,82,0,0,0,1,0,0,0,1
 )
 [System.IO.File]::WriteAllBytes($validPng, $pngBytes)
+$script:ProbePaths = [System.Collections.ArrayList]::new()
+$script:ProbeArguments = @()
+$script:ProbeScenario = ''
 function Invoke-NativeCaptureCommand {{
   param([string]$Command, [string[]]$Arguments, [int]$Timeout)
-  return [pscustomobject]@{{ ExitCode = 0; Output = '' }}
+  $script:ProbeArguments = @($Arguments)
+  $screenshotArgument = @(
+    $Arguments | Where-Object {{ $_ -like '--screenshot=*' }} | Select-Object -First 1
+  )
+  $screenshotPath = $screenshotArgument[0].Substring('--screenshot='.Length)
+  [void]$script:ProbePaths.Add([pscustomobject]@{{
+    Screenshot = $screenshotPath
+    Directory = Split-Path $screenshotPath -Parent
+  }})
+  switch ($script:ProbeScenario) {{
+    'valid' {{
+      [System.IO.File]::WriteAllBytes($screenshotPath, $pngBytes)
+      return [pscustomobject]@{{ ExitCode = 0; Output = '' }}
+    }}
+    'empty' {{
+      New-Item -ItemType File -Path $screenshotPath | Out-Null
+      return [pscustomobject]@{{ ExitCode = 0; Output = '' }}
+    }}
+    'invalid' {{
+      Set-Content -LiteralPath $screenshotPath -Value 'not-a-png' -NoNewline
+      return [pscustomobject]@{{ ExitCode = 0; Output = '' }}
+    }}
+    'command-failure' {{ return [pscustomobject]@{{ ExitCode = 7; Output = 'synthetic failure' }} }}
+    default {{ return [pscustomobject]@{{ ExitCode = 0; Output = '' }} }}
+  }}
 }}
 $candidate = [pscustomobject]@{{ Command = $executable; Kind = 'edge'; Name = 'edge-test' }}
-$candidateFailure = Test-ScreenshotToolCandidate -Candidate $candidate
+function Invoke-CandidateScenario {{
+  param([string]$Scenario)
+  $script:ProbeScenario = $Scenario
+  $result = Test-ScreenshotToolCandidate -Candidate $candidate
+  $probePath = @($script:ProbePaths | Select-Object -Last 1)[0]
+  return [pscustomobject]@{{
+    Usable = [bool]$result.Usable
+    Status = [string]$result.Status
+    Cleanup = -not (Test-Path -LiteralPath $probePath.Directory) `
+      -and -not (Test-Path -LiteralPath $probePath.Screenshot)
+  }}
+}}
+$candidateValid = Invoke-CandidateScenario -Scenario 'valid'
+$candidateMissing = Invoke-CandidateScenario -Scenario 'missing'
+$candidateEmpty = Invoke-CandidateScenario -Scenario 'empty'
+$candidateInvalid = Invoke-CandidateScenario -Scenario 'invalid'
+$candidateCommandFailure = Invoke-CandidateScenario -Scenario 'command-failure'
 $missingScreenshot = Join-Path {json.dumps(str(tmp_path))} 'missing.png'
 $domMissingParameters = @{{
   Operation = 'probe'; ExitCode = 0; RequiredOutput = 'DOM'
@@ -1271,7 +1318,12 @@ $validScreenshotParameters = @{{
   BrowserExecutableCategory = 'edge'; OutputPath = $validPng; RequirePng = $true
 }}
 [ordered]@{{
-  Candidate = $candidateFailure.Status
+  CandidateValid = $candidateValid
+  CandidateMissing = $candidateMissing
+  CandidateEmpty = $candidateEmpty
+  CandidateInvalid = $candidateInvalid
+  CandidateCommandFailure = $candidateCommandFailure
+  CandidateArguments = @($script:ProbeArguments)
   MissingDom = Get-BrowserAutomationOutputFailure @domMissingParameters
   MissingScreenshot = Get-BrowserAutomationOutputFailure @missingScreenshotParameters
   EmptyScreenshot = Get-BrowserAutomationOutputFailure @emptyScreenshotParameters
@@ -1289,7 +1341,27 @@ $validScreenshotParameters = @{{
 
     assert result.returncode == 0, plain_output(result)
     failures = json.loads(result.stdout)
-    for key in ("Candidate", "MissingDom", "MissingScreenshot", "EmptyScreenshot"):
+    assert failures["CandidateValid"]["Usable"] is True
+    assert failures["CandidateValid"]["Status"] == "usable headless browser screenshot executable"
+    assert failures["CandidateValid"]["Cleanup"] is True
+    for key in ("CandidateMissing", "CandidateEmpty"):
+        assert failures[key]["Usable"] is False
+        assert failures[key]["Cleanup"] is True
+        assert failures[key]["Status"].startswith(
+            "BROWSER_AUTOMATION_NO_REQUIRED_OUTPUT:"
+        )
+    for key in ("CandidateInvalid", "CandidateCommandFailure"):
+        assert failures[key]["Usable"] is False
+        assert failures[key]["Cleanup"] is True
+    assert failures["CandidateInvalid"]["Status"].startswith(
+        "BROWSER_AUTOMATION_INVALID_REQUIRED_OUTPUT:"
+    )
+    assert failures["CandidateCommandFailure"]["Status"].startswith(
+        "BROWSER_AUTOMATION_COMMAND_FAILED:"
+    )
+    assert "--screenshot=" in " ".join(failures["CandidateArguments"])
+    assert "--user-data-dir=" not in " ".join(failures["CandidateArguments"])
+    for key in ("MissingDom", "MissingScreenshot", "EmptyScreenshot"):
         assert failures[key].startswith("BROWSER_AUTOMATION_NO_REQUIRED_OUTPUT:")
         assert "exitCode=0" in failures[key]
     assert failures["ValidDom"] == ""

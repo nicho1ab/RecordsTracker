@@ -484,12 +484,19 @@ function Test-ScreenshotToolCandidate {
             Remove-Item -LiteralPath $probePath -Force -ErrorAction SilentlyContinue
         }
     }
-    $probe = Invoke-NativeCaptureCommand -Command $Candidate.Command -Arguments @("--headless=new", "--disable-gpu", "--dump-dom", "about:blank") -Timeout ([Math]::Max(15, [int]$TimeoutSeconds))
-    $failure = Get-BrowserAutomationOutputFailure -Operation "headless-dom-probe" -ExitCode $probe.ExitCode -RequiredOutput "DOM" -BrowserExecutableCategory $Candidate.Kind -TextOutput $probe.Output -TextOutputExpected
-    if (-not $failure) {
-        return [pscustomobject]@{ Usable = $true; Status = "usable headless browser executable" }
+    $probeDirectory = Join-Path ([System.IO.Path]::GetTempPath()) ("ccld-native-screenshot-probe-{0}" -f [guid]::NewGuid().ToString("N"))
+    $probePath = Join-Path $probeDirectory "probe.png"
+    try {
+        New-Item -ItemType Directory -Path $probeDirectory | Out-Null
+        $failure = Invoke-RouteScreenshot -Tool $Candidate -Url "about:blank" -ScreenshotPath $probePath -Width $ViewportWidth -Height $ViewportHeight
+        if (-not $failure) {
+            return [pscustomobject]@{ Usable = $true; Status = "usable headless browser screenshot executable" }
+        }
+        return [pscustomobject]@{ Usable = $false; Status = $failure }
     }
-    return [pscustomobject]@{ Usable = $false; Status = $failure }
+    finally {
+        Remove-Item -LiteralPath $probeDirectory -Recurse -Force -ErrorAction SilentlyContinue
+    }
 }
 
 function Resolve-ScreenshotTool {
