@@ -672,10 +672,16 @@ def test_capture_script_verifies_zip_membership_sizes_and_hash(tmp_path: Path) -
         + "try { Test-EvidencePacketFiles -PacketDirectory $packet | Out-Null; "
         + "$zero = 'not rejected' } "
         + "catch { $zero = $_.Exception.Message }\n"
+        + "Set-Content -LiteralPath (Join-Path $packet 'README.txt') -Value 'evidence' -NoNewline\n"
+        + "Set-Content -LiteralPath (Join-Path $packet 'manifest.json') "
+        + "-Value 'not-json' -NoNewline\n"
+        + "try { Test-EvidencePacketFiles -PacketDirectory $packet | Out-Null; "
+        + "$invalidJson = 'not rejected' } "
+        + "catch { $invalidJson = $_.Exception.Message }\n"
         + "[ordered]@{ Hash = $hash; Length = $length; FileHash = $file.sha256; "
         + "FileAction = $file.action; FileSource = $file.source; "
         + "FileTimestamp = $file.timestamp; FileSanitization = $file.sanitizationState; "
-        + "ZeroLength = $zero } | ConvertTo-Json\n"
+        + "ZeroLength = $zero; InvalidJson = $invalidJson } | ConvertTo-Json\n"
     )
     result = subprocess.run(
         [powershell(), "-NoProfile", "-Command", ps_script],
@@ -695,6 +701,7 @@ def test_capture_script_verifies_zip_membership_sizes_and_hash(tmp_path: Path) -
     assert "credentials" in verified["FileSanitization"]
     assert verified["Length"] > 0
     assert "zero-length files" in verified["ZeroLength"]
+    assert "invalid JSON files" in verified["InvalidJson"]
 
 
 def test_issue_641_validation_summary_fails_when_any_failure_count_is_nonzero() -> None:
@@ -1160,6 +1167,133 @@ def test_issue_502_capture_records_complete_responsive_and_keyboard_state() -> N
     assert "issue-502-responsive-measurements.json" in script
     assert "issue-502-focus-state-report.json" in script
     assert "keyboard screenshot differs from ordinary route" in script
+
+
+def test_issue_502_empty_aggregate_diagnostics_are_valid_json_arrays(
+    tmp_path: Path,
+) -> None:
+    writer = powershell_function("Write-JsonAggregateFile", "Test-ScreenshotToolCandidate")
+    focus_path = tmp_path / "issue-502-focus-state-report.json"
+    responsive_path = tmp_path / "issue-502-responsive-measurements.json"
+    populated_path = tmp_path / "populated.json"
+    ps_script = f"""
+{writer}
+$focus = {json.dumps(str(focus_path))}
+$responsive = {json.dumps(str(responsive_path))}
+$populated = {json.dumps(str(populated_path))}
+Write-JsonAggregateFile -Path $focus -Rows @()
+Write-JsonAggregateFile -Path $responsive -Rows @()
+Write-JsonAggregateFile -Path $populated -Rows @(
+  [pscustomobject]@{{ route = 'one' }},
+  [pscustomobject]@{{ route = 'two' }}
+)
+[ordered]@{{
+  Focus = Get-Content -LiteralPath $focus -Raw
+  Responsive = Get-Content -LiteralPath $responsive -Raw
+  Populated = Get-Content -LiteralPath $populated -Raw
+  FocusLength = (Get-Item -LiteralPath $focus).Length
+  ResponsiveLength = (Get-Item -LiteralPath $responsive).Length
+}} | ConvertTo-Json
+"""
+    result = subprocess.run(
+        [powershell(), "-NoProfile", "-Command", ps_script],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, plain_output(result)
+    diagnostics = json.loads(result.stdout)
+    assert diagnostics["FocusLength"] > 0
+    assert diagnostics["ResponsiveLength"] > 0
+    assert json.loads(diagnostics["Focus"]) == []
+    assert json.loads(diagnostics["Responsive"]) == []
+    assert json.loads(diagnostics["Populated"]) == [
+        {"route": "one"},
+        {"route": "two"},
+    ]
+
+
+def test_browser_exit_zero_without_required_output_is_governed_failure(
+    tmp_path: Path,
+) -> None:
+    output_failure = powershell_function(
+        "Get-BrowserAutomationOutputFailure", "Write-JsonAggregateFile"
+    )
+    candidate_test = powershell_function(
+        "Test-ScreenshotToolCandidate", "Resolve-ScreenshotTool"
+    )
+    png_dimensions = powershell_function("Get-PngDimensions", "Invoke-Issue502BrowserCapture")
+    executable = tmp_path / "browser.exe"
+    empty_png = tmp_path / "empty.png"
+    valid_png = tmp_path / "valid.png"
+    ps_script = f"""
+{png_dimensions}
+{output_failure}
+{candidate_test}
+$TimeoutSeconds = 1
+$executable = {json.dumps(str(executable))}
+$emptyPng = {json.dumps(str(empty_png))}
+$validPng = {json.dumps(str(valid_png))}
+Set-Content -LiteralPath $executable -Value 'test' -NoNewline
+New-Item -ItemType File -Path $emptyPng | Out-Null
+$pngBytes = [byte[]](
+  137,80,78,71,13,10,26,10,0,0,0,13,
+  73,72,68,82,0,0,0,1,0,0,0,1
+)
+[System.IO.File]::WriteAllBytes($validPng, $pngBytes)
+function Invoke-NativeCaptureCommand {{
+  param([string]$Command, [string[]]$Arguments, [int]$Timeout)
+  return [pscustomobject]@{{ ExitCode = 0; Output = '' }}
+}}
+$candidate = [pscustomobject]@{{ Command = $executable; Kind = 'edge'; Name = 'edge-test' }}
+$candidateFailure = Test-ScreenshotToolCandidate -Candidate $candidate
+$missingScreenshot = Join-Path {json.dumps(str(tmp_path))} 'missing.png'
+$domMissingParameters = @{{
+  Operation = 'probe'; ExitCode = 0; RequiredOutput = 'DOM'
+  BrowserExecutableCategory = 'edge'; TextOutput = ''; TextOutputExpected = $true
+}}
+$domValidParameters = @{{
+  Operation = 'probe'; ExitCode = 0; RequiredOutput = 'DOM'
+  BrowserExecutableCategory = 'edge'; TextOutput = '<html></html>'; TextOutputExpected = $true
+}}
+$missingScreenshotParameters = @{{
+  Operation = 'screenshot'; ExitCode = 0; RequiredOutput = 'screenshot'
+  BrowserExecutableCategory = 'edge'; OutputPath = $missingScreenshot; RequirePng = $true
+}}
+$emptyScreenshotParameters = @{{
+  Operation = 'screenshot'; ExitCode = 0; RequiredOutput = 'screenshot'
+  BrowserExecutableCategory = 'edge'; OutputPath = $emptyPng; RequirePng = $true
+}}
+$validScreenshotParameters = @{{
+  Operation = 'screenshot'; ExitCode = 0; RequiredOutput = 'screenshot'
+  BrowserExecutableCategory = 'edge'; OutputPath = $validPng; RequirePng = $true
+}}
+[ordered]@{{
+  Candidate = $candidateFailure.Status
+  MissingDom = Get-BrowserAutomationOutputFailure @domMissingParameters
+  MissingScreenshot = Get-BrowserAutomationOutputFailure @missingScreenshotParameters
+  EmptyScreenshot = Get-BrowserAutomationOutputFailure @emptyScreenshotParameters
+  ValidDom = Get-BrowserAutomationOutputFailure @domValidParameters
+  ValidScreenshot = Get-BrowserAutomationOutputFailure @validScreenshotParameters
+}} | ConvertTo-Json
+"""
+    result = subprocess.run(
+        [powershell(), "-NoProfile", "-Command", ps_script],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, plain_output(result)
+    failures = json.loads(result.stdout)
+    for key in ("Candidate", "MissingDom", "MissingScreenshot", "EmptyScreenshot"):
+        assert failures[key].startswith("BROWSER_AUTOMATION_NO_REQUIRED_OUTPUT:")
+        assert "exitCode=0" in failures[key]
+    assert failures["ValidDom"] == ""
+    assert failures["ValidScreenshot"] == ""
 
 
 def test_issue_503_capture_proves_fragments_interactions_reflow_and_print() -> None:
