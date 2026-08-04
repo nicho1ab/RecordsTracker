@@ -419,6 +419,53 @@ function Get-ScreenshotToolCandidates {
     return @($candidates)
 }
 
+function Get-BrowserAutomationOutputFailure {
+    param(
+        [string]$Operation,
+        [int]$ExitCode,
+        [string]$RequiredOutput,
+        [string]$BrowserExecutableCategory,
+        [string]$TextOutput = "",
+        [string]$OutputPath = "",
+        [switch]$TextOutputExpected,
+        [switch]$RequirePng
+    )
+    $prefix = "BROWSER_AUTOMATION_"
+    $details = "operation=$Operation; exitCode=$ExitCode; requiredOutput=$RequiredOutput; browserExecutableCategory=$BrowserExecutableCategory"
+    if ($ExitCode -ne 0) {
+        return "${prefix}COMMAND_FAILED: $details; outputStatus=command-failed"
+    }
+    if ($TextOutputExpected) {
+        if ([string]::IsNullOrWhiteSpace($TextOutput)) {
+            return "${prefix}NO_REQUIRED_OUTPUT: $details; outputStatus=missing"
+        }
+        if ($RequiredOutput -eq "DOM" -and $TextOutput -notmatch "(?i)<html") {
+            return "${prefix}INVALID_REQUIRED_OUTPUT: $details; outputStatus=invalid"
+        }
+        return ""
+    }
+    if (-not (Test-Path -LiteralPath $OutputPath -PathType Leaf)) {
+        return "${prefix}NO_REQUIRED_OUTPUT: $details; outputStatus=missing"
+    }
+    if ((Get-Item -LiteralPath $OutputPath).Length -le 0) {
+        return "${prefix}NO_REQUIRED_OUTPUT: $details; outputStatus=empty"
+    }
+    if ($RequirePng) {
+        try { Get-PngDimensions -Path $OutputPath | Out-Null }
+        catch { return "${prefix}INVALID_REQUIRED_OUTPUT: $details; outputStatus=invalid" }
+    }
+    return ""
+}
+
+function Write-JsonAggregateFile {
+    param([string]$Path, [object[]]$Rows, [int]$Depth = 10)
+    $json = if (@($Rows).Count -eq 0) { "[]" } else { $Rows | ConvertTo-Json -Depth $Depth }
+    if ([string]::IsNullOrWhiteSpace($json)) {
+        throw "Refusing to write an empty JSON aggregate: $Path"
+    }
+    Set-Content -LiteralPath $Path -Value $json -Encoding UTF8
+}
+
 function Test-ScreenshotToolCandidate {
     param([object]$Candidate)
     if (-not $Candidate.Command -or -not (Test-Path -LiteralPath $Candidate.Command)) {
@@ -438,10 +485,11 @@ function Test-ScreenshotToolCandidate {
         }
     }
     $probe = Invoke-NativeCaptureCommand -Command $Candidate.Command -Arguments @("--headless=new", "--disable-gpu", "--dump-dom", "about:blank") -Timeout ([Math]::Max(15, [int]$TimeoutSeconds))
-    if ($probe.ExitCode -eq 0 -and $probe.Output -match "(?i)<html") {
+    $failure = Get-BrowserAutomationOutputFailure -Operation "headless-dom-probe" -ExitCode $probe.ExitCode -RequiredOutput "DOM" -BrowserExecutableCategory $Candidate.Kind -TextOutput $probe.Output -TextOutputExpected
+    if (-not $failure) {
         return [pscustomobject]@{ Usable = $true; Status = "usable headless browser executable" }
     }
-    return [pscustomobject]@{ Usable = $false; Status = ("headless browser validation failed: " + (Redact-EvidenceText -Text $probe.Output.Trim())) }
+    return [pscustomobject]@{ Usable = $false; Status = $failure }
 }
 
 function Resolve-ScreenshotTool {
@@ -528,7 +576,8 @@ function Invoke-RouteScreenshot {
     while ($result.ExitCode -eq 0 -and -not (Test-Path -LiteralPath $ScreenshotPath) -and [DateTime]::UtcNow -lt $visibilityDeadline) {
         Start-Sleep -Milliseconds 50
     }
-    if ($result.ExitCode -ne 0 -or -not (Test-Path -LiteralPath $ScreenshotPath)) { return "screenshot failed with $($Tool.Name) exit code $($result.ExitCode): $($result.Output.Trim())" }
+    $failure = Get-BrowserAutomationOutputFailure -Operation "route-screenshot" -ExitCode $result.ExitCode -RequiredOutput "screenshot" -BrowserExecutableCategory $Tool.Kind -OutputPath $ScreenshotPath -RequirePng
+    if ($failure) { return $failure }
     return ""
 }
 
@@ -584,7 +633,9 @@ function Start-InteractionAwareBrowserSession {
         $activePortFile = Join-Path $profileDir "DevToolsActivePort"
         $deadline = [DateTime]::UtcNow.AddSeconds([Math]::Max(15, [int]$TimeoutSeconds))
         while (-not (Test-Path -LiteralPath $activePortFile) -and [DateTime]::UtcNow -lt $deadline) {
-            if ($process.HasExited) { throw "Headless browser exited before DevTools became available." }
+            if ($process.HasExited) {
+                throw (Get-BrowserAutomationOutputFailure -Operation "interaction-aware-startup" -ExitCode $process.ExitCode -RequiredOutput "DevTools endpoint" -BrowserExecutableCategory $Tool.Kind -OutputPath $activePortFile)
+            }
             Start-Sleep -Milliseconds 50
         }
         if (-not (Test-Path -LiteralPath $activePortFile)) { throw "Timed out waiting for the DevTools endpoint." }
@@ -2676,6 +2727,18 @@ function Test-EvidencePacketFiles {
     if ($zeroLengthFiles.Count -gt 0) {
         Stop-CaptureFail "Evidence packet contains zero-length files: $($zeroLengthFiles.path -join ', ')"
     }
+    $invalidJsonFiles = [System.Collections.ArrayList]::new()
+    foreach ($jsonFile in @($indexedPacketFiles | Where-Object { $_.path -like '*.json' })) {
+        try {
+            Get-Content -LiteralPath (Join-Path $PacketDirectory $jsonFile.path) -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop | Out-Null
+        }
+        catch {
+            [void]$invalidJsonFiles.Add($jsonFile.path)
+        }
+    }
+    if ($invalidJsonFiles.Count -gt 0) {
+        Stop-CaptureFail "Evidence packet contains invalid JSON files: $($invalidJsonFiles -join ', ')"
+    }
     return $indexedPacketFiles
 }
 
@@ -4145,8 +4208,8 @@ try {
         }
         $responsiveRows = @($issue502StateRows | Where-Object { $_.route -in @('issue-502-home-mobile', 'issue-502-facility-mobile', 'issue-502-facility-mobile-focused-results', 'issue-502-facility-reflow') })
         $focusRows = @($issue502StateRows | Where-Object { $_.route -in @('issue-502-home-keyboard', 'issue-502-facility-keyboard') })
-        Set-Content -LiteralPath (Join-Path $diagnosticsDir 'issue-502-responsive-measurements.json') -Value ($responsiveRows | ConvertTo-Json -Depth 10) -Encoding UTF8
-        Set-Content -LiteralPath (Join-Path $diagnosticsDir 'issue-502-focus-state-report.json') -Value ($focusRows | ConvertTo-Json -Depth 10) -Encoding UTF8
+        Write-JsonAggregateFile -Path (Join-Path $diagnosticsDir 'issue-502-responsive-measurements.json') -Rows $responsiveRows -Depth 10
+        Write-JsonAggregateFile -Path (Join-Path $diagnosticsDir 'issue-502-focus-state-report.json') -Rows $focusRows -Depth 10
         foreach ($route in $routesToCapture | Where-Object { $_.ContainsKey('Issue502DistinctFrom') }) {
             $keyboardResult = $routeResults | Where-Object { $_.name -eq $route.Name } | Select-Object -First 1
             $baselineResult = $routeResults | Where-Object { $_.name -eq $route.Issue502DistinctFrom } | Select-Object -First 1
