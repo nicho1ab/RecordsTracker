@@ -281,7 +281,7 @@ function New-FixtureProfileSymbolicLink {
 
 $insideLinkTarget = Join-Path $governedRoot "inside-link-target"
 $outsideLinkTarget = Join-Path $outsideRoot "outside-link-target"
-$insideLinkProfile = Join-Path $governedRoot "ccld-ui-evidence-0000000000000000000000000000000b"
+$insideLinkProfile = Join-Path $governedRoot "ccld-ui-evidence-0000000000000000000000000000000e"
 $outsideLinkProfile = Join-Path $governedRoot "ccld-ui-evidence-0000000000000000000000000000000c"
 $brokenLinkProfile = Join-Path $governedRoot "ccld-ui-evidence-0000000000000000000000000000000d"
 New-Item -ItemType Directory -Path $insideLinkTarget, $outsideLinkTarget -Force | Out-Null
