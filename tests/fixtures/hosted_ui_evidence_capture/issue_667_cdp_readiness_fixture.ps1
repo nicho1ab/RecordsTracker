@@ -96,7 +96,8 @@ function Invoke-FixtureCleanupScenario {
         [int]$RemovalFailuresBeforeSuccess = 0,
         [switch]$PermanentProcess,
         [switch]$PermanentRemoval,
-        [int]$ReusedProcessId = 0
+        [int]$ReusedProcessId = 0,
+        [scriptblock]$ProfileItemProvider = $null
     )
     $script:CleanupFixtureState = [pscustomobject]@{
         Clock = [DateTime]::new(2026, 8, 4, 12, 0, 0, [DateTimeKind]::Utc)
@@ -146,17 +147,20 @@ function Invoke-FixtureCleanupScenario {
             $script:CleanupFixtureState.ProcessPollsBeforeExit -= 1
         }
     }
-    $outcome = Invoke-TaskOwnedBrowserCleanup `
-        -ProfileDir $ProfileDir `
-        -ProcessIdentities $ProcessIdentities `
-        -GovernedTempRoot $GovernedRoot `
-        -CleanupTimeoutMilliseconds 150 `
-        -PollMilliseconds 50 `
-        -CurrentProcessProvider $currentProcessProvider `
-        -StopProcessAction $stopProcessAction `
-        -RemoveProfileAction $removeProfileAction `
-        -NowProvider $nowProvider `
-        -SleepAction $sleepAction
+    $cleanupArguments = @{
+        ProfileDir = $ProfileDir
+        ProcessIdentities = $ProcessIdentities
+        GovernedTempRoot = $GovernedRoot
+        CleanupTimeoutMilliseconds = 150
+        PollMilliseconds = 50
+        CurrentProcessProvider = $currentProcessProvider
+        StopProcessAction = $stopProcessAction
+        RemoveProfileAction = $removeProfileAction
+        NowProvider = $nowProvider
+        SleepAction = $sleepAction
+    }
+    if ($null -ne $ProfileItemProvider) { $cleanupArguments.ProfileItemProvider = $ProfileItemProvider }
+    $outcome = Invoke-TaskOwnedBrowserCleanup @cleanupArguments
     return [pscustomobject]@{
         Outcome = $outcome
         StopRequestedIds = @($script:CleanupFixtureState.StopRequestedIds)
@@ -252,11 +256,43 @@ foreach ($entry in @(
     $invalidCases[$entry.Name] = Get-FixtureCleanupSummary -Scenario (Invoke-FixtureCleanupScenario -ProfileDir $entry.Path -GovernedRoot $governedRoot)
 }
 
-$reparseTarget = Join-Path $TempRoot "reparse-target"
 $reparseProfile = Join-Path $governedRoot "ccld-ui-evidence-0000000000000000000000000000000a"
-New-Item -ItemType Directory -Path $reparseTarget -Force | Out-Null
-New-Item -ItemType Junction -Path $reparseProfile -Target $reparseTarget | Out-Null
-$reparse = Invoke-FixtureCleanupScenario -ProfileDir $reparseProfile -GovernedRoot $governedRoot
+New-Item -ItemType Directory -Path $reparseProfile -Force | Out-Null
+$reparseItemProvider = {
+    param($path)
+    if ([System.IO.Path]::GetFileName($path) -eq "ccld-ui-evidence-0000000000000000000000000000000a") {
+        return [pscustomobject]@{ Attributes = ([System.IO.FileAttributes]::Directory -bor [System.IO.FileAttributes]::ReparsePoint); LinkType = ""; Target = @() }
+    }
+    return Get-Item -LiteralPath $path -Force -ErrorAction Stop
+}
+$reparse = Invoke-FixtureCleanupScenario -ProfileDir $reparseProfile -GovernedRoot $governedRoot -ProfileItemProvider $reparseItemProvider
+
+function New-FixtureProfileSymbolicLink {
+    param([string]$Path, [string]$Target)
+    try {
+        New-Item -ItemType SymbolicLink -Path $Path -Target $Target -ErrorAction Stop | Out-Null
+        return [pscustomobject]@{ Created = $true; Error = "" }
+    }
+    catch {
+        if ($env:OS -eq "Windows_NT") { return [pscustomobject]@{ Created = $false; Error = $_.Exception.GetType().Name } }
+        throw "Linux symbolic-link fixture creation failed: $($_.Exception.Message)"
+    }
+}
+
+$insideLinkTarget = Join-Path $governedRoot "inside-link-target"
+$outsideLinkTarget = Join-Path $outsideRoot "outside-link-target"
+$insideLinkProfile = Join-Path $governedRoot "ccld-ui-evidence-0000000000000000000000000000000b"
+$outsideLinkProfile = Join-Path $governedRoot "ccld-ui-evidence-0000000000000000000000000000000c"
+$brokenLinkProfile = Join-Path $governedRoot "ccld-ui-evidence-0000000000000000000000000000000d"
+New-Item -ItemType Directory -Path $insideLinkTarget, $outsideLinkTarget -Force | Out-Null
+Set-Content -LiteralPath (Join-Path $insideLinkTarget "preserve.txt") -Value "inside" -NoNewline
+Set-Content -LiteralPath (Join-Path $outsideLinkTarget "preserve.txt") -Value "outside" -NoNewline
+$insideLink = New-FixtureProfileSymbolicLink -Path $insideLinkProfile -Target $insideLinkTarget
+$outsideLink = New-FixtureProfileSymbolicLink -Path $outsideLinkProfile -Target $outsideLinkTarget
+$brokenLink = New-FixtureProfileSymbolicLink -Path $brokenLinkProfile -Target (Join-Path $outsideRoot "missing-link-target")
+$insideLinkCleanup = if ($insideLink.Created) { Invoke-FixtureCleanupScenario -ProfileDir $insideLinkProfile -GovernedRoot $governedRoot } else { $null }
+$outsideLinkCleanup = if ($outsideLink.Created) { Invoke-FixtureCleanupScenario -ProfileDir $outsideLinkProfile -GovernedRoot $governedRoot } else { $null }
+$brokenLinkCleanup = if ($brokenLink.Created) { Invoke-FixtureCleanupScenario -ProfileDir $brokenLinkProfile -GovernedRoot $governedRoot } else { $null }
 
 $siblingCleanup = Invoke-FixtureCleanupScenario -ProfileDir $exactSiblingTarget -GovernedRoot $governedRoot
 $reusedIdentity = [pscustomobject]@{ ProcessId = 404; CreationTimeUtcTicks = 638898192000000100 }
@@ -291,7 +327,13 @@ $pidReuse = Invoke-FixtureCleanupScenario -ProfileDir $reuseProfile -GovernedRoo
         ProcessTimeout = Get-FixtureCleanupSummary -Scenario $processTimeout
         InvalidPaths = $invalidCases
         Reparse = Get-FixtureCleanupSummary -Scenario $reparse
-        ReparseTargetPreserved = Test-Path -LiteralPath $reparseTarget -PathType Container
+        ReparseProfilePreserved = Test-Path -LiteralPath $reparseProfile -PathType Container
+        IsWindows = ($env:OS -eq "Windows_NT")
+        InsideLink = [ordered]@{ Created = [bool]$insideLink.Created; Error = [string]$insideLink.Error; Cleanup = if ($null -eq $insideLinkCleanup) { $null } else { Get-FixtureCleanupSummary -Scenario $insideLinkCleanup } }
+        OutsideLink = [ordered]@{ Created = [bool]$outsideLink.Created; Error = [string]$outsideLink.Error; Cleanup = if ($null -eq $outsideLinkCleanup) { $null } else { Get-FixtureCleanupSummary -Scenario $outsideLinkCleanup } }
+        BrokenLink = [ordered]@{ Created = [bool]$brokenLink.Created; Error = [string]$brokenLink.Error; Cleanup = if ($null -eq $brokenLinkCleanup) { $null } else { Get-FixtureCleanupSummary -Scenario $brokenLinkCleanup } }
+        InsideLinkTargetPreserved = Test-Path -LiteralPath (Join-Path $insideLinkTarget "preserve.txt") -PathType Leaf
+        OutsideLinkTargetPreserved = Test-Path -LiteralPath (Join-Path $outsideLinkTarget "preserve.txt") -PathType Leaf
         Sibling = Get-FixtureCleanupSummary -Scenario $siblingCleanup
         SiblingPreserved = Test-Path -LiteralPath $siblingProfile -PathType Container
         PidReuse = Get-FixtureCleanupSummary -Scenario $pidReuse

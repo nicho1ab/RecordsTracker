@@ -710,8 +710,42 @@ function Stop-TaskOwnedBrowserProcesses {
     return [pscustomobject]@{ Requested = @($requested); Errors = @($errors) }
 }
 
+function Get-TaskOwnedBrowserProfilePathItem {
+    param([string]$Path, [scriptblock]$ItemProvider)
+    try {
+        return & $ItemProvider $Path
+    }
+    catch {
+        if ($_.Exception -isnot [System.Management.Automation.ItemNotFoundException]) { throw }
+        $parent = [System.IO.Directory]::GetParent($Path)
+        if ($null -eq $parent -or -not (Test-Path -LiteralPath $parent.FullName -PathType Container)) { return $null }
+        $leaf = [System.IO.Path]::GetFileName($Path)
+        $matchingItem = @(
+            Get-ChildItem -LiteralPath $parent.FullName -Force -ErrorAction Stop |
+                Where-Object { [string]::Equals($_.Name, $leaf, [System.StringComparison]::Ordinal) }
+        ) | Select-Object -First 1
+        return $matchingItem
+    }
+}
+
+function Test-TaskOwnedBrowserProfilePathLink {
+    param([object]$Item)
+    if ($null -eq $Item) { return $false }
+    $attributes = if ($null -ne $Item.PSObject.Properties["Attributes"]) { [System.IO.FileAttributes]$Item.Attributes } else { [System.IO.FileAttributes]::Normal }
+    if (($attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) { return $true }
+    foreach ($propertyName in @("LinkType", "Target", "LinkTarget")) {
+        $property = $Item.PSObject.Properties[$propertyName]
+        if ($null -ne $property -and @($property.Value | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) }).Count -gt 0) { return $true }
+    }
+    return $false
+}
+
 function Resolve-TaskOwnedBrowserProfilePath {
-    param([string]$ProfileDir, [string]$GovernedTempRoot = ([System.IO.Path]::GetTempPath()))
+    param(
+        [string]$ProfileDir,
+        [string]$GovernedTempRoot = ([System.IO.Path]::GetTempPath()),
+        [scriptblock]$ItemProvider = { param($path) Get-Item -LiteralPath $path -Force -ErrorAction Stop }
+    )
     if ([string]::IsNullOrWhiteSpace($ProfileDir)) {
         throw "TASK_PROFILE_OWNERSHIP_REJECTED: profile path is empty."
     }
@@ -733,11 +767,9 @@ function Resolve-TaskOwnedBrowserProfilePath {
     }
     $cursor = $resolvedProfile
     while (-not $cursor.Equals($resolvedRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
-        if (Test-Path -LiteralPath $cursor) {
-            $item = Get-Item -LiteralPath $cursor -Force -ErrorAction Stop
-            if (($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) {
-                throw "TASK_PROFILE_REPARSE_POINT_REJECTED: task profile path contains a reparse point."
-            }
+        $item = Get-TaskOwnedBrowserProfilePathItem -Path $cursor -ItemProvider $ItemProvider
+        if (Test-TaskOwnedBrowserProfilePathLink -Item $item) {
+            throw "TASK_PROFILE_REPARSE_POINT_REJECTED: task profile path contains a link or reparse point."
         }
         $parent = [System.IO.Directory]::GetParent($cursor)
         if ($null -eq $parent) {
@@ -770,6 +802,7 @@ function Invoke-TaskOwnedBrowserCleanup {
         [scriptblock]$StopProcessAction = { param($processId) Stop-Process -Id $processId -Force -ErrorAction Stop },
         [scriptblock]$RemoveProfileAction = { param($path) Remove-Item -LiteralPath $path -Recurse -Force -ErrorAction Stop },
         [scriptblock]$ProfileExists = { param($path) Test-Path -LiteralPath $path },
+        [scriptblock]$ProfileItemProvider = { param($path) Get-Item -LiteralPath $path -Force -ErrorAction Stop },
         [scriptblock]$NowProvider = { [DateTime]::UtcNow },
         [scriptblock]$SleepAction = { param($milliseconds) Start-Sleep -Milliseconds $milliseconds }
     )
@@ -800,7 +833,7 @@ function Invoke-TaskOwnedBrowserCleanup {
         Failure = ""
     }
     try {
-        $resolvedProfile = Resolve-TaskOwnedBrowserProfilePath -ProfileDir $ProfileDir -GovernedTempRoot $GovernedTempRoot
+        $resolvedProfile = Resolve-TaskOwnedBrowserProfilePath -ProfileDir $ProfileDir -GovernedTempRoot $GovernedTempRoot -ItemProvider $ProfileItemProvider
         $outcome.ProfilePathValidated = $true
         $outcome.ValidatedProfilePath = $resolvedProfile
     }
@@ -840,7 +873,7 @@ function Invoke-TaskOwnedBrowserCleanup {
     $removalStartedAt = & $NowProvider
     while ($true) {
         try {
-            $retryProfile = Resolve-TaskOwnedBrowserProfilePath -ProfileDir $resolvedProfile -GovernedTempRoot $GovernedTempRoot
+            $retryProfile = Resolve-TaskOwnedBrowserProfilePath -ProfileDir $resolvedProfile -GovernedTempRoot $GovernedTempRoot -ItemProvider $ProfileItemProvider
         }
         catch {
             $outcome.Classification = if ($_.Exception.Message.StartsWith("TASK_PROFILE_REPARSE_POINT_REJECTED:")) { "reparse-point-rejected" } else { "ownership-rejected" }

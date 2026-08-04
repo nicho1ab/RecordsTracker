@@ -1273,7 +1273,20 @@ def test_task_owned_cleanup_is_bounded_exact_and_fail_closed(tmp_path: Path) -> 
     assert cleanup["Reparse"]["Success"] is False
     assert cleanup["Reparse"]["Classification"] == "reparse-point-rejected"
     assert cleanup["Reparse"]["FixtureRemovalAttemptCount"] == 0
-    assert cleanup["ReparseTargetPreserved"] is True
+    assert cleanup["ReparseProfilePreserved"] is True
+
+    for name in ("InsideLink", "OutsideLink", "BrokenLink"):
+        link = cleanup[name]
+        if cleanup["IsWindows"] and link["Created"] is False:
+            assert link["Error"]
+            assert link["Cleanup"] is None
+            continue
+        assert link["Created"] is True
+        assert link["Cleanup"]["Success"] is False
+        assert link["Cleanup"]["Classification"] == "reparse-point-rejected"
+        assert link["Cleanup"]["FixtureRemovalAttemptCount"] == 0
+    assert cleanup["InsideLinkTargetPreserved"] is True
+    assert cleanup["OutsideLinkTargetPreserved"] is True
 
     assert cleanup["Sibling"]["Success"] is True
     assert cleanup["Sibling"]["ProfileRemoved"] is True
