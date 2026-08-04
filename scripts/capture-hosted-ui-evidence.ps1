@@ -88,7 +88,6 @@ Run from the repository root. Generated packets capture local hosted UI route,
 text, assertion, accessibility, and screenshot evidence for reviewer inspection.
 #>
 param(
-    [Parameter(Mandatory = $true)]
     [string]$BaseUrl,
 
     [ValidateSet("live", "fixture", "scaffold")]
@@ -113,6 +112,8 @@ param(
     [string]$ScreenshotToolPreference = "auto",
 
     [switch]$AllowUnavailable,
+
+    [switch]$LibraryOnly,
 
     [switch]$Issue415,
 
@@ -149,8 +150,6 @@ param(
 
     [switch]$Issue642LicensingSourceUnavailable
 )
-
-$ErrorActionPreference = "Stop"
 
 $evidencePurpose = if ($Issue610) {
     "Focused Issue #610 local fixture evidence for Complaint Overview print pagination on the product-owner-rejected populated route and one unavailable-source comparison state."
@@ -604,13 +603,373 @@ function Invoke-RoutePrint {
 }
 
 function New-InteractionBrowserSessionState {
-    param([object]$Socket, [object]$Process, [string]$ProfileDir)
+    param(
+        [object]$Socket,
+        [object]$Process,
+        [string]$ProfileDir,
+        [int[]]$TaskProcessIds = @(),
+        [object[]]$TaskProcessIdentities = @()
+    )
     return [pscustomobject]@{
         Socket = $Socket
         Process = $Process
         ProfileDir = $ProfileDir
+        TaskProcessIds = @($TaskProcessIds)
+        TaskProcessIdentities = @($TaskProcessIdentities)
+        CleanupResult = $null
         NextId = 0
     }
+}
+
+function Get-InteractionAwareStartupFailure {
+    param([object]$Tool, [string]$OutputStatus)
+    $prefix = if ($OutputStatus -in @("missing", "empty")) { "BROWSER_AUTOMATION_NO_REQUIRED_OUTPUT" } else { "BROWSER_AUTOMATION_INVALID_REQUIRED_OUTPUT" }
+    return "${prefix}: operation=interaction-aware-startup; exitCode=0; requiredOutput=DevTools endpoint; browserExecutableCategory=$($Tool.Kind); outputStatus=$OutputStatus"
+}
+
+function New-TaskOwnedBrowserProcessIdentity {
+    param([int]$ProcessId, [DateTime]$CreationTime)
+    return [pscustomobject]@{
+        ProcessId = $ProcessId
+        CreationTimeUtcTicks = $CreationTime.ToUniversalTime().Ticks
+    }
+}
+
+function Get-TaskOwnedBrowserProcessIdentity {
+    param([int]$ProcessId)
+    try {
+        $process = Get-Process -Id $ProcessId -ErrorAction Stop
+        return New-TaskOwnedBrowserProcessIdentity -ProcessId $ProcessId -CreationTime $process.StartTime
+    }
+    catch {
+        return $null
+    }
+}
+
+function Test-TaskOwnedBrowserProcessIdentity {
+    param([object]$Expected, [object]$Observed)
+    return (
+        $null -ne $Expected -and
+        $null -ne $Observed -and
+        [int]$Expected.ProcessId -eq [int]$Observed.ProcessId -and
+        [long]$Expected.CreationTimeUtcTicks -gt 0 -and
+        [long]$Expected.CreationTimeUtcTicks -eq [long]$Observed.CreationTimeUtcTicks
+    )
+}
+
+function Update-TaskOwnedBrowserProcessIds {
+    param(
+        [System.Collections.Generic.HashSet[int]]$ProcessIds,
+        [hashtable]$ProcessIdentities
+    )
+    $pending = [System.Collections.Generic.Queue[int]]::new()
+    $visited = [System.Collections.Generic.HashSet[int]]::new()
+    foreach ($processId in @($ProcessIds)) { $pending.Enqueue([int]$processId) }
+    while ($pending.Count -gt 0) {
+        $parentId = $pending.Dequeue()
+        if (-not $visited.Add($parentId)) { continue }
+        try {
+            $children = @(Get-CimInstance -ClassName Win32_Process -Filter "ParentProcessId = $parentId" -ErrorAction Stop)
+        }
+        catch {
+            continue
+        }
+        foreach ($child in $children) {
+            $childId = [int]$child.ProcessId
+            if ($childId -le 0) { continue }
+            if ($null -ne $ProcessIdentities -and -not $ProcessIdentities.ContainsKey($childId)) {
+                try {
+                    $ProcessIdentities[$childId] = New-TaskOwnedBrowserProcessIdentity -ProcessId $childId -CreationTime ([DateTime]$child.CreationDate)
+                }
+                catch { }
+            }
+            if ($ProcessIds.Add($childId)) { $pending.Enqueue($childId) }
+        }
+    }
+}
+
+function Stop-TaskOwnedBrowserProcesses {
+    param(
+        [object[]]$ProcessIdentities,
+        [scriptblock]$CurrentProcessProvider = { param($processId) Get-TaskOwnedBrowserProcessIdentity -ProcessId $processId },
+        [scriptblock]$StopProcessAction = { param($processId) Stop-Process -Id $processId -Force -ErrorAction Stop }
+    )
+    $requested = [System.Collections.Generic.List[object]]::new()
+    $errors = [System.Collections.Generic.List[string]]::new()
+    foreach ($identity in @($ProcessIdentities | Sort-Object { [int]$_.ProcessId } -Descending)) {
+        $observed = & $CurrentProcessProvider ([int]$identity.ProcessId)
+        if (-not (Test-TaskOwnedBrowserProcessIdentity -Expected $identity -Observed $observed)) { continue }
+        $requested.Add($identity)
+        try {
+            & $StopProcessAction ([int]$identity.ProcessId)
+        }
+        catch {
+            $errors.Add("pid=$([int]$identity.ProcessId); type=$($_.Exception.GetType().FullName); message=$($_.Exception.Message)")
+        }
+    }
+    return [pscustomobject]@{ Requested = @($requested); Errors = @($errors) }
+}
+
+function Resolve-TaskOwnedBrowserProfilePath {
+    param([string]$ProfileDir, [string]$GovernedTempRoot = ([System.IO.Path]::GetTempPath()))
+    if ([string]::IsNullOrWhiteSpace($ProfileDir)) {
+        throw "TASK_PROFILE_OWNERSHIP_REJECTED: profile path is empty."
+    }
+    if (-not [System.IO.Path]::IsPathFullyQualified($ProfileDir)) {
+        throw "TASK_PROFILE_OWNERSHIP_REJECTED: profile path is not absolute."
+    }
+    if ([string]::IsNullOrWhiteSpace($GovernedTempRoot) -or -not [System.IO.Path]::IsPathFullyQualified($GovernedTempRoot)) {
+        throw "TASK_PROFILE_OWNERSHIP_REJECTED: governed temp root is invalid."
+    }
+    $resolvedRoot = [System.IO.Path]::GetFullPath($GovernedTempRoot).TrimEnd([char[]]"\/")
+    $resolvedProfile = [System.IO.Path]::GetFullPath($ProfileDir)
+    $strictChildPrefix = $resolvedRoot + [System.IO.Path]::DirectorySeparatorChar
+    if (-not $resolvedProfile.StartsWith($strictChildPrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "TASK_PROFILE_OWNERSHIP_REJECTED: profile path is not a strict child of the governed temp root."
+    }
+    $profileLeaf = [System.IO.Path]::GetFileName($resolvedProfile.TrimEnd([char[]]"\/"))
+    if ($profileLeaf -notmatch '^ccld-ui-evidence-[0-9A-Fa-f]{32}$') {
+        throw "TASK_PROFILE_OWNERSHIP_REJECTED: profile name does not match the task-owned contract."
+    }
+    $cursor = $resolvedProfile
+    while (-not $cursor.Equals($resolvedRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
+        if (Test-Path -LiteralPath $cursor) {
+            $item = Get-Item -LiteralPath $cursor -Force -ErrorAction Stop
+            if (($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) {
+                throw "TASK_PROFILE_REPARSE_POINT_REJECTED: task profile path contains a reparse point."
+            }
+        }
+        $parent = [System.IO.Directory]::GetParent($cursor)
+        if ($null -eq $parent) {
+            throw "TASK_PROFILE_OWNERSHIP_REJECTED: profile ancestry does not reach the governed temp root."
+        }
+        $cursor = $parent.FullName
+    }
+    if ((Test-Path -LiteralPath $resolvedProfile) -and -not (Test-Path -LiteralPath $resolvedProfile -PathType Container)) {
+        throw "TASK_PROFILE_OWNERSHIP_REJECTED: task profile path is not a directory."
+    }
+    return $resolvedProfile
+}
+
+function Get-TaskOwnedBrowserCleanupFailure {
+    param([object]$Outcome)
+    $remaining = @($Outcome.RemainingProcessIdentities | ForEach-Object { "$([int]$_.ProcessId)@$([long]$_.CreationTimeUtcTicks)" }) -join ','
+    return "TASK_OWNED_BROWSER_CLEANUP_FAILED: classification=$($Outcome.Classification); detail=$($Outcome.Failure); remainingProcessIdentities=$remaining; profilePathValidated=$($Outcome.ProfilePathValidated); profileRemovalAttempts=$($Outcome.ProfileRemovalAttemptCount); profileRemovalElapsedMilliseconds=$($Outcome.ProfileRemovalElapsedMilliseconds); lastRemovalExceptionType=$($Outcome.LastRemovalExceptionType); lastRemovalExceptionMessage=$($Outcome.LastRemovalExceptionMessage); lastRemovalErrorId=$($Outcome.LastRemovalErrorId)"
+}
+
+function Invoke-TaskOwnedBrowserCleanup {
+    param(
+        [string]$ProfileDir,
+        [object[]]$ProcessIdentities = @(),
+        [int[]]$ExpectedProcessIds = @(),
+        [string]$GovernedTempRoot = ([System.IO.Path]::GetTempPath()),
+        [int]$CleanupTimeoutMilliseconds = 5000,
+        [int]$PollMilliseconds = 50,
+        [scriptblock]$BeforeProcessStopAction = { },
+        [scriptblock]$CurrentProcessProvider = { param($processId) Get-TaskOwnedBrowserProcessIdentity -ProcessId $processId },
+        [scriptblock]$StopProcessAction = { param($processId) Stop-Process -Id $processId -Force -ErrorAction Stop },
+        [scriptblock]$RemoveProfileAction = { param($path) Remove-Item -LiteralPath $path -Recurse -Force -ErrorAction Stop },
+        [scriptblock]$ProfileExists = { param($path) Test-Path -LiteralPath $path },
+        [scriptblock]$NowProvider = { [DateTime]::UtcNow },
+        [scriptblock]$SleepAction = { param($milliseconds) Start-Sleep -Milliseconds $milliseconds }
+    )
+    if ($CleanupTimeoutMilliseconds -le 0 -or $PollMilliseconds -le 0) {
+        throw "TASK_OWNED_BROWSER_CLEANUP_INVALID_TIMING: cleanup timeout and poll interval must be positive."
+    }
+    $normalizedById = @{}
+    foreach ($identity in @($ProcessIdentities)) {
+        if ($null -eq $identity -or [int]$identity.ProcessId -le 0 -or [long]$identity.CreationTimeUtcTicks -le 0) { continue }
+        if (-not $normalizedById.ContainsKey([int]$identity.ProcessId)) { $normalizedById[[int]$identity.ProcessId] = $identity }
+    }
+    $normalizedIdentities = @($normalizedById.Values | Sort-Object { [int]$_.ProcessId })
+    $outcome = [pscustomobject][ordered]@{
+        Success = $false
+        TaskOwnedProcessIdentities = @($normalizedIdentities)
+        StopRequestedProcessIdentities = @()
+        RemainingProcessIdentities = @()
+        ProfilePathValidated = $false
+        ValidatedProfilePath = ""
+        ProfileRemovalAttemptCount = 0
+        ProfileRemovalElapsedMilliseconds = 0
+        InitialProfileRemovalFailed = $false
+        ProfileRemoved = $false
+        LastRemovalExceptionType = ""
+        LastRemovalExceptionMessage = ""
+        LastRemovalErrorId = ""
+        Classification = "pending"
+        Failure = ""
+    }
+    try {
+        $resolvedProfile = Resolve-TaskOwnedBrowserProfilePath -ProfileDir $ProfileDir -GovernedTempRoot $GovernedTempRoot
+        $outcome.ProfilePathValidated = $true
+        $outcome.ValidatedProfilePath = $resolvedProfile
+    }
+    catch {
+        $outcome.Classification = if ($_.Exception.Message.StartsWith("TASK_PROFILE_REPARSE_POINT_REJECTED:")) { "reparse-point-rejected" } else { "ownership-rejected" }
+        $outcome.Failure = $_.Exception.Message
+        return $outcome
+    }
+
+    $cleanupStartedAt = & $NowProvider
+    $deadline = $cleanupStartedAt.AddMilliseconds($CleanupTimeoutMilliseconds)
+    $missingIdentityIds = @($ExpectedProcessIds | Sort-Object -Unique | Where-Object { [int]$_ -gt 0 -and -not $normalizedById.ContainsKey([int]$_) })
+    if ($missingIdentityIds.Count -gt 0) {
+        $outcome.Classification = "process-identity-unavailable"
+        $outcome.Failure = "Task-owned process creation identity was unavailable for PID(s): $($missingIdentityIds -join ',')."
+        return $outcome
+    }
+    & $BeforeProcessStopAction
+    $stopResult = Stop-TaskOwnedBrowserProcesses -ProcessIdentities $normalizedIdentities -CurrentProcessProvider $CurrentProcessProvider -StopProcessAction $StopProcessAction
+    $outcome.StopRequestedProcessIdentities = @($stopResult.Requested)
+    while ($true) {
+        $remaining = [System.Collections.Generic.List[object]]::new()
+        foreach ($identity in $normalizedIdentities) {
+            $observed = & $CurrentProcessProvider ([int]$identity.ProcessId)
+            if (Test-TaskOwnedBrowserProcessIdentity -Expected $identity -Observed $observed) { $remaining.Add($identity) }
+        }
+        $outcome.RemainingProcessIdentities = @($remaining)
+        if ($remaining.Count -eq 0) { break }
+        if ((& $NowProvider) -ge $deadline) {
+            $outcome.Classification = "process-timeout"
+            $outcome.Failure = if ($stopResult.Errors.Count -gt 0) { $stopResult.Errors -join ' | ' } else { "Confirmed task-owned processes remained at the cleanup deadline." }
+            return $outcome
+        }
+        & $SleepAction $PollMilliseconds
+    }
+
+    $removalStartedAt = & $NowProvider
+    while ($true) {
+        try {
+            $retryProfile = Resolve-TaskOwnedBrowserProfilePath -ProfileDir $resolvedProfile -GovernedTempRoot $GovernedTempRoot
+        }
+        catch {
+            $outcome.Classification = if ($_.Exception.Message.StartsWith("TASK_PROFILE_REPARSE_POINT_REJECTED:")) { "reparse-point-rejected" } else { "ownership-rejected" }
+            $outcome.Failure = $_.Exception.Message
+            $outcome.ProfileRemovalElapsedMilliseconds = [int]((& $NowProvider) - $removalStartedAt).TotalMilliseconds
+            return $outcome
+        }
+        if (-not (& $ProfileExists $retryProfile)) {
+            $outcome.Success = $true
+            $outcome.ProfileRemoved = $true
+            $outcome.Classification = "success"
+            $outcome.ProfileRemovalElapsedMilliseconds = [int]((& $NowProvider) - $removalStartedAt).TotalMilliseconds
+            return $outcome
+        }
+        $outcome.ProfileRemovalAttemptCount += 1
+        $attemptFailed = $false
+        try {
+            & $RemoveProfileAction $retryProfile
+        }
+        catch {
+            $attemptFailed = $true
+            $outcome.LastRemovalExceptionType = $_.Exception.GetType().FullName
+            $outcome.LastRemovalExceptionMessage = $_.Exception.Message
+            $outcome.LastRemovalErrorId = $_.FullyQualifiedErrorId
+        }
+        $profileStillExists = [bool](& $ProfileExists $retryProfile)
+        if ($outcome.ProfileRemovalAttemptCount -eq 1) { $outcome.InitialProfileRemovalFailed = $attemptFailed -or $profileStillExists }
+        if (-not $profileStillExists) {
+            $outcome.Success = $true
+            $outcome.ProfileRemoved = $true
+            $outcome.Classification = "success"
+            $outcome.ProfileRemovalElapsedMilliseconds = [int]((& $NowProvider) - $removalStartedAt).TotalMilliseconds
+            return $outcome
+        }
+        if ((& $NowProvider) -ge $deadline) {
+            if ($outcome.LastRemovalExceptionType -eq "System.UnauthorizedAccessException") {
+                $outcome.Classification = "access-denied"
+            }
+            elseif ($outcome.LastRemovalExceptionMessage -match '(?i)not empty') {
+                $outcome.Classification = "path-not-empty"
+            }
+            elseif ($outcome.LastRemovalExceptionMessage -match '(?i)in use|used by another process|cannot access the file') {
+                $outcome.Classification = "path-in-use"
+            }
+            else {
+                $outcome.Classification = "filesystem-error"
+            }
+            $outcome.Failure = if ($outcome.LastRemovalExceptionMessage) { $outcome.LastRemovalExceptionMessage } else { "Task profile remained after exact-path removal without a terminating error." }
+            $outcome.ProfileRemovalElapsedMilliseconds = [int]((& $NowProvider) - $removalStartedAt).TotalMilliseconds
+            return $outcome
+        }
+        & $SleepAction $PollMilliseconds
+    }
+}
+
+function Get-TaskOwnedCdpReadiness {
+    param([string]$ActivePortFile, [DateTime]$LaunchStartedAt, [object]$Tool)
+    if (-not (Test-Path -LiteralPath $ActivePortFile -PathType Leaf)) {
+        return [pscustomobject]@{ State = "pending"; Failure = ""; Target = $null }
+    }
+    $portFile = Get-Item -LiteralPath $ActivePortFile -ErrorAction Stop
+    if ($portFile.Length -le 0) {
+        return [pscustomobject]@{ State = "terminal"; Failure = (Get-InteractionAwareStartupFailure -Tool $Tool -OutputStatus "empty"); Target = $null }
+    }
+    if ($portFile.LastWriteTimeUtc -lt $LaunchStartedAt) {
+        return [pscustomobject]@{ State = "terminal"; Failure = (Get-InteractionAwareStartupFailure -Tool $Tool -OutputStatus "stale"); Target = $null }
+    }
+    try {
+        $content = [System.IO.File]::ReadAllText($ActivePortFile).TrimEnd([char[]]"`r`n")
+        $portLines = @($content -split "`r?`n")
+    }
+    catch {
+        return [pscustomobject]@{ State = "terminal"; Failure = (Get-InteractionAwareStartupFailure -Tool $Tool -OutputStatus "malformed"); Target = $null }
+    }
+    $port = 0
+    if ($portLines.Count -ne 2 -or [string]::IsNullOrWhiteSpace($portLines[0]) -or [string]::IsNullOrWhiteSpace($portLines[1]) -or -not [int]::TryParse($portLines[0], [ref]$port) -or $port -lt 1 -or $port -gt 65535 -or $portLines[1] -notmatch '^/devtools/browser/[A-Za-z0-9-]+$') {
+        return [pscustomobject]@{ State = "terminal"; Failure = (Get-InteractionAwareStartupFailure -Tool $Tool -OutputStatus "malformed"); Target = $null }
+    }
+    try {
+        $targetsResponse = Invoke-WebRequest -Uri "http://127.0.0.1:$port/json/list" -UseBasicParsing -TimeoutSec ([Math]::Max(5, [int]$TimeoutSeconds))
+    }
+    catch {
+        return [pscustomobject]@{ State = "pending"; Failure = (Get-InteractionAwareStartupFailure -Tool $Tool -OutputStatus "unreachable"); Target = $null }
+    }
+    try {
+        $targets = @($targetsResponse.Content | ConvertFrom-Json)
+    }
+    catch {
+        return [pscustomobject]@{ State = "terminal"; Failure = (Get-InteractionAwareStartupFailure -Tool $Tool -OutputStatus "malformed-endpoint"); Target = $null }
+    }
+    $target = $targets | Where-Object { $_.type -eq "page" -and $_.webSocketDebuggerUrl } | Select-Object -First 1
+    if ($null -eq $target) {
+        return [pscustomobject]@{ State = "pending"; Failure = (Get-InteractionAwareStartupFailure -Tool $Tool -OutputStatus "missing-page-target"); Target = $null }
+    }
+    try {
+        $targetUri = [Uri]$target.webSocketDebuggerUrl
+        if ($targetUri.Scheme -ne "ws" -or -not $targetUri.IsLoopback -or $targetUri.Port -ne $port) { throw "CDP target endpoint was not task-local." }
+    }
+    catch {
+        return [pscustomobject]@{ State = "terminal"; Failure = (Get-InteractionAwareStartupFailure -Tool $Tool -OutputStatus "mismatched-endpoint"); Target = $null }
+    }
+    return [pscustomobject]@{ State = "ready"; Failure = ""; Target = $target }
+}
+
+function Wait-TaskOwnedCdpReadiness {
+    param(
+        [string]$ActivePortFile,
+        [DateTime]$LaunchStartedAt,
+        [DateTime]$Deadline,
+        [object]$Tool,
+        [object]$RootProcess,
+        [System.Collections.Generic.HashSet[int]]$TaskProcessIds,
+        [hashtable]$TaskProcessIdentities,
+        [scriptblock]$ReadinessProbe = { param($path, $startedAt, $candidate) Get-TaskOwnedCdpReadiness -ActivePortFile $path -LaunchStartedAt $startedAt -Tool $candidate },
+        [scriptblock]$NowProvider = { [DateTime]::UtcNow },
+        [scriptblock]$SleepAction = { param($milliseconds) Start-Sleep -Milliseconds $milliseconds }
+    )
+    $lastReadinessFailure = ""
+    while ((& $NowProvider) -lt $Deadline) {
+        Update-TaskOwnedBrowserProcessIds -ProcessIds $TaskProcessIds -ProcessIdentities $TaskProcessIdentities
+        $readiness = & $ReadinessProbe $ActivePortFile $LaunchStartedAt $Tool
+        if ($readiness.State -eq "ready") { return $readiness }
+        if ($readiness.State -eq "terminal") { throw $readiness.Failure }
+        if ($readiness.Failure) { $lastReadinessFailure = [string]$readiness.Failure }
+        & $SleepAction 50
+    }
+    if ($lastReadinessFailure) { throw $lastReadinessFailure }
+    $exitCode = if ($null -ne $RootProcess -and $RootProcess.HasExited) { [int]$RootProcess.ExitCode } else { 0 }
+    throw (Get-BrowserAutomationOutputFailure -Operation "interaction-aware-startup" -ExitCode $exitCode -RequiredOutput "DevTools endpoint" -BrowserExecutableCategory $Tool.Kind -OutputPath $ActivePortFile)
 }
 
 function Start-InteractionAwareBrowserSession {
@@ -621,6 +980,8 @@ function Start-InteractionAwareBrowserSession {
     $profileDir = Join-Path ([System.IO.Path]::GetTempPath()) ("ccld-ui-evidence-{0}" -f [guid]::NewGuid().ToString("N"))
     New-Item -ItemType Directory -Path $profileDir | Out-Null
     $process = $null
+    $taskProcessIds = [System.Collections.Generic.HashSet[int]]::new()
+    $taskProcessIdentities = @{}
     try {
         $arguments = @(
             "--headless=new",
@@ -636,23 +997,15 @@ function Start-InteractionAwareBrowserSession {
             "about:blank"
         )
         $argumentList = @($arguments | ForEach-Object { Join-NativeArgument -Value ([string]$_) })
-        $process = Start-Process -FilePath $Tool.Command -ArgumentList $argumentList -WindowStyle Hidden -PassThru
         $activePortFile = Join-Path $profileDir "DevToolsActivePort"
+        Remove-Item -LiteralPath $activePortFile -Force -ErrorAction SilentlyContinue
+        $launchStartedAt = [DateTime]::UtcNow
+        $process = Start-Process -FilePath $Tool.Command -ArgumentList $argumentList -WindowStyle Hidden -PassThru
+        [void]$taskProcessIds.Add([int]$process.Id)
+        $taskProcessIdentities[[int]$process.Id] = New-TaskOwnedBrowserProcessIdentity -ProcessId ([int]$process.Id) -CreationTime $process.StartTime
         $deadline = [DateTime]::UtcNow.AddSeconds([Math]::Max(15, [int]$TimeoutSeconds))
-        while (-not (Test-Path -LiteralPath $activePortFile) -and [DateTime]::UtcNow -lt $deadline) {
-            if ($process.HasExited) {
-                throw (Get-BrowserAutomationOutputFailure -Operation "interaction-aware-startup" -ExitCode $process.ExitCode -RequiredOutput "DevTools endpoint" -BrowserExecutableCategory $Tool.Kind -OutputPath $activePortFile)
-            }
-            Start-Sleep -Milliseconds 50
-        }
-        if (-not (Test-Path -LiteralPath $activePortFile)) { throw "Timed out waiting for the DevTools endpoint." }
-        $portLines = @(Get-Content -LiteralPath $activePortFile -ErrorAction Stop)
-        if ($portLines.Count -lt 1 -or -not ($portLines[0] -match '^\d+$')) { throw "DevToolsActivePort did not contain a valid local port." }
-        $port = [int]$portLines[0]
-        $targetsResponse = Invoke-WebRequest -Uri "http://127.0.0.1:$port/json/list" -UseBasicParsing -TimeoutSec ([Math]::Max(5, [int]$TimeoutSeconds))
-        $targets = @($targetsResponse.Content | ConvertFrom-Json)
-        $target = $targets | Where-Object { $_.type -eq "page" -and $_.webSocketDebuggerUrl } | Select-Object -First 1
-        if ($null -eq $target) { throw "No DevTools page target was available." }
+        $readiness = Wait-TaskOwnedCdpReadiness -ActivePortFile $activePortFile -LaunchStartedAt $launchStartedAt -Deadline $deadline -Tool $Tool -RootProcess $process -TaskProcessIds $taskProcessIds -TaskProcessIdentities $taskProcessIdentities
+        $target = $readiness.Target
         $socket = [System.Net.WebSockets.ClientWebSocket]::new()
         $connectTimeout = [System.Threading.CancellationTokenSource]::new([TimeSpan]::FromSeconds([Math]::Max(10, [int]$TimeoutSeconds)))
         try {
@@ -661,17 +1014,17 @@ function Start-InteractionAwareBrowserSession {
         finally {
             $null = $connectTimeout.Dispose()
         }
-        $sessionState = New-InteractionBrowserSessionState -Socket $socket -Process $process -ProfileDir $profileDir
+        $sessionState = New-InteractionBrowserSessionState -Socket $socket -Process $process -ProfileDir $profileDir -TaskProcessIds @($taskProcessIds) -TaskProcessIdentities @($taskProcessIdentities.Values | Sort-Object { [int]$_.ProcessId })
         return $sessionState
     }
     catch {
-        if ($null -ne $process -and -not $process.HasExited) { Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue }
-        $tempRoot = [System.IO.Path]::GetFullPath([System.IO.Path]::GetTempPath())
-        $resolvedProfile = [System.IO.Path]::GetFullPath($profileDir)
-        if ($resolvedProfile.StartsWith($tempRoot, [System.StringComparison]::OrdinalIgnoreCase) -and (Split-Path $resolvedProfile -Leaf) -like "ccld-ui-evidence-*") {
-            Remove-Item -LiteralPath $resolvedProfile -Recurse -Force -ErrorAction SilentlyContinue
+        $startupFailure = $_
+        Update-TaskOwnedBrowserProcessIds -ProcessIds $taskProcessIds -ProcessIdentities $taskProcessIdentities
+        $cleanupOutcome = Invoke-TaskOwnedBrowserCleanup -ProfileDir $profileDir -ProcessIdentities @($taskProcessIdentities.Values) -ExpectedProcessIds @($taskProcessIds)
+        if (-not $cleanupOutcome.Success) {
+            throw (Get-TaskOwnedBrowserCleanupFailure -Outcome $cleanupOutcome)
         }
-        throw
+        throw $startupFailure
     }
 }
 
@@ -769,13 +1122,29 @@ function Wait-CdpCondition {
 function Stop-InteractionAwareBrowserSession {
     param([object]$Session)
     if ($null -eq $Session) { return }
-    try { Invoke-CdpCommand -Session $Session -Method "Browser.close" -Timeout 5 | Out-Null } catch { }
-    try { $Session.Socket.Dispose() } catch { }
-    if ($null -ne $Session.Process -and -not $Session.Process.HasExited) { Stop-Process -Id $Session.Process.Id -Force -ErrorAction SilentlyContinue }
-    $tempRoot = [System.IO.Path]::GetFullPath([System.IO.Path]::GetTempPath())
-    $resolvedProfile = [System.IO.Path]::GetFullPath([string]$Session.ProfileDir)
-    if ($resolvedProfile.StartsWith($tempRoot, [System.StringComparison]::OrdinalIgnoreCase) -and (Split-Path $resolvedProfile -Leaf) -like "ccld-ui-evidence-*") {
-        Remove-Item -LiteralPath $resolvedProfile -Recurse -Force -ErrorAction SilentlyContinue
+    $taskProcessIdentities = if ($null -ne $Session.PSObject.Properties["TaskProcessIdentities"]) {
+        @($Session.TaskProcessIdentities)
+    }
+    elseif ($null -ne $Session.Process) {
+        try { @(New-TaskOwnedBrowserProcessIdentity -ProcessId ([int]$Session.Process.Id) -CreationTime $Session.Process.StartTime) } catch { @() }
+    }
+    else {
+        @()
+    }
+    $taskProcessIds = if ($null -ne $Session.PSObject.Properties["TaskProcessIds"]) { @($Session.TaskProcessIds) } else { @($taskProcessIdentities | ForEach-Object { [int]$_.ProcessId }) }
+    $beforeProcessStop = {
+        try { Invoke-CdpCommand -Session $Session -Method "Browser.close" -Timeout 5 | Out-Null } catch { }
+        try { $Session.Socket.Dispose() } catch { }
+    }
+    $cleanupOutcome = Invoke-TaskOwnedBrowserCleanup -ProfileDir ([string]$Session.ProfileDir) -ProcessIdentities $taskProcessIdentities -ExpectedProcessIds $taskProcessIds -BeforeProcessStopAction $beforeProcessStop
+    if ($null -ne $Session.PSObject.Properties["CleanupResult"] -and $Session.PSObject.Properties["CleanupResult"].IsSettable) {
+        $Session.CleanupResult = $cleanupOutcome
+    }
+    else {
+        $Session | Add-Member -NotePropertyName CleanupResult -NotePropertyValue $cleanupOutcome -Force
+    }
+    if (-not $cleanupOutcome.Success) {
+        throw (Get-TaskOwnedBrowserCleanupFailure -Outcome $cleanupOutcome)
     }
 }
 
@@ -3705,6 +4074,16 @@ function Test-Issue420RouteAssertions {
         $printContract = $Html.Contains("@media print") -and $Html.Contains(".facility-inventory-filters") -and $Html.Contains(".facility-inventory-actions")
         Add-AssertionResult -Target $Assertions -RouteName $name -Check "issue420 print contract" -Status $(if ($printContract) { "PASS" } else { "FAIL" }) -Message $(if ($printContract) { "Print stylesheet preserves values while hiding filter and action controls." } else { "Facility Overview print contract missing." })
     }
+}
+
+# Library-only mode exists solely for fixed, auditable tooling and tests; it is not an alternate capture path.
+if ($LibraryOnly) {
+    return
+}
+
+$ErrorActionPreference = "Stop"
+if ([string]::IsNullOrWhiteSpace($BaseUrl)) {
+    Stop-CaptureFail "BaseUrl is required for standalone capture."
 }
 
 $captureEnvOverrides = [ordered]@{

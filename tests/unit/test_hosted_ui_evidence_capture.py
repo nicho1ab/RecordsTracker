@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 import json
 import re
 import shutil
@@ -1082,7 +1083,15 @@ def test_interaction_browser_session_constructor_returns_one_mutable_state_objec
     assert result == {
         "Count": 1,
         "Type": "System.Management.Automation.PSCustomObject",
-        "Properties": ["Socket", "Process", "ProfileDir", "NextId"],
+        "Properties": [
+            "Socket",
+            "Process",
+            "ProfileDir",
+            "TaskProcessIds",
+            "TaskProcessIdentities",
+            "CleanupResult",
+            "NextId",
+        ],
         "NextIdBefore": 0,
         "NextIdAfter": 1,
     }
@@ -1108,6 +1117,344 @@ def test_browser_session_startup_suppresses_connection_output_and_guards_shape()
     assert "Returned types: $returnedTypeSummary" in script
     assert '$requiredSessionProperties = @("Socket", "Process", "ProfileDir", "NextId")' in script
     assert "$missingSessionProperties.Count -gt 0" in script
+
+
+def test_task_owned_cdp_readiness_static_fixture_is_bounded_and_fail_closed(
+    tmp_path: Path,
+) -> None:
+    fixture = (
+        ROOT
+        / "tests"
+        / "fixtures"
+        / "hosted_ui_evidence_capture"
+        / "issue_667_cdp_readiness_fixture.ps1"
+    )
+    result = subprocess.run(
+        [
+            powershell(),
+            "-NoProfile",
+            "-File",
+            str(fixture),
+            "-TempRoot",
+            str(tmp_path),
+            "-CaptureScriptPath",
+            str(CAPTURE_SCRIPT),
+        ],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, plain_output(result)
+    readiness_result = json.loads(result.stdout)
+    assert readiness_result["Valid"] == "ready"
+    assert readiness_result["Normal"] == "ready"
+    assert readiness_result["Handoff"] == "ready"
+    assert readiness_result["HandoffPolls"] == 2
+    assert readiness_result["HandoffRootExited"] is True
+    for key in ("MissingOutput", "LateOutput", "Empty"):
+        assert readiness_result[key].startswith(
+            "BROWSER_AUTOMATION_NO_REQUIRED_OUTPUT:"
+        )
+    assert all(
+        failure.startswith("BROWSER_AUTOMATION_INVALID_REQUIRED_OUTPUT:")
+        for failure in readiness_result["Malformed"]
+    )
+    for key in ("Unreachable", "MissingTarget", "Stale"):
+        assert readiness_result[key].startswith(
+            "BROWSER_AUTOMATION_INVALID_REQUIRED_OUTPUT:"
+        )
+    assert readiness_result["OutsideProfile"] == "pending"
+    assert readiness_result["OwnedProcessIds"] == [41, 51, 52]
+    assert readiness_result["UnrelatedProcessSelected"] is False
+    assert readiness_result["SuccessCleanupRemoved"] is True
+    assert readiness_result["FailureCleanupRemoved"] is True
+    assert readiness_result["ExternalProfilePreserved"] is True
+
+    script = CAPTURE_SCRIPT.read_text(encoding="utf-8")
+    for expected in (
+        "function Get-TaskOwnedCdpReadiness",
+        "function Wait-TaskOwnedCdpReadiness",
+        "Remove-Item -LiteralPath $activePortFile -Force",
+        "Wait-TaskOwnedCdpReadiness",
+        "Get-CimInstance -ClassName Win32_Process",
+        "Stop-TaskOwnedBrowserProcesses",
+        "http://127.0.0.1:$port/json/list",
+    ):
+        assert expected in script
+    assert 'if ($process.HasExited) {' not in script
+
+
+def test_task_owned_cleanup_is_bounded_exact_and_fail_closed(tmp_path: Path) -> None:
+    fixture = (
+        ROOT
+        / "tests"
+        / "fixtures"
+        / "hosted_ui_evidence_capture"
+        / "issue_667_cdp_readiness_fixture.ps1"
+    )
+    result = subprocess.run(
+        [
+            powershell(),
+            "-NoProfile",
+            "-File",
+            str(fixture),
+            "-TempRoot",
+            str(tmp_path),
+            "-CaptureScriptPath",
+            str(CAPTURE_SCRIPT),
+        ],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, plain_output(result)
+    cleanup = json.loads(result.stdout)["Cleanup"]
+
+    immediate = cleanup["Immediate"]
+    assert immediate["Success"] is True
+    assert immediate["StopRequestedIds"] == []
+    assert immediate["RemainingProcessIds"] == []
+    assert immediate["ProfileRemovalAttemptCount"] == 1
+    assert immediate["InitialProfileRemovalFailed"] is False
+    assert immediate["ProfileRemoved"] is True
+
+    delayed_process = cleanup["DelayedProcess"]
+    assert delayed_process["Success"] is True
+    assert delayed_process["StopRequestedIds"] == [401]
+    assert delayed_process["ProcessProviderIds"].count(401) >= 4
+    assert delayed_process["RemainingProcessIds"] == []
+    assert delayed_process["ProfileRemoved"] is True
+
+    delayed_removal = cleanup["DelayedRemoval"]
+    assert delayed_removal["Success"] is True
+    assert delayed_removal["InitialProfileRemovalFailed"] is True
+    assert delayed_removal["ProfileRemovalAttemptCount"] == 2
+    assert delayed_removal["LastRemovalExceptionType"] == "System.IO.IOException"
+    assert delayed_removal["LastRemovalExceptionMessage"] == "synthetic profile is in use"
+    assert delayed_removal["LastRemovalErrorId"]
+    assert delayed_removal["ProfileRemoved"] is True
+
+    permanent_removal = cleanup["PermanentRemoval"]
+    assert permanent_removal["Success"] is False
+    assert permanent_removal["Classification"] == "path-not-empty"
+    assert permanent_removal["ProfileRemovalAttemptCount"] > 1
+    assert permanent_removal["LastRemovalExceptionType"] == "System.IO.IOException"
+    assert permanent_removal["LastRemovalExceptionMessage"] == (
+        "synthetic directory is not empty"
+    )
+    assert permanent_removal["ProfileRemoved"] is False
+
+    process_timeout = cleanup["ProcessTimeout"]
+    assert process_timeout["Success"] is False
+    assert process_timeout["Classification"] == "process-timeout"
+    assert process_timeout["StopRequestedIds"] == [401]
+    assert process_timeout["RemainingProcessIds"] == [401]
+    assert process_timeout["ProfileRemovalAttemptCount"] == 0
+    assert process_timeout["ProfileRemoved"] is False
+
+    for name in (
+        "Empty",
+        "Relative",
+        "TempRoot",
+        "Parent",
+        "OutsideRoot",
+        "MalformedName",
+    ):
+        rejected = cleanup["InvalidPaths"][name]
+        assert rejected["Success"] is False
+        assert rejected["Classification"] == "ownership-rejected"
+        assert rejected["ProfilePathValidated"] is False
+        assert rejected["FixtureRemovalAttemptCount"] == 0
+
+    assert cleanup["Reparse"]["Success"] is False
+    assert cleanup["Reparse"]["Classification"] == "reparse-point-rejected"
+    assert cleanup["Reparse"]["FixtureRemovalAttemptCount"] == 0
+    assert cleanup["ReparseTargetPreserved"] is True
+
+    assert cleanup["Sibling"]["Success"] is True
+    assert cleanup["Sibling"]["ProfileRemoved"] is True
+    assert cleanup["SiblingPreserved"] is True
+
+    assert cleanup["PidReuse"]["Success"] is True
+    assert cleanup["PidReuse"]["StopRequestedIds"] == []
+    assert cleanup["PidReuse"]["ProcessProviderIds"] == [404, 404]
+    assert 999 not in cleanup["PidReuse"]["ProcessProviderIds"]
+
+
+def test_issue_667_static_fixture_has_no_dynamic_or_live_browser_harness() -> None:
+    fixture = (
+        ROOT
+        / "tests"
+        / "fixtures"
+        / "hosted_ui_evidence_capture"
+        / "issue_667_cdp_readiness_fixture.ps1"
+    )
+    fixture_text = fixture.read_text(encoding="utf-8")
+    test_text = "\n".join(
+        (
+            inspect.getsource(
+                test_task_owned_cdp_readiness_static_fixture_is_bounded_and_fail_closed
+            ),
+            inspect.getsource(test_task_owned_cleanup_is_bounded_exact_and_fail_closed),
+        )
+    )
+    prohibited = (
+        "-Command",
+        "scriptblock]::Create",
+        "Invoke-Expression",
+        "EncodedCommand",
+        "run-probe.ps1",
+        "Start-Process",
+        "Invoke-WebRequest",
+        "msedge.exe",
+        "chrome.exe",
+        ".index(\"function",
+    )
+    for value in prohibited:
+        assert value not in fixture_text
+        assert value not in test_text
+
+
+def test_capture_script_library_only_import_is_side_effect_free(tmp_path: Path) -> None:
+    fixture = (
+        ROOT
+        / "tests"
+        / "fixtures"
+        / "hosted_ui_evidence_capture"
+        / "issue_667_library_import_fixture.ps1"
+    )
+    result_path = tmp_path / "library-import.json"
+    result = subprocess.run(
+        [
+            powershell(),
+            "-NoProfile",
+            "-File",
+            str(fixture),
+            "-CaptureScript",
+            str(CAPTURE_SCRIPT),
+            "-ResultPath",
+            str(result_path),
+        ],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, plain_output(result)
+    assert result.stdout == ""
+    import_result = json.loads(result_path.read_text(encoding="utf-8-sig"))
+    assert import_result["ContinuedAfterImport"] is True
+    assert import_result["CurrentDirectoryUnchanged"] is True
+    assert import_result["EnvironmentUnchanged"] is True
+    assert import_result["NoArtifactsCreated"] is True
+    assert import_result["Functions"] == [True, True, True, True, True]
+    assert sorted(path.name for path in tmp_path.iterdir()) == ["library-import.json"]
+
+    normal_result = subprocess.run(
+        [powershell(), "-NoProfile", "-File", str(CAPTURE_SCRIPT), "-Mode", "fixture"],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert normal_result.returncode != 0
+    assert "BaseUrl is required for standalone capture." in plain_output(normal_result)
+
+    script = CAPTURE_SCRIPT.read_text(encoding="utf-8")
+    assert "[switch]$LibraryOnly" in script
+    assert "if ($LibraryOnly)" in script
+    assert script.index("if ($LibraryOnly)") < script.index("$captureEnvOverrides")
+    assert script.index("BaseUrl is required for standalone capture.") < script.index(
+        "$captureEnvOverrides"
+    )
+
+
+def test_issue_667_library_import_fixture_has_no_dynamic_or_live_browser_harness() -> None:
+    fixture = (
+        ROOT
+        / "tests"
+        / "fixtures"
+        / "hosted_ui_evidence_capture"
+        / "issue_667_library_import_fixture.ps1"
+    )
+    fixture_text = fixture.read_text(encoding="utf-8")
+    prohibited = (
+        "-Command",
+        "scriptblock]::Create",
+        "Invoke-Expression",
+        "EncodedCommand",
+        "run-probe.ps1",
+        "Start-Process",
+        "Invoke-WebRequest",
+        "msedge.exe",
+        "chrome.exe",
+        ".index(\"function",
+    )
+    for value in prohibited:
+        assert value not in fixture_text
+
+
+def test_issue_667_real_edge_probe_is_fixed_and_task_owned() -> None:
+    fixture = (
+        ROOT
+        / "tests"
+        / "fixtures"
+        / "hosted_ui_evidence_capture"
+        / "issue_667_real_edge_probe.ps1"
+    )
+    fixture_text = fixture.read_text(encoding="utf-8")
+
+    assert fixture.exists()
+    assert ". $CaptureScriptPath -LibraryOnly" in fixture_text
+    assert "Test-ScreenshotToolCandidate" in fixture_text
+    assert "Invoke-RouteScreenshot" in fixture_text
+    assert "Start-InteractionAwareBrowserSession" in fixture_text
+    assert "Stop-InteractionAwareBrowserSession" in fixture_text
+    assert "$session.TaskProcessIds" in fixture_text
+    assert "$session.TaskProcessIdentities" in fixture_text
+    assert "$session.CleanupResult" in fixture_text
+    assert "cleanupAttemptCount" in fixture_text
+    assert "cleanupElapsedMilliseconds" in fixture_text
+    assert "cleanupInitialDeletionFailed" in fixture_text
+    assert "cleanupLastDeletionExceptionType" in fixture_text
+    assert "cleanupLastDeletionExceptionMessage" in fixture_text
+    assert "cleanupLastDeletionErrorId" in fixture_text
+    assert "productionCleanupSucceeded" in fixture_text
+    assert "$result.productionCleanupSucceeded -and" in fixture_text
+    assert "$result.profileAbsentAfterHarness -and" in fixture_text
+    assert "RecordsTracker-issue-667-real-edge-*" in fixture_text
+    assert "result.json" in fixture_text
+    assert "invocation.json" in fixture_text
+    assert "validation.png" in fixture_text
+    assert "Function:" not in fixture_text
+
+    prohibited = (
+        "-Command",
+        "scriptblock]::Create",
+        "Invoke-Expression",
+        "EncodedCommand",
+        "run-probe.ps1",
+        "Start-Process",
+        "Stop-Process",
+        "msedge.exe",
+        "chrome.exe",
+        "http://",
+        "https://",
+        "Download",
+        "Set-ItemProperty",
+        "Register-ScheduledTask",
+        "New-Service",
+        "Add-MpPreference",
+        ".index(\"function",
+        "Substring(",
+    )
+    for value in prohibited:
+        assert value not in fixture_text
 
 
 def test_cdp_command_rejects_malformed_session_state_before_socket_use() -> None:
