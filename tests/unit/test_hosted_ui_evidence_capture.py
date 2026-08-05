@@ -27,6 +27,13 @@ ISSUE_644_PACKET_ACCOUNTING_FIXTURE = (
     / "hosted_ui_evidence_capture"
     / "issue_644_packet_accounting_fixture.ps1"
 )
+ISSUE_644_RUNTIME_EVENT_FIXTURE = (
+    ROOT
+    / "tests"
+    / "fixtures"
+    / "hosted_ui_evidence_capture"
+    / "issue_644_runtime_event_classification_fixture.ps1"
+)
 
 
 def read_repo_text(relative_path: str) -> str:
@@ -1049,6 +1056,53 @@ def test_issue_644_packet_accounting_includes_supplemental_and_self_excluded_ind
     assert "indexSelfExclusion" in script
     assert "supplementalArtifactCount" in script
     assert "FINAL_ARTIFACT_COUNT=" in script
+
+
+def test_issue_644_runtime_events_emit_exact_allowlisted_telemetry_classification() -> None:
+    command = [
+        powershell(), "-NoProfile", "-File", str(ISSUE_644_RUNTIME_EVENT_FIXTURE),
+        "-CaptureScriptPath", str(CAPTURE_SCRIPT)
+    ]
+    result = subprocess.run(
+        command,
+        cwd=ROOT, text=True, capture_output=True, check=False
+    )
+    assert result.returncode == 0, plain_output(result)
+    value = json.loads(result.stdout)
+    valid = value["valid"]
+    assert valid["observedConsoleOccurrences"] == valid["classifiedConsoleOccurrences"] == 1
+    assert valid["observedNetworkOccurrences"] == valid["classifiedNetworkOccurrences"] == 1
+    assert value["valid"]["consoleClassifications"][0]["classification"] == (
+        "EXPECTED_OPTIONAL_TELEMETRY"
+    )
+    assert value["valid"]["consoleClassifications"][0]["correlationBasis"].startswith(
+        "context-and-resource:"
+    )
+    zero = value["zero"]
+    assert zero["observedConsoleOccurrences"] == zero["observedNetworkOccurrences"] == 0
+    assert "zero inventory" not in value["zero"].get("status", "")
+
+
+def test_issue_644_runtime_events_reject_unknown_or_application_failures() -> None:
+    command = [
+        powershell(), "-NoProfile", "-File", str(ISSUE_644_RUNTIME_EVENT_FIXTURE),
+        "-CaptureScriptPath", str(CAPTURE_SCRIPT)
+    ]
+    result = subprocess.run(
+        command,
+        cwd=ROOT, text=True, capture_output=True, check=False
+    )
+    assert result.returncode == 0, plain_output(result)
+    value = json.loads(result.stdout)
+    assert "classification is incomplete" in value["unknown"]
+    assert "classification is incomplete" in value["application"]
+    assert "duplicate" in value["duplicate"]
+    assert "occurrence totals" in value["omitted"]
+    assert "omits or references" in value["unobserved"]
+    assert "Test-RuntimeEventClassificationLedger" in CAPTURE_SCRIPT.read_text(encoding="utf-8")
+    assert "Test-RuntimeEventClassificationLedger" in ISSUE_644_RUNTIME_EVENT_FIXTURE.read_text(
+        encoding="utf-8"
+    )
 
 
 def test_issue_641_validation_summary_fails_when_any_failure_count_is_nonzero() -> None:

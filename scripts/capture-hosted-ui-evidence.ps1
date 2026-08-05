@@ -4292,6 +4292,89 @@ function Test-Issue655StaticScenarioEvidence {
     Set-Content -LiteralPath (Join-Path $DiagnosticsDirectory 'issue-655-static-scenario-gate.json') -Value ($gate | ConvertTo-Json -Depth 8) -Encoding UTF8
 }
 
+function Get-RuntimeEventResourceIdentity {
+    param([string]$Value)
+
+    try {
+        $uri = [uri]$Value
+        if (-not $uri.IsAbsoluteUri -or [string]::IsNullOrWhiteSpace($uri.Host)) { throw 'not absolute' }
+        $resource = [IO.Path]::GetFileName($uri.AbsolutePath)
+        if ([string]::IsNullOrWhiteSpace($resource)) { throw 'missing resource' }
+        return [ordered]@{ host=$uri.Host.ToLowerInvariant(); resource=$resource; identity=("{0}/{1}" -f $uri.Host.ToLowerInvariant(), $resource); valid=$true }
+    }
+    catch {
+        return [ordered]@{ host=''; resource=''; identity=''; valid=$false }
+    }
+}
+
+function Test-RuntimeEventClassificationLedger {
+    param([object]$Ledger)
+
+    $raw = @($Ledger.rawConsoleEvents) + @($Ledger.rawNetworkFailures)
+    $rows = @($Ledger.consoleClassifications) + @($Ledger.networkClassifications)
+    if ($raw.Count -eq 0 -and $rows.Count -ne 0) { Stop-CaptureFail 'Runtime-event zero inventory must not synthesize classification rows.' }
+    $rawKeys = @($raw | ForEach-Object { "$($_.category)|$($_.context)|$($_.detail)" })
+    $rowKeys = @($rows | ForEach-Object { "$($_.category)|$($_.context)|$($_.observedDetail)" })
+    if (@($rawKeys | Sort-Object -Unique).Count -ne $rawKeys.Count) { Stop-CaptureFail 'Runtime-event raw inventory contains duplicate normalized event identity.' }
+    if (@($rowKeys | Sort-Object -Unique).Count -ne $rowKeys.Count) { Stop-CaptureFail 'Runtime-event classification contains duplicate or unobserved event identity.' }
+    if ($raw.Count -ne $rows.Count) { Stop-CaptureFail 'Runtime-event observed and classified occurrence totals do not reconcile.' }
+    if (@($rawKeys | Where-Object { $_ -notin $rowKeys }).Count -gt 0 -or @($rowKeys | Where-Object { $_ -notin $rawKeys }).Count -gt 0) { Stop-CaptureFail 'Runtime-event classification omits or references an unobserved event.' }
+    foreach ($row in $rows) {
+        if ($row.classification -ne 'EXPECTED_OPTIONAL_TELEMETRY' -or $row.originScope -ne 'ALLOWLISTED_OPTIONAL_TELEMETRY' -or $row.unexpected -or [string]::IsNullOrWhiteSpace([string]$row.normalizedResource) -or $row.normalizedResource -ne 'static.cloudflareinsights.com/beacon.min.js') { Stop-CaptureFail 'Runtime-event classification is incomplete, unexpected, or not the exact governed optional telemetry resource.' }
+    }
+    foreach ($console in @($Ledger.consoleClassifications)) {
+        $matches=@($Ledger.networkClassifications | Where-Object { $_.correlationBasis -eq "context-and-resource:$($console.id)" -and $_.context -eq $console.context -and $_.normalizedResource -eq $console.normalizedResource })
+        if ($matches.Count -ne 1 -or $console.correlationBasis -ne "context-and-resource:$($matches[0].id)") { Stop-CaptureFail 'Runtime-event correlation is missing, ambiguous, or based on unequal context/resource identity.' }
+    }
+    return [ordered]@{observed=$raw.Count;classified=$rows.Count;status='PASS'}
+}
+
+function New-RuntimeEventClassificationLedger {
+    param([object[]]$BrowserStates)
+
+    $consoleRaw = [System.Collections.ArrayList]::new()
+    $networkRaw = [System.Collections.ArrayList]::new()
+    foreach ($state in @($BrowserStates)) {
+        $context = [string]$state.routeName
+        foreach ($event in @($state.consoleErrors) + @($state.consoleWarnings) + @($state.pageErrors)) {
+            [void]$consoleRaw.Add([ordered]@{ context=$context; detail=[string]$event; category='console' })
+        }
+        foreach ($request in @($state.failedNetworkRequests)) {
+            [void]$networkRaw.Add([ordered]@{ context=$context; detail=[string]$request; category='network' })
+        }
+    }
+    $classify = {
+        param([object[]]$Raw, [string]$Category)
+        $rows = [System.Collections.ArrayList]::new()
+        for ($index = 0; $index -lt $Raw.Count; $index++) {
+            $item = $Raw[$index]
+            $candidate = if ($Category -eq 'network') { [string]$item.detail } else { [regex]::Match([string]$item.detail, 'https?://[^\s"''<>]+').Value }
+            $identity = Get-RuntimeEventResourceIdentity -Value $candidate
+            $isAllowlisted = $identity.valid -and $identity.host -eq 'static.cloudflareinsights.com' -and $identity.resource -eq 'beacon.min.js'
+            [void]$rows.Add([ordered]@{
+                id = "$Category-$index"; category=$Category; context=$item.context; observedDetail=$item.detail; normalizedResource=$identity.identity
+                classification = if ($isAllowlisted) { 'EXPECTED_OPTIONAL_TELEMETRY' } else { 'UNCLASSIFIED' }
+                originScope = if ($isAllowlisted) { 'ALLOWLISTED_OPTIONAL_TELEMETRY' } else { 'UNKNOWN' }
+                observedOccurrences = 1; classifiedOccurrences = 1; disposition = if ($isAllowlisted) { 'allowed optional telemetry' } else { 'unexpected or unclassifiable runtime event' }; unexpected = -not $isAllowlisted
+                correlationBasis = ''
+            })
+        }
+        return @($rows)
+    }
+    $consoleRows = @(& $classify -Raw @($consoleRaw) -Category 'console')
+    $networkRows = @(& $classify -Raw @($networkRaw) -Category 'network')
+    foreach ($console in $consoleRows) {
+        $matches = @($networkRows | Where-Object { $_.classification -eq 'EXPECTED_OPTIONAL_TELEMETRY' -and $_.context -eq $console.context -and $_.normalizedResource -eq $console.normalizedResource })
+        if ($console.classification -eq 'EXPECTED_OPTIONAL_TELEMETRY' -and $matches.Count -eq 1) { $console.correlationBasis = "context-and-resource:$($matches[0].id)"; $matches[0].correlationBasis = "context-and-resource:$($console.id)" }
+        elseif ($console.classification -eq 'EXPECTED_OPTIONAL_TELEMETRY' -and $matches.Count -ne 1) { $console.classification='UNCLASSIFIED'; $console.originScope='UNKNOWN'; $console.unexpected=$true; $console.disposition='ambiguous optional telemetry correlation' }
+    }
+    $classifiedConsoleOccurrences = [int](@($consoleRows | ForEach-Object { [int]$_.classifiedOccurrences } | Measure-Object -Sum).Sum)
+    $classifiedNetworkOccurrences = [int](@($networkRows | ForEach-Object { [int]$_.classifiedOccurrences } | Measure-Object -Sum).Sum)
+    $ledger = [ordered]@{ rawConsoleEvents=@($consoleRaw); rawNetworkFailures=@($networkRaw); consoleClassifications=$consoleRows; networkClassifications=$networkRows; observedConsoleOccurrences=$consoleRaw.Count; observedNetworkOccurrences=$networkRaw.Count; classifiedConsoleOccurrences=$classifiedConsoleOccurrences; classifiedNetworkOccurrences=$classifiedNetworkOccurrences }
+    Test-RuntimeEventClassificationLedger -Ledger $ledger | Out-Null
+    return $ledger
+}
+
 function Write-Issue642PacketDiagnostics {
     param([string]$PacketDirectory, [string]$ScreenshotDirectory, [string]$DiagnosticsDirectory, [object[]]$RouteResults, [string]$IssueNumber = '642')
 
@@ -4325,12 +4408,14 @@ function Write-Issue642PacketDiagnostics {
     if ($pageErrors.Count -gt 0) { $nonzero += 'page-errors' }
     if ($failedRequests.Count -gt 0) { $nonzero += 'failed-network-requests' }
     if ($unexpectedResponses.Count -gt 0) { $nonzero += 'unexpected-http-responses' }
+    $runtimeEvents = New-RuntimeEventClassificationLedger -BrowserStates $browserStates
     $summary = [ordered]@{
         browserStateArtifacts = $browserStates.Count
         console = [ordered]@{ events = ($consoleErrors.Count + $consoleWarnings.Count + $pageErrors.Count); errors = $consoleErrors.Count; warnings = $consoleWarnings.Count; pageErrors = $pageErrors.Count }
         network = [ordered]@{ failedRequests = $failedRequests.Count; unexpectedHttpResponses = $unexpectedResponses.Count }
         nonzeroClassifications = $nonzero
         statement = if ($nonzero.Count -eq 0) { 'No console events, failed requests, or unexpected HTTP responses were observed.' } else { 'Nonzero events or failures are classified above.' }
+        runtimeEventClassification = $runtimeEvents
     }
     Set-Content -LiteralPath (Join-Path $DiagnosticsDirectory "issue-$IssueNumber-console-network-summary.json") -Value ($summary | ConvertTo-Json -Depth 8) -Encoding UTF8
     return [ordered]@{ screenshotStates = $stateCounts; consoleNetwork = $summary }

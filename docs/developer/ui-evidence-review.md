@@ -121,6 +121,18 @@ unexplained exclusions, missing supplemental artifacts, zero-byte files,
 invalid JSON, and ZIP membership or hash mismatches reject the packet rather
 than producing a partial archive.
 
+### Runtime-event classification
+
+Capture preserves raw console and failed-network inventories, then records a
+one-to-one classification ledger with context, normalized resource identity,
+occurrence counts, disposition, and explicit correlation. Counts alone never
+establish correlation. The only permitted optional telemetry is
+`EXPECTED_OPTIONAL_TELEMETRY` with `ALLOWLISTED_OPTIONAL_TELEMETRY` for exact
+host `static.cloudflareinsights.com` and resource basename `beacon.min.js`.
+Zero-event inventories emit no synthetic rows. Wildcards, sibling resources,
+generic third-party labels, unknown events, application failures, duplicate or
+unobserved classifications, mismatches, and ambiguous correlation fail closed.
+
 ## Fail-closed hosted acceptance record
 
 Issue #648 separates evidence capture from acceptance. A packet, route summary,
