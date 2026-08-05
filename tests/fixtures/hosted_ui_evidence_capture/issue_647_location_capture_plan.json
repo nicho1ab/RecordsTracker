@@ -1,0 +1,69 @@
+{
+  "purpose": "Issue #647 location completeness and missing-address presentation.",
+  "dataMode": "fixture-demo",
+  "governanceIssue": "#647",
+  "limitations": [
+    "Presentation evidence only.",
+    "This packet is not PostgreSQL evidence, production evidence, statewide evidence, or live-source completeness evidence.",
+    "Fixture use is explicit and does not silently fall back to production data."
+  ],
+  "scenarios": [
+    {
+      "id": "facility-157806098-unavailable-location",
+      "facilityId": "157806098",
+      "classification": "governed unavailable-location presentation",
+      "expectedLocationState": "unavailable",
+      "routes": [
+        {
+          "kind": "search",
+          "requiredText": ["Facility not found in the directory", "Continue with this Facility ID"],
+          "forbiddenText": ["Unavailable, Unavailable Unavailable"]
+        },
+        {
+          "kind": "overview",
+          "requiredText": ["157806098", "Blank in source"],
+          "forbiddenText": ["Unavailable, Unavailable Unavailable"]
+        },
+        {
+          "kind": "compare",
+          "screenshotMode": "supplemental-tall",
+          "requiredText": ["A. MIRIAM JAMISON CHILDREN'S CENTER", "Facility ID 157806098", "Blank in source"],
+          "forbiddenText": ["Unavailable, Unavailable Unavailable"]
+        },
+        {
+          "kind": "complaint-detail",
+          "applicability": "not-applicable",
+          "reason": "The governed location presentation scenario has no fixture complaint-detail route that can truthfully establish this facility's missing source location."
+        }
+      ]
+    },
+    {
+      "id": "facility-900000001-complete-location",
+      "facilityId": "900000001",
+      "classification": "explicitly synthetic governed fixture",
+      "expectedLocationState": "complete",
+      "routes": [
+        {
+          "kind": "search",
+          "requiredText": ["900000001", "Synthetic Orchard Child Care"],
+          "forbiddenText": ["Unavailable, Unavailable Unavailable"]
+        },
+        {
+          "kind": "overview",
+          "requiredText": ["900000001", "Synthetic Orchard Child Care", "100 Example Way, Sample City, CA 90001"],
+          "forbiddenText": ["Source unavailable"]
+        },
+        {
+          "kind": "compare",
+          "applicability": "not-applicable",
+          "reason": "The fixture comparison view contains complaint-derived facilities only, and this complete-address facility has no truthfully displayed comparison result."
+        },
+        {
+          "kind": "complaint-detail",
+          "applicability": "not-applicable",
+          "reason": "The explicit synthetic complete-address fixture is a facility-presentation scenario and does not claim a linked complaint-detail record."
+        }
+      ]
+    }
+  ]
+}

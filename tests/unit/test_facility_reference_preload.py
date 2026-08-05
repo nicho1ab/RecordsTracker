@@ -760,6 +760,7 @@ def test_active_transparency_suggestions_bypass_full_identity_projection(
                 "cap": "Blank in source",
             "city": "Direct City",
             "co": "Direct County",
+            "loc": "Direct City, CA 95814",
             "n": "Direct Endpoint Facility",
             "num": "001234567",
             "p": "",

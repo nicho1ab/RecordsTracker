@@ -23,7 +23,7 @@ from ccld_complaints.hosted_app.copy_controls import (
     render_copy_icon_button,
 )
 from ccld_complaints.hosted_app.facility_identity_presenter import (
-    present_facility_field,
+    present_facility_location,
     projected_display_text,
     projected_selected_text,
     unresolved_raw_code_text,
@@ -113,15 +113,6 @@ _SECRET_HTML_MARKERS = (
     "secret",
     "token",
 )
-_STATE_TEXT_VALUES = frozenset(
-    {
-        "Blank in source",
-        "Conflicting source values",
-        "Invalid source value",
-        "Not found in source",
-        "Source unavailable",
-    }
-)
 _FACILITY_COMBOBOX_JS = r"""(function(){
   'use strict';
   var wrap=document.getElementById('facility-selector-wrap');
@@ -163,7 +154,7 @@ _FACILITY_COMBOBOX_JS = r"""(function(){
     if(sb)sb.disabled=!si.value.trim();
   }
   function match(f,toks){
-        var h=norm([f.num,f.n,f.city,f.state,f.co,f.zip,f.t,f.p,f.cap,f.s].join(' '));
+        var h=norm([f.num,f.n,f.loc,f.city,f.state,f.co,f.zip,f.t,f.p,f.cap,f.s].join(' '));
     return toks.every(function(t){return h.indexOf(t)!==-1;});
   }
   function esc(s){
@@ -184,12 +175,13 @@ _FACILITY_COMBOBOX_JS = r"""(function(){
     for(var i=0;i<matches.length;i++){
       var f=matches[i];
     var info=statusInfo(f.s,f.ss,f.sc);
-    var geo=[f.city,f.state,f.zip].filter(Boolean).join(' \u00b7 ');
+    var geo=f.loc||[f.city,f.state,f.zip].filter(Boolean).join(' \u00b7 ');
     var meta=[f.num,f.co,f.t,f.p].filter(Boolean).join(' \u2022 ');
       var det=[geo,meta].filter(Boolean).join(' | ');
       h+='<li role="option"><button type="button" class="suggestion-btn"'
         +' data-num="'+esc(f.num)+'" data-name="'+esc(f.n)+'"'
         +' data-city="'+esc(f.city||'')+'" data-state="'+esc(f.state||'')+'"'
+        +' data-location="'+esc(f.loc||'')+'"'
         +' data-zip="'+esc(f.zip||'')+'" data-type="'+esc(f.t||'')+'"'
         +' data-program="'+esc(f.p||'')+'" data-status="'+esc(f.s||'')+'">'
         +'<span class="suggestion-main">'
@@ -281,7 +273,7 @@ _FACILITY_COMBOBOX_JS = r"""(function(){
     var sn=sc.querySelector('.selected-facility-name-field');
     if(ne)ne.textContent=f.n;
     if(nue)nue.textContent=f.num;
-    if(ge)ge.textContent=[f.city,f.state,f.zip].filter(Boolean).join(', ');
+    if(ge)ge.textContent=f.loc||[f.city,f.state,f.zip].filter(Boolean).join(', ');
     if(me)me.textContent=[f.t,f.p,f.s].filter(Boolean).join(' \u2022 ');
     if(sf)sf.value=f.num;
     if(so)so.value='facility_lookup';
@@ -309,7 +301,7 @@ _FACILITY_COMBOBOX_JS = r"""(function(){
   function selFac(btn){
     var f={
       num:btn.getAttribute('data-num'),n:btn.getAttribute('data-name'),
-      city:btn.getAttribute('data-city'),zip:btn.getAttribute('data-zip'),
+      city:btn.getAttribute('data-city'),zip:btn.getAttribute('data-zip'),loc:btn.getAttribute('data-location'),
             state:btn.getAttribute('data-state'),t:btn.getAttribute('data-type'),
             p:btn.getAttribute('data-program'),s:btn.getAttribute('data-status')
     };
@@ -1891,7 +1883,7 @@ def _render_facility_identity_and_core_facts(
 {fact_rows}
 {unavailable_markup}
         </dl>
-        {_render_facility_conflict_note(record, (FacilityProjectionField.FACILITY_NAME, FacilityProjectionField.FACILITY_TYPE, FacilityProjectionField.STATUS, FacilityProjectionField.FULL_ADDRESS, FacilityProjectionField.COUNTY, FacilityProjectionField.CAPACITY))}
+        {_render_facility_conflict_note(record, (FacilityProjectionField.FACILITY_NAME, FacilityProjectionField.FACILITY_TYPE, FacilityProjectionField.STATUS, FacilityProjectionField.FULL_ADDRESS, FacilityProjectionField.CITY, FacilityProjectionField.STATE, FacilityProjectionField.ZIP, FacilityProjectionField.COUNTY, FacilityProjectionField.CAPACITY))}
       </div>
     </section>"""
 
@@ -1919,40 +1911,9 @@ def _facility_identity_fact_rows(
             ),
         ),
         (
-            "Address",
-            "Address",
-            _facility_identity_source_value(
-                record,
-                FacilityProjectionField.FULL_ADDRESS,
-                record.address or record.facility_address or record.res_street_addr or "",
-            ),
-        ),
-        (
-            "City",
-            "City",
-            _facility_identity_source_value(
-                record,
-                FacilityProjectionField.CITY,
-                record.city,
-            ),
-        ),
-        (
-            "State",
-            "State",
-            _facility_identity_source_value(
-                record,
-                FacilityProjectionField.STATE,
-                record.state,
-            ),
-        ),
-        (
-            "ZIP",
-            "ZIP",
-            _facility_identity_source_value(
-                record,
-                FacilityProjectionField.ZIP,
-                record.zip_code,
-            ),
+            "Location",
+            "Location",
+            _display_facility_address(record),
         ),
         (
             "County",
@@ -2050,24 +2011,10 @@ def _render_secondary_facility_facts(record: CcldFacilityLookupRecord) -> str:
 
 def _display_facility_address(record: CcldFacilityLookupRecord) -> str:
     if record.identity_projection is not None:
-        result = record.identity_projection.field(FacilityProjectionField.FULL_ADDRESS)
-        street = projected_selected_text(
+        return present_facility_location(
             record.identity_projection,
-            FacilityProjectionField.FULL_ADDRESS,
-        )
-        location = _display_location(record)
-        if street:
-            return ", ".join(
-                part
-                for part in (
-                    street,
-                    location if location not in _STATE_TEXT_VALUES else "",
-                )
-                if part
-            )
-        if location not in _STATE_TEXT_VALUES:
-            return location
-        return present_facility_field(result).text
+            include_street=True,
+        ).text
     street_value = record.address
     street_source_present = bool(street_value)
     if not street_value and record.facility_address is not None:
@@ -3618,32 +3565,10 @@ def _facility_hub_href(facility_number: str) -> str:
 
 def _display_location(record: CcldFacilityLookupRecord) -> str:
     if record.identity_projection is not None:
-        city = projected_selected_text(
-            record.identity_projection, FacilityProjectionField.CITY
-        )
-        state = projected_selected_text(
-            record.identity_projection, FacilityProjectionField.STATE
-        )
-        zip_code = projected_selected_text(
-            record.identity_projection, FacilityProjectionField.ZIP
-        )
-        city_state = ", ".join(part for part in (city, state) if part)
-        location = " ".join(part for part in (city_state, zip_code) if part)
-        if location:
-            return location
-        states = tuple(
-            record.identity_projection.field(field).state
-            for field in (
-                FacilityProjectionField.CITY,
-                FacilityProjectionField.STATE,
-                FacilityProjectionField.ZIP,
-            )
-        )
-        if FacilityValueState.UNAVAILABLE in states:
-            return "Source unavailable"
-        if FacilityValueState.BLANK in states:
-            return "Blank in source"
-        return "Not found in source"
+        return present_facility_location(
+            record.identity_projection,
+            include_street=False,
+        ).text
     city_state = ", ".join(part for part in (record.city, record.state) if part)
     return " ".join(part for part in (city_state, record.zip_code) if part)
 
@@ -3673,6 +3598,17 @@ def _facility_record_field(
         FacilityProjectionField.REGIONAL_OFFICE: record.regional_office,
     }
     return _display_value(fallback_by_field[field])
+
+
+def _facility_selected_field(
+    record: CcldFacilityLookupRecord,
+    field: FacilityProjectionField,
+) -> str:
+    """Return a selected value for search data, never a missing-state label."""
+
+    if record.identity_projection is not None:
+        return projected_selected_text(record.identity_projection, field)
+    return _facility_record_field(record, field)
 
 
 def facility_lookup_display_text(
@@ -3846,10 +3782,11 @@ def _build_facility_json_data(
         {
             "num": record.facility_number,
             "n": _facility_record_field(record, FacilityProjectionField.FACILITY_NAME),
-            "city": _facility_record_field(record, FacilityProjectionField.CITY),
-            "state": _facility_record_field(record, FacilityProjectionField.STATE),
+            "city": _facility_selected_field(record, FacilityProjectionField.CITY),
+            "state": _facility_selected_field(record, FacilityProjectionField.STATE),
             "co": _facility_record_field(record, FacilityProjectionField.COUNTY),
-            "zip": _facility_record_field(record, FacilityProjectionField.ZIP),
+            "zip": _facility_selected_field(record, FacilityProjectionField.ZIP),
+            "loc": _display_location(record),
             "t": _facility_record_field(record, FacilityProjectionField.FACILITY_TYPE),
             "p": record.program_type,
             "cap": _facility_record_field(record, FacilityProjectionField.CAPACITY),
@@ -3918,10 +3855,11 @@ def _facility_json_records(
         {
             "num": record.facility_number,
             "n": _facility_record_field(record, FacilityProjectionField.FACILITY_NAME),
-            "city": _facility_record_field(record, FacilityProjectionField.CITY),
-            "state": _facility_record_field(record, FacilityProjectionField.STATE),
+            "city": _facility_selected_field(record, FacilityProjectionField.CITY),
+            "state": _facility_selected_field(record, FacilityProjectionField.STATE),
             "co": _facility_record_field(record, FacilityProjectionField.COUNTY),
-            "zip": _facility_record_field(record, FacilityProjectionField.ZIP),
+            "zip": _facility_selected_field(record, FacilityProjectionField.ZIP),
+            "loc": _display_location(record),
             "t": _facility_record_field(record, FacilityProjectionField.FACILITY_TYPE),
             "p": record.program_type,
             "cap": _facility_record_field(record, FacilityProjectionField.CAPACITY),

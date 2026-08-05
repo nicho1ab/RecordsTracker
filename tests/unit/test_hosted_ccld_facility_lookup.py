@@ -48,6 +48,10 @@ from ccld_complaints.hosted_app.ccld_facility_lookup import (
 from ccld_complaints.hosted_app.ccld_record_request_ui import (
     ccld_record_request_context_for_reviewer_context,
 )
+from ccld_complaints.hosted_app.facility_identity_projection import (
+    FacilityProjectionSourceAvailability,
+    project_facility_identity,
+)
 from ccld_complaints.hosted_app.facility_reference_preload import (
     hosted_facility_reference_metadata,
     hosted_facility_reference_records,
@@ -217,6 +221,57 @@ def test_facility_address_uses_one_readable_governed_presentation(
     )
 
     assert facility_lookup._display_facility_address(record) == expected  # noqa: SLF001
+
+
+def test_location_is_serialized_and_rendered_once_when_all_fields_are_unavailable() -> None:
+    projection = project_facility_identity(
+        "157806098",
+        (),
+        availability=FacilityProjectionSourceAvailability(
+            transparencyapi_current=False,
+            arcgis_supplement=False,
+            program_reference=False,
+            complaint_linked_facility=False,
+        ),
+    )
+    record = CcldFacilityLookupRecord(
+        facility_number="157806098",
+        facility_name="Example Facility",
+        city="",
+        state="",
+        county="",
+        zip_code="",
+        facility_type="",
+        program_type="",
+        capacity="",
+        status="",
+        closed_date="",
+        identity_projection=projection,
+    )
+
+    [payload] = json.loads(
+        facility_lookup._build_facility_json_data(  # noqa: SLF001
+            CcldFacilityReferenceSource(
+                source_kind="test",
+                label="Test reference",
+                path_label="test",
+                records=(record,),
+            )
+        )
+    )
+    overview = facility_lookup._render_facility_identity_and_core_facts(  # noqa: SLF001
+        record,
+        CcldFacilityReviewContext(),
+    )
+
+    assert payload["loc"] == "Source unavailable"
+    assert payload["city"] == payload["state"] == payload["zip"] == ""
+    assert "<dt>Location</dt>" in overview
+    assert overview.count("Source unavailable") == 1
+    assert "<dt>Address</dt>" not in overview
+    assert "<dt>City</dt>" not in overview
+    assert "<dt>State</dt>" not in overview
+    assert "<dt>ZIP</dt>" not in overview
 
 
 class _DefinitionTermParser(HTMLParser):
@@ -1239,10 +1294,7 @@ def test_fixture_facility_overview_missing_identity_projection_preserves_only_id
     assert "Unavailable facility facts" in html
     for unavailable_field in (
         "Facility type",
-        "Address",
-        "City",
-        "State",
-        "ZIP",
+        "Location",
         "County",
         "License status",
         "Capacity",

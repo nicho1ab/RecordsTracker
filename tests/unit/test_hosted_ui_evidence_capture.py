@@ -5,6 +5,7 @@ import json
 import re
 import shutil
 import subprocess
+import tempfile
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
@@ -12,6 +13,13 @@ ROOT = Path(__file__).resolve().parents[2]
 CAPTURE_SCRIPT = ROOT / "scripts" / "capture-hosted-ui-evidence.ps1"
 WRAPPER_SCRIPT = ROOT / "scripts" / "run-and-capture-hosted-ui-evidence.ps1"
 GUIDE = ROOT / "docs" / "developer" / "ui-evidence-review.md"
+ISSUE_647_CAPTURE_PLAN = (
+    ROOT
+    / "tests"
+    / "fixtures"
+    / "hosted_ui_evidence_capture"
+    / "issue_647_location_capture_plan.json"
+)
 
 
 def read_repo_text(relative_path: str) -> str:
@@ -29,6 +37,32 @@ def plain_output(result: subprocess.CompletedProcess[str]) -> str:
     output = result.stdout + result.stderr
     without_ansi = re.sub(r"\x1b\[[0-9;?]*[ -/]*[@-~]", "", output)
     return " ".join(without_ansi.split())
+
+
+def capture_plan_rejection_output(plan_text: str) -> str:
+    with tempfile.TemporaryDirectory(dir=ROOT) as temporary_directory:
+        plan_path = Path(temporary_directory) / "capture-plan.json"
+        plan_path.write_text(plan_text, encoding="utf-8")
+        result = subprocess.run(
+            [
+                powershell(),
+                "-NoProfile",
+                "-File",
+                str(CAPTURE_SCRIPT),
+                "-BaseUrl",
+                "http://127.0.0.1:1",
+                "-Mode",
+                "fixture",
+                "-CapturePlanPath",
+                str(plan_path.relative_to(ROOT)),
+            ],
+            cwd=ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+    assert result.returncode != 0
+    return plain_output(result)
 
 
 def powershell_function(function_name: str, next_function_name: str) -> str:
@@ -274,6 +308,7 @@ def test_capture_script_declares_parameters_routes_and_outputs() -> None:
         '[ValidateSet("auto", "playwright", "edge", "chrome")]',
         '$ScreenshotToolPreference = "auto"',
         "AllowUnavailable",
+        "CapturePlanPath",
         "Issue415",
         "Issue416",
         "Issue417",
@@ -339,6 +374,8 @@ def test_capture_script_declares_parameters_routes_and_outputs() -> None:
         "do not commit them unless a specific repository workflow explicitly says to do so",
     ):
         assert expected in script
+
+
     for route in (
         "/",
         "/ccld/facilities",
@@ -626,6 +663,234 @@ def test_capture_script_declares_parameters_routes_and_outputs() -> None:
         "ccld-complaint-32-CR-20240120111111-rt-src-002-source-unavailable-fixture",
     ):
         assert fixture_key in script
+
+
+def test_capture_plan_is_reusable_fixture_only_and_covers_issue_647_location_states() -> None:
+    plan = json.loads(ISSUE_647_CAPTURE_PLAN.read_text(encoding="utf-8"))
+    script = CAPTURE_SCRIPT.read_text(encoding="utf-8")
+    guide = GUIDE.read_text(encoding="utf-8")
+
+    assert plan["dataMode"] == "fixture-demo"
+    assert plan["governanceIssue"] == "#647"
+    assert plan["purpose"]
+    assert len(plan["limitations"]) >= 2
+    assert {scenario["id"] for scenario in plan["scenarios"]} == {
+        "facility-157806098-unavailable-location",
+        "facility-900000001-complete-location",
+    }
+    by_id = {scenario["id"]: scenario for scenario in plan["scenarios"]}
+    unavailable = by_id["facility-157806098-unavailable-location"]
+    complete = by_id["facility-900000001-complete-location"]
+    assert unavailable["facilityId"] == "157806098"
+    assert unavailable["classification"] == "governed unavailable-location presentation"
+    assert unavailable["expectedLocationState"] == "unavailable"
+    unavailable_compare = unavailable["routes"][2]
+    assert unavailable_compare["screenshotMode"] == "supplemental-tall"
+    assert unavailable_compare["requiredText"] == [
+        "A. MIRIAM JAMISON CHILDREN'S CENTER",
+        "Facility ID 157806098",
+        "Blank in source",
+    ]
+    assert complete["facilityId"] == "900000001"
+    assert complete["classification"] == "explicitly synthetic governed fixture"
+    assert complete["expectedLocationState"] == "complete"
+    assert "100 Example Way, Sample City, CA 90001" in complete["routes"][1]["requiredText"]
+
+    for scenario in plan["scenarios"]:
+        routes = scenario["routes"]
+        assert {route["kind"] for route in routes} == {
+            "search",
+            "overview",
+            "compare",
+            "complaint-detail",
+        }
+        for route in routes:
+            if route.get("applicability") == "not-applicable":
+                assert route["reason"]
+
+    assert "function Read-CapturePlan" in script
+    assert "function New-CapturePlanRoutes" in script
+    assert "function Test-CapturePlanRouteAssertions" in script
+    assert "function Assert-CapturePlanPropertyNames" in script
+    assert "CapturePlanPath must stay inside the repository root." in script
+    assert "require -Mode fixture" in script
+    assert "Test-CapturePlanRouteAssertions -Route $Route" in script
+    assert "fileName = $capturePlan.FileName" in script
+    assert "governanceIssue = $capturePlan.GovernanceIssue" in script
+    assert 'else { "#648" }' in script
+    assert "['SupplementalScreenshotHeight'] = 3000" in script
+    assert "Supplemental screenshot capture failed:" in script
+    assert "CapturePlanPath" not in script[script.index("capturePlan            ="):]
+    assert "Path=$path" not in script
+    assert "complaint-detail routes are not supported" in script
+    assert "if ($null -ne $capturePlan) { $routesToCapture" in script
+    assert "CapturePlanPath <repository JSON path>" in guide
+
+
+def test_capture_plan_rejects_invalid_data_without_execution() -> None:
+    valid_plan = json.loads(ISSUE_647_CAPTURE_PLAN.read_text(encoding="utf-8"))
+    cases = {
+        "malformed JSON": ("{", "Capture plan JSON is malformed."),
+        "empty purpose": (
+            json.dumps({**valid_plan, "purpose": " "}),
+            "Capture plan requires a non-empty 'purpose'.",
+        ),
+        "empty limitations": (
+            json.dumps({**valid_plan, "limitations": []}),
+            "Capture plan requires at least one limitation.",
+        ),
+        "unsupported mode": (
+            json.dumps({**valid_plan, "dataMode": "production"}),
+            "Capture plan dataMode 'production' is unsupported.",
+        ),
+        "malformed governance issue": (
+            json.dumps({**valid_plan, "governanceIssue": "647"}),
+            "Capture plan governanceIssue '647' is invalid.",
+        ),
+        "unknown root property": (
+            json.dumps({**valid_plan, "command": "Write-Output should-not-run"}),
+            "Capture plan root has unsupported property 'command'.",
+        ),
+        "duplicate scenario": (
+            json.dumps({**valid_plan, "scenarios": valid_plan["scenarios"] * 2}),
+            "Capture plan has duplicate scenario id",
+        ),
+        "bad facility id": (
+            json.dumps(
+                {
+                    **valid_plan,
+                    "scenarios": [
+                        {**valid_plan["scenarios"][0], "facilityId": "not-a-facility"}
+                    ],
+                }
+            ),
+            "Capture plan facility id 'not-a-facility' is invalid.",
+        ),
+        "unsupported route": (
+            json.dumps(
+                {
+                    **valid_plan,
+                    "scenarios": [
+                        {
+                            **valid_plan["scenarios"][0],
+                            "routes": [
+                                {"kind": "external-url", "requiredText": ["safe"]}
+                            ],
+                        }
+                    ],
+                }
+            ),
+            "Capture plan route 'external-url' is unsupported.",
+        ),
+        "duplicate route kind": (
+            json.dumps(
+                {
+                    **valid_plan,
+                    "scenarios": [
+                        {
+                            **valid_plan["scenarios"][0],
+                            "routes": [
+                                {"kind": "search", "requiredText": ["one"]},
+                                {"kind": "search", "requiredText": ["two"]},
+                            ],
+                        }
+                    ],
+                }
+            ),
+            "has duplicate route kind 'search'.",
+        ),
+        "unsafe route property": (
+            json.dumps(
+                {
+                    **valid_plan,
+                    "scenarios": [
+                        {
+                            **valid_plan["scenarios"][0],
+                            "routes": [
+                                {
+                                    "kind": "search",
+                                    "requiredText": ["safe"],
+                                    "path": "/not-allowed",
+                                }
+                            ],
+                        }
+                    ],
+                }
+            ),
+            "has unsupported property 'path'.",
+        ),
+        "unsupported screenshot mode": (
+            json.dumps(
+                {
+                    **valid_plan,
+                    "scenarios": [
+                        {
+                            **valid_plan["scenarios"][0],
+                            "routes": [
+                                {
+                                    "kind": "compare",
+                                    "screenshotMode": "arbitrary-height",
+                                    "requiredText": ["safe"],
+                                }
+                            ],
+                        }
+                    ],
+                }
+            ),
+            "Capture plan screenshotMode 'arbitrary-height' is unsupported.",
+        ),
+    }
+
+    for case_name, (plan_text, expected) in cases.items():
+        output = capture_plan_rejection_output(plan_text)
+        assert expected in output, case_name
+        assert "should-not-run" not in output
+
+
+def test_capture_plan_rejects_missing_and_outside_repository_paths(tmp_path: Path) -> None:
+    missing = subprocess.run(
+        [
+            powershell(),
+            "-NoProfile",
+            "-File",
+            str(CAPTURE_SCRIPT),
+            "-BaseUrl",
+            "http://127.0.0.1:1",
+            "-Mode",
+            "fixture",
+            "-CapturePlanPath",
+            "tests/fixtures/hosted_ui_evidence_capture/missing-capture-plan.json",
+        ],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    outside_plan = tmp_path / "outside-capture-plan.json"
+    outside_plan.write_text("{}", encoding="utf-8")
+    outside = subprocess.run(
+        [
+            powershell(),
+            "-NoProfile",
+            "-File",
+            str(CAPTURE_SCRIPT),
+            "-BaseUrl",
+            "http://127.0.0.1:1",
+            "-Mode",
+            "fixture",
+            "-CapturePlanPath",
+            str(outside_plan),
+        ],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert missing.returncode != 0
+    assert "Capture plan file is missing." in plain_output(missing)
+    assert outside.returncode != 0
+    assert "CapturePlanPath must stay inside the repository root." in plain_output(outside)
 
 
 def test_capture_script_verifies_zip_membership_sizes_and_hash(tmp_path: Path) -> None:
