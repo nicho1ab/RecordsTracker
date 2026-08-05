@@ -103,6 +103,24 @@ unless a separate contract expressly requires otherwise.
 subsequent ZIP validation includes the index itself, avoiding recursive index
 or hash content.
 
+### Final packet artifact accounting
+
+The packet manifest and file index record one authoritative final artifact
+count. `sourceIndexedArtifactCount` is the count of the hashed source inventory
+that precedes `file-index.json`; `finalArtifactCount` is the count of every
+regular file in the packaged directory and ZIP, including `file-index.json`.
+The index is the only excluded source artifact, and its explicit
+`indexSelfExclusion` path and reason document why it is absent from its own
+hash inventory.
+
+Accounting is fail closed. The filesystem count, ZIP entry count, manifest
+count, file-index count, and reported `FINAL_ARTIFACT_COUNT` must reconcile
+exactly. Every route-declared supplemental screenshot must occur exactly once
+in both the source index and final package. Duplicate normalized paths,
+unexplained exclusions, missing supplemental artifacts, zero-byte files,
+invalid JSON, and ZIP membership or hash mismatches reject the packet rather
+than producing a partial archive.
+
 ## Fail-closed hosted acceptance record
 
 Issue #648 separates evidence capture from acceptance. A packet, route summary,

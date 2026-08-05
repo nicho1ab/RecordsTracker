@@ -20,6 +20,13 @@ ISSUE_647_CAPTURE_PLAN = (
     / "hosted_ui_evidence_capture"
     / "issue_647_location_capture_plan.json"
 )
+ISSUE_644_PACKET_ACCOUNTING_FIXTURE = (
+    ROOT
+    / "tests"
+    / "fixtures"
+    / "hosted_ui_evidence_capture"
+    / "issue_644_packet_accounting_fixture.ps1"
+)
 
 
 def read_repo_text(relative_path: str) -> str:
@@ -968,6 +975,80 @@ def test_capture_script_verifies_zip_membership_sizes_and_hash(tmp_path: Path) -
     assert verified["Length"] > 0
     assert "zero-length files" in verified["ZeroLength"]
     assert "invalid JSON files" in verified["InvalidJson"]
+
+
+def test_issue_644_packet_accounting_reconciles_filesystem_zip_manifest_and_reported_counts(
+    tmp_path: Path,
+) -> None:
+    result = subprocess.run(
+        [
+            powershell(),
+            "-NoProfile",
+            "-File",
+            str(ISSUE_644_PACKET_ACCOUNTING_FIXTURE),
+            "-TempRoot",
+            str(tmp_path),
+            "-CaptureScriptPath",
+            str(CAPTURE_SCRIPT),
+        ],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, plain_output(result)
+    accounting = json.loads(result.stdout)
+    assert accounting["valid"] == {
+        "sourceIndexedArtifactCount": 9,
+        "finalArtifactCount": 10,
+        "zipEntryCount": 10,
+        "supplementalArtifactCount": 1,
+        "zipSha256": accounting["valid"]["zipSha256"],
+    }
+    assert re.fullmatch(r"[A-F0-9]{64}", accounting["valid"]["zipSha256"])
+    assert "final artifact count does not match final filesystem artifacts" in accounting[
+        "incorrectManifestFailure"
+    ]
+    assert "Reported final artifact count does not match" in accounting[
+        "incorrectReportedFailure"
+    ]
+    assert "supplemental artifact is missing or duplicated" in accounting[
+        "omittedSupplementalFailure"
+    ]
+    assert "file-index self-exclusion is not explicit" in accounting[
+        "unexpectedExclusionFailure"
+    ]
+    assert "duplicate normalized artifact paths" in accounting["duplicatePathFailure"]
+
+
+def test_issue_644_packet_accounting_includes_supplemental_and_self_excluded_index() -> None:
+    fixture_text = ISSUE_644_PACKET_ACCOUNTING_FIXTURE.read_text(encoding="utf-8")
+    script = CAPTURE_SCRIPT.read_text(encoding="utf-8")
+
+    assert "New-EvidencePacketAccounting" in fixture_text
+    assert "New-EvidenceFileIndex" in fixture_text
+    assert "Test-EvidencePacketAccounting" in fixture_text
+    assert "supplementalScreenshotPath" in fixture_text
+    assert "UseUnexpectedIndexExclusion" in fixture_text
+    assert "Assert-UniqueEvidencePaths" in fixture_text
+    for prohibited in (
+        "-Command",
+        "scriptblock]::Create",
+        "Invoke-Expression",
+        "EncodedCommand",
+        "Start-Process",
+        "Invoke-WebRequest",
+        "msedge.exe",
+        "chrome.exe",
+    ):
+        assert prohibited not in fixture_text
+    assert "packetAccounting" in script
+    assert "sourceIndexedArtifactCount" in script
+    assert "finalArtifactCount" in script
+    assert "indexSelfExclusion" in script
+    assert "supplementalArtifactCount" in script
+    assert "FINAL_ARTIFACT_COUNT=" in script
 
 
 def test_issue_641_validation_summary_fails_when_any_failure_count_is_nonzero() -> None:
