@@ -278,10 +278,12 @@ function Read-CapturePlan {
     try { $rawPlan = Get-Content -LiteralPath $candidate -Raw | ConvertFrom-Json }
     catch { Stop-CaptureFail "Capture plan JSON is malformed." }
     if ($null -eq $rawPlan) { Stop-CaptureFail "Capture plan JSON is empty." }
-    Assert-CapturePlanPropertyNames -Object $rawPlan -AllowedNames @('purpose', 'dataMode', 'limitations', 'scenarios') -Context 'root'
+    Assert-CapturePlanPropertyNames -Object $rawPlan -AllowedNames @('purpose', 'dataMode', 'governanceIssue', 'limitations', 'scenarios') -Context 'root'
     $purpose = Get-CapturePlanString -Object $rawPlan -Name 'purpose' -Required
     $dataMode = Get-CapturePlanString -Object $rawPlan -Name 'dataMode' -Required
     if ($dataMode -ne 'fixture-demo') { Stop-CaptureFail "Capture plan dataMode '$dataMode' is unsupported." }
+    $governanceIssue = if ($null -ne $rawPlan.PSObject.Properties['governanceIssue']) { Get-CapturePlanString -Object $rawPlan -Name 'governanceIssue' } else { '' }
+    if ($governanceIssue -and $governanceIssue -notmatch '^#\d+$') { Stop-CaptureFail "Capture plan governanceIssue '$governanceIssue' is invalid." }
     if ($null -eq $rawPlan.PSObject.Properties['limitations']) { Stop-CaptureFail "Capture plan requires limitations." }
     $limitations = ConvertTo-CapturePlanTextList -Value $rawPlan.limitations -Name 'limitations'
     if ($limitations.Count -eq 0) { Stop-CaptureFail "Capture plan requires at least one limitation." }
@@ -303,7 +305,7 @@ function Read-CapturePlan {
         $routes = @()
         $seenRouteKinds = @{}
         foreach ($rawRoute in @($rawScenario.routes)) {
-            Assert-CapturePlanPropertyNames -Object $rawRoute -AllowedNames @('kind', 'applicability', 'reason', 'requiredText', 'forbiddenText') -Context "scenario '$scenarioId' route"
+            Assert-CapturePlanPropertyNames -Object $rawRoute -AllowedNames @('kind', 'applicability', 'reason', 'requiredText', 'forbiddenText', 'screenshotMode') -Context "scenario '$scenarioId' route"
             $kind = Get-CapturePlanString -Object $rawRoute -Name 'kind' -Required
             if ($kind -notin @('search', 'overview', 'compare', 'complaint-detail')) { Stop-CaptureFail "Capture plan route '$kind' is unsupported." }
             if ($seenRouteKinds.ContainsKey($kind)) { Stop-CaptureFail "Capture plan scenario '$scenarioId' has duplicate route kind '$kind'." }
@@ -313,15 +315,18 @@ function Read-CapturePlan {
             $reason = if ($null -ne $rawRoute.PSObject.Properties['reason']) { Get-CapturePlanString -Object $rawRoute -Name 'reason' } else { '' }
             if ($applicability -eq 'not-applicable' -and [string]::IsNullOrWhiteSpace($reason)) { Stop-CaptureFail "Capture plan not-applicable route '$kind' requires a reason." }
             if ($kind -eq 'complaint-detail' -and $applicability -eq 'applicable') { Stop-CaptureFail "Capture plan complaint-detail routes are not supported without a truthful existing route derivation." }
+            $screenshotMode = if ($null -ne $rawRoute.PSObject.Properties['screenshotMode']) { Get-CapturePlanString -Object $rawRoute -Name 'screenshotMode' } else { 'standard' }
+            if ($screenshotMode -notin @('standard', 'supplemental-tall')) { Stop-CaptureFail "Capture plan screenshotMode '$screenshotMode' is unsupported." }
+            if ($applicability -eq 'not-applicable' -and $screenshotMode -ne 'standard') { Stop-CaptureFail "Capture plan not-applicable route '$kind' cannot request a supplemental screenshot." }
             $requiredText = if ($null -ne $rawRoute.PSObject.Properties['requiredText']) { ConvertTo-CapturePlanTextList -Value $rawRoute.requiredText -Name 'requiredText' } else { @() }
             $forbiddenText = if ($null -ne $rawRoute.PSObject.Properties['forbiddenText']) { ConvertTo-CapturePlanTextList -Value $rawRoute.forbiddenText -Name 'forbiddenText' } else { @() }
-            $routes += [pscustomobject]@{ Kind=$kind; Applicability=$applicability; Reason=$reason; RequiredText=@($requiredText); ForbiddenText=@($forbiddenText) }
+            $routes += [pscustomobject]@{ Kind=$kind; Applicability=$applicability; Reason=$reason; ScreenshotMode=$screenshotMode; RequiredText=@($requiredText); ForbiddenText=@($forbiddenText) }
         }
         if ($routes.Count -eq 0) { Stop-CaptureFail "Capture plan scenario '$scenarioId' requires at least one route." }
         $scenarios += [pscustomobject]@{ Id=$scenarioId; FacilityId=$facilityId; Classification=$classification; ExpectedLocationState=$locationState; Routes=@($routes) }
     }
     if ($scenarios.Count -eq 0) { Stop-CaptureFail "Capture plan requires at least one scenario." }
-    return [pscustomobject]@{ Purpose=$purpose; DataMode=$dataMode; Limitations=@($limitations); Scenarios=@($scenarios); FileName=(Split-Path -Leaf $candidate) }
+    return [pscustomobject]@{ Purpose=$purpose; DataMode=$dataMode; GovernanceIssue=$governanceIssue; Limitations=@($limitations); Scenarios=@($scenarios); FileName=(Split-Path -Leaf $candidate) }
 }
 
 function New-CapturePlanRoutes {
@@ -337,7 +342,7 @@ function New-CapturePlanRoutes {
                 'complaint-detail' { Stop-CaptureFail 'Capture plan complaint-detail routes cannot be generated without a truthful existing route derivation.' }
                 default { Stop-CaptureFail "Capture plan route kind '$($scenarioRoute.Kind)' is unsupported." }
             }
-            $routes += @{
+            $route = @{
                 Name = "plan-$($scenario.Id)-$($scenarioRoute.Kind)"
                 Label = "plan-$($scenario.Id)-$($scenarioRoute.Kind)"
                 Path = $path
@@ -346,9 +351,15 @@ function New-CapturePlanRoutes {
                 CapturePlanScenarioId = $scenario.Id
                 CapturePlanClassification = $scenario.Classification
                 CapturePlanLocationState = $scenario.ExpectedLocationState
+                CapturePlanScreenshotMode = $scenarioRoute.ScreenshotMode
                 CapturePlanRequiredText = @($scenarioRoute.RequiredText)
                 CapturePlanForbiddenText = @($scenarioRoute.ForbiddenText)
             }
+            if ($scenarioRoute.ScreenshotMode -eq 'supplemental-tall') {
+                $route['SupplementalScreenshotFileName'] = "$($scenario.Id)-$($scenarioRoute.Kind)-supplemental-tall.png"
+                $route['SupplementalScreenshotHeight'] = 3000
+            }
+            $routes += $route
         }
     }
     return @($routes)
@@ -4715,7 +4726,21 @@ try {
                 elseif ($null -ne $resolvedScreenshotTool) {
                     $shotError = Invoke-RouteScreenshot -Tool $resolvedScreenshotTool -Url $url -ScreenshotPath $shotFile -Width $routeViewportWidth -Height $routeViewportHeight
                     if ($shotError) { $script:screenshotWarnings += "$($Route.Name): $shotError" }
-                    elseif (Test-Path -LiteralPath $shotFile) { $screenshotPath = ConvertTo-RelativeEvidencePath -Path $shotFile -Root $packetDir }
+                    elseif (Test-Path -LiteralPath $shotFile) {
+                        $screenshotPath = ConvertTo-RelativeEvidencePath -Path $shotFile -Root $packetDir
+                        if ($Route.ContainsKey('SupplementalScreenshotFileName')) {
+                            $supplementalShotFile = Join-Path $screenshotDir ([string]$Route.SupplementalScreenshotFileName)
+                            $supplementalShotHeight = if ($Route.ContainsKey('SupplementalScreenshotHeight')) { [int]$Route.SupplementalScreenshotHeight } else { $routeViewportHeight }
+                            $supplementalShotError = Invoke-RouteScreenshot -Tool $resolvedScreenshotTool -Url $url -ScreenshotPath $supplementalShotFile -Width $routeViewportWidth -Height $supplementalShotHeight
+                            if ($supplementalShotError) {
+                                $failure = "Supplemental screenshot capture failed: $supplementalShotError"
+                                $script:screenshotWarnings += "$($Route.Name): $failure"
+                            }
+                            elseif (Test-Path -LiteralPath $supplementalShotFile) {
+                                $supplementalScreenshotPath = ConvertTo-RelativeEvidencePath -Path $supplementalShotFile -Root $packetDir
+                            }
+                        }
+                    }
                 }
                 if (-not $Issue498 -and -not $Issue502 -and -not $Issue503 -and -not $Issue641 -and -not $Issue642 -and -not $Issue655 -and $null -ne $resolvedScreenshotTool -and $Route.ContainsKey("CapturePrint") -and [bool]$Route.CapturePrint) {
                     $printFile = Join-Path $printDir "$($Route.Label).pdf"
@@ -5640,10 +5665,10 @@ scripts/validate_hosted_ui_acceptance.py.
         issue641               = [ordered]@{ enabled = [bool]$Issue641; routeCount = @($routesToCapture).Count; scenarios = @($routesToCapture | ForEach-Object { $_.Name }); evidenceGates = @($issue641GateResults); gateArtifact = if ($Issue641) { "issue-641-evidence-gates.csv" } else { "" }; summaryArtifact = if ($Issue641) { "issue-641-evidence-summary.md" } else { "" }; measuredPageScale = if ($Issue641) { "1280x900 at visualViewport scale 2" } else { "" }; visualAcceptance = "PENDING_INDEPENDENT_VISUAL_REVIEW"; printArtifact = @($routeResults | Where-Object { $_.printPath } | ForEach-Object { $_.printPath }) }
         issue642               = [ordered]@{ enabled = [bool]$Issue642; routeCount = if ($Issue642) { @($routesToCapture).Count } else { 0 }; scenarios = if ($Issue642) { @($routesToCapture | ForEach-Object { $_.Name }) } else { @() }; controlledInteraction = "Navigation, staged public Facility ID, multi-value state, canonical continuation, return context, responsive, focus, print"; screenshotStateArtifact = if ($Issue642) { 'diagnostics/issue-642-screenshot-states.json' } else { '' }; screenshotStates = if ($Issue642) { $issue642PacketDiagnostics.screenshotStates } else { @{} }; consoleNetworkSummaryArtifact = if ($Issue642) { 'diagnostics/issue-642-console-network-summary.json' } else { '' }; consoleNetwork = if ($Issue642) { $issue642PacketDiagnostics.consoleNetwork } else { @{} }; visualAcceptance = "PENDING_INDEPENDENT_VISUAL_REVIEW"; ownerAcceptance = "PENDING_OWNER_DECISION"; printArtifact = @($routeResults | Where-Object { $_.printPath } | ForEach-Object { $_.printPath }) }
         issue655               = [ordered]@{ enabled = [bool]$Issue655; mode = 'local-fixture'; branch = $gitBranch; head = $gitCommit; baseSha = $gitBaseSha; baseShaSource = $gitBaseSource; baseShaAttempts = $gitBaseAttempts; routeCount = if ($Issue655) { @($routesToCapture).Count } else { 0 }; scenarios = if ($Issue655) { @($routesToCapture | ForEach-Object { $_.Name }) } else { @() }; screenshotStateArtifact = if ($Issue655) { 'diagnostics/issue-655-screenshot-states.json' } else { '' }; screenshotStates = if ($Issue655) { $issue642PacketDiagnostics.screenshotStates } else { @{} }; browserStateCount = if ($Issue655) { $issue642PacketDiagnostics.browserStates } else { 0 }; geometryDiagnosticsArtifact = if ($Issue655) { $issue642PacketDiagnostics.geometryArtifact } else { '' }; focusLiveRegionDiagnosticsArtifact = if ($Issue655) { $issue642PacketDiagnostics.focusLiveArtifact } else { '' }; interactionIndexArtifact = if ($Issue655) { $issue642PacketDiagnostics.interactionIndexArtifact } else { '' }; consoleNetworkSummaryArtifact = if ($Issue655) { 'diagnostics/issue-655-console-network-summary.json' } else { '' }; consoleNetwork = if ($Issue655) { $issue642PacketDiagnostics.consoleNetwork } else { @{} }; evidenceLimitations = 'Local fixture evidence only; it does not establish deployed-host acceptance.'; visualAcceptance = 'PENDING_INDEPENDENT_VISUAL_REVIEW'; ownerAcceptance = 'PENDING_OWNER_DECISION'; printArtifact = @($routeResults | Where-Object { $_.printPath } | ForEach-Object { $_.printPath }) }
-        capturePlan            = if ($null -eq $capturePlan) { $null } else { [ordered]@{ fileName = $capturePlan.FileName; dataMode = $capturePlan.DataMode; purpose = $capturePlan.Purpose; limitations = @($capturePlan.Limitations); scenarios = @($capturePlan.Scenarios | ForEach-Object { [ordered]@{ id = $_.Id; facilityId = $_.FacilityId; classification = $_.Classification; expectedLocationState = $_.ExpectedLocationState; routes = @($_.Routes | ForEach-Object { [ordered]@{ kind = $_.Kind; applicability = $_.Applicability; reason = $_.Reason; requiredText = @($_.RequiredText); forbiddenText = @($_.ForbiddenText) } }) } }) } }
+        capturePlan            = if ($null -eq $capturePlan) { $null } else { [ordered]@{ fileName = $capturePlan.FileName; dataMode = $capturePlan.DataMode; governanceIssue = $capturePlan.GovernanceIssue; purpose = $capturePlan.Purpose; limitations = @($capturePlan.Limitations); scenarios = @($capturePlan.Scenarios | ForEach-Object { [ordered]@{ id = $_.Id; facilityId = $_.FacilityId; classification = $_.Classification; expectedLocationState = $_.ExpectedLocationState; routes = @($_.Routes | ForEach-Object { [ordered]@{ kind = $_.Kind; applicability = $_.Applicability; reason = $_.Reason; screenshotMode = $_.ScreenshotMode; requiredText = @($_.RequiredText); forbiddenText = @($_.ForbiddenText) } }) } }) } }
         acceptance             = [ordered]@{
             schemaVersion = "recordstracker.hosted-ui-acceptance.v1"
-            governanceIssue = "#648"
+            governanceIssue = if ($null -ne $capturePlan -and $capturePlan.GovernanceIssue) { $capturePlan.GovernanceIssue } else { "#648" }
             parentIssue = "#640"
             stakeholderIssue = "#419"
             featureIssues = $focusedIssueScope

@@ -48,9 +48,18 @@ The packet never submits forms, triggers controlled retrieval, loads or imports 
 adds a reviewed, data-driven route plan without changing the default capture
 behavior. A plan is restricted to a regular JSON file inside the repository and
 must declare a purpose, `fixture-demo` data mode, explicit limitations, and one
-or more named scenarios. Each scenario records its facility ID, classification,
-expected location state, and applicable route assertions. A declared
+or more named scenarios. A plan may declare a governed issue only as `#` plus
+digits; when omitted, existing capture metadata is unchanged. Each scenario
+records its facility ID, classification, expected location state, and applicable
+route assertions. A declared
 `not-applicable` route requires a specific reason; it is never silently omitted.
+
+A route may use the fixed `supplemental-tall` screenshot mode when its normal
+viewport screenshot cannot show an already captured, text-asserted review row.
+The normal screenshot remains required; the supplemental image is a 1440-pixel
+wide, 3000-pixel-tall native capture recorded through the existing supplemental
+screenshot manifest field. Plans cannot provide selectors, paths, URLs, code,
+or arbitrary screenshot dimensions.
 
 Plans use `-Mode fixture` only. The capture command records the plan filename,
 purpose, fixture mode, limitations, scenarios, route applicability, and visible

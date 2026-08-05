@@ -671,6 +671,7 @@ def test_capture_plan_is_reusable_fixture_only_and_covers_issue_647_location_sta
     guide = GUIDE.read_text(encoding="utf-8")
 
     assert plan["dataMode"] == "fixture-demo"
+    assert plan["governanceIssue"] == "#647"
     assert plan["purpose"]
     assert len(plan["limitations"]) >= 2
     assert {scenario["id"] for scenario in plan["scenarios"]} == {
@@ -683,6 +684,13 @@ def test_capture_plan_is_reusable_fixture_only_and_covers_issue_647_location_sta
     assert unavailable["facilityId"] == "157806098"
     assert unavailable["classification"] == "governed unavailable-location presentation"
     assert unavailable["expectedLocationState"] == "unavailable"
+    unavailable_compare = unavailable["routes"][2]
+    assert unavailable_compare["screenshotMode"] == "supplemental-tall"
+    assert unavailable_compare["requiredText"] == [
+        "A. MIRIAM JAMISON CHILDREN'S CENTER",
+        "Facility ID 157806098",
+        "Blank in source",
+    ]
     assert complete["facilityId"] == "900000001"
     assert complete["classification"] == "explicitly synthetic governed fixture"
     assert complete["expectedLocationState"] == "complete"
@@ -708,6 +716,10 @@ def test_capture_plan_is_reusable_fixture_only_and_covers_issue_647_location_sta
     assert "require -Mode fixture" in script
     assert "Test-CapturePlanRouteAssertions -Route $Route" in script
     assert "fileName = $capturePlan.FileName" in script
+    assert "governanceIssue = $capturePlan.GovernanceIssue" in script
+    assert 'else { "#648" }' in script
+    assert "['SupplementalScreenshotHeight'] = 3000" in script
+    assert "Supplemental screenshot capture failed:" in script
     assert "CapturePlanPath" not in script[script.index("capturePlan            ="):]
     assert "Path=$path" not in script
     assert "complaint-detail routes are not supported" in script
@@ -730,6 +742,10 @@ def test_capture_plan_rejects_invalid_data_without_execution() -> None:
         "unsupported mode": (
             json.dumps({**valid_plan, "dataMode": "production"}),
             "Capture plan dataMode 'production' is unsupported.",
+        ),
+        "malformed governance issue": (
+            json.dumps({**valid_plan, "governanceIssue": "647"}),
+            "Capture plan governanceIssue '647' is invalid.",
         ),
         "unknown root property": (
             json.dumps({**valid_plan, "command": "Write-Output should-not-run"}),
@@ -802,6 +818,26 @@ def test_capture_plan_rejects_invalid_data_without_execution() -> None:
                 }
             ),
             "has unsupported property 'path'.",
+        ),
+        "unsupported screenshot mode": (
+            json.dumps(
+                {
+                    **valid_plan,
+                    "scenarios": [
+                        {
+                            **valid_plan["scenarios"][0],
+                            "routes": [
+                                {
+                                    "kind": "compare",
+                                    "screenshotMode": "arbitrary-height",
+                                    "requiredText": ["safe"],
+                                }
+                            ],
+                        }
+                    ],
+                }
+            ),
+            "Capture plan screenshotMode 'arbitrary-height' is unsupported.",
         ),
     }
 

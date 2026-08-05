@@ -1,6 +1,7 @@
 {
   "purpose": "Issue #647 location completeness and missing-address presentation.",
   "dataMode": "fixture-demo",
+  "governanceIssue": "#647",
   "limitations": [
     "Presentation evidence only.",
     "This packet is not PostgreSQL evidence, production evidence, statewide evidence, or live-source completeness evidence.",
@@ -25,7 +26,8 @@
         },
         {
           "kind": "compare",
-          "requiredText": ["157806098"],
+          "screenshotMode": "supplemental-tall",
+          "requiredText": ["A. MIRIAM JAMISON CHILDREN'S CENTER", "Facility ID 157806098", "Blank in source"],
           "forbiddenText": ["Unavailable, Unavailable Unavailable"]
         },
         {
