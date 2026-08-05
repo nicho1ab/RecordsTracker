@@ -3320,6 +3320,102 @@ function Test-EvidencePacketFiles {
     return $indexedPacketFiles
 }
 
+function Assert-UniqueEvidencePaths {
+    param([object[]]$Files, [string]$Context)
+
+    $paths = @($Files | ForEach-Object { [string]$_.path })
+    if ($paths | Where-Object { [string]::IsNullOrWhiteSpace($_) }) {
+        Stop-CaptureFail "$Context contains an empty normalized artifact path."
+    }
+    $duplicates = @($paths | Group-Object | Where-Object { $_.Count -gt 1 } | ForEach-Object { $_.Name })
+    if ($duplicates.Count -gt 0) {
+        Stop-CaptureFail "$Context contains duplicate normalized artifact paths: $($duplicates -join ', ')"
+    }
+}
+
+function Get-ManifestSupplementalArtifactPaths {
+    param([object]$Manifest)
+
+    $paths = [System.Collections.ArrayList]::new()
+    foreach ($route in @($Manifest.routes)) {
+        if ($null -eq $route.PSObject.Properties['supplementalScreenshotPath']) { continue }
+        $path = [string]$route.supplementalScreenshotPath
+        if ([string]::IsNullOrWhiteSpace($path)) { continue }
+        [void]$paths.Add($path)
+    }
+    return @($paths)
+}
+
+function New-EvidencePacketAccounting {
+    param([string]$PacketDirectory)
+
+    $indexPath = 'file-index.json'
+    $sourceFiles = @(Test-EvidencePacketFiles -PacketDirectory $PacketDirectory)
+    Assert-UniqueEvidencePaths -Files $sourceFiles -Context 'Evidence packet source inventory'
+    if (@($sourceFiles | Where-Object { $_.path -eq $indexPath }).Count -gt 0) {
+        Stop-CaptureFail 'Evidence packet source inventory must be created before file-index.json exists.'
+    }
+
+    $manifestPath = Join-Path $PacketDirectory 'manifest.json'
+    try { $manifest = Get-Content -LiteralPath $manifestPath -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop }
+    catch { Stop-CaptureFail 'Evidence packet manifest is invalid before final artifact accounting.' }
+    $supplementalPaths = @(Get-ManifestSupplementalArtifactPaths -Manifest $manifest)
+    foreach ($supplementalPath in $supplementalPaths) {
+        if (@($sourceFiles | Where-Object { $_.path -eq $supplementalPath }).Count -ne 1) {
+            Stop-CaptureFail "Evidence packet supplemental artifact is missing or duplicated before final accounting: $supplementalPath"
+        }
+    }
+
+    return [ordered]@{
+        sourceIndexedArtifactCount = [int]$sourceFiles.Count
+        finalArtifactCount         = [int]($sourceFiles.Count + 1)
+        indexSelfExclusion         = [ordered]@{
+            path   = $indexPath
+            reason = 'file-index.json is excluded from its own hashed source inventory and is included in final packet accounting.'
+        }
+        supplementalArtifactCount  = [int]$supplementalPaths.Count
+        finalArtifactCountSemantics = 'Every final packaged regular file, including file-index.json and supplemental screenshots.'
+    }
+}
+
+function New-EvidenceFileIndex {
+    param([object[]]$SourceFiles, [object]$Accounting)
+
+    Assert-UniqueEvidencePaths -Files $SourceFiles -Context 'Evidence packet file index'
+    if ([string]$Accounting.indexSelfExclusion.path -ne 'file-index.json') {
+        Stop-CaptureFail 'Evidence packet file-index self-exclusion must identify file-index.json.'
+    }
+    if ([string]::IsNullOrWhiteSpace([string]$Accounting.indexSelfExclusion.reason)) {
+        Stop-CaptureFail 'Evidence packet file-index self-exclusion requires an explicit reason.'
+    }
+    if ([int]$Accounting.sourceIndexedArtifactCount -ne @($SourceFiles).Count) {
+        Stop-CaptureFail 'Evidence packet file-index source artifact count does not match its source inventory.'
+    }
+    if ([int]$Accounting.finalArtifactCount -ne (@($SourceFiles).Count + 1)) {
+        Stop-CaptureFail 'Evidence packet final artifact count must include exactly the self-excluded file index.'
+    }
+    return [ordered]@{
+        sourceIndexedArtifactCount = [int]$Accounting.sourceIndexedArtifactCount
+        finalArtifactCount         = [int]$Accounting.finalArtifactCount
+        indexSelfExclusion         = $Accounting.indexSelfExclusion
+        files                      = @($SourceFiles)
+    }
+}
+
+function Get-EvidenceZipEntryCount {
+    param([string]$ZipPath)
+
+    try { [System.IO.Compression.ZipFile] | Out-Null }
+    catch { Add-Type -AssemblyName System.IO.Compression.FileSystem }
+    $archive = [System.IO.Compression.ZipFile]::OpenRead($ZipPath)
+    try {
+        return @($archive.Entries | Where-Object { -not $_.FullName.EndsWith('/') }).Count
+    }
+    finally {
+        $archive.Dispose()
+    }
+}
+
 function Test-EvidenceZipIntegrity {
     param([string]$PacketDirectory, [string]$ZipPath, [object[]]$ExpectedFiles)
 
@@ -3370,6 +3466,81 @@ function Test-EvidenceZipIntegrity {
         $archive.Dispose()
     }
     return (Get-FileHash -LiteralPath $ZipPath -Algorithm SHA256).Hash
+}
+
+function Test-EvidencePacketAccounting {
+    param(
+        [string]$PacketDirectory,
+        [string]$ZipPath,
+        [int]$ReportedFinalArtifactCount
+    )
+
+    $manifestPath = Join-Path $PacketDirectory 'manifest.json'
+    $fileIndexPath = Join-Path $PacketDirectory 'file-index.json'
+    try { $manifest = Get-Content -LiteralPath $manifestPath -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop }
+    catch { Stop-CaptureFail 'Evidence packet manifest is invalid during final artifact accounting.' }
+    if ($null -eq $manifest.PSObject.Properties['packetAccounting']) {
+        Stop-CaptureFail 'Evidence packet manifest is missing final artifact accounting.'
+    }
+    $accounting = $manifest.packetAccounting
+    foreach ($property in @('sourceIndexedArtifactCount', 'finalArtifactCount', 'indexSelfExclusion', 'supplementalArtifactCount')) {
+        if ($null -eq $accounting.PSObject.Properties[$property]) {
+            Stop-CaptureFail "Evidence packet manifest final artifact accounting is missing '$property'."
+        }
+    }
+    if ([string]$accounting.indexSelfExclusion.path -ne 'file-index.json' -or [string]::IsNullOrWhiteSpace([string]$accounting.indexSelfExclusion.reason)) {
+        Stop-CaptureFail 'Evidence packet manifest file-index self-exclusion is not explicit.'
+    }
+
+    try { $fileIndex = Get-Content -LiteralPath $fileIndexPath -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop }
+    catch { Stop-CaptureFail 'Evidence packet file index is invalid during final artifact accounting.' }
+    if ($null -eq $fileIndex.PSObject.Properties['indexSelfExclusion'] -or [string]$fileIndex.indexSelfExclusion.path -ne 'file-index.json' -or [string]::IsNullOrWhiteSpace([string]$fileIndex.indexSelfExclusion.reason)) {
+        Stop-CaptureFail 'Evidence packet file-index self-exclusion is not explicit.'
+    }
+
+    $finalFiles = @(Test-EvidencePacketFiles -PacketDirectory $PacketDirectory)
+    Assert-UniqueEvidencePaths -Files $finalFiles -Context 'Evidence packet final inventory'
+    $finalPaths = @($finalFiles | ForEach-Object { [string]$_.path })
+    $sourcePaths = @($fileIndex.files | ForEach-Object { [string]$_.path })
+    Assert-UniqueEvidencePaths -Files @($fileIndex.files) -Context 'Evidence packet file index'
+    $expectedSourcePaths = @($finalPaths | Where-Object { $_ -ne 'file-index.json' })
+    $missingIndexedPaths = @($expectedSourcePaths | Where-Object { $_ -notin $sourcePaths })
+    $unexpectedIndexedPaths = @($sourcePaths | Where-Object { $_ -notin $expectedSourcePaths })
+    if ($missingIndexedPaths.Count -gt 0 -or $unexpectedIndexedPaths.Count -gt 0) {
+        Stop-CaptureFail "Evidence packet file index has an unexplained exclusion or inclusion. Missing: $($missingIndexedPaths -join ', '); unexpected: $($unexpectedIndexedPaths -join ', ')."
+    }
+    if ([int]$accounting.sourceIndexedArtifactCount -ne $sourcePaths.Count -or [int]$fileIndex.sourceIndexedArtifactCount -ne $sourcePaths.Count) {
+        Stop-CaptureFail 'Evidence packet source-indexed artifact count does not match the final file index.'
+    }
+    if ([int]$accounting.finalArtifactCount -ne $finalFiles.Count -or [int]$fileIndex.finalArtifactCount -ne $finalFiles.Count) {
+        Stop-CaptureFail 'Evidence packet manifest or file index final artifact count does not match final filesystem artifacts.'
+    }
+
+    $supplementalPaths = @(Get-ManifestSupplementalArtifactPaths -Manifest $manifest)
+    if ([int]$accounting.supplementalArtifactCount -ne $supplementalPaths.Count) {
+        Stop-CaptureFail 'Evidence packet manifest supplemental artifact count does not match route metadata.'
+    }
+    foreach ($supplementalPath in $supplementalPaths) {
+        if (@($finalPaths | Where-Object { $_ -eq $supplementalPath }).Count -ne 1 -or @($sourcePaths | Where-Object { $_ -eq $supplementalPath }).Count -ne 1) {
+            Stop-CaptureFail "Evidence packet supplemental artifact is omitted from final accounting: $supplementalPath"
+        }
+    }
+
+    $zipSha256 = Test-EvidenceZipIntegrity -PacketDirectory $PacketDirectory -ZipPath $ZipPath -ExpectedFiles $finalFiles
+    $zipEntryCount = Get-EvidenceZipEntryCount -ZipPath $ZipPath
+    if ($zipEntryCount -ne $finalFiles.Count -or $zipEntryCount -ne [int]$accounting.finalArtifactCount) {
+        Stop-CaptureFail 'Evidence packet ZIP entry count does not match final artifact accounting.'
+    }
+    if ($ReportedFinalArtifactCount -ne [int]$accounting.finalArtifactCount) {
+        Stop-CaptureFail 'Reported final artifact count does not match manifest final artifact accounting.'
+    }
+    return [ordered]@{
+        sourceIndexedArtifactCount = [int]$sourcePaths.Count
+        finalArtifactCount         = [int]$finalFiles.Count
+        zipEntryCount              = [int]$zipEntryCount
+        supplementalArtifactCount  = [int]$supplementalPaths.Count
+        zipSha256                  = $zipSha256
+    }
 }
 
 function Add-AssertionResult {
@@ -5747,10 +5918,12 @@ scripts/validate_hosted_ui_acceptance.py.
         Test-Issue655AcceptancePacket -PacketDirectory $packetDir -DiagnosticsDirectory $diagnosticsDir -Assertions $assertions
     }
 
+    $packetAccounting = New-EvidencePacketAccounting -PacketDirectory $packetDir
+    $manifest.packetAccounting = $packetAccounting
+    Set-Content -LiteralPath (Join-Path $packetDir "manifest.json") -Value ($manifest | ConvertTo-Json -Depth 8) -Encoding UTF8
+
     $indexedPacketFiles = @(Test-EvidencePacketFiles -PacketDirectory $packetDir)
-    $fileIndex = [ordered]@{
-        files = $indexedPacketFiles
-    }
+    $fileIndex = New-EvidenceFileIndex -SourceFiles $indexedPacketFiles -Accounting $packetAccounting
     Set-Content -LiteralPath (Join-Path $packetDir "file-index.json") -Value ($fileIndex | ConvertTo-Json -Depth 5) -Encoding UTF8
 
     if (($routeFailures.Count -gt 0 -or $assertionFailures.Count -gt 0 -or $screenshotFailures.Count -gt 0) -and -not $AllowUnavailable) {
@@ -5761,8 +5934,8 @@ scripts/validate_hosted_ui_acceptance.py.
 
     if (Test-Path -LiteralPath $zipPath) { Remove-Item -LiteralPath $zipPath -Force }
     Compress-Archive -LiteralPath $packetDir -DestinationPath $zipPath -Force
-    $packagedFiles = @(Get-EvidenceFileIndex -PacketDirectory $packetDir)
-    $zipSha256 = Test-EvidenceZipIntegrity -PacketDirectory $packetDir -ZipPath $zipPath -ExpectedFiles $packagedFiles
+    $finalPacketAccounting = Test-EvidencePacketAccounting -PacketDirectory $packetDir -ZipPath $zipPath -ReportedFinalArtifactCount ([int]$packetAccounting.finalArtifactCount)
+    $zipSha256 = $finalPacketAccounting.zipSha256
 
     Write-Host "Evidence packet path: $packetDir"
     Write-Host "EVIDENCE_PACKET_PATH=$packetDir"
@@ -5770,6 +5943,9 @@ scripts/validate_hosted_ui_acceptance.py.
     Write-Host "EVIDENCE_ZIP_PATH=$zipPath"
     Write-Host "Evidence ZIP SHA-256: $zipSha256"
     Write-Host "EVIDENCE_ZIP_SHA256=$zipSha256"
+    Write-Host "Final artifact count: $($finalPacketAccounting.finalArtifactCount)"
+    Write-Host "FINAL_ARTIFACT_COUNT=$($finalPacketAccounting.finalArtifactCount)"
+    Write-Host "Final ZIP entry count: $($finalPacketAccounting.zipEntryCount)"
     Write-Host "HOSTED_UI_ACCEPTANCE=NOT_ACCEPTED"
     Write-Host "Output counts: screenshots=$($outputCounts.screenshots); html=$($outputCounts.html); text=$($outputCounts.text); diagnostics=$($outputCounts.diagnostics); accessibility=$($outputCounts.accessibility)"
     Write-Host "manifest.json: $(Join-Path $packetDir 'manifest.json')"
