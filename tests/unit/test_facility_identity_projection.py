@@ -34,6 +34,7 @@ from ccld_complaints.hosted_app.ccld_retrieval_jobs import (
 )
 from ccld_complaints.hosted_app.facility_identity_presenter import (
     present_facility_field,
+    present_facility_location,
 )
 from ccld_complaints.hosted_app.facility_identity_projection import (
     PUBLIC_FACILITY_FIELDS,
@@ -279,6 +280,125 @@ def test_presenter_uses_one_approved_phrase_for_each_empty_state(
     )
 
     assert presentation.text == expected
+
+
+@pytest.mark.parametrize(
+    ("values", "semantic_states", "include_street", "expected"),
+    (
+        (
+            {
+                FacilityProjectionField.FULL_ADDRESS: "100 Review Way",
+                FacilityProjectionField.CITY: "Sacramento",
+                FacilityProjectionField.STATE: "CA",
+                FacilityProjectionField.ZIP: "95814",
+            },
+            {},
+            True,
+            "100 Review Way, Sacramento, CA 95814",
+        ),
+        (
+            {
+                FacilityProjectionField.FULL_ADDRESS: "100 Review Way",
+                FacilityProjectionField.CITY: "Sacramento",
+                FacilityProjectionField.STATE: "CA",
+            },
+            {},
+            True,
+            "100 Review Way, Sacramento, CA",
+        ),
+        (
+            {
+                FacilityProjectionField.CITY: "Sacramento",
+                FacilityProjectionField.STATE: "CA",
+            },
+            {},
+            True,
+            "Sacramento, CA",
+        ),
+        ({FacilityProjectionField.STATE: "CA"}, {}, True, "CA"),
+        ({}, {}, True, "Not found in source"),
+        (
+            {
+                FacilityProjectionField.FULL_ADDRESS: "",
+                FacilityProjectionField.CITY: "",
+                FacilityProjectionField.STATE: "",
+                FacilityProjectionField.ZIP: "",
+            },
+            {},
+            True,
+            "Blank in source",
+        ),
+        (
+            {FacilityProjectionField.CITY: "Unavailable"},
+            {FacilityProjectionField.CITY: FacilityValueState.UNAVAILABLE},
+            False,
+            "Source unavailable",
+        ),
+        (
+            {FacilityProjectionField.CITY: None},
+            {FacilityProjectionField.CITY: FacilityValueState.EXTRACTION_FAILED},
+            False,
+            "Source extraction failed",
+        ),
+    ),
+)
+def test_location_presenter_composes_partial_values_and_reports_one_state(
+    values: Mapping[FacilityProjectionField, Any],
+    semantic_states: Mapping[FacilityProjectionField, FacilityValueState],
+    include_street: bool,
+    expected: str,
+) -> None:
+    projection = project_facility_identity(
+        FACILITY_ID,
+        (
+            _candidate(
+                source_kind=FacilitySourceKind.TRANSPARENCY_API_CURRENT,
+                row_identity="location-row",
+                observed_at="2026-08-03T00:00:00+00:00",
+                context=FacilityValueContext.CURRENT_REFERENCE,
+                values=values,
+                semantic_states=semantic_states,
+            ),
+        ),
+    )
+
+    presentation = present_facility_location(
+        projection,
+        include_street=include_street,
+    )
+
+    assert presentation.text == expected
+    assert ", ," not in presentation.text
+    assert "  " not in presentation.text
+    assert presentation.text.count("Source unavailable") <= 1
+
+
+def test_location_presenter_reports_conflicting_observations_without_a_placeholder() -> None:
+    projection = project_facility_identity(
+        FACILITY_ID,
+        (
+            _candidate(
+                source_kind=FacilitySourceKind.TRANSPARENCY_API_CURRENT,
+                row_identity="location-current",
+                observed_at="2026-08-03T00:00:00+00:00",
+                context=FacilityValueContext.CURRENT_REFERENCE,
+                values={FacilityProjectionField.CITY: "Sacramento"},
+            ),
+            _candidate(
+                source_kind=FacilitySourceKind.COMPLAINT_LINKED_FACILITY,
+                row_identity="location-historical",
+                observed_at="2026-08-02T00:00:00+00:00",
+                context=FacilityValueContext.HISTORICAL_COMPLAINT,
+                values={FacilityProjectionField.CITY: "Fresno"},
+            ),
+        ),
+    )
+
+    presentation = present_facility_location(projection, include_street=False)
+
+    assert presentation.text == "Sacramento (Conflicting source values)"
+    assert presentation.state is FacilityValueState.CONFLICTING
+    assert presentation.conflict is True
 
 
 def test_multiple_same_id_rows_are_insertion_order_independent_and_never_first_row_wins() -> None:

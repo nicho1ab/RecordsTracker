@@ -28,6 +28,9 @@ Screenshot tool selector: auto, playwright, edge, or chrome. Explicit requests
 fail without silently falling back to another tool.
 .PARAMETER AllowUnavailable
 When set, route failures are recorded in the manifest instead of failing the script.
+.PARAMETER CapturePlanPath
+Optional repository-contained JSON capture plan. Plans can declare a purpose,
+fixture-demo scenarios, safe route kinds, and required or forbidden visible text.
 .PARAMETER Issue415
 Capture the focused issue #415 substantiated-worklist evidence routes and assertions.
 .PARAMETER Issue416
@@ -112,6 +115,8 @@ param(
     [string]$ScreenshotToolPreference = "auto",
 
     [switch]$AllowUnavailable,
+
+    [string]$CapturePlanPath = "",
 
     [switch]$LibraryOnly,
 
@@ -207,6 +212,159 @@ $forbiddenMarkers = @(
 function Stop-CaptureFail {
     param([string]$Message)
     throw "[FAIL] $Message"
+}
+
+function Get-CapturePlanString {
+    param(
+        [object]$Object,
+        [string]$Name,
+        [switch]$Required
+    )
+    if ($null -eq $Object -or $null -eq $Object.PSObject.Properties[$Name]) {
+        if ($Required) { Stop-CaptureFail "Capture plan requires '$Name'." }
+        return ""
+    }
+    $value = [string]$Object.PSObject.Properties[$Name].Value
+    if ($Required -and [string]::IsNullOrWhiteSpace($value)) {
+        Stop-CaptureFail "Capture plan requires a non-empty '$Name'."
+    }
+    return $value.Trim()
+}
+
+function ConvertTo-CapturePlanTextList {
+    param([object]$Value, [string]$Name)
+    if ($null -eq $Value) { return @() }
+    if ($Value -is [string]) { Stop-CaptureFail "Capture plan '$Name' must be an array of non-empty strings." }
+    $values = @()
+    foreach ($item in @($Value)) {
+        $text = [string]$item
+        if ([string]::IsNullOrWhiteSpace($text)) { Stop-CaptureFail "Capture plan '$Name' contains an empty value." }
+        if ($text.Length -gt 240) { Stop-CaptureFail "Capture plan '$Name' contains an overlong value." }
+        $values += $text.Trim()
+    }
+    return @($values)
+}
+
+function Assert-CapturePlanPropertyNames {
+    param(
+        [object]$Object,
+        [string[]]$AllowedNames,
+        [string]$Context
+    )
+    if ($null -eq $Object -or $Object -isnot [pscustomobject]) {
+        Stop-CaptureFail "Capture plan $Context must be a JSON object."
+    }
+    foreach ($property in @($Object.PSObject.Properties.Name)) {
+        if ($property -notin $AllowedNames) {
+            Stop-CaptureFail "Capture plan $Context has unsupported property '$property'."
+        }
+    }
+}
+
+function Read-CapturePlan {
+    param([string]$Path, [string]$RepositoryRoot = $PWD)
+    if ([string]::IsNullOrWhiteSpace($Path)) { return $null }
+    if (-not $Path.EndsWith('.json', [System.StringComparison]::OrdinalIgnoreCase)) {
+        Stop-CaptureFail "CapturePlanPath must name a JSON file."
+    }
+    $root = [System.IO.Path]::GetFullPath($RepositoryRoot).TrimEnd([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar)
+    $candidate = if ([System.IO.Path]::IsPathRooted($Path)) { [System.IO.Path]::GetFullPath($Path) } else { [System.IO.Path]::GetFullPath((Join-Path $root $Path)) }
+    if (-not $candidate.StartsWith(($root + [System.IO.Path]::DirectorySeparatorChar), [System.StringComparison]::OrdinalIgnoreCase)) {
+        Stop-CaptureFail "CapturePlanPath must stay inside the repository root."
+    }
+    if (-not (Test-Path -LiteralPath $candidate -PathType Leaf)) { Stop-CaptureFail "Capture plan file is missing." }
+    $item = Get-Item -LiteralPath $candidate -Force
+    if (($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) { Stop-CaptureFail "Capture plan file must not be a reparse point." }
+    try { $rawPlan = Get-Content -LiteralPath $candidate -Raw | ConvertFrom-Json }
+    catch { Stop-CaptureFail "Capture plan JSON is malformed." }
+    if ($null -eq $rawPlan) { Stop-CaptureFail "Capture plan JSON is empty." }
+    Assert-CapturePlanPropertyNames -Object $rawPlan -AllowedNames @('purpose', 'dataMode', 'limitations', 'scenarios') -Context 'root'
+    $purpose = Get-CapturePlanString -Object $rawPlan -Name 'purpose' -Required
+    $dataMode = Get-CapturePlanString -Object $rawPlan -Name 'dataMode' -Required
+    if ($dataMode -ne 'fixture-demo') { Stop-CaptureFail "Capture plan dataMode '$dataMode' is unsupported." }
+    if ($null -eq $rawPlan.PSObject.Properties['limitations']) { Stop-CaptureFail "Capture plan requires limitations." }
+    $limitations = ConvertTo-CapturePlanTextList -Value $rawPlan.limitations -Name 'limitations'
+    if ($limitations.Count -eq 0) { Stop-CaptureFail "Capture plan requires at least one limitation." }
+    if ($null -eq $rawPlan.PSObject.Properties['scenarios']) { Stop-CaptureFail "Capture plan requires scenarios." }
+    $seenScenarioIds = @{}
+    $scenarios = @()
+    foreach ($rawScenario in @($rawPlan.scenarios)) {
+        Assert-CapturePlanPropertyNames -Object $rawScenario -AllowedNames @('id', 'facilityId', 'classification', 'expectedLocationState', 'routes') -Context 'scenario'
+        $scenarioId = Get-CapturePlanString -Object $rawScenario -Name 'id' -Required
+        if ($scenarioId -notmatch '^[a-z][a-z0-9-]{1,63}$') { Stop-CaptureFail "Capture plan scenario id '$scenarioId' is invalid." }
+        if ($seenScenarioIds.ContainsKey($scenarioId)) { Stop-CaptureFail "Capture plan has duplicate scenario id '$scenarioId'." }
+        $seenScenarioIds[$scenarioId] = $true
+        $facilityId = Get-CapturePlanString -Object $rawScenario -Name 'facilityId' -Required
+        if ($facilityId -notmatch '^\d{9}$') { Stop-CaptureFail "Capture plan facility id '$facilityId' is invalid." }
+        $classification = Get-CapturePlanString -Object $rawScenario -Name 'classification' -Required
+        $locationState = Get-CapturePlanString -Object $rawScenario -Name 'expectedLocationState' -Required
+        if ($locationState -notin @('unavailable', 'complete', 'partial')) { Stop-CaptureFail "Capture plan location state '$locationState' is unsupported." }
+        if ($null -eq $rawScenario.PSObject.Properties['routes']) { Stop-CaptureFail "Capture plan scenario '$scenarioId' requires routes." }
+        $routes = @()
+        $seenRouteKinds = @{}
+        foreach ($rawRoute in @($rawScenario.routes)) {
+            Assert-CapturePlanPropertyNames -Object $rawRoute -AllowedNames @('kind', 'applicability', 'reason', 'requiredText', 'forbiddenText') -Context "scenario '$scenarioId' route"
+            $kind = Get-CapturePlanString -Object $rawRoute -Name 'kind' -Required
+            if ($kind -notin @('search', 'overview', 'compare', 'complaint-detail')) { Stop-CaptureFail "Capture plan route '$kind' is unsupported." }
+            if ($seenRouteKinds.ContainsKey($kind)) { Stop-CaptureFail "Capture plan scenario '$scenarioId' has duplicate route kind '$kind'." }
+            $seenRouteKinds[$kind] = $true
+            $applicability = if ($null -ne $rawRoute.PSObject.Properties['applicability']) { Get-CapturePlanString -Object $rawRoute -Name 'applicability' } else { 'applicable' }
+            if ($applicability -notin @('applicable', 'not-applicable')) { Stop-CaptureFail "Capture plan route applicability '$applicability' is unsupported." }
+            $reason = if ($null -ne $rawRoute.PSObject.Properties['reason']) { Get-CapturePlanString -Object $rawRoute -Name 'reason' } else { '' }
+            if ($applicability -eq 'not-applicable' -and [string]::IsNullOrWhiteSpace($reason)) { Stop-CaptureFail "Capture plan not-applicable route '$kind' requires a reason." }
+            if ($kind -eq 'complaint-detail' -and $applicability -eq 'applicable') { Stop-CaptureFail "Capture plan complaint-detail routes are not supported without a truthful existing route derivation." }
+            $requiredText = if ($null -ne $rawRoute.PSObject.Properties['requiredText']) { ConvertTo-CapturePlanTextList -Value $rawRoute.requiredText -Name 'requiredText' } else { @() }
+            $forbiddenText = if ($null -ne $rawRoute.PSObject.Properties['forbiddenText']) { ConvertTo-CapturePlanTextList -Value $rawRoute.forbiddenText -Name 'forbiddenText' } else { @() }
+            $routes += [pscustomobject]@{ Kind=$kind; Applicability=$applicability; Reason=$reason; RequiredText=@($requiredText); ForbiddenText=@($forbiddenText) }
+        }
+        if ($routes.Count -eq 0) { Stop-CaptureFail "Capture plan scenario '$scenarioId' requires at least one route." }
+        $scenarios += [pscustomobject]@{ Id=$scenarioId; FacilityId=$facilityId; Classification=$classification; ExpectedLocationState=$locationState; Routes=@($routes) }
+    }
+    if ($scenarios.Count -eq 0) { Stop-CaptureFail "Capture plan requires at least one scenario." }
+    return [pscustomobject]@{ Purpose=$purpose; DataMode=$dataMode; Limitations=@($limitations); Scenarios=@($scenarios); FileName=(Split-Path -Leaf $candidate) }
+}
+
+function New-CapturePlanRoutes {
+    param([object]$Plan)
+    $routes = @()
+    foreach ($scenario in $Plan.Scenarios) {
+        foreach ($scenarioRoute in $scenario.Routes) {
+            if ($scenarioRoute.Applicability -eq 'not-applicable') { continue }
+            $path = switch ($scenarioRoute.Kind) {
+                'search' { "/ccld/facilities?q=$($scenario.FacilityId)#facility-results" }
+                'overview' { "/ccld/facilities/detail?facility_number=$($scenario.FacilityId)" }
+                'compare' { "/ccld/facilities/intelligence?facility=$($scenario.FacilityId)" }
+                'complaint-detail' { Stop-CaptureFail 'Capture plan complaint-detail routes cannot be generated without a truthful existing route derivation.' }
+                default { Stop-CaptureFail "Capture plan route kind '$($scenarioRoute.Kind)' is unsupported." }
+            }
+            $routes += @{
+                Name = "plan-$($scenario.Id)-$($scenarioRoute.Kind)"
+                Label = "plan-$($scenario.Id)-$($scenarioRoute.Kind)"
+                Path = $path
+                ActiveHref = if ($scenarioRoute.Kind -eq 'compare') { '/ccld/facilities/intelligence' } elseif ($scenarioRoute.Kind -eq 'complaint-detail') { '/reviewer' } else { '/ccld/facilities' }
+                WorkflowStep = if ($scenarioRoute.Kind -eq 'complaint-detail') { 'Review' } else { 'Facility' }
+                CapturePlanScenarioId = $scenario.Id
+                CapturePlanClassification = $scenario.Classification
+                CapturePlanLocationState = $scenario.ExpectedLocationState
+                CapturePlanRequiredText = @($scenarioRoute.RequiredText)
+                CapturePlanForbiddenText = @($scenarioRoute.ForbiddenText)
+            }
+        }
+    }
+    return @($routes)
+}
+
+function Test-CapturePlanRouteAssertions {
+    param([hashtable]$Route, [string]$Text, [System.Collections.ArrayList]$Assertions)
+    if (-not $Route.ContainsKey('CapturePlanScenarioId')) { return }
+    foreach ($required in @($Route.CapturePlanRequiredText)) {
+        $pass = $Text.Contains([string]$required)
+        Add-AssertionResult -Target $Assertions -RouteName $Route.Name -Check "capture-plan required text" -Status $(if ($pass) { 'PASS' } else { 'FAIL' }) -Message $(if ($pass) { "Required capture-plan text found: $required" } else { "Required capture-plan text missing: $required" })
+    }
+    foreach ($forbidden in @($Route.CapturePlanForbiddenText)) {
+        $pass = -not $Text.Contains([string]$forbidden)
+        Add-AssertionResult -Target $Assertions -RouteName $Route.Name -Check "capture-plan forbidden text" -Status $(if ($pass) { 'PASS' } else { 'FAIL' }) -Message $(if ($pass) { "Forbidden capture-plan text absent: $forbidden" } else { "Forbidden capture-plan text found: $forbidden" })
+    }
 }
 
 function Resolve-OptionalGitRevision {
@@ -4140,6 +4298,11 @@ foreach ($entry in $captureEnvOverrides.GetEnumerator()) {
 try {
     Test-AllowedBaseUrl -Value $BaseUrl
     if (-not $Issue655Rehearsal) { Assert-OutputDir -Path $OutputDir }
+    $capturePlan = Read-CapturePlan -Path $CapturePlanPath -RepositoryRoot $PWD
+    if ($null -ne $capturePlan) {
+        if ($Mode -ne 'fixture') { Stop-CaptureFail "Capture plans with dataMode fixture-demo require -Mode fixture." }
+        $evidencePurpose = $capturePlan.Purpose
+    }
     if (($Issue419 -or $Issue420 -or $Issue502 -or $Issue503 -or $Issue641 -or $Issue642 -or $Issue643) -and $Mode -ne "fixture") {
         Stop-CaptureFail "Issue #419, Issue #420, Issue #502, Issue #503, and Issue #641 evidence routes are local fixture/demo-only; use -Mode fixture."
     }
@@ -4155,7 +4318,7 @@ try {
         $resolvedOutput = [IO.Path]::GetFullPath($OutputDir)
         if (-not $resolvedOutput.StartsWith($tempRoot, [StringComparison]::OrdinalIgnoreCase)) { throw 'Issue #655 rehearsal output must stay under the temporary directory.' }
     }
-    $packetName = if ($Issue655Rehearsal) { "issue-655-rehearsal-$RehearsalRunName" } elseif ($Issue655) { "$timestamp-issue-655-local" } elseif ($Issue643) { "$timestamp-issue-643-local" } elseif ($Issue642) { "$timestamp-issue-642-local" } elseif ($Issue503) { "$timestamp-$Mode-issue-503" } elseif ($Issue502) { "$timestamp-$Mode-issue-502" } elseif ($Issue498) { "$timestamp-$Mode-issue-498" } elseif ($Issue420) { "$timestamp-$Mode-issue-420" } elseif ($Issue419) { "$timestamp-$Mode-issue-419" } elseif ($Issue418) { "$timestamp-$Mode-issue-418" } elseif ($Issue417) { "$timestamp-$Mode-issue-417" } elseif ($Issue416) { "$timestamp-$Mode-issue-416" } elseif ($Issue415) { "$timestamp-$Mode-issue-415" } else { "$timestamp-$Mode" }
+    $packetName = if ($Issue655Rehearsal) { "issue-655-rehearsal-$RehearsalRunName" } elseif ($Issue655) { "$timestamp-issue-655-local" } elseif ($Issue643) { "$timestamp-issue-643-local" } elseif ($Issue642) { "$timestamp-issue-642-local" } elseif ($Issue503) { "$timestamp-$Mode-issue-503" } elseif ($Issue502) { "$timestamp-$Mode-issue-502" } elseif ($Issue498) { "$timestamp-$Mode-issue-498" } elseif ($Issue420) { "$timestamp-$Mode-issue-420" } elseif ($Issue419) { "$timestamp-$Mode-issue-419" } elseif ($Issue418) { "$timestamp-$Mode-issue-418" } elseif ($Issue417) { "$timestamp-$Mode-issue-417" } elseif ($Issue416) { "$timestamp-$Mode-issue-416" } elseif ($Issue415) { "$timestamp-$Mode-issue-415" } elseif ($null -ne $capturePlan) { "$timestamp-$Mode-plan" } else { "$timestamp-$Mode" }
     $outputRoot = if ([IO.Path]::IsPathRooted($OutputDir)) {
         [IO.Path]::GetFullPath($OutputDir)
     } else {
@@ -4395,6 +4558,7 @@ try {
         @{ Name = "issue-655-print"; Path = $issue655Base; Label = "issue-655-12-print"; ActiveHref = $issue655Base; WorkflowStep = "Review"; Issue655State = "print"; ViewportWidth = 1440; ViewportHeight = 1200; CapturePrint = $true }
     )
     $routesToCapture = if ($Issue655) { $issue655Routes } elseif ($Issue643) { $issue643Routes } elseif ($Issue642) { $issue642Routes } elseif ($Issue641) { $issue641Routes } elseif ($Issue610) { $issue610Routes } elseif ($Issue503) { $issue503Routes } elseif ($Issue502) { $issue502Routes } elseif ($Issue498) { $issue498Routes } elseif ($Issue420) { $issue420Routes } elseif ($Issue419) { $issue419Routes } elseif ($Issue418) { $issue418Routes } elseif ($Issue417) { $issue417Routes } elseif ($Issue416) { $issue416Routes } elseif ($Issue415) { $issue415Routes } else { $coreRoutes }
+    if ($null -ne $capturePlan) { $routesToCapture = @(New-CapturePlanRoutes -Plan $capturePlan) }
 
     $routeResults = [System.Collections.ArrayList]::new()
     $assertions = [System.Collections.ArrayList]::new()
@@ -4602,6 +4766,9 @@ try {
         }
         if ($Issue498) {
             Test-Issue498RouteAssertions -Route $Route -Html $safeHtml -Text $plainText -Assertions $assertions
+        }
+        if ($null -ne $capturePlan) {
+            Test-CapturePlanRouteAssertions -Route $Route -Text $plainText -Assertions $assertions
         }
         if (($response.StatusCode -ne $expectedStatus -or $response.StatusCode -eq 0) -and -not $AllowUnavailable) { $failure = if ($failure) { $failure } else { "Route returned HTTP $($response.StatusCode); expected $expectedStatus." } }
         [void]$routeResults.Add([pscustomobject]@{ name = $Route.Name; path = $Route.Path; label = $Route.Label; url = $url; viewportWidth = $routeViewportWidth; viewportHeight = $routeViewportHeight; expectedStatus = $expectedStatus; statusCode = $response.StatusCode; title = $title; h1 = $h1; htmlPath = $htmlPath; textPath = $textPath; screenshotPath = $screenshotPath; screenshotSha256 = $screenshotSha256; supplementalScreenshotPath = $supplementalScreenshotPath; printPath = $printPath; browserStatePath = $browserStatePath; failure = $failure })
@@ -5473,6 +5640,7 @@ scripts/validate_hosted_ui_acceptance.py.
         issue641               = [ordered]@{ enabled = [bool]$Issue641; routeCount = @($routesToCapture).Count; scenarios = @($routesToCapture | ForEach-Object { $_.Name }); evidenceGates = @($issue641GateResults); gateArtifact = if ($Issue641) { "issue-641-evidence-gates.csv" } else { "" }; summaryArtifact = if ($Issue641) { "issue-641-evidence-summary.md" } else { "" }; measuredPageScale = if ($Issue641) { "1280x900 at visualViewport scale 2" } else { "" }; visualAcceptance = "PENDING_INDEPENDENT_VISUAL_REVIEW"; printArtifact = @($routeResults | Where-Object { $_.printPath } | ForEach-Object { $_.printPath }) }
         issue642               = [ordered]@{ enabled = [bool]$Issue642; routeCount = if ($Issue642) { @($routesToCapture).Count } else { 0 }; scenarios = if ($Issue642) { @($routesToCapture | ForEach-Object { $_.Name }) } else { @() }; controlledInteraction = "Navigation, staged public Facility ID, multi-value state, canonical continuation, return context, responsive, focus, print"; screenshotStateArtifact = if ($Issue642) { 'diagnostics/issue-642-screenshot-states.json' } else { '' }; screenshotStates = if ($Issue642) { $issue642PacketDiagnostics.screenshotStates } else { @{} }; consoleNetworkSummaryArtifact = if ($Issue642) { 'diagnostics/issue-642-console-network-summary.json' } else { '' }; consoleNetwork = if ($Issue642) { $issue642PacketDiagnostics.consoleNetwork } else { @{} }; visualAcceptance = "PENDING_INDEPENDENT_VISUAL_REVIEW"; ownerAcceptance = "PENDING_OWNER_DECISION"; printArtifact = @($routeResults | Where-Object { $_.printPath } | ForEach-Object { $_.printPath }) }
         issue655               = [ordered]@{ enabled = [bool]$Issue655; mode = 'local-fixture'; branch = $gitBranch; head = $gitCommit; baseSha = $gitBaseSha; baseShaSource = $gitBaseSource; baseShaAttempts = $gitBaseAttempts; routeCount = if ($Issue655) { @($routesToCapture).Count } else { 0 }; scenarios = if ($Issue655) { @($routesToCapture | ForEach-Object { $_.Name }) } else { @() }; screenshotStateArtifact = if ($Issue655) { 'diagnostics/issue-655-screenshot-states.json' } else { '' }; screenshotStates = if ($Issue655) { $issue642PacketDiagnostics.screenshotStates } else { @{} }; browserStateCount = if ($Issue655) { $issue642PacketDiagnostics.browserStates } else { 0 }; geometryDiagnosticsArtifact = if ($Issue655) { $issue642PacketDiagnostics.geometryArtifact } else { '' }; focusLiveRegionDiagnosticsArtifact = if ($Issue655) { $issue642PacketDiagnostics.focusLiveArtifact } else { '' }; interactionIndexArtifact = if ($Issue655) { $issue642PacketDiagnostics.interactionIndexArtifact } else { '' }; consoleNetworkSummaryArtifact = if ($Issue655) { 'diagnostics/issue-655-console-network-summary.json' } else { '' }; consoleNetwork = if ($Issue655) { $issue642PacketDiagnostics.consoleNetwork } else { @{} }; evidenceLimitations = 'Local fixture evidence only; it does not establish deployed-host acceptance.'; visualAcceptance = 'PENDING_INDEPENDENT_VISUAL_REVIEW'; ownerAcceptance = 'PENDING_OWNER_DECISION'; printArtifact = @($routeResults | Where-Object { $_.printPath } | ForEach-Object { $_.printPath }) }
+        capturePlan            = if ($null -eq $capturePlan) { $null } else { [ordered]@{ fileName = $capturePlan.FileName; dataMode = $capturePlan.DataMode; purpose = $capturePlan.Purpose; limitations = @($capturePlan.Limitations); scenarios = @($capturePlan.Scenarios | ForEach-Object { [ordered]@{ id = $_.Id; facilityId = $_.FacilityId; classification = $_.Classification; expectedLocationState = $_.ExpectedLocationState; routes = @($_.Routes | ForEach-Object { [ordered]@{ kind = $_.Kind; applicability = $_.Applicability; reason = $_.Reason; requiredText = @($_.RequiredText); forbiddenText = @($_.ForbiddenText) } }) } }) } }
         acceptance             = [ordered]@{
             schemaVersion = "recordstracker.hosted-ui-acceptance.v1"
             governanceIssue = "#648"
