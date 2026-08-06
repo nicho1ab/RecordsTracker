@@ -146,6 +146,8 @@ param(
 
     [switch]$Issue643,
 
+    [switch]$Issue644,
+
     [switch]$Issue655,
 
     [switch]$Issue655Rehearsal,
@@ -167,6 +169,9 @@ elseif ($Issue642) {
 }
 elseif ($Issue643) {
     "Focused Issue #643 local fixture evidence for the Complaint Patterns facility-card hierarchy, canonical contributor navigation, responsive reflow, native zoom, and populated print."
+}
+elseif ($Issue644) {
+    "Integrated Issue #644 local fixture evidence composed from the established Compare Facilities browser operations, states, responsive routes, print, and packet contracts."
 }
 elseif ($Issue655) {
     "Focused Issue #655 local fixture evidence for the bounded Review next region, canonical inventory preservation, responsive reflow, native zoom, and print suppression."
@@ -2065,6 +2070,78 @@ function Invoke-Issue642ExplicitEvidenceCapture {
     Invoke-Issue642FocusEvidenceCapture -Session $Session -BaseUrl $BaseUrl -ScreenshotRoot $ScreenshotRoot
 }
 
+function Get-Issue642PaginationPosition {
+    param([object]$Session)
+    $positionText = [string](Invoke-CdpEvaluate -Session $Session -Expression "document.querySelector('#facility-intelligence-position')?.innerText || ''")
+    if ($positionText -notmatch 'Showing\s+(\d+)\s*[–-]\s*(\d+)\s+of\s+(\d+)\s+facilities') {
+        throw "Issue #642 pagination position is missing or invalid: '$positionText'."
+    }
+    return [pscustomobject]@{
+        text = $positionText
+        first = [int]$Matches[1]
+        last = [int]$Matches[2]
+        total = [int]$Matches[3]
+    }
+}
+
+function Get-Issue642PaginationPage {
+    param([object]$Session)
+    $position = Get-Issue642PaginationPosition -Session $Session
+    $identities = @(
+        Invoke-CdpEvaluate -Session $Session -Expression 'Array.from(document.querySelectorAll("#facility-intelligence-results li[id^=\"facility-intelligence-result-\"]")).map((entry)=>entry.id)'
+    )
+    $controls = Invoke-CdpEvaluate -Session $Session -Expression '(function(){return {previous:!!document.querySelector("a.facility-pagination__control[aria-label^=\"Previous facilities\"]"),next:!!document.querySelector("a.facility-pagination__control[aria-label^=\"Next facilities\"]")};})()'
+    return [pscustomobject]@{
+        first = $position.first
+        last = $position.last
+        total = $position.total
+        identities = $identities
+        previousEnabled = [bool]$controls.previous
+        nextEnabled = [bool]$controls.next
+        url = [string](Invoke-CdpEvaluate -Session $Session -Expression 'location.href')
+    }
+}
+
+function Test-Issue642PaginationReconciliation {
+    param([object[]]$Pages)
+    $pages = @($Pages)
+    if ($pages.Count -lt 2) { throw 'Issue #642 pagination reconciliation requires at least a first and final page.' }
+    $total = [int]$pages[0].total
+    $pageSize = [int]$pages[0].last - [int]$pages[0].first + 1
+    if ($total -le 0) { throw "Issue #642 pagination reconciliation requires a positive total count; observed $total." }
+    if ($pageSize -le 0) { throw "Issue #642 pagination reconciliation requires a positive page size; observed $pageSize." }
+    $expectedPageCount = [math]::Ceiling([double]$total / [double]$pageSize)
+    if ($pages.Count -ne $expectedPageCount) { throw "Issue #642 pagination reconciliation expected $expectedPageCount pages for total=$total and page_size=$pageSize; observed $($pages.Count)." }
+    $allIdentities = @()
+    $context = [uri]$pages[0].url
+    for ($index = 0; $index -lt $pages.Count; $index++) {
+        $page = $pages[$index]
+        if ([int]$page.total -ne $total) { throw "Issue #642 pagination total changed between pages; expected $total, observed $($page.total)." }
+        $expectedFirst = if ($index -eq 0) { 1 } else { [int]$pages[$index - 1].last + 1 }
+        if ([int]$page.first -ne $expectedFirst -or [int]$page.last -lt [int]$page.first) { throw "Issue #642 pagination position skipped or overlapped at page $($index + 1): observed $($page.first)-$($page.last)." }
+        $expectedCount = if ($index -eq $pages.Count - 1) { $remainder = $total % $pageSize; if ($remainder -eq 0) { $pageSize } else { $remainder } } else { $pageSize }
+        if (@($page.identities).Count -ne $expectedCount -or ([int]$page.last - [int]$page.first + 1) -ne $expectedCount) { throw "Issue #642 pagination row count mismatch at page $($index + 1): expected $expectedCount, observed $(@($page.identities).Count)." }
+        $expectedPrevious = $index -gt 0
+        $expectedNext = $index -lt ($pages.Count - 1)
+        if ([bool]$page.previousEnabled -ne $expectedPrevious -or [bool]$page.nextEnabled -ne $expectedNext) { throw "Issue #642 pagination control state mismatch at page $($index + 1)." }
+        $pageUri = [uri]$page.url
+        if ($pageUri.AbsolutePath -ne $context.AbsolutePath -or $pageUri.Query -notmatch 'facility_type=430' -or $pageUri.Query -notmatch 'facility_type=733' -or $pageUri.Query -notmatch 'start_date=1900-01-01') { throw "Issue #642 pagination filter or comparison context changed at page $($index + 1)." }
+        $allIdentities += @($page.identities)
+    }
+    $uniqueIdentities = @($allIdentities | Select-Object -Unique)
+    if ($uniqueIdentities.Count -ne $total) { throw "Issue #642 pagination identity reconciliation failed: total=$total; unique=$($uniqueIdentities.Count); duplicates=$($allIdentities.Count - $uniqueIdentities.Count)." }
+    return [ordered]@{
+        page_size = $pageSize
+        total = $total
+        page_count = $pages.Count
+        page_counts = @($pages | ForEach-Object { @($_.identities).Count })
+        unique_count = $uniqueIdentities.Count
+        duplicate_count = $allIdentities.Count - $uniqueIdentities.Count
+        missing_count = $total - $uniqueIdentities.Count
+        pages = $pages
+    }
+}
+
 function Invoke-Issue642OperatedInteractionCapture {
     param([object]$Session, [string]$BaseUrl, [string]$ScreenshotPath)
     $states = [System.Collections.ArrayList]::new()
@@ -2158,21 +2235,36 @@ function Invoke-Issue642OperatedInteractionCapture {
     Invoke-CdpNativeText -Session $Session -Text "01011900"
     Invoke-CdpClickSelector -Session $Session -Selector "form.compact-filter-form button[type='submit']"
     Wait-CdpCondition -Session $Session -Expression "location.search.includes('facility_type=430') && location.search.includes('facility_type=733') && location.search.includes('start_date=1900-01-01') && document.querySelector('#facility-intelligence-position').innerText.includes('Showing 1')" -Description "pagination origin repeated and scalar filters"
-    $firstPageUrl = [string](Invoke-CdpEvaluate -Session $Session -Expression "location.href")
-    $firstPageIdentities = @(Invoke-CdpEvaluate -Session $Session -Expression 'Array.from(document.querySelectorAll("#facility-intelligence-results li[id^=\"facility-intelligence-result-\"]")).map((entry)=>entry.id)')
-    if ($firstPageIdentities.Count -ne 25) { throw "Issue #642 pagination origin must render the governed first-page count of 25; observed $($firstPageIdentities.Count)." }
+    $paginationPages = [System.Collections.ArrayList]::new()
+    $firstPage = Get-Issue642PaginationPage -Session $Session
+    [void]$paginationPages.Add($firstPage)
+    $snapshot = & $before
+    & $record "issue642-pagination-first-page" @("verify rendered first page", "verify Previous disabled and Next enabled") $snapshot.url $snapshot.focus "pagination controls"
+    for ($pageNumber = 2; $pageNumber -le 4; $pageNumber++) {
+        $snapshot = & $before
+        Invoke-CdpClickSelector -Session $Session -Selector "a.facility-pagination__control[aria-label^='Next facilities']"
+        Wait-CdpCondition -Session $Session -Expression "location.search.includes('continuation=') && document.querySelector('#facility-intelligence-position').innerText.includes('Showing') && document.activeElement === document.querySelector('#facility-intelligence-results')" -Description "operated Next page $pageNumber and result focus"
+        $page = Get-Issue642PaginationPage -Session $Session
+        [void]$paginationPages.Add($page)
+        $stateId = if ($pageNumber -eq 4) { 'issue642-pagination-last-page' } elseif ($pageNumber -eq 3) { 'issue642-pagination-page-3' } else { 'issue642-pagination-next' }
+        & $record $stateId @("click rendered Next control", "verify page $pageNumber range and pagination semantics") $snapshot.url $snapshot.focus "a.facility-pagination__control[aria-label^='Next facilities']"
+        if ($pageNumber -eq 2) {
+            & $record "issue642-pagination-page-2" @("reconcile the first middle page", "preserve the existing #642 operated-state contract") $snapshot.url $snapshot.focus "rendered Next control"
+        }
+    }
+    $paginationReconciliation = Test-Issue642PaginationReconciliation -Pages @($paginationPages)
+    $states[$states.Count - 1] | Add-Member -NotePropertyName page_identity_reconciliation -NotePropertyValue $paginationReconciliation
 
     $snapshot = & $before
-    Invoke-CdpClickSelector -Session $Session -Selector "a.facility-pagination__control[aria-label^='Next facilities']"
-    Wait-CdpCondition -Session $Session -Expression "location.search.includes('continuation=') && document.querySelector('#facility-intelligence-position').innerText.includes('Showing 26') && document.activeElement === document.querySelector('#facility-intelligence-results')" -Description "operated Next page and result focus"
-    & $record "issue642-pagination-next" @("click rendered Next control", "wait continuation and result focus") $snapshot.url $snapshot.focus "a.facility-pagination__control[aria-label^='Next facilities']"
+    Invoke-CdpClickSelector -Session $Session -Selector "a.facility-pagination__control[aria-label^='Previous facilities']"
+    Wait-CdpCondition -Session $Session -Expression "document.querySelector('#facility-intelligence-position').innerText.includes('Showing')" -Description "operated Previous from final page"
+    & $record "issue642-pagination-middle-page" @("click rendered Previous control", "verify a true middle page with both pagination controls enabled") $snapshot.url $snapshot.focus "a.facility-pagination__control[aria-label^='Previous facilities']"
+
+    $snapshot = & $before
+    Invoke-CdpClickSelector -Session $Session -Selector "a.facility-pagination__control[aria-label^='Previous facilities']"
+    Wait-CdpCondition -Session $Session -Expression "document.querySelector('#facility-intelligence-position').innerText.includes('Showing')" -Description "operated Previous to page two"
     $pageTwoUrl = [string](Invoke-CdpEvaluate -Session $Session -Expression "location.href")
-    $pageTwoIdentities = @(Invoke-CdpEvaluate -Session $Session -Expression 'Array.from(document.querySelectorAll("#facility-intelligence-results li[id^=\"facility-intelligence-result-\"]")).map((entry)=>entry.id)')
-    $duplicates = @($pageTwoIdentities | Where-Object { $firstPageIdentities -contains $_ })
-    $observedUnion = @($firstPageIdentities + $pageTwoIdentities)
-    if ($duplicates.Count -gt 0 -or $observedUnion.Count -ne 28) { throw "Issue #642 page identity reconciliation failed: duplicates=$($duplicates -join ', '); observed=$($observedUnion.Count); expected=28." }
-    & $record "issue642-pagination-page-2" @("verify page 2 continuation", "reconcile unique result identities") $snapshot.url $snapshot.focus "rendered Next control"
-    $states[$states.Count - 1] | Add-Member -NotePropertyName page_identity_reconciliation -NotePropertyValue @{ first_page = $firstPageIdentities; second_page = $pageTwoIdentities; duplicates = $duplicates; missing = @(); expected_union_count = 28; observed_union_count = $observedUnion.Count }
+    & $record "issue642-pagination-page-2-previous" @("click rendered Previous control", "verify page-two filters and comparison context") $snapshot.url $snapshot.focus "a.facility-pagination__control[aria-label^='Previous facilities']"
 
     $snapshot = & $before
     Invoke-CdpClickSelector -Session $Session -Selector "a.facility-pagination__control[aria-label^='Previous facilities']"
@@ -2181,7 +2273,7 @@ function Invoke-Issue642OperatedInteractionCapture {
 
     $snapshot = & $before
     Invoke-CdpClickSelector -Session $Session -Selector "a.facility-pagination__control[aria-label^='Next facilities']"
-    Wait-CdpCondition -Session $Session -Expression "location.search.includes('continuation=') && document.querySelector('#facility-intelligence-position').innerText.includes('Showing 26') && document.activeElement === document.querySelector('#facility-intelligence-results')" -Description "operated Next return to page two"
+    Wait-CdpCondition -Session $Session -Expression "location.search.includes('continuation=') && document.querySelector('#facility-intelligence-position').innerText.includes('Showing') && document.activeElement === document.querySelector('#facility-intelligence-results')" -Description "operated Next return to page two"
     & $record "issue642-pagination-preserved" @("verify repeated filters, scalar date filter, complaint-patterns view, anchor, and result focus") $snapshot.url $snapshot.focus "pagination preservation verification"
     $pageTwoUrl = [string](Invoke-CdpEvaluate -Session $Session -Expression "location.href")
 
@@ -4421,6 +4513,85 @@ function Write-Issue642PacketDiagnostics {
     return [ordered]@{ screenshotStates = $stateCounts; consoleNetwork = $summary }
 }
 
+function Test-Issue644AutomatedVisualPrerequisites {
+    param(
+        [string]$PacketDirectory,
+        [object[]]$RouteResults,
+        [object]$ManifestSurfaceMeasurement = $null
+    )
+
+    $printValidationPath = Join-Path $PacketDirectory 'issue-420-print-validation.json'
+    if (-not (Test-Path -LiteralPath $printValidationPath)) {
+        Stop-CaptureFail 'Issue #644 visual prerequisite failed: print validation is missing; allowed minimum=1; allowed maximum=4; governed requirement=Issue #648 Compare Facilities print output.'
+    }
+    try { $printValidation = Get-Content -LiteralPath $printValidationPath -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop }
+    catch { Stop-CaptureFail 'Issue #644 visual prerequisite failed: print validation is invalid; allowed minimum=1; allowed maximum=4; governed requirement=Issue #648 Compare Facilities print output.' }
+    $printPdfName = [string]$printValidation.pdf
+    $printPdfPath = if ([string]::IsNullOrWhiteSpace($printPdfName)) { '' } else { Join-Path (Join-Path $PacketDirectory 'print') $printPdfName }
+    $pageCount = $printValidation.pageCount
+    if ($null -eq $pageCount -or -not ($pageCount -is [int] -or $pageCount -is [long] -or $pageCount -is [double])) {
+        Stop-CaptureFail "Issue #644 visual prerequisite failed: print artifact '$printPdfName' has a nonnumeric page count; allowed minimum=1; allowed maximum=4; governed requirement=Issue #648 Compare Facilities print output."
+    }
+    $pageCount = [int]$pageCount
+    $renderedPages = @($printValidation.pages)
+    $renderedPageFiles = @(Get-ChildItem -LiteralPath (Join-Path $PacketDirectory 'print-pages') -File -ErrorAction SilentlyContinue)
+    if ([string]::IsNullOrWhiteSpace($printPdfPath) -or -not (Test-Path -LiteralPath $printPdfPath) -or (Get-Item -LiteralPath $printPdfPath).Length -le 0 -or $renderedPages.Count -ne $pageCount -or $renderedPageFiles.Count -ne $pageCount -or @($renderedPageFiles | Where-Object { $_.Length -le 0 }).Count -gt 0) {
+        Stop-CaptureFail "Issue #644 visual prerequisite failed: print artifact '$printPdfName' lacks a nonempty PDF or reconciled rendered pages; observed page count=$pageCount; allowed minimum=1; allowed maximum=4; governed requirement=Issue #648 Compare Facilities print output."
+    }
+    if ($pageCount -lt 1 -or $pageCount -gt 4) {
+        Stop-CaptureFail "Issue #644 visual prerequisite failed: print artifact 'print/$printPdfName' observed page count=$pageCount; allowed minimum=1; allowed maximum=4; governed requirement=Issue #648 Compare Facilities print output."
+    }
+
+    $requiredDensityRoutes = @(
+        [ordered]@{ id = 'DESKTOP'; route = 'issue-643-populated-desktop'; ceiling = 12 },
+        [ordered]@{ id = 'SURFACE'; route = 'issue-644-surface-1189'; ceiling = 16 },
+        [ordered]@{ id = 'NARROW_500'; route = 'issue-643-populated-500'; ceiling = 16 },
+        [ordered]@{ id = 'MOBILE'; route = 'issue-643-populated-390'; ceiling = 24 },
+        [ordered]@{ id = 'ZOOM_200'; route = 'issue-643-populated-zoom-200'; ceiling = 24 }
+    )
+    $resultsByName = @{}
+    foreach ($result in @($RouteResults)) { $resultsByName[[string]$result.name] = $result }
+    $densityResults = [System.Collections.ArrayList]::new()
+    $surfaceMeasurement = $null
+    foreach ($required in $requiredDensityRoutes) {
+        $routeName = [string]$required.route
+        if (-not $resultsByName.ContainsKey($routeName) -or [string]::IsNullOrWhiteSpace([string]$resultsByName[$routeName].browserStatePath)) {
+            Stop-CaptureFail "Issue #644 visual prerequisite failed: mandatory $($required.id) density result is missing browser-state evidence for route '$routeName'."
+        }
+        $statePath = Join-Path $PacketDirectory ([string]$resultsByName[$routeName].browserStatePath)
+        if (-not (Test-Path -LiteralPath $statePath)) {
+            Stop-CaptureFail "Issue #644 visual prerequisite failed: mandatory $($required.id) density result is missing browser-state artifact '$($resultsByName[$routeName].browserStatePath)'."
+        }
+        try { $state = Get-Content -LiteralPath $statePath -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop }
+        catch { Stop-CaptureFail "Issue #644 visual prerequisite failed: mandatory $($required.id) density browser-state artifact is invalid for route '$routeName'." }
+        $viewportHeight = $state.viewport.innerHeight
+        $documentHeight = $state.document.scrollHeight
+        if ($null -eq $viewportHeight -or $null -eq $documentHeight -or -not ($viewportHeight -is [int] -or $viewportHeight -is [long] -or $viewportHeight -is [double]) -or -not ($documentHeight -is [int] -or $documentHeight -is [long] -or $documentHeight -is [double]) -or [double]$viewportHeight -le 0 -or [double]$documentHeight -le 0) {
+            Stop-CaptureFail "Issue #644 visual prerequisite failed: mandatory $($required.id) density input is missing or invalid for route '$routeName'."
+        }
+        $ratio = [math]::Round(([double]$documentHeight / [double]$viewportHeight), 4)
+        $status = if ($ratio -le [double]$required.ceiling) { 'PASS' } else { 'FAIL' }
+        [void]$densityResults.Add([ordered]@{ id = $required.id; route = $routeName; viewport = [ordered]@{ innerWidth = [int]$state.viewport.innerWidth; innerHeight = [int]$viewportHeight }; documentHeight = [int]$documentHeight; viewportHeightRatio = $ratio; governedCeiling = [double]$required.ceiling; result = $status; browserStateArtifact = [string]$resultsByName[$routeName].browserStatePath })
+        if ($status -ne 'PASS') {
+            Stop-CaptureFail "Issue #644 visual prerequisite failed: mandatory $($required.id) density ratio=$ratio exceeds governed ceiling=$($required.ceiling) viewport heights for route '$routeName'."
+        }
+        if ($required.id -eq 'SURFACE') {
+            $surfaceMeasurement = [ordered]@{ innerWidth = [int]$state.viewport.innerWidth; innerHeight = [int]$state.viewport.innerHeight; visualViewportScale = [double]$state.viewport.visualViewportScale; devicePixelRatio = [double]$state.viewport.devicePixelRatio; source = [string]$resultsByName[$routeName].browserStatePath }
+        }
+    }
+    if ($null -eq $surfaceMeasurement) { Stop-CaptureFail 'Issue #644 visual prerequisite failed: measured Surface browser-state evidence is missing.' }
+    if ($null -ne $ManifestSurfaceMeasurement) {
+        foreach ($property in @('innerWidth', 'innerHeight', 'visualViewportScale', 'devicePixelRatio')) {
+            if ($null -eq $ManifestSurfaceMeasurement.PSObject.Properties[$property] -or [math]::Abs([double]$ManifestSurfaceMeasurement.$property - [double]$surfaceMeasurement.$property) -gt 0.01) {
+                Stop-CaptureFail "Issue #644 visual prerequisite failed: manifest Surface metadata '$property' conflicts with captured browser-state evidence."
+            }
+        }
+    }
+    $densityArtifact = 'diagnostics/issue-644-density.json'
+    Set-Content -LiteralPath (Join-Path $PacketDirectory $densityArtifact) -Value ([ordered]@{ requirement = 'Issue #648 governed density ceilings'; results = @($densityResults) } | ConvertTo-Json -Depth 8) -Encoding UTF8
+    return [ordered]@{ print = [ordered]@{ artifact = "print/$printPdfName"; pageCount = $pageCount; minimumPages = 1; maximumPages = 4; result = 'PASS' }; densityArtifact = $densityArtifact; densityResults = @($densityResults); surfaceMeasurement = $surfaceMeasurement }
+}
+
 function Write-Issue655PacketDiagnostics {
     param([string]$PacketDirectory, [string]$ScreenshotDirectory, [string]$DiagnosticsDirectory, [object[]]$RouteResults)
     $base = Write-Issue642PacketDiagnostics -PacketDirectory $PacketDirectory -ScreenshotDirectory $ScreenshotDirectory -DiagnosticsDirectory $DiagnosticsDirectory -RouteResults $RouteResults -IssueNumber '655'
@@ -4570,7 +4741,7 @@ try {
         if ($Mode -ne 'fixture') { Stop-CaptureFail "Capture plans with dataMode fixture-demo require -Mode fixture." }
         $evidencePurpose = $capturePlan.Purpose
     }
-    if (($Issue419 -or $Issue420 -or $Issue502 -or $Issue503 -or $Issue641 -or $Issue642 -or $Issue643) -and $Mode -ne "fixture") {
+    if (($Issue419 -or $Issue420 -or $Issue502 -or $Issue503 -or $Issue641 -or $Issue642 -or $Issue643 -or $Issue644) -and $Mode -ne "fixture") {
         Stop-CaptureFail "Issue #419, Issue #420, Issue #502, Issue #503, and Issue #641 evidence routes are local fixture/demo-only; use -Mode fixture."
     }
     if ($Issue498 -and $Mode -ne "fixture") {
@@ -4585,7 +4756,7 @@ try {
         $resolvedOutput = [IO.Path]::GetFullPath($OutputDir)
         if (-not $resolvedOutput.StartsWith($tempRoot, [StringComparison]::OrdinalIgnoreCase)) { throw 'Issue #655 rehearsal output must stay under the temporary directory.' }
     }
-    $packetName = if ($Issue655Rehearsal) { "issue-655-rehearsal-$RehearsalRunName" } elseif ($Issue655) { "$timestamp-issue-655-local" } elseif ($Issue643) { "$timestamp-issue-643-local" } elseif ($Issue642) { "$timestamp-issue-642-local" } elseif ($Issue503) { "$timestamp-$Mode-issue-503" } elseif ($Issue502) { "$timestamp-$Mode-issue-502" } elseif ($Issue498) { "$timestamp-$Mode-issue-498" } elseif ($Issue420) { "$timestamp-$Mode-issue-420" } elseif ($Issue419) { "$timestamp-$Mode-issue-419" } elseif ($Issue418) { "$timestamp-$Mode-issue-418" } elseif ($Issue417) { "$timestamp-$Mode-issue-417" } elseif ($Issue416) { "$timestamp-$Mode-issue-416" } elseif ($Issue415) { "$timestamp-$Mode-issue-415" } elseif ($null -ne $capturePlan) { "$timestamp-$Mode-plan" } else { "$timestamp-$Mode" }
+    $packetName = if ($Issue655Rehearsal) { "issue-655-rehearsal-$RehearsalRunName" } elseif ($Issue655) { "$timestamp-issue-655-local" } elseif ($Issue644) { "$timestamp-issue-644-local" } elseif ($Issue643) { "$timestamp-issue-643-local" } elseif ($Issue642) { "$timestamp-issue-642-local" } elseif ($Issue503) { "$timestamp-$Mode-issue-503" } elseif ($Issue502) { "$timestamp-$Mode-issue-502" } elseif ($Issue498) { "$timestamp-$Mode-issue-498" } elseif ($Issue420) { "$timestamp-$Mode-issue-420" } elseif ($Issue419) { "$timestamp-$Mode-issue-419" } elseif ($Issue418) { "$timestamp-$Mode-issue-418" } elseif ($Issue417) { "$timestamp-$Mode-issue-417" } elseif ($Issue416) { "$timestamp-$Mode-issue-416" } elseif ($Issue415) { "$timestamp-$Mode-issue-415" } elseif ($null -ne $capturePlan) { "$timestamp-$Mode-plan" } else { "$timestamp-$Mode" }
     $outputRoot = if ([IO.Path]::IsPathRooted($OutputDir)) {
         [IO.Path]::GetFullPath($OutputDir)
     } else {
@@ -4806,6 +4977,11 @@ try {
         @{ Name = "issue-643-populated-print"; Path = $issue643Base; Label = "issue-643-08-populated-print"; ActiveHref = $issue643Base; WorkflowStep = "Review"; ViewportWidth = 1440; ViewportHeight = 1200; CapturePrint = $true },
         @{ Name = "issue-643-source-unavailable"; Path = "${issue643Base}?facility_type=733"; Label = "issue-643-09-source-unavailable"; ActiveHref = $issue643Base; WorkflowStep = "Review"; ViewportWidth = 1440; ViewportHeight = 1200 }
     )
+    # Issue #644 composes the already-governed route inventories.  The route
+    # objects remain the source of truth for their individual assertions and
+    # browser operation; no #644-specific capture pipeline is introduced.
+    $issue644SurfaceRoute = @{ Name = 'issue-644-surface-1189'; Path = $issue642CompareState; Label = 'issue-644-surface-1189'; ActiveHref = $issue642Base; WorkflowStep = 'Review'; ViewportWidth = 1189; ViewportHeight = 671 }
+    $issue644Routes = @($issue642Routes + $issue643Routes + $issue644SurfaceRoute)
     # Issue #655 is deliberately independent of Issue #643's card evidence.
     # The recommendation cursor is server-generated during operated capture;
     # static routes establish the canonical and exceptional server responses.
@@ -4824,7 +5000,9 @@ try {
         @{ Name = "issue-655-reduced-motion"; Path = $issue655Base; Label = "issue-655-11-reduced-motion"; ActiveHref = $issue655Base; WorkflowStep = "Review"; Issue655State = "reduced-motion"; ViewportWidth = 400; ViewportHeight = 900; Operated = $true },
         @{ Name = "issue-655-print"; Path = $issue655Base; Label = "issue-655-12-print"; ActiveHref = $issue655Base; WorkflowStep = "Review"; Issue655State = "print"; ViewportWidth = 1440; ViewportHeight = 1200; CapturePrint = $true }
     )
-    $routesToCapture = if ($Issue655) { $issue655Routes } elseif ($Issue643) { $issue643Routes } elseif ($Issue642) { $issue642Routes } elseif ($Issue641) { $issue641Routes } elseif ($Issue610) { $issue610Routes } elseif ($Issue503) { $issue503Routes } elseif ($Issue502) { $issue502Routes } elseif ($Issue498) { $issue498Routes } elseif ($Issue420) { $issue420Routes } elseif ($Issue419) { $issue419Routes } elseif ($Issue418) { $issue418Routes } elseif ($Issue417) { $issue417Routes } elseif ($Issue416) { $issue416Routes } elseif ($Issue415) { $issue415Routes } else { $coreRoutes }
+    # #644 is deliberately a composition of the proven #642 contract; it does
+    # not create a second launcher, browser harness, or packet format.
+    $routesToCapture = if ($Issue655) { $issue655Routes } elseif ($Issue644) { $issue644Routes } elseif ($Issue643) { $issue643Routes } elseif ($Issue642) { $issue642Routes } elseif ($Issue641) { $issue641Routes } elseif ($Issue610) { $issue610Routes } elseif ($Issue503) { $issue503Routes } elseif ($Issue502) { $issue502Routes } elseif ($Issue498) { $issue498Routes } elseif ($Issue420) { $issue420Routes } elseif ($Issue419) { $issue419Routes } elseif ($Issue418) { $issue418Routes } elseif ($Issue417) { $issue417Routes } elseif ($Issue416) { $issue416Routes } elseif ($Issue415) { $issue415Routes } else { $coreRoutes }
     if ($null -ne $capturePlan) { $routesToCapture = @(New-CapturePlanRoutes -Plan $capturePlan) }
 
     $routeResults = [System.Collections.ArrayList]::new()
@@ -4833,14 +5011,14 @@ try {
     $routeHtmlByName = @{}
     $screenshotWarnings = @()
     $screenshotToolResolution = if ($IncludeScreenshots) {
-        Resolve-ScreenshotTool -Requested $ScreenshotToolPreference -RequireInteractionAware ([bool]($Issue498 -or $Issue420 -or $Issue502 -or $Issue503 -or $Issue641 -or $Issue642 -or $Issue643 -or $Issue655))
+        Resolve-ScreenshotTool -Requested $ScreenshotToolPreference -RequireInteractionAware ([bool]($Issue498 -or $Issue420 -or $Issue502 -or $Issue503 -or $Issue641 -or $Issue642 -or $Issue643 -or $Issue644 -or $Issue655))
     }
     else {
         [pscustomobject]@{ Requested = $ScreenshotToolPreference; Resolved = "none"; ValidationStatus = "screenshots not requested"; Executable = ""; SupportsInteractionAwareCapture = $false; FullPage = $false; Tool = $null; Attempts = @(); Error = "" }
     }
     $resolvedScreenshotTool = $screenshotToolResolution.Tool
     $interactionBrowserSession = $null
-    if (($Issue498 -or $Issue420 -or $Issue502 -or $Issue503 -or $Issue641 -or $Issue642 -or $Issue643 -or $Issue655) -and $IncludeScreenshots) {
+    if (($Issue498 -or $Issue420 -or $Issue502 -or $Issue503 -or $Issue641 -or $Issue642 -or $Issue643 -or $Issue644 -or $Issue655) -and $IncludeScreenshots) {
         if ($null -eq $resolvedScreenshotTool) {
                 $screenshotWarnings += "Interaction-aware screenshot tool selection failed: $($screenshotToolResolution.Error)"
         }
@@ -4930,7 +5108,7 @@ try {
                         }
                     }
                 }
-                elseif ($Issue502 -or $Issue420 -or $Issue503 -or $Issue641 -or $Issue642 -or $Issue643 -or $Issue655) {
+                elseif ($Issue502 -or $Issue420 -or $Issue503 -or $Issue641 -or $Issue642 -or $Issue643 -or $Issue644 -or $Issue655) {
                     if ($null -eq $interactionBrowserSession) {
                         $shotError = "interaction-aware browser session unavailable"
                         $script:screenshotWarnings += "$($Route.Name): screenshot failed: $shotError"
@@ -4944,7 +5122,7 @@ try {
                         elseif ($Issue655) {
                             Invoke-Issue655BrowserCapture -Session $interactionBrowserSession -Route $Route -Url $url -ScreenshotPath $shotFile -PrintPath $printFile -Width $routeViewportWidth -Height $routeViewportHeight
                         }
-                        elseif ($Issue642 -or $Issue643) {
+                        elseif ($Issue642 -or $Issue643 -or $Issue644) {
                             Invoke-Issue642BrowserCapture -Session $interactionBrowserSession -Route $Route -Url $url -ScreenshotPath $shotFile -PrintPath $printFile -Width $routeViewportWidth -Height $routeViewportHeight
                         }
                         elseif ($Issue503) {
@@ -4961,7 +5139,7 @@ try {
                         if (-not $captureResult.Success -or -not $captureResult.ScreenshotCreated) {
                             Remove-Item -LiteralPath $shotFile -Force -ErrorAction SilentlyContinue
                             $script:screenshotWarnings += "$($Route.Name): screenshot failed: $($captureResult.Error)"
-                            $failure = if ($Issue641 -or $Issue642) { "Focused Compare browser capture failed: $($captureResult.Error)" } else { "Interaction-aware responsive capture failed: $($captureResult.Error)" }
+                            $failure = if ($Issue641 -or $Issue642 -or $Issue644) { "Focused Compare browser capture failed: $($captureResult.Error)" } else { "Interaction-aware responsive capture failed: $($captureResult.Error)" }
                         }
                         else {
                             $screenshotPath = ConvertTo-RelativeEvidencePath -Path $shotFile -Root $packetDir
@@ -4998,7 +5176,7 @@ try {
                         }
                     }
                 }
-                if (-not $Issue498 -and -not $Issue502 -and -not $Issue503 -and -not $Issue641 -and -not $Issue642 -and -not $Issue655 -and $null -ne $resolvedScreenshotTool -and $Route.ContainsKey("CapturePrint") -and [bool]$Route.CapturePrint) {
+                if (-not $Issue498 -and -not $Issue502 -and -not $Issue503 -and -not $Issue641 -and -not $Issue642 -and -not $Issue644 -and -not $Issue655 -and $null -ne $resolvedScreenshotTool -and $Route.ContainsKey("CapturePrint") -and [bool]$Route.CapturePrint) {
                     $printFile = Join-Path $printDir "$($Route.Label).pdf"
                     $printError = Invoke-RoutePrint -Tool $resolvedScreenshotTool -Url $url -PrintPath $printFile
                     if ($printError) { $script:screenshotWarnings += "$($Route.Name): $printError" }
@@ -5006,7 +5184,7 @@ try {
                 }
             }
         }
-        if (-not $Issue641 -and -not $Issue642 -and -not $Issue643 -and -not $Issue655) {
+        if (-not $Issue641 -and -not $Issue642 -and -not $Issue643 -and -not $Issue644 -and -not $Issue655) {
             Test-RouteAssertions -Route $Route -Html $safeHtml -StatusCode $response.StatusCode -Assertions $assertions
         }
         elseif ($Issue641) {
@@ -5019,7 +5197,7 @@ try {
         }
         else {
             Add-AssertionResult -Target $assertions -RouteName $Route.Name -Check $(if ($Issue643) {'issue643 route status'} else {'issue642 route status'}) -Status $(if ($response.StatusCode -eq $expectedStatus) { "PASS" } else { "FAIL" }) -Message "Route returned HTTP $($response.StatusCode); expected $expectedStatus."
-            if ($Issue643) { Test-Issue643RouteAssertions -Route $Route -Text $plainText -Assertions $assertions } else { Test-Issue642RouteAssertions -Route $Route -Text $plainText -Assertions $assertions }
+            if ($Issue643 -or ([string]$Route.Name).StartsWith('issue-643-')) { Test-Issue643RouteAssertions -Route $Route -Text $plainText -Assertions $assertions } else { Test-Issue642RouteAssertions -Route $Route -Text $plainText -Assertions $assertions }
         }
         if ($Issue415) {
             Test-Issue415RouteAssertions -Route $Route -Html $safeHtml -Text $plainText -Assertions $assertions
@@ -5731,7 +5909,7 @@ This packet supersedes neither the historical rejected packet nor any acceptance
     $gitBaseAttempts = if ($gitBaseResolution) { @($gitBaseResolution.Attempts) } else { @() }
     Set-Content -LiteralPath (Join-Path $diagnosticsDir "git-status.txt") -Value $gitStatusText -Encoding UTF8
     Set-Content -LiteralPath (Join-Path $diagnosticsDir "git-log.txt") -Value ((git log --oneline -n 5 2>$null) -join "`n") -Encoding UTF8
-    $focusedCommandSuffix = if ($Issue655) { " -Issue655" } elseif ($Issue642) { " -Issue642" } elseif ($Issue641) { " -Issue641" } elseif ($Issue503) { " -Issue503" } elseif ($Issue502) { " -Issue502" } elseif ($Issue498) { " -Issue498" } elseif ($Issue420) { " -Issue420" } elseif ($Issue419) { " -Issue419" } elseif ($Issue418) { " -Issue418" } elseif ($Issue417) { " -Issue417" } elseif ($Issue416) { " -Issue416" } elseif ($Issue415) { " -Issue415" } else { "" }
+    $focusedCommandSuffix = if ($Issue655) { " -Issue655" } elseif ($Issue644) { " -Issue644" } elseif ($Issue642) { " -Issue642" } elseif ($Issue641) { " -Issue641" } elseif ($Issue503) { " -Issue503" } elseif ($Issue502) { " -Issue502" } elseif ($Issue498) { " -Issue498" } elseif ($Issue420) { " -Issue420" } elseif ($Issue419) { " -Issue419" } elseif ($Issue418) { " -Issue418" } elseif ($Issue417) { " -Issue417" } elseif ($Issue416) { " -Issue416" } elseif ($Issue415) { " -Issue415" } else { "" }
     Set-Content -LiteralPath (Join-Path $diagnosticsDir "capture-command.txt") -Value "capture-hosted-ui-evidence.ps1 -BaseUrl $normalizedBaseUrl -Mode $Mode -OutputDir $OutputDir -ViewportWidth $ViewportWidth -ViewportHeight $ViewportHeight -TimeoutSeconds $TimeoutSeconds -ScreenshotToolPreference $ScreenshotToolPreference$focusedCommandSuffix" -Encoding UTF8
     $environmentSummary = if ($Issue655) { @(
         'issue=655',
@@ -5834,11 +6012,18 @@ scripts/validate_hosted_ui_acceptance.py.
         if ($featureFailures -gt 0) { Stop-CaptureFail "Issue #641 feature assertion failures prevent packet publication." }
     }
     $issue642PacketDiagnostics = $null
-    if ($Issue642) {
-        $issue642PacketDiagnostics = Write-Issue642PacketDiagnostics -PacketDirectory $packetDir -ScreenshotDirectory $screenshotDir -DiagnosticsDirectory $diagnosticsDir -RouteResults @($routeResults)
+    $issue644VisualPrerequisites = $null
+    if ($Issue642 -or $Issue644) {
+        $issue642PacketDiagnostics = Write-Issue642PacketDiagnostics -PacketDirectory $packetDir -ScreenshotDirectory $screenshotDir -DiagnosticsDirectory $diagnosticsDir -RouteResults @($routeResults) -IssueNumber $(if ($Issue644) { '644' } else { '642' })
     }
     elseif ($Issue643) {
         $issue642PacketDiagnostics = Write-Issue642PacketDiagnostics -PacketDirectory $packetDir -ScreenshotDirectory $screenshotDir -DiagnosticsDirectory $diagnosticsDir -RouteResults @($routeResults) -IssueNumber '643'
+    }
+    # Fail closed before manifest finalization, file indexing, and ZIP creation.
+    # The #648 visual thresholds are a prerequisite to independent human review,
+    # not a claim of visual or owner acceptance.
+    if ($Issue644) {
+        $issue644VisualPrerequisites = Test-Issue644AutomatedVisualPrerequisites -PacketDirectory $packetDir -RouteResults @($routeResults)
     }
     elseif ($Issue655) {
         $issue642PacketDiagnostics = Write-Issue655PacketDiagnostics -PacketDirectory $packetDir -ScreenshotDirectory $screenshotDir -DiagnosticsDirectory $diagnosticsDir -RouteResults @($routeResults)
@@ -5885,6 +6070,7 @@ scripts/validate_hosted_ui_acceptance.py.
         [pscustomobject]@{ Enabled = $Issue610; Reference = "#610" },
         [pscustomobject]@{ Enabled = $Issue641; Reference = "#641" },
         [pscustomobject]@{ Enabled = $Issue642; Reference = "#642" },
+        [pscustomobject]@{ Enabled = $Issue644; Reference = "#644" },
         [pscustomobject]@{ Enabled = $Issue655; Reference = "#655" }
     )) {
         if ([bool]$issueEntry.Enabled) { $focusedIssueScope += [string]$issueEntry.Reference }
@@ -5920,6 +6106,7 @@ scripts/validate_hosted_ui_acceptance.py.
         issue610               = [ordered]@{ enabled = [bool]$Issue610; routeCount = @($routesToCapture).Count; scenarios = @($routesToCapture | ForEach-Object { $_.Name }); printSettings = "Portrait; scale 100%; default margins; headers and footers off; background graphics on."; printArtifact = @($routeResults | Where-Object { $_.printPath } | ForEach-Object { $_.printPath }) }
         issue641               = [ordered]@{ enabled = [bool]$Issue641; routeCount = @($routesToCapture).Count; scenarios = @($routesToCapture | ForEach-Object { $_.Name }); evidenceGates = @($issue641GateResults); gateArtifact = if ($Issue641) { "issue-641-evidence-gates.csv" } else { "" }; summaryArtifact = if ($Issue641) { "issue-641-evidence-summary.md" } else { "" }; measuredPageScale = if ($Issue641) { "1280x900 at visualViewport scale 2" } else { "" }; visualAcceptance = "PENDING_INDEPENDENT_VISUAL_REVIEW"; printArtifact = @($routeResults | Where-Object { $_.printPath } | ForEach-Object { $_.printPath }) }
         issue642               = [ordered]@{ enabled = [bool]$Issue642; routeCount = if ($Issue642) { @($routesToCapture).Count } else { 0 }; scenarios = if ($Issue642) { @($routesToCapture | ForEach-Object { $_.Name }) } else { @() }; controlledInteraction = "Navigation, staged public Facility ID, multi-value state, canonical continuation, return context, responsive, focus, print"; screenshotStateArtifact = if ($Issue642) { 'diagnostics/issue-642-screenshot-states.json' } else { '' }; screenshotStates = if ($Issue642) { $issue642PacketDiagnostics.screenshotStates } else { @{} }; consoleNetworkSummaryArtifact = if ($Issue642) { 'diagnostics/issue-642-console-network-summary.json' } else { '' }; consoleNetwork = if ($Issue642) { $issue642PacketDiagnostics.consoleNetwork } else { @{} }; visualAcceptance = "PENDING_INDEPENDENT_VISUAL_REVIEW"; ownerAcceptance = "PENDING_OWNER_DECISION"; printArtifact = @($routeResults | Where-Object { $_.printPath } | ForEach-Object { $_.printPath }) }
+        issue644               = [ordered]@{ enabled = [bool]$Issue644; routeCount = if ($Issue644) { @($routesToCapture).Count } else { 0 }; composedContracts = @('#642', '#643', '#648', '#670', '#671'); surfaceMeasurement = if ($Issue644) { $issue644VisualPrerequisites.surfaceMeasurement } else { $null }; automatedVisualPrerequisites = if ($Issue644) { [ordered]@{ print = $issue644VisualPrerequisites.print; densityArtifact = $issue644VisualPrerequisites.densityArtifact; densityResults = $issue644VisualPrerequisites.densityResults } } else { $null }; visualAcceptance = 'PENDING_INDEPENDENT_VISUAL_REVIEW'; ownerAcceptance = 'PENDING_OWNER_DECISION'; evidenceLimitations = 'Local fixture evidence only; it does not establish deployed-host acceptance.' }
         issue655               = [ordered]@{ enabled = [bool]$Issue655; mode = 'local-fixture'; branch = $gitBranch; head = $gitCommit; baseSha = $gitBaseSha; baseShaSource = $gitBaseSource; baseShaAttempts = $gitBaseAttempts; routeCount = if ($Issue655) { @($routesToCapture).Count } else { 0 }; scenarios = if ($Issue655) { @($routesToCapture | ForEach-Object { $_.Name }) } else { @() }; screenshotStateArtifact = if ($Issue655) { 'diagnostics/issue-655-screenshot-states.json' } else { '' }; screenshotStates = if ($Issue655) { $issue642PacketDiagnostics.screenshotStates } else { @{} }; browserStateCount = if ($Issue655) { $issue642PacketDiagnostics.browserStates } else { 0 }; geometryDiagnosticsArtifact = if ($Issue655) { $issue642PacketDiagnostics.geometryArtifact } else { '' }; focusLiveRegionDiagnosticsArtifact = if ($Issue655) { $issue642PacketDiagnostics.focusLiveArtifact } else { '' }; interactionIndexArtifact = if ($Issue655) { $issue642PacketDiagnostics.interactionIndexArtifact } else { '' }; consoleNetworkSummaryArtifact = if ($Issue655) { 'diagnostics/issue-655-console-network-summary.json' } else { '' }; consoleNetwork = if ($Issue655) { $issue642PacketDiagnostics.consoleNetwork } else { @{} }; evidenceLimitations = 'Local fixture evidence only; it does not establish deployed-host acceptance.'; visualAcceptance = 'PENDING_INDEPENDENT_VISUAL_REVIEW'; ownerAcceptance = 'PENDING_OWNER_DECISION'; printArtifact = @($routeResults | Where-Object { $_.printPath } | ForEach-Object { $_.printPath }) }
         capturePlan            = if ($null -eq $capturePlan) { $null } else { [ordered]@{ fileName = $capturePlan.FileName; dataMode = $capturePlan.DataMode; governanceIssue = $capturePlan.GovernanceIssue; purpose = $capturePlan.Purpose; limitations = @($capturePlan.Limitations); scenarios = @($capturePlan.Scenarios | ForEach-Object { [ordered]@{ id = $_.Id; facilityId = $_.FacilityId; classification = $_.Classification; expectedLocationState = $_.ExpectedLocationState; routes = @($_.Routes | ForEach-Object { [ordered]@{ kind = $_.Kind; applicability = $_.Applicability; reason = $_.Reason; screenshotMode = $_.ScreenshotMode; requiredText = @($_.RequiredText); forbiddenText = @($_.ForbiddenText) } }) } }) } }
         acceptance             = [ordered]@{

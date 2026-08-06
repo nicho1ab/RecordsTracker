@@ -4156,6 +4156,108 @@ SHARED_CSS = r"""
       .civic-ledger-page .facility-inventory-context {
         position: static !important;
       }
+      .civic-ledger-page .facility-intelligence-results {
+        border: 0;
+      }
+      .civic-ledger-page .facility-intelligence-results__header {
+        padding: 0.35rem 0;
+      }
+      .civic-ledger-page .facility-inventory-context {
+        padding: 0.35rem 0;
+      }
+      .civic-ledger-page .facility-inventory-context--bottom {
+        display: none;
+      }
+      .civic-ledger-page .facility-intelligence-inventory {
+        display: block;
+      }
+      .civic-ledger-page .facility-intelligence-row {
+        border-bottom: 1px solid #000;
+        break-inside: avoid;
+        display: block;
+        margin: 0;
+        page-break-inside: avoid;
+      }
+      .civic-ledger-page .facility-intelligence-row > article {
+        display: block;
+        padding: 0.28rem 0.4rem;
+      }
+      .civic-ledger-page .facility-card-header h3,
+      .civic-ledger-page .facility-card-summary h4,
+      .civic-ledger-page .facility-card-topics h4,
+      .civic-ledger-page .facility-card-recommended h4 {
+        display: inline;
+        font-size: 0.78rem;
+        line-height: 1.2;
+        margin: 0;
+      }
+      .civic-ledger-page .facility-card-header p,
+      .civic-ledger-page .facility-card-topics,
+      .civic-ledger-page .facility-card-summary,
+      .civic-ledger-page .facility-card-recommended {
+        display: inline;
+        font-size: 0.72rem;
+        line-height: 1.25;
+        margin: 0;
+      }
+      .civic-ledger-page .facility-card-summary,
+      .civic-ledger-page .facility-card-recommended {
+        border-top: 0;
+        padding-top: 0;
+      }
+      .civic-ledger-page .facility-card-header h3::after,
+      .civic-ledger-page .facility-card-summary h4::after,
+      .civic-ledger-page .facility-card-topics h4::after,
+      .civic-ledger-page .facility-card-recommended h4::after {
+        content: ": ";
+      }
+      .civic-ledger-page .facility-card-header p::before,
+      .civic-ledger-page .facility-card-summary::before,
+      .civic-ledger-page .facility-card-topics::before,
+      .civic-ledger-page .facility-card-recommended::before {
+        content: " · ";
+      }
+      .civic-ledger-page .facility-card-title {
+        display: inline;
+      }
+      .civic-ledger-page .facility-card-summary dl,
+      .civic-ledger-page .facility-card-recommended dl {
+        display: inline;
+        margin: 0;
+      }
+      .civic-ledger-page .facility-card-summary dl > div,
+      .civic-ledger-page .facility-card-recommended dl > div {
+        display: inline;
+      }
+      .civic-ledger-page .facility-card-summary dt,
+      .civic-ledger-page .facility-card-summary dd,
+      .civic-ledger-page .facility-card-recommended dt,
+      .civic-ledger-page .facility-card-recommended dd {
+        display: inline;
+        font-size: inherit;
+        line-height: inherit;
+        margin: 0;
+      }
+      .civic-ledger-page .facility-card-summary dt::after,
+      .civic-ledger-page .facility-card-recommended dt::after {
+        content: ": ";
+      }
+      .civic-ledger-page .facility-card-summary dl > div + div::before,
+      .civic-ledger-page .facility-card-recommended dl > div + div::before {
+        content: " · ";
+      }
+      .civic-ledger-page .facility-card-topics ul {
+        display: inline;
+        gap: 0;
+      }
+      .civic-ledger-page .facility-card-topics li {
+        display: inline;
+      }
+      .civic-ledger-page .facility-card-topics .review-chip {
+        display: inline;
+        font-size: inherit;
+        padding: 0;
+      }
       .facility-inventory-item,
       .facility-overview-summary,
       .facility-activity-summary,

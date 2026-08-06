@@ -3274,6 +3274,298 @@ def test_issue_642_operated_capture_uses_native_input_and_records_state_metadata
         assert expected in script
 
 
+def test_issue_644_mode_composes_the_existing_compare_facilities_capture_contract() -> None:
+    script = CAPTURE_SCRIPT.read_text(encoding="utf-8")
+    wrapper = WRAPPER_SCRIPT.read_text(encoding="utf-8")
+
+    for expected in (
+        "[switch]$Issue644",
+        "issue-644-local",
+        "elseif ($Issue644) { $issue644Routes }",
+        "$issue644Routes = @($issue642Routes + $issue643Routes + $issue644SurfaceRoute)",
+        "issue-644-surface-1189",
+        "StartsWith('issue-643-')",
+        "Issue642 -or $Issue643 -or $Issue644",
+        "#644 is deliberately a composition of the proven #642 contract",
+        "issue642-pagination-middle-page",
+        "issue642-pagination-last-page",
+        "page_size = $pageSize",
+        "unique_count = $uniqueIdentities.Count",
+        "innerWidth",
+        "visualViewportScale",
+        "devicePixelRatio",
+    ):
+        assert expected in script
+    assert "if ($Issue642 -or $Issue644) { $launcherArguments += '-Issue642Evidence' }" in wrapper
+    assert "if ($Issue644) { $captureArguments.Issue644 = $true }" in wrapper
+
+
+def test_issue_642_pagination_reconciliation_uses_rendered_page_size_and_fails_closed() -> None:
+    helper = powershell_function(
+        "Test-Issue642PaginationReconciliation", "Invoke-Issue642OperatedInteractionCapture"
+    )
+
+    def pages(total: int, page_size: int) -> list[dict[str, object]]:
+        output: list[dict[str, object]] = []
+        first = 1
+        page_number = 0
+        while first <= total:
+            page_number += 1
+            last = min(first + page_size - 1, total)
+            output.append(
+                {
+                    "first": first,
+                    "last": last,
+                    "total": total,
+                    "identities": [
+                        f"facility-intelligence-result-{index}" for index in range(first, last + 1)
+                    ],
+                    "previousEnabled": page_number > 1,
+                    "nextEnabled": last < total,
+                    "url": "http://127.0.0.1:8010/ccld/facilities/intelligence?facility_type=430&facility_type=733&start_date=1900-01-01",
+                }
+            )
+            first = last + 1
+        return output
+
+    valid_51 = pages(51, 14)
+    valid_other = pages(10, 3)
+    cases = {
+        "valid_51": valid_51,
+        "valid_other": valid_other,
+        "wrong_first_count": [
+            {**valid_51[0], "identities": valid_51[0]["identities"][:-1]}
+        ] + valid_51[1:],
+        "wrong_middle_count": [
+            valid_51[0],
+            {**valid_51[1], "identities": valid_51[1]["identities"][:-1]},
+        ] + valid_51[2:],
+        "wrong_final_remainder": valid_51[:-1]
+        + [{**valid_51[-1], "identities": valid_51[-1]["identities"] + ["extra"]}],
+        "duplicate": [
+            valid_51[0],
+            {
+                **valid_51[1],
+                "identities": [valid_51[0]["identities"][0]]
+                + valid_51[1]["identities"][1:],
+            },
+        ] + valid_51[2:],
+        "skipped": [valid_51[0], {**valid_51[1], "first": 16}] + valid_51[2:],
+        "zero_page_size": [{**valid_51[0], "last": 0, "identities": []}] + valid_51[1:],
+        "control_mismatch": [{**valid_51[0], "previousEnabled": True}] + valid_51[1:],
+        "context_loss": [
+            valid_51[0],
+            {
+                **valid_51[1],
+                "url": "http://127.0.0.1:8010/ccld/facilities/intelligence?facility_type=430",
+            },
+        ] + valid_51[2:],
+    }
+    cases_json = json.dumps(cases).replace("'", "''")
+    ps_script = f"""
+{helper}
+$cases = ConvertFrom-Json -InputObject '{cases_json}'
+$results = [ordered]@{{}}
+foreach ($property in $cases.PSObject.Properties) {{
+    try {{
+        $value = Test-Issue642PaginationReconciliation -Pages @($property.Value)
+        $results[$property.Name] = [ordered]@{{
+            pass = $true
+            page_size = $value.page_size
+            total = $value.total
+            page_counts = @($value.page_counts)
+            unique_count = $value.unique_count
+            duplicate_count = $value.duplicate_count
+            missing_count = $value.missing_count
+        }}
+    }} catch {{
+        $results[$property.Name] = [ordered]@{{ pass = $false; message = $_.Exception.Message }}
+    }}
+}}
+$results | ConvertTo-Json -Depth 8 -Compress
+"""
+    result = subprocess.run(
+        [powershell(), "-NoProfile", "-Command", ps_script],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert result.returncode == 0, plain_output(result)
+    observed = json.loads(plain_output(result).strip().splitlines()[-1])
+    assert observed["valid_51"] == {
+        "pass": True,
+        "page_size": 14,
+        "total": 51,
+        "page_counts": [14, 14, 14, 9],
+        "unique_count": 51,
+        "duplicate_count": 0,
+        "missing_count": 0,
+    }
+    assert observed["valid_other"]["pass"] is True
+    assert observed["valid_other"]["page_counts"] == [3, 3, 3, 1]
+    for name in cases:
+        if name not in {"valid_51", "valid_other"}:
+            assert observed[name]["pass"] is False, name
+    assert "25" not in helper
+
+
+def test_issue_644_automated_visual_prerequisites_fail_closed_before_packet_finalization(
+    tmp_path: Path,
+) -> None:
+    stop_capture_fail = powershell_function("Stop-CaptureFail", "Test-AllowedBaseUrl")
+    prerequisites = powershell_function(
+        "Test-Issue644AutomatedVisualPrerequisites", "Write-Issue655PacketDiagnostics"
+    )
+    packet = tmp_path / "packet"
+    diagnostics = packet / "diagnostics"
+    print_dir = packet / "print"
+    print_pages = packet / "print-pages"
+    diagnostics.mkdir(parents=True)
+    print_dir.mkdir()
+    print_pages.mkdir()
+    (print_dir / "compare.pdf").write_bytes(b"pdf")
+
+    route_states = {
+        "issue-643-populated-desktop": (1440, 1200, 1200 * 12),
+        "issue-644-surface-1189": (1189, 671, 671 * 16),
+        "issue-643-populated-500": (500, 900, 900 * 16),
+        "issue-643-populated-390": (390, 844, 844 * 24),
+        "issue-643-populated-zoom-200": (1280, 900, 900 * 24),
+    }
+    route_rows = []
+    for route_name, (width, height, document_height) in route_states.items():
+        state_path = diagnostics / f"{route_name}-browser-state.json"
+        state_path.write_text(
+            json.dumps(
+                {
+                    "viewport": {
+                        "innerWidth": width,
+                        "innerHeight": height,
+                        "visualViewportScale": 1,
+                        "devicePixelRatio": 1,
+                    },
+                    "document": {"scrollHeight": document_height},
+                }
+            ),
+            encoding="utf-8",
+        )
+        route_rows.append(
+            {
+                "name": route_name,
+                "browserStatePath": f"diagnostics/{state_path.name}",
+            }
+        )
+
+    packet_literal = str(packet).replace("'", "''")
+    route_rows_literal = json.dumps(route_rows).replace("'", "''")
+    ps_script = f"""
+{stop_capture_fail}
+{prerequisites}
+$packet = '{packet_literal}'
+$routes = @((ConvertFrom-Json -InputObject '{route_rows_literal}'))
+function Set-PrintValidation {{
+    param([int]$PageCount)
+    $pages = @()
+    Get-ChildItem -LiteralPath (Join-Path $packet 'print-pages') -File | Remove-Item -Force
+    for ($index = 1; $index -le $PageCount; $index++) {{
+        $name = 'page-{{0:D3}}.png' -f $index
+        Set-Content -LiteralPath (Join-Path $packet "print-pages/$name") -Value 'png' -NoNewline
+        $pages += [ordered]@{{ file = $name }}
+    }}
+    $validation = [ordered]@{{
+        pdf = 'compare.pdf'
+        pageCount = $PageCount
+        pages = @($pages)
+    }}
+    $validation | ConvertTo-Json -Depth 5 |
+        Set-Content -LiteralPath (Join-Path $packet 'issue-420-print-validation.json')
+}}
+function Invoke-Case {{
+    param([string]$Name, [scriptblock]$Action)
+    try {{ & $Action; return 'PASS' }} catch {{ return $_.Exception.Message }}
+}}
+function Invoke-Prerequisites {{
+    param([object[]]$RouteResults, [object]$Measurement = $null)
+    $parameters = @{{
+        PacketDirectory = $packet
+        RouteResults = $RouteResults
+    }}
+    if ($null -ne $Measurement) {{
+        $parameters.ManifestSurfaceMeasurement = $Measurement
+    }}
+    Test-Issue644AutomatedVisualPrerequisites @parameters | Out-Null
+}}
+Set-PrintValidation -PageCount 2
+$valid = Test-Issue644AutomatedVisualPrerequisites -PacketDirectory $packet -RouteResults $routes
+$printTwenty = Invoke-Case 'print-twenty' {{
+    Set-PrintValidation -PageCount 20
+    Invoke-Prerequisites -RouteResults $routes
+}}
+$missingPrint = Invoke-Case 'missing-print' {{
+    Remove-Item -LiteralPath (Join-Path $packet 'issue-420-print-validation.json') -Force
+    Invoke-Prerequisites -RouteResults $routes
+}}
+Set-PrintValidation -PageCount 2
+$missingDensity = Invoke-Case 'missing-density' {{
+    $withoutMobile = @($routes | Where-Object {{ $_.name -ne 'issue-643-populated-390' }})
+    Invoke-Prerequisites -RouteResults $withoutMobile
+}}
+$desktop = Join-Path $packet 'diagnostics/issue-643-populated-desktop-browser-state.json'
+$originalDesktop = Get-Content -LiteralPath $desktop -Raw
+$state = $originalDesktop | ConvertFrom-Json
+    $state.document.scrollHeight = 17057
+$state | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $desktop
+$densityExcess = Invoke-Case 'density-excess' {{
+    Invoke-Prerequisites -RouteResults $routes
+}}
+Set-Content -LiteralPath $desktop -Value $originalDesktop
+$surfaceConflict = Invoke-Case 'surface-conflict' {{
+    $measurement = [pscustomobject]@{{
+        innerWidth = 1189
+        innerHeight = 671
+        visualViewportScale = 1
+        devicePixelRatio = 1.9250000715
+    }}
+    Invoke-Prerequisites -RouteResults $routes -Measurement $measurement
+}}
+[ordered]@{{
+  ValidPrint = $valid.print.result
+  ValidDensityCount = @($valid.densityResults).Count
+  ValidSurfaceDpr = $valid.surfaceMeasurement.devicePixelRatio
+  DensityArtifact = Test-Path -LiteralPath (Join-Path $packet $valid.densityArtifact)
+  PrintTwenty = $printTwenty
+  MissingPrint = $missingPrint
+  MissingDensity = $missingDensity
+  DensityExcess = $densityExcess
+  SurfaceConflict = $surfaceConflict
+  FileIndexExists = Test-Path -LiteralPath (Join-Path $packet 'file-index.json')
+      ZipExists = Test-Path -LiteralPath ($packet + '.zip')
+}} | ConvertTo-Json -Compress
+"""
+    result = subprocess.run(
+        [powershell(), "-NoProfile", "-Command", ps_script],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, plain_output(result)
+    outcome = json.loads(result.stdout)
+    assert outcome["ValidPrint"] == "PASS"
+    assert outcome["ValidDensityCount"] == 5
+    assert outcome["ValidSurfaceDpr"] == 1
+    assert outcome["DensityArtifact"] is True
+    assert "observed page count=20" in outcome["PrintTwenty"]
+    assert "print validation is missing" in outcome["MissingPrint"]
+    assert "mandatory MOBILE density result is missing" in outcome["MissingDensity"]
+    assert "density ratio=" in outcome["DensityExcess"]
+    assert "manifest Surface metadata 'devicePixelRatio' conflicts" in outcome["SurfaceConflict"]
+    assert outcome["FileIndexExists"] is False
+    assert outcome["ZipExists"] is False
+
+
 def test_issue_655_mode_declares_dedicated_routes_operations_and_packet_artifacts() -> None:
     script = CAPTURE_SCRIPT.read_text(encoding="utf-8")
     required = (

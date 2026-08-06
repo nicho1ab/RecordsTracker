@@ -90,6 +90,9 @@ from ccld_complaints.hosted_app.seeded_import import (
     import_seeded_corpus_artifact,
     load_seeded_corpus_artifact,
 )
+from ccld_complaints.hosted_app.source_derived_reads import (
+    FACILITY_INTELLIGENCE_PAGE_SIZE,
+)
 
 FIXTURE = Path("tests/fixtures/hosted_seeded_corpus/validated_seeded_corpus.json")
 TEST_SCOPE = LOCAL_REVIEWER_UI_SCOPE
@@ -5347,6 +5350,53 @@ def test_fixture_demo_reviewer_context_keeps_seeded_fixture_scope() -> None:
     assert source_context.actor is not None
     assert source_context.actor.scopes == (LOCAL_REVIEWER_UI_SCOPE,)
     assert source_context.scope.scope_id == "seeded-ccld-fixture-2026-06-13"
+
+
+def test_issue_642_pagination_fixture_is_local_only_and_preserves_existing_rows() -> None:
+    """The three-page corpus is confined to the explicit local evidence launch."""
+    required_environment = {
+        "CCLD_HOSTED_PAGE_DATA_MODE": "fixture-demo",
+        "CCLD_HOSTED_TESTER_AUTH_MODE": "local-dev",
+        "CCLD_HOSTED_TESTER_LOCAL_DEV_AUTH": "enabled",
+        "CCLD_HOSTED_ISSUE642_EVIDENCE_MODE": "enabled",
+    }
+    assert reviewer_ui._issue_642_evidence_fixture_enabled(required_environment)
+    for omitted_key in required_environment:
+        incomplete = dict(required_environment)
+        incomplete.pop(omitted_key)
+        assert not reviewer_ui._issue_642_evidence_fixture_enabled(incomplete)
+
+    baseline = reviewer_ui._with_local_issue_641_visual_fixture_records(
+        reviewer_ui._with_local_rt_src_002_visual_fixture_records(
+            load_seeded_corpus_artifact(FIXTURE)
+        )
+    )
+    extended = reviewer_ui._with_local_issue_642_pagination_fixture_records(baseline)
+    assert extended.records[: len(baseline.records)] == baseline.records
+    assert baseline.records == reviewer_ui._with_local_issue_641_visual_fixture_records(
+        reviewer_ui._with_local_rt_src_002_visual_fixture_records(
+            load_seeded_corpus_artifact(FIXTURE)
+        )
+    ).records
+
+    facilities = [
+        cast(Mapping[str, Any], record["facility"])
+        for record in extended.records
+        if isinstance(record, Mapping) and isinstance(record.get("facility"), Mapping)
+    ]
+    fixture_numbers = [
+        str(facility["external_facility_number"])
+        for facility in facilities
+        if str(facility.get("external_facility_number", "")).startswith("642900")
+    ]
+    assert fixture_numbers == [f"642900{offset:03d}" for offset in range(1, 50)]
+    assert len(fixture_numbers) == len(set(fixture_numbers))
+    assert len(facilities) >= 51
+    assert FACILITY_INTELLIGENCE_PAGE_SIZE == 14
+    page_count = (
+        len(facilities) + FACILITY_INTELLIGENCE_PAGE_SIZE - 1
+    ) // FACILITY_INTELLIGENCE_PAGE_SIZE
+    assert page_count >= 4
 
 
 def test_default_postgres_reviewer_context_uses_loaded_ccld_corpus_scope(

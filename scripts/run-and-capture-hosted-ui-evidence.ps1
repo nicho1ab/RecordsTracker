@@ -52,6 +52,8 @@ param(
 
     [switch]$Issue643,
 
+    [switch]$Issue644,
+
     [switch]$Issue655,
 
     [switch]$Issue655Rehearsal,
@@ -198,7 +200,7 @@ foreach ($candidate in $candidatePorts | Select-Object -Unique) {
     $launcherArguments = @('-NoProfile','-ExecutionPolicy','Bypass','-File',$scriptPath,'-Port',[string]$candidate)
     if ($Mode -eq 'fixture') {
         $launcherArguments += @('-PythonExecutable',$PythonExecutable)
-        if ($Issue642) { $launcherArguments += '-Issue642Evidence' }
+        if ($Issue642 -or $Issue644) { $launcherArguments += '-Issue642Evidence' }
         if ($Issue642LicensingSourceUnavailable) { $launcherArguments += '-Issue642LicensingSourceUnavailable' }
     }
     # Failed fixture launches leave only temporary diagnostics, never an evidence packet directory.
@@ -229,6 +231,7 @@ if ($Issue502) { $captureArguments.Issue502 = $true }
 if ($Issue420) { $captureArguments.Issue420 = $true }
 if ($Issue642) { $captureArguments.Issue642 = $true }
 if ($Issue643) { $captureArguments.Issue643 = $true }
+if ($Issue644) { $captureArguments.Issue644 = $true }
 if ($Issue655) { $captureArguments.Issue655 = $true }
 if ($Issue655Rehearsal) {
     if (-not $Issue655) { throw 'Issue655Rehearsal requires Issue655.' }

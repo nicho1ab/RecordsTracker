@@ -83,6 +83,59 @@ def test_compare_facilities_print_scope_is_outside_print_hidden_filters() -> Non
     assert "<strong>Applied filters:</strong> Facility type: 430; Finding: Unsubstantiated" in html
 
 
+def test_compare_facilities_print_compacts_cards_without_changing_screen_content() -> None:
+    """The print treatment condenses the current result page, not its content."""
+    context = reviewer_ui.build_local_test_reviewer_ui_context()
+    status, _content_type, body = route_response(
+        CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH,
+        reviewer_ui_context=context,
+    )
+    repeat_status, _repeat_content_type, repeat_body = route_response(
+        CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH,
+        reviewer_ui_context=context,
+    )
+
+    html = body.decode("utf-8")
+    repeat_html = repeat_body.decode("utf-8")
+    print_css = html.rsplit("@media print", 1)[1].split(
+        "@media (prefers-reduced-motion: reduce)", 1
+    )[0]
+
+    assert status == repeat_status == 200
+    assert html == repeat_html
+    assert '<form class="compact-filter-form" method="get"' in html
+    assert html.count('<div class="facility-inventory-context') >= 2
+    assert html.count('<article class="facility-intelligence-card"') >= 1
+    for required_content in (
+        "Find Facilities That May Need Closer Review",
+        "Complaint Patterns",
+        "Applied filters:",
+        "Facility ID",
+        "Complaints",
+        "Recommended complaint",
+        "Source availability",
+    ):
+        assert required_content in html
+    for screen_only_control in (
+        "Apply filters",
+        "Open Facility Overview",
+        "Review complaint",
+        "Previous",
+        "Next",
+    ):
+        assert screen_only_control in html
+
+    assert "column-count:" not in print_css
+    assert ".facility-card-header h3::after" in print_css
+    assert "display: inline;" in print_css
+    assert ".facility-inventory-context--bottom" in print_css
+    assert "display: none;" in print_css
+    assert "break-inside: avoid;" in print_css
+    assert "page-break-inside: avoid;" in print_css
+    assert "content: \": \";" in print_css
+    assert "content: \" · \";" in print_css
+
+
 def test_facility_priorities_orders_by_visible_factors_and_links_to_records() -> None:
     with _priority_connection() as connection:
         _insert_facility_bundle(
@@ -1277,7 +1330,18 @@ def test_facility_intelligence_projects_raw_type_codes_and_labels_all_options() 
 
 
 def test_facility_intelligence_pagination_boundaries_and_exact_position_wording() -> None:
-    cases = (0, 1, 24, 25, 26, 49, 50, 51)
+    page_size = source_derived_reads.FACILITY_INTELLIGENCE_PAGE_SIZE
+    assert page_size == 14
+    cases = (
+        0,
+        1,
+        page_size - 1,
+        page_size,
+        page_size + 1,
+        2 * page_size - 1,
+        2 * page_size,
+        2 * page_size + 1,
+    )
     for facility_count in cases:
         with _priority_connection() as connection:
             _insert_facility_population(connection, facility_count)
@@ -1286,7 +1350,7 @@ def test_facility_intelligence_pagination_boundaries_and_exact_position_wording(
                 reviewer_ui_context=reviewer_ui_context_for_connection(connection),
             )
             first_html = body.decode("utf-8")
-            expected_last = min(facility_count, 25)
+            expected_last = min(facility_count, page_size)
             expected_first = 1 if facility_count else 0
             assert status == 200
             assert (
@@ -1300,24 +1364,27 @@ def test_facility_intelligence_pagination_boundaries_and_exact_position_wording(
                 'is-disabled" aria-disabled="true">Previous</span>'
                 in first_html
             )
-            if facility_count <= 25:
+            if facility_count <= page_size:
                 assert _pagination_href(first_html, "Next") is None
                 assert 'aria-disabled="true">Next</span>' in first_html
                 continue
 
             next_href = _pagination_href(first_html, "Next")
             assert next_href is not None
-            assert 'aria-label="Next facilities, showing 26–' in first_html
+            assert f'aria-label="Next facilities, showing {page_size + 1}–' in first_html
             second_status, _second_type, second_body = route_response(
                 next_href,
                 reviewer_ui_context=reviewer_ui_context_for_connection(connection),
             )
             second_html = second_body.decode("utf-8")
-            second_last = min(facility_count, 50)
+            second_last = min(facility_count, 2 * page_size)
             assert second_status == 200
-            assert f"Showing 26–{second_last} of {facility_count} facilities" in second_html
+            assert (
+                f"Showing {page_size + 1}–{second_last} of {facility_count} facilities"
+                in second_html
+            )
             assert _pagination_href(second_html, "Previous") is not None
-            if facility_count <= 50:
+            if facility_count <= 2 * page_size:
                 assert _pagination_href(second_html, "Next") is None
                 assert 'aria-disabled="true">Next</span>' in second_html
             else:
@@ -1329,7 +1396,10 @@ def test_facility_intelligence_pagination_boundaries_and_exact_position_wording(
                 )
                 final_html = final_body.decode("utf-8")
                 assert final_status == 200
-                assert "Showing 51–51 of 51 facilities" in final_html
+                assert (
+                    f"Showing {2 * page_size + 1}–{facility_count} of {facility_count} facilities"
+                    in final_html
+                )
                 assert 'aria-disabled="true">Next</span>' in final_html
 
 
@@ -1361,7 +1431,7 @@ def test_complaint_patterns_bottom_pagination_matches_top_and_preserves_state() 
         assert status == 200
         assert first_html.count('aria-label="Top facility result pages"') == 1
         assert first_html.count('aria-label="Bottom facility result pages"') == 1
-        assert first_html.count("Showing 1–25 of 51 facilities") == 2
+        assert first_html.count("Showing 1–14 of 51 facilities") == 2
         assert first_html.count('aria-disabled="true">Previous</span>') == 2
         assert len(first_next) == 2
         assert first_next[0] == first_next[1]
@@ -1377,25 +1447,24 @@ def test_complaint_patterns_bottom_pagination_matches_top_and_preserves_state() 
         ):
             assert value in first_next[0]
 
-        middle_status, _middle_type, middle_body = route_response(
-            first_next[0], reviewer_ui_context=context
-        )
-        middle_html = middle_body.decode("utf-8")
-        middle_previous = pagination_hrefs(middle_html, "Previous")
-        middle_next = pagination_hrefs(middle_html, "Next")
-        assert middle_status == 200
-        assert len(middle_previous) == len(middle_next) == 2
-        assert middle_previous[0] == middle_previous[1]
-        assert middle_next[0] == middle_next[1]
-
-        final_status, _final_type, final_body = route_response(
-            middle_next[0], reviewer_ui_context=context
-        )
-        final_html = final_body.decode("utf-8")
-        assert final_status == 200
-        assert len(pagination_hrefs(final_html, "Previous")) == 2
-        assert pagination_hrefs(final_html, "Next") == []
-        assert final_html.count('aria-disabled="true">Next</span>') == 2
+        current_href = first_next[0]
+        while current_href:
+            current_status, _current_type, current_body = route_response(
+                current_href, reviewer_ui_context=context
+            )
+            current_html = current_body.decode("utf-8")
+            current_previous = pagination_hrefs(current_html, "Previous")
+            current_next = pagination_hrefs(current_html, "Next")
+            assert current_status == 200
+            assert len(current_previous) == 2
+            assert current_previous[0] == current_previous[1]
+            if current_next:
+                assert len(current_next) == 2
+                assert current_next[0] == current_next[1]
+                current_href = current_next[0]
+            else:
+                assert current_html.count('aria-disabled="true">Next</span>') == 2
+                current_href = ""
 
         for view in ("licensing-visit-activity", "complaint-activity-over-time"):
             other_status, _other_type, other_body = route_response(
@@ -1425,10 +1494,10 @@ def test_facility_intelligence_seek_pages_have_no_duplicates_or_omissions() -> N
             positions.append(match.group(0))
             href = _pagination_href(html, "Next") or ""
 
+        page_size = source_derived_reads.FACILITY_INTELLIGENCE_PAGE_SIZE
         assert positions == [
-            "Showing 1–25 of 51 facilities",
-            "Showing 26–50 of 51 facilities",
-            "Showing 51–51 of 51 facilities",
+            f"Showing {start}–{min(start + page_size - 1, 51)} of 51 facilities"
+            for start in range(1, 52, page_size)
         ]
         assert len(seen) == len(set(seen)) == 51
         assert seen == [f"Page Facility {index:03d}" for index in range(51)]
@@ -1465,7 +1534,10 @@ def test_facility_intelligence_continuations_preserve_filters_and_reject_bad_sta
             reviewer_ui_context=context,
         )
         assert next_status == 200
-        assert "Showing 26–26 of 26 facilities" in next_body.decode("utf-8")
+        assert (
+            f"Showing {source_derived_reads.FACILITY_INTELLIGENCE_PAGE_SIZE + 1}–26"
+            " of 26 facilities"
+        ) in next_body.decode("utf-8")
 
         token = parse_qs(urlsplit(next_href).query)["continuation"][0]
         malformed_status, _malformed_type, malformed_body = route_response(
@@ -1543,51 +1615,34 @@ def test_facility_intelligence_forward_and_backward_ranges_use_anchor_rank() -> 
     with _priority_connection() as connection:
         _insert_facility_population(connection, 51)
         context = reviewer_ui_context_for_connection(connection)
-        first_status, _first_type, first_body = route_response(
-            f"{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}?sort=facility_name",
-            reviewer_ui_context=context,
-        )
-        second_href = _pagination_href(first_body.decode("utf-8"), "Next")
-        assert first_status == 200
-        assert second_href is not None
+        href = f"{CCLD_FACILITY_REVIEW_INTELLIGENCE_PATH}?sort=facility_name"
+        forward_positions: list[str] = []
+        last_html = ""
+        while href:
+            status, _content_type, body = route_response(
+                href, reviewer_ui_context=context
+            )
+            last_html = body.decode("utf-8")
+            match = re.search(r"Showing \d+–\d+ of 51 facilities", last_html)
+            assert status == 200
+            assert match is not None
+            forward_positions.append(match.group(0))
+            href = _pagination_href(last_html, "Next") or ""
 
-        second_status, _second_type, second_body = route_response(
-            second_href,
-            reviewer_ui_context=context,
-        )
-        second_html = second_body.decode("utf-8")
-        third_href = _pagination_href(second_html, "Next")
-        assert second_status == 200
-        assert "Showing 26–50 of 51 facilities" in second_html
-        assert third_href is not None
+        backward_positions: list[str] = []
+        href = _pagination_href(last_html, "Previous") or ""
+        while href:
+            status, _content_type, body = route_response(
+                href, reviewer_ui_context=context
+            )
+            html = body.decode("utf-8")
+            match = re.search(r"Showing \d+–\d+ of 51 facilities", html)
+            assert status == 200
+            assert match is not None
+            backward_positions.append(match.group(0))
+            href = _pagination_href(html, "Previous") or ""
 
-        third_status, _third_type, third_body = route_response(
-            third_href,
-            reviewer_ui_context=context,
-        )
-        third_html = third_body.decode("utf-8")
-        back_to_second_href = _pagination_href(third_html, "Previous")
-        assert third_status == 200
-        assert "Showing 51–51 of 51 facilities" in third_html
-        assert back_to_second_href is not None
-
-        back_status, _back_type, back_body = route_response(
-            back_to_second_href,
-            reviewer_ui_context=context,
-        )
-        back_html = back_body.decode("utf-8")
-        back_to_first_href = _pagination_href(back_html, "Previous")
-        assert back_status == 200
-        assert "Showing 26–50 of 51 facilities" in back_html
-        assert back_to_first_href is not None
-
-        first_again_status, _first_again_type, first_again_body = route_response(
-            back_to_first_href,
-            reviewer_ui_context=context,
-        )
-
-    assert first_again_status == 200
-    assert "Showing 1–25 of 51 facilities" in first_again_body.decode("utf-8")
+    assert backward_positions == list(reversed(forward_positions[:-1]))
 
 
 def test_facility_intelligence_reads_only_current_page_and_uses_bounded_sql(
@@ -1663,12 +1718,13 @@ def test_facility_intelligence_reads_only_current_page_and_uses_bounded_sql(
 
     html = body.decode("utf-8")
     assert status == 200
-    assert "Showing 26–50 of 51 facilities" in html
+    page_size = source_derived_reads.FACILITY_INTELLIGENCE_PAGE_SIZE
+    assert f"Showing {page_size + 1}–{2 * page_size} of 51 facilities" in html
     assert len(captured_pages) == 1
-    assert len(captured_pages[0].facility_identities) == 25
-    assert len(captured_pages[0].records) == 75
+    assert len(captured_pages[0].facility_identities) == page_size
+    assert len(captured_pages[0].records) == page_size * 3
     assert len(captured_state_keys) == 1
-    assert len(captured_state_keys[0]) == 25
+    assert len(captured_state_keys[0]) == page_size
     offset_statements = [
         statement for statement in statements if " offset " in f" {statement} "
     ]
@@ -1799,7 +1855,10 @@ def test_facility_intelligence_pagination_preserves_authorization_and_batch_isol
     assert denied_status == 401
     assert "Facility intelligence unavailable" in denied_body.decode("utf-8")
     assert status == 200
-    assert "Showing 1–25 of 26 facilities" in html
+    assert (
+        f"Showing 1–{source_derived_reads.FACILITY_INTELLIGENCE_PAGE_SIZE} of 26 facilities"
+        in html
+    )
     assert "Outside Scope Center" not in html
 
 
