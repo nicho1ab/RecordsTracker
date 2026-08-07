@@ -796,6 +796,20 @@ def test_facility_intelligence_accessible_structure_and_safe_language() -> None:
     assert ".facility-inventory-context" in html
     assert "position: sticky" in html
     assert "position: static !important" in html
+    assert (
+        "grid-template-columns: minmax(16rem, 1.25fr) minmax(13rem, 0.8fr) "
+        "minmax(15rem, 1fr);"
+    ) in html
+    assert ".facility-card-summary h4::after" in html
+    assert ".facility-card-recommended h4::after" in html
+    assert "content: \" · \";" in html
+    assert (
+        ".facility-card-summary,\n"
+        "    .facility-card-topics,\n"
+        "    .facility-card-recommended {\n"
+        "      border-top: 0;\n"
+        "      margin: 0;"
+    ) in html
     assert ".facility-pagination, .facility-card-actions" in html
     assert ".site-header, .civic-header" in html
     assert ".copy-icon-button, .copy-text-control" in html
@@ -1331,7 +1345,7 @@ def test_facility_intelligence_projects_raw_type_codes_and_labels_all_options() 
 
 def test_facility_intelligence_pagination_boundaries_and_exact_position_wording() -> None:
     page_size = source_derived_reads.FACILITY_INTELLIGENCE_PAGE_SIZE
-    assert page_size == 14
+    assert page_size == 25
     cases = (
         0,
         1,
@@ -1431,7 +1445,8 @@ def test_complaint_patterns_bottom_pagination_matches_top_and_preserves_state() 
         assert status == 200
         assert first_html.count('aria-label="Top facility result pages"') == 1
         assert first_html.count('aria-label="Bottom facility result pages"') == 1
-        assert first_html.count("Showing 1–14 of 51 facilities") == 2
+        page_size = source_derived_reads.FACILITY_INTELLIGENCE_PAGE_SIZE
+        assert first_html.count(f"Showing 1–{page_size} of 51 facilities") == 2
         assert first_html.count('aria-disabled="true">Previous</span>') == 2
         assert len(first_next) == 2
         assert first_next[0] == first_next[1]

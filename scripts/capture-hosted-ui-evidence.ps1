@@ -2102,10 +2102,27 @@ function Get-Issue642PaginationPage {
     }
 }
 
+function Test-Issue642CanonicalInventory {
+    param([object]$Page)
+    if ($null -eq $Page) { throw 'Issue #642 canonical inventory pagination evidence is missing.' }
+    if ([int]$Page.total -ne 53) { throw "Issue #642 canonical inventory requires total=53; observed $($Page.total)." }
+    if ([int]$Page.first -ne 1 -or [int]$Page.last -ne 25 -or @($Page.identities).Count -ne 25) {
+        throw "Issue #642 canonical inventory requires rendered first range 1-25 of 53; observed $($Page.first)-$($Page.last) of $($Page.total)."
+    }
+    if ([bool]$Page.previousEnabled -or -not [bool]$Page.nextEnabled) {
+        throw 'Issue #642 canonical inventory requires Previous unavailable and Next enabled on the rendered first page.'
+    }
+    $uri = [uri]$Page.url
+    if ($uri.AbsolutePath -ne '/ccld/facilities/intelligence' -or -not [string]::IsNullOrWhiteSpace($uri.Query)) {
+        throw "Issue #642 canonical inventory must be captured from the unfiltered Compare Facilities route; observed '$($Page.url)'."
+    }
+    return [ordered]@{ canonicalInventoryTotal = 53; page_size = 25; first = 1; last = 25; nextEnabled = $true; previousEnabled = $false; url = [string]$Page.url }
+}
+
 function Test-Issue642PaginationReconciliation {
     param([object[]]$Pages)
     $pages = @($Pages)
-    if ($pages.Count -lt 2) { throw 'Issue #642 pagination reconciliation requires at least a first and final page.' }
+    if ($pages.Count -lt 1) { throw 'Issue #642 pagination reconciliation requires at least one rendered page.' }
     $total = [int]$pages[0].total
     $pageSize = [int]$pages[0].last - [int]$pages[0].first + 1
     if ($total -le 0) { throw "Issue #642 pagination reconciliation requires a positive total count; observed $total." }
@@ -2227,6 +2244,7 @@ function Invoke-Issue642OperatedInteractionCapture {
     # keyboard text in month/day/year order and serializes ISO in the request.
     Invoke-CdpCommand -Session $Session -Method "Page.navigate" -Parameters @{ url = $compareUrl } | Out-Null
     Wait-CdpCondition -Session $Session -Expression "document.readyState === 'complete' && !!document.querySelector('#facility-intelligence-facility-type')" -Description "Issue #642 pagination clean origin"
+    $canonicalInventory = Test-Issue642CanonicalInventory -Page (Get-Issue642PaginationPage -Session $Session)
     $snapshot = & $before; Invoke-CdpClickSelector -Session $Session -Selector "#facility-intelligence-facility-type"
     Invoke-CdpClickSelector -Session $Session -Selector "input[name='facility_type'][value='430']"
     Invoke-CdpClickSelector -Session $Session -Selector "input[name='facility_type'][value='733']"
@@ -2240,42 +2258,65 @@ function Invoke-Issue642OperatedInteractionCapture {
     [void]$paginationPages.Add($firstPage)
     $snapshot = & $before
     & $record "issue642-pagination-first-page" @("verify rendered first page", "verify Previous disabled and Next enabled") $snapshot.url $snapshot.focus "pagination controls"
-    for ($pageNumber = 2; $pageNumber -le 4; $pageNumber++) {
+    $states[$states.Count - 1] | Add-Member -NotePropertyName canonical_inventory_reconciliation -NotePropertyValue $canonicalInventory
+    $pageNumber = 2
+    $maximumPaginationTransitions = [math]::Max(1, [int]$firstPage.total)
+    while ($true) {
+        $currentPage = Get-Issue642PaginationPage -Session $Session
+        if (-not $currentPage.nextEnabled) {
+            break
+        }
+        if ($paginationPages.Count -ge $maximumPaginationTransitions) {
+            throw "Issue #642 pagination traversal exceeded the rendered total of $($firstPage.total) pages without reaching a terminal state."
+        }
         $snapshot = & $before
         Invoke-CdpClickSelector -Session $Session -Selector "a.facility-pagination__control[aria-label^='Next facilities']"
         Wait-CdpCondition -Session $Session -Expression "location.search.includes('continuation=') && document.querySelector('#facility-intelligence-position').innerText.includes('Showing') && document.activeElement === document.querySelector('#facility-intelligence-results')" -Description "operated Next page $pageNumber and result focus"
         $page = Get-Issue642PaginationPage -Session $Session
+        if ($page.first -le $currentPage.last -or $page.url -eq $currentPage.url) {
+            throw 'Issue #642 Next pagination traversal did not advance to a new rendered range.'
+        }
         [void]$paginationPages.Add($page)
-        $stateId = if ($pageNumber -eq 4) { 'issue642-pagination-last-page' } elseif ($pageNumber -eq 3) { 'issue642-pagination-page-3' } else { 'issue642-pagination-next' }
+        $stateId = if (-not $page.nextEnabled) { 'issue642-pagination-last-page' } elseif ($pageNumber -eq 3) { 'issue642-pagination-page-3' } else { 'issue642-pagination-next' }
         & $record $stateId @("click rendered Next control", "verify page $pageNumber range and pagination semantics") $snapshot.url $snapshot.focus "a.facility-pagination__control[aria-label^='Next facilities']"
         if ($pageNumber -eq 2) {
             & $record "issue642-pagination-page-2" @("reconcile the first middle page", "preserve the existing #642 operated-state contract") $snapshot.url $snapshot.focus "rendered Next control"
         }
+        $pageNumber++
     }
     $paginationReconciliation = Test-Issue642PaginationReconciliation -Pages @($paginationPages)
     $states[$states.Count - 1] | Add-Member -NotePropertyName page_identity_reconciliation -NotePropertyValue $paginationReconciliation
 
-    $snapshot = & $before
-    Invoke-CdpClickSelector -Session $Session -Selector "a.facility-pagination__control[aria-label^='Previous facilities']"
-    Wait-CdpCondition -Session $Session -Expression "document.querySelector('#facility-intelligence-position').innerText.includes('Showing')" -Description "operated Previous from final page"
-    & $record "issue642-pagination-middle-page" @("click rendered Previous control", "verify a true middle page with both pagination controls enabled") $snapshot.url $snapshot.focus "a.facility-pagination__control[aria-label^='Previous facilities']"
+    # Traverse backward only when the rendered terminal state proves a prior page
+    # exists. A filtered one-page result legitimately has neither navigation link.
+    $currentPage = Get-Issue642PaginationPage -Session $Session
+    if ($paginationPages.Count -eq 1 -and ($currentPage.previousEnabled -or $currentPage.nextEnabled)) {
+        throw 'Issue #642 one-page pagination state has inconsistent rendered controls.'
+    }
+    while ($currentPage.previousEnabled) {
+        $snapshot = & $before
+        Invoke-CdpClickSelector -Session $Session -Selector "a.facility-pagination__control[aria-label^='Previous facilities']"
+        Wait-CdpCondition -Session $Session -Expression "document.querySelector('#facility-intelligence-position').innerText.includes('Showing') && document.activeElement === document.querySelector('#facility-intelligence-results')" -Description "operated Previous pagination page"
+        $previousPage = Get-Issue642PaginationPage -Session $Session
+        if ($previousPage.last -ge $currentPage.first) {
+            throw "Issue #642 Previous pagination traversal did not move to an earlier rendered range."
+        }
+        $stateId = if ($previousPage.previousEnabled) { 'issue642-pagination-middle-page' } else { 'issue642-pagination-previous' }
+        & $record $stateId @("click rendered Previous control", "verify rendered earlier-page range and pagination semantics") $snapshot.url $snapshot.focus "a.facility-pagination__control[aria-label^='Previous facilities']"
+        $currentPage = $previousPage
+    }
+    if ($currentPage.first -ne 1) {
+        throw "Issue #642 terminal pagination state lacks a required Previous control for rendered range $($currentPage.first)-$($currentPage.last)."
+    }
 
-    $snapshot = & $before
-    Invoke-CdpClickSelector -Session $Session -Selector "a.facility-pagination__control[aria-label^='Previous facilities']"
-    Wait-CdpCondition -Session $Session -Expression "document.querySelector('#facility-intelligence-position').innerText.includes('Showing')" -Description "operated Previous to page two"
-    $pageTwoUrl = [string](Invoke-CdpEvaluate -Session $Session -Expression "location.href")
-    & $record "issue642-pagination-page-2-previous" @("click rendered Previous control", "verify page-two filters and comparison context") $snapshot.url $snapshot.focus "a.facility-pagination__control[aria-label^='Previous facilities']"
-
-    $snapshot = & $before
-    Invoke-CdpClickSelector -Session $Session -Selector "a.facility-pagination__control[aria-label^='Previous facilities']"
-    Wait-CdpCondition -Session $Session -Expression "document.querySelector('#facility-intelligence-position').innerText.includes('Showing 1') && document.activeElement === document.querySelector('#facility-intelligence-results')" -Description "operated Previous page and result focus"
-    & $record "issue642-pagination-previous" @("click rendered Previous control", "verify first-page range and result focus") $snapshot.url $snapshot.focus "a.facility-pagination__control[aria-label^='Previous facilities']"
-
-    $snapshot = & $before
-    Invoke-CdpClickSelector -Session $Session -Selector "a.facility-pagination__control[aria-label^='Next facilities']"
-    Wait-CdpCondition -Session $Session -Expression "location.search.includes('continuation=') && document.querySelector('#facility-intelligence-position').innerText.includes('Showing') && document.activeElement === document.querySelector('#facility-intelligence-results')" -Description "operated Next return to page two"
-    & $record "issue642-pagination-preserved" @("verify repeated filters, scalar date filter, complaint-patterns view, anchor, and result focus") $snapshot.url $snapshot.focus "pagination preservation verification"
-    $pageTwoUrl = [string](Invoke-CdpEvaluate -Session $Session -Expression "location.href")
+    $pageTwoUrl = [string]$currentPage.url
+    if ($currentPage.nextEnabled) {
+        $snapshot = & $before
+        Invoke-CdpClickSelector -Session $Session -Selector "a.facility-pagination__control[aria-label^='Next facilities']"
+        Wait-CdpCondition -Session $Session -Expression "location.search.includes('continuation=') && document.querySelector('#facility-intelligence-position').innerText.includes('Showing') && document.activeElement === document.querySelector('#facility-intelligence-results')" -Description "operated Next return to first subsequent page"
+        & $record "issue642-pagination-preserved" @("verify repeated filters, scalar date filter, complaint-patterns view, anchor, and result focus") $snapshot.url $snapshot.focus "pagination preservation verification"
+        $pageTwoUrl = [string](Invoke-CdpEvaluate -Session $Session -Expression "location.href")
+    }
 
     # Both details are opened from the same operated page-two origin, using the
     # rendered links and then the rendered return link or actual browser history.

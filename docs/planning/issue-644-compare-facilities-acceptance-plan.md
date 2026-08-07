@@ -66,13 +66,12 @@ screen markup, pagination, filtering, or fixture scope.
 
 The separate screen-density investigation found no combined Issue #642/#643
 state or stale measurement: the populated desktop route rendered one normal
-25-facility page, whose main content occupied nearly the entire measured
-document. The product correction keeps the existing card content, controls,
-cursor pagination, routes, and evidence contract, but reduces the normal
-Compare Facilities page window to fourteen complete facility rows. This uses
-the existing pagination mechanism instead of hiding content or weakening any
-density ceiling; the remaining matching facilities stay available through the
-same descriptive Previous and Next controls.
+25-facility page, whose stacked ordinary cards occupied nearly the entire
+measured document. RT-PAG-001 retains the approved 25-row seek/keyset page and
+the existing content, controls, routes, and evidence contract. The compact
+inventory treatment instead groups the same reviewer facts and actions into
+responsive rows, preserving normal document flow outside desktop without
+hiding content or weakening a density ceiling.
 
 ## Stop conditions
 

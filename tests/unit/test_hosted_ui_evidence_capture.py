@@ -86,6 +86,13 @@ def powershell_function(function_name: str, next_function_name: str) -> str:
     return script[start:end]
 
 
+def wrapper_port_guard_functions() -> str:
+    script = WRAPPER_SCRIPT.read_text(encoding="utf-8")
+    start = script.index("function Get-PortListenerObservation")
+    end = script.index("\nfunction Get-TaskOwnedProcessIds", start)
+    return script[start:end]
+
+
 def run_optional_git_revision_resolution(
     *,
     origin_main: str | None = None,
@@ -3274,6 +3281,23 @@ def test_issue_642_operated_capture_uses_native_input_and_records_state_metadata
         assert expected in script
 
 
+def test_issue_642_operated_pagination_only_activates_an_enabled_next_control() -> None:
+    script = CAPTURE_SCRIPT.read_text(encoding="utf-8")
+    assert "for ($pageNumber = 2; $pageNumber -le 4; $pageNumber++)" not in script
+    loop_start = script.index("$pageNumber = 2")
+    loop_end = script.index("$page = Get-Issue642PaginationPage", loop_start)
+    loop = script[loop_start:loop_end]
+    assert "while ($true)" in loop
+    assert "if (-not $currentPage.nextEnabled)" in loop
+    click_call = (
+        "Invoke-CdpClickSelector -Session $Session -Selector "
+        "\"a.facility-pagination__control[aria-label^='Next facilities']\""
+    )
+    assert loop.index("$currentPage = Get-Issue642PaginationPage") < loop.index(
+        click_call
+    )
+
+
 def test_issue_644_mode_composes_the_existing_compare_facilities_capture_contract() -> None:
     script = CAPTURE_SCRIPT.read_text(encoding="utf-8")
     wrapper = WRAPPER_SCRIPT.read_text(encoding="utf-8")
@@ -3300,7 +3324,9 @@ def test_issue_644_mode_composes_the_existing_compare_facilities_capture_contrac
     assert "if ($Issue644) { $captureArguments.Issue644 = $true }" in wrapper
 
 
-def test_issue_642_pagination_reconciliation_uses_rendered_page_size_and_fails_closed() -> None:
+def test_issue_642_pagination_reconciliation_uses_rendered_page_size_and_fails_closed(
+    tmp_path: Path,
+) -> None:
     helper = powershell_function(
         "Test-Issue642PaginationReconciliation", "Invoke-Issue642OperatedInteractionCapture"
     )
@@ -3328,38 +3354,42 @@ def test_issue_642_pagination_reconciliation_uses_rendered_page_size_and_fails_c
             first = last + 1
         return output
 
-    valid_51 = pages(51, 14)
-    valid_other = pages(10, 3)
+    valid_53 = pages(53, 25)
+    valid_filtered_51 = pages(51, 25)
+    valid_one_page = pages(7, 25)
     cases = {
-        "valid_51": valid_51,
-        "valid_other": valid_other,
+        "valid_53": valid_53,
+        "valid_filtered_51": valid_filtered_51,
+        "valid_one_page": valid_one_page,
         "wrong_first_count": [
-            {**valid_51[0], "identities": valid_51[0]["identities"][:-1]}
-        ] + valid_51[1:],
+            {**valid_53[0], "identities": valid_53[0]["identities"][:-1]}
+        ] + valid_53[1:],
         "wrong_middle_count": [
-            valid_51[0],
-            {**valid_51[1], "identities": valid_51[1]["identities"][:-1]},
-        ] + valid_51[2:],
-        "wrong_final_remainder": valid_51[:-1]
-        + [{**valid_51[-1], "identities": valid_51[-1]["identities"] + ["extra"]}],
+            valid_53[0],
+            {**valid_53[1], "identities": valid_53[1]["identities"][:-1]},
+        ] + valid_53[2:],
+        "wrong_final_remainder": valid_53[:-1]
+        + [{**valid_53[-1], "identities": valid_53[-1]["identities"] + ["extra"]}],
         "duplicate": [
-            valid_51[0],
+            valid_53[0],
             {
-                **valid_51[1],
-                "identities": [valid_51[0]["identities"][0]]
-                + valid_51[1]["identities"][1:],
+                **valid_53[1],
+                "identities": [valid_53[0]["identities"][0]]
+                + valid_53[1]["identities"][1:],
             },
-        ] + valid_51[2:],
-        "skipped": [valid_51[0], {**valid_51[1], "first": 16}] + valid_51[2:],
-        "zero_page_size": [{**valid_51[0], "last": 0, "identities": []}] + valid_51[1:],
-        "control_mismatch": [{**valid_51[0], "previousEnabled": True}] + valid_51[1:],
+        ] + valid_53[2:],
+        "skipped": [valid_53[0], {**valid_53[1], "first": 16}] + valid_53[2:],
+        "zero_page_size": [{**valid_53[0], "last": 0, "identities": []}] + valid_53[1:],
+        "control_mismatch": [{**valid_53[0], "previousEnabled": True}] + valid_53[1:],
+        "final_missing_previous": valid_53[:-1] + [{**valid_53[-1], "previousEnabled": False}],
+        "one_page_has_previous": [{**valid_one_page[0], "previousEnabled": True}],
         "context_loss": [
-            valid_51[0],
+            valid_53[0],
             {
-                **valid_51[1],
+                **valid_53[1],
                 "url": "http://127.0.0.1:8010/ccld/facilities/intelligence?facility_type=430",
             },
-        ] + valid_51[2:],
+        ] + valid_53[2:],
     }
     cases_json = json.dumps(cases).replace("'", "''")
     ps_script = f"""
@@ -3384,6 +3414,89 @@ foreach ($property in $cases.PSObject.Properties) {{
 }}
 $results | ConvertTo-Json -Depth 8 -Compress
 """
+    script_path = tmp_path / "issue642-pagination-reconciliation.ps1"
+    script_path.write_text(ps_script, encoding="utf-8")
+    result = subprocess.run(
+        [powershell(), "-NoProfile", "-File", str(script_path)],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert result.returncode == 0, plain_output(result)
+    observed = json.loads(plain_output(result).strip().splitlines()[-1])
+    assert observed["valid_53"] == {
+        "pass": True,
+        "page_size": 25,
+        "total": 53,
+        "page_counts": [25, 25, 3],
+        "unique_count": 53,
+        "duplicate_count": 0,
+        "missing_count": 0,
+    }
+    assert observed["valid_filtered_51"] == {
+        "pass": True,
+        "page_size": 25,
+        "total": 51,
+        "page_counts": [25, 25, 1],
+        "unique_count": 51,
+        "duplicate_count": 0,
+        "missing_count": 0,
+    }
+    assert observed["valid_one_page"] == {
+        "pass": True,
+        "page_size": 7,
+        "total": 7,
+        "page_counts": [7],
+        "unique_count": 7,
+        "duplicate_count": 0,
+        "missing_count": 0,
+    }
+    for name in cases:
+        if name not in {"valid_53", "valid_filtered_51", "valid_one_page"}:
+            assert observed[name]["pass"] is False, name
+    assert "25" not in helper
+
+
+def test_issue_642_canonical_inventory_cardinality_is_distinct_from_filtered_reconciliation(
+) -> None:
+    helper = powershell_function(
+        "Test-Issue642CanonicalInventory", "Test-Issue642PaginationReconciliation"
+    )
+    canonical = {
+        "first": 1,
+        "last": 25,
+        "total": 53,
+        "identities": [f"facility-intelligence-result-{index}" for index in range(1, 26)],
+        "previousEnabled": False,
+        "nextEnabled": True,
+        "url": "http://127.0.0.1:8010/ccld/facilities/intelligence",
+    }
+    cases = {
+        "canonical": canonical,
+        "canonical_total_dropped": {**canonical, "total": 51},
+        "canonical_wrong_first_range": {
+            **canonical,
+            "last": 24,
+            "identities": canonical["identities"][:-1],
+        },
+        "canonical_missing_next": {**canonical, "nextEnabled": False},
+        "filtered_url": {**canonical, "url": canonical["url"] + "?facility_type=430"},
+    }
+    cases_json = json.dumps(cases).replace("'", "''")
+    ps_script = f"""
+{helper}
+$cases = ConvertFrom-Json -InputObject '{cases_json}'
+$results = [ordered]@{{}}
+foreach ($property in $cases.PSObject.Properties) {{
+    try {{
+        $value = Test-Issue642CanonicalInventory -Page $property.Value
+        $results[$property.Name] = [ordered]@{{ pass=$true; value=$value }}
+    }}
+    catch {{ $results[$property.Name] = [ordered]@{{ pass=$false; message=$_.Exception.Message }} }}
+}}
+$results | ConvertTo-Json -Depth 8 -Compress
+"""
     result = subprocess.run(
         [powershell(), "-NoProfile", "-Command", ps_script],
         cwd=ROOT,
@@ -3393,21 +3506,15 @@ $results | ConvertTo-Json -Depth 8 -Compress
     )
     assert result.returncode == 0, plain_output(result)
     observed = json.loads(plain_output(result).strip().splitlines()[-1])
-    assert observed["valid_51"] == {
-        "pass": True,
-        "page_size": 14,
-        "total": 51,
-        "page_counts": [14, 14, 14, 9],
-        "unique_count": 51,
-        "duplicate_count": 0,
-        "missing_count": 0,
-    }
-    assert observed["valid_other"]["pass"] is True
-    assert observed["valid_other"]["page_counts"] == [3, 3, 3, 1]
-    for name in cases:
-        if name not in {"valid_51", "valid_other"}:
-            assert observed[name]["pass"] is False, name
-    assert "25" not in helper
+    assert observed["canonical"]["pass"] is True
+    assert observed["canonical"]["value"]["canonicalInventoryTotal"] == 53
+    for name in (
+        "canonical_total_dropped",
+        "canonical_wrong_first_range",
+        "canonical_missing_next",
+        "filtered_url",
+    ):
+        assert observed[name]["pass"] is False, name
 
 
 def test_issue_644_automated_visual_prerequisites_fail_closed_before_packet_finalization(
@@ -3848,6 +3955,108 @@ def test_evidence_wrapper_uses_bounded_stable_free_port_guard() -> None:
     assert "Input.dispatchMouseEvent" in capture_script
     assert "mousePressed" in capture_script
     assert "mouseReleased" in capture_script
+
+
+def test_stable_free_port_fails_closed_and_uses_netstat_only_after_primary_failure() -> None:
+    guard = wrapper_port_guard_functions()
+    ps_lines = (
+        "$freePrimary = { param($port) }",
+        "$listenerPrimary = { param($port) New-Listener $port 4242 }",
+        "$deniedPrimary = { param($port) throw 'Access denied' }",
+        "$fallbackFree = { param($port) @('Active Connections') }",
+        "$fallbackCalls = 0",
+        "function New-Listener {",
+        "  param($port, $processId)",
+        "  [pscustomobject]@{ LocalAddress='127.0.0.1'; LocalPort=$port;",
+        "    State='Listen'; OwningProcess=$processId }",
+        "}",
+        "function Test-Guard {",
+        "  param($primary, $fallback, $maximum = 3)",
+        "  Test-StableFreePort -LocalPort 8010 -MaximumObservations $maximum `",
+        "    -IntervalMilliseconds 0 -PrimaryEnumerator $primary `",
+        "    -FallbackEnumerator $fallback",
+        "}",
+        "$fallbackV4 = { param($port) @(",
+        "  '  TCP    127.0.0.1:8010' +",
+        "    '         0.0.0.0:0              LISTENING       6400') }",
+        "$fallbackV6 = { param($port) @(",
+        "  '  TCP    [::1]:8010' +",
+        "    '             [::]:0                 LISTENING       6401') }",
+        "$fallbackTimeWait = { param($port) @(",
+        "  '  TCP    127.0.0.1:8010' +",
+        "    '         127.0.0.1:50000        TIME_WAIT       0') }",
+        "$fallbackOtherPort = { param($port) @(",
+        "  '  TCP    127.0.0.1:8011' +",
+        "    '         0.0.0.0:0              LISTENING       6402') }",
+        "$fallbackMalformed = { param($port) @(",
+        "  '  TCP    127.0.0.1:8010' +",
+        "    '         0.0.0.0:0              LISTENING       not-a-pid') }",
+        "$unexpectedFallback = { param($port)",
+        "  $script:fallbackCalls++; throw 'fallback should not run' }",
+        "$free = Test-Guard $freePrimary $unexpectedFallback",
+        "$primaryListener = Test-Guard $listenerPrimary $fallbackFree",
+        "$fallbackListenerV4 = Get-PortListenerObservation -LocalPort 8010 `",
+        "  -PrimaryEnumerator $deniedPrimary -FallbackEnumerator $fallbackV4",
+        "$fallbackListenerV6 = Get-PortListenerObservation -LocalPort 8010 `",
+        "  -PrimaryEnumerator $deniedPrimary -FallbackEnumerator $fallbackV6",
+        "$timeWait = Get-PortListenerObservation -LocalPort 8010 `",
+        "  -PrimaryEnumerator $deniedPrimary -FallbackEnumerator $fallbackTimeWait",
+        "$otherPort = Get-PortListenerObservation -LocalPort 8010 `",
+        "  -PrimaryEnumerator $deniedPrimary -FallbackEnumerator $fallbackOtherPort",
+        "$fallbackFailure = Get-PortListenerObservation -LocalPort 8010 `",
+        "  -PrimaryEnumerator $deniedPrimary -FallbackEnumerator { throw 'netstat unavailable' }",
+        "$fallbackMalformedResult = Get-PortListenerObservation -LocalPort 8010 `",
+        "  -PrimaryEnumerator $deniedPrimary -FallbackEnumerator $fallbackMalformed",
+        "$fallbackFreeStable = Test-Guard $deniedPrimary $fallbackFree",
+        "$sequence = @(",
+        "  [pscustomobject]@{ state='FREE'; listeners=@() },",
+        "  [pscustomobject]@{ state='LISTENER_PRESENT'; listeners=@(New-Listener 8010 4242) },",
+        "  [pscustomobject]@{ state='FREE'; listeners=@() },",
+        "  [pscustomobject]@{ state='FREE'; listeners=@() },",
+        "  [pscustomobject]@{ state='FREE'; listeners=@() }",
+        ")",
+        "$sequenceIndex = 0",
+        "$reset = Test-StableFreePort -LocalPort 8010 -MaximumObservations 5 `",
+        "  -IntervalMilliseconds 0 -ObservationProvider { param($index)",
+        "    $result=$sequence[$script:sequenceIndex]; $script:sequenceIndex++; $result }",
+        "[ordered]@{",
+        "  free = @($free.free, $free.state, @($free.observations).Count, $fallbackCalls)",
+        "  primary_listener = @($primaryListener.free, $primaryListener.state)",
+        "  fallback_v4 = @($fallbackListenerV4.state, $fallbackListenerV4.primaryEnumeration,",
+        "    $fallbackListenerV4.fallbackEnumeration, $fallbackListenerV4.listeners[0].owningPid)",
+        "  fallback_v6 = @($fallbackListenerV6.state, $fallbackListenerV6.listeners[0].owningPid)",
+        "  time_wait = @($timeWait.state, @($timeWait.listeners).Count)",
+        "  other_port = @($otherPort.state, @($otherPort.listeners).Count)",
+        "  fallback_failure = @($fallbackFailure.state, @($fallbackFailure.listeners).Count)",
+        "  malformed = @($fallbackMalformedResult.state,",
+        "    @($fallbackMalformedResult.listeners).Count)",
+        "  fallback_free = @($fallbackFreeStable.free, $fallbackFreeStable.state,",
+        "    $fallbackFreeStable.observations[0].fallbackEnumeration)",
+        "  reset = @($reset.free, $reset.state, $reset.transientListener,",
+        "    @($reset.observations).Count)",
+        "} | ConvertTo-Json -Depth 8 -Compress",
+    )
+    ps_script = guard + "\n" + "\n".join(ps_lines)
+    result = subprocess.run(
+        [powershell(), "-NoProfile", "-Command", ps_script],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert result.returncode == 0, plain_output(result)
+    observed = json.loads(plain_output(result).strip().splitlines()[-1])
+    assert observed["free"] == [True, "FREE", 3, 0]
+    assert observed["primary_listener"] == [False, "LISTENER_PRESENT"]
+    assert observed["fallback_v4"] == ["LISTENER_PRESENT", "failed", "succeeded", 6400]
+    assert observed["fallback_v6"] == ["LISTENER_PRESENT", 6401]
+    assert observed["time_wait"] == ["FREE", 0]
+    assert observed["other_port"] == ["FREE", 0]
+    assert observed["fallback_failure"] == ["ENUMERATION_FAILED", 0]
+    assert observed["malformed"] == ["ENUMERATION_FAILED", 0]
+    assert observed["fallback_free"] == [True, "FREE", "succeeded"]
+    assert observed["reset"] == [True, "FREE", True, 5]
+    assert "Stop-Process" not in guard
 
 
 def test_issue_655_fixture_acquisition_uses_bounded_candidates_and_readiness() -> None:

@@ -168,10 +168,8 @@ CCLD_REVIEW_DATE_FIELDS = (
     "date_signed",
 )
 
-# Fourteen complete facility rows retain the existing cursor-pagination contract
-# while keeping the normal Compare Facilities state within its governed viewport
-# density ceilings at supported widths.
-FACILITY_INTELLIGENCE_PAGE_SIZE = 14
+# Approved by RT-PAG-001: use one bounded seek/keyset page of 25 facilities.
+FACILITY_INTELLIGENCE_PAGE_SIZE = 25
 _FACILITY_INTELLIGENCE_OPTION_LIMIT = 250
 _FACILITY_INTELLIGENCE_SERIOUS_CATEGORY_LABELS = {
     "abuse or mistreatment": "Mistreatment-topic",

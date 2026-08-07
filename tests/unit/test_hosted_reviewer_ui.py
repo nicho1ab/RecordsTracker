@@ -5392,11 +5392,11 @@ def test_issue_642_pagination_fixture_is_local_only_and_preserves_existing_rows(
     assert fixture_numbers == [f"642900{offset:03d}" for offset in range(1, 50)]
     assert len(fixture_numbers) == len(set(fixture_numbers))
     assert len(facilities) >= 51
-    assert FACILITY_INTELLIGENCE_PAGE_SIZE == 14
+    assert FACILITY_INTELLIGENCE_PAGE_SIZE == 25
     page_count = (
         len(facilities) + FACILITY_INTELLIGENCE_PAGE_SIZE - 1
     ) // FACILITY_INTELLIGENCE_PAGE_SIZE
-    assert page_count >= 4
+    assert page_count >= 3
 
 
 def test_default_postgres_reviewer_context_uses_loaded_ccld_corpus_scope(

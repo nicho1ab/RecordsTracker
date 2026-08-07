@@ -57,6 +57,7 @@ def test_postgresql_filter_option_queries_compile_with_grouped_ordering() -> Non
 
 
 def test_postgresql_count_hydration_page_and_review_queries_are_bounded() -> None:
+    assert reads.FACILITY_INTELLIGENCE_PAGE_SIZE == 25
     connection = cast(
         Connection,
         create_mock_engine("postgresql+psycopg://", lambda *_args, **_kwargs: None),
