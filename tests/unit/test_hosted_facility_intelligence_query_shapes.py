@@ -57,6 +57,7 @@ def test_postgresql_filter_option_queries_compile_with_grouped_ordering() -> Non
 
 
 def test_postgresql_count_hydration_page_and_review_queries_are_bounded() -> None:
+    assert reads.FACILITY_INTELLIGENCE_PAGE_SIZE == 25
     connection = cast(
         Connection,
         create_mock_engine("postgresql+psycopg://", lambda *_args, **_kwargs: None),
@@ -119,7 +120,7 @@ def test_postgresql_count_hydration_page_and_review_queries_are_bounded() -> Non
         dialect_name="postgresql",
     )
     page_sql = _postgresql_sql(page_statement)
-    assert " limit 25" in page_sql
+    assert f" limit {reads.FACILITY_INTELLIGENCE_PAGE_SIZE}" in page_sql
     assert " offset " not in f" {page_sql} "
 
     review_next_statement = reads._facility_intelligence_bounded_limit(

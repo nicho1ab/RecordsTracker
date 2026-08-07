@@ -1040,7 +1040,7 @@ def _issue_642_evidence_fixture_enabled(
 def _with_local_issue_642_pagination_fixture_records(
     artifact: SeededCorpusArtifact,
 ) -> SeededCorpusArtifact:
-    """Add 26 deterministic, public-safe rows solely for Issue #642 evidence."""
+    """Add 49 deterministic, public-safe rows solely for local pagination evidence."""
     source_record = next(
         (
             record
@@ -1056,7 +1056,11 @@ def _with_local_issue_642_pagination_fixture_records(
         raise ValueError("Local Issue #642 fixtures require one seeded complaint bundle.")
 
     fixture_records: list[Mapping[str, Any]] = []
-    for offset in range(1, 27):
+    # Keep the original Issue #642 rows (1 through 26) byte-for-byte stable in
+    # their generated values. The final 23 rows make the fixture corpus 51
+    # facilities in total, which exercises four cursor-paginated pages at the
+    # governed Compare Facilities page size.
+    for offset in range(1, 50):
         facility_number = f"642900{offset:03d}"
         facility_type = "430" if offset % 2 else "733"
         bundle = copy.deepcopy(source_record)
@@ -1123,12 +1127,12 @@ def _with_local_issue_642_pagination_fixture_records(
 
     record_counts = dict(artifact.record_counts)
     for record_type, increment in (
-        ("facility", 26),
-        ("source_document", 26),
-        ("complaint", 26),
-        ("allegation", 52),
-        ("event", 26),
-        ("extraction_audit", 26),
+        ("facility", 49),
+        ("source_document", 49),
+        ("complaint", 49),
+        ("allegation", 98),
+        ("event", 49),
+        ("extraction_audit", 49),
     ):
         record_counts[record_type] = record_counts.get(record_type, 0) + increment
     return replace(
@@ -1139,7 +1143,7 @@ def _with_local_issue_642_pagination_fixture_records(
         record_counts=record_counts,
         warnings=artifact.warnings
         + (
-            "Twenty-six deterministic Issue #642 pagination rows are available only "
+            "Forty-nine deterministic Issue #642 pagination rows are available only "
             "to the explicitly enabled local fixture/demo evidence invocation.",
         ),
         records=artifact.records + tuple(fixture_records),

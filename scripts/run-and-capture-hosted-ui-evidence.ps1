@@ -52,6 +52,8 @@ param(
 
     [switch]$Issue643,
 
+    [switch]$Issue644,
+
     [switch]$Issue655,
 
     [switch]$Issue655Rehearsal,
@@ -64,13 +66,52 @@ param(
 $ErrorActionPreference = "Stop"
 
 function Get-PortListenerObservation {
-    param([int]$LocalPort)
-    $listeners = @(Get-NetTCPConnection -LocalPort $LocalPort -State Listen -ErrorAction SilentlyContinue | ForEach-Object {
-        $name = ''
-        try { $name = (Get-Process -Id $_.OwningProcess -ErrorAction Stop).ProcessName } catch { }
-        [pscustomobject]@{ timestamp=(Get-Date).ToString('o'); localAddress=[string]$_.LocalAddress; localPort=[int]$_.LocalPort; state=[string]$_.State; owningPid=[int]$_.OwningProcess; processName=$name }
-    })
-    [pscustomobject]@{ timestamp=(Get-Date).ToString('o'); listeners=$listeners }
+    param(
+        [int]$LocalPort,
+        [scriptblock]$PrimaryEnumerator = $null,
+        [scriptblock]$FallbackEnumerator = $null
+    )
+    $primaryError = ''
+    try {
+        $primaryListeners = if ($PrimaryEnumerator) { @(& $PrimaryEnumerator $LocalPort) } else { @(Get-NetTCPConnection -LocalPort $LocalPort -State Listen -ErrorAction Stop) }
+        $listeners = @($primaryListeners | ForEach-Object {
+            $name = ''
+            try { $name = (Get-Process -Id $_.OwningProcess -ErrorAction Stop).ProcessName } catch { }
+            [pscustomobject]@{ timestamp=(Get-Date).ToString('o'); localAddress=[string]$_.LocalAddress; localPort=[int]$_.LocalPort; state=[string]$_.State; owningPid=[int]$_.OwningProcess; processName=$name }
+        })
+        return [pscustomobject]@{ timestamp=(Get-Date).ToString('o'); state=if ($listeners.Count -eq 0) {'FREE'} else {'LISTENER_PRESENT'}; primaryEnumeration='succeeded'; fallbackEnumeration='not-required'; listeners=$listeners; enumerationError='' }
+    }
+    catch { $primaryError = $_.Exception.Message }
+
+    try {
+        $fallbackLines = if ($FallbackEnumerator) { @(& $FallbackEnumerator $LocalPort) } else {
+            $output = @(& netstat -ano -p tcp 2>&1)
+            if ($LASTEXITCODE -ne 0) { throw "netstat exited with code $LASTEXITCODE." }
+            $output
+        }
+        $listeners = [System.Collections.ArrayList]::new(); $sawTcpRow = $false
+        foreach ($line in @($fallbackLines)) {
+            $text = [string]$line
+            if ($text -notmatch '^\s*TCP\s+') { continue }
+            $sawTcpRow = $true
+            if ($text -notmatch '^\s*TCP\s+(?<local>\S+)\s+\S+\s+LISTENING\s+(?<pid>\d+)\s*$') {
+                if ($text -match '\s+LISTENING\s+') { throw "Unable to safely parse netstat listener row: $text" }
+                continue
+            }
+            $local = [string]$Matches.local
+            $listenerPid = [int]$Matches.pid
+            if ($local -notmatch ':(?<port>\d+)$') { throw "Unable to safely parse netstat local endpoint: $local" }
+            if ([int]$Matches.port -ne $LocalPort) { continue }
+            $name = ''
+            try { $name = (Get-Process -Id $listenerPid -ErrorAction Stop).ProcessName } catch { }
+            [void]$listeners.Add([pscustomobject]@{ timestamp=(Get-Date).ToString('o'); localAddress=$local; localPort=$LocalPort; state='Listen'; owningPid=$listenerPid; processName=$name })
+        }
+        if (-not $sawTcpRow -and @($fallbackLines).Count -eq 0) { throw 'netstat produced no parseable output.' }
+        return [pscustomobject]@{ timestamp=(Get-Date).ToString('o'); state=if ($listeners.Count -eq 0) {'FREE'} else {'LISTENER_PRESENT'}; primaryEnumeration='failed'; fallbackEnumeration='succeeded'; listeners=@($listeners); enumerationError="Primary Get-NetTCPConnection failed: $primaryError" }
+    }
+    catch {
+        return [pscustomobject]@{ timestamp=(Get-Date).ToString('o'); state='ENUMERATION_FAILED'; primaryEnumeration='failed'; fallbackEnumeration='failed'; listeners=@(); enumerationError="Primary Get-NetTCPConnection failed: $primaryError Fallback netstat failed: $($_.Exception.Message)" }
+    }
 }
 
 function Test-StableFreePort {
@@ -79,24 +120,28 @@ function Test-StableFreePort {
         [int]$RequiredConsecutiveFree = 3,
         [int]$IntervalMilliseconds = 250,
         [int]$MaximumObservations = 20,
-        [scriptblock]$ObservationProvider = $null
+        [scriptblock]$ObservationProvider = $null,
+        [scriptblock]$PrimaryEnumerator = $null,
+        [scriptblock]$FallbackEnumerator = $null
     )
     $observations = [System.Collections.ArrayList]::new(); $freeStreak = 0; $transient = $false
     for ($index = 0; $index -lt $MaximumObservations; $index++) {
-        $observation = if ($ObservationProvider) { & $ObservationProvider $index } else { Get-PortListenerObservation -LocalPort $LocalPort }
+        $observation = if ($ObservationProvider) { & $ObservationProvider $index } else { Get-PortListenerObservation -LocalPort $LocalPort -PrimaryEnumerator $PrimaryEnumerator -FallbackEnumerator $FallbackEnumerator }
         [void]$observations.Add($observation)
+        if ($observation.state -eq 'ENUMERATION_FAILED') { return [pscustomobject]@{ free=$false; state='ENUMERATION_FAILED'; transientListener=$transient; observations=@($observations) } }
         if (@($observation.listeners).Count -eq 0) { $freeStreak++ } else { if ($freeStreak -gt 0) { $transient = $true }; $freeStreak = 0 }
-        if ($freeStreak -ge $RequiredConsecutiveFree) { return [pscustomobject]@{ free=$true; transientListener=$transient; observations=@($observations) } }
+        if ($freeStreak -ge $RequiredConsecutiveFree) { return [pscustomobject]@{ free=$true; state='FREE'; transientListener=$transient; observations=@($observations) } }
         if ($index -lt ($MaximumObservations - 1)) { Start-Sleep -Milliseconds $IntervalMilliseconds }
     }
-    [pscustomobject]@{ free=$false; transientListener=$transient; observations=@($observations) }
+    [pscustomobject]@{ free=$false; state='LISTENER_PRESENT'; transientListener=$transient; observations=@($observations) }
 }
 
 function Write-PortObservations {
     param([object[]]$Observations)
     foreach ($observation in $Observations) {
-        if (@($observation.listeners).Count -eq 0) { Write-Host "$($observation.timestamp) listener=none" }
-        else { foreach ($listener in $observation.listeners) { Write-Host "$($listener.timestamp) listener=$($listener.localAddress):$($listener.localPort) state=$($listener.state) pid=$($listener.owningPid) process=$($listener.processName)" } }
+        if ($observation.state -eq 'ENUMERATION_FAILED') { Write-Host "$($observation.timestamp) listener=unresolved primary=$($observation.primaryEnumeration) fallback=$($observation.fallbackEnumeration) error=$($observation.enumerationError)" }
+        elseif (@($observation.listeners).Count -eq 0) { Write-Host "$($observation.timestamp) listener=none primary=$($observation.primaryEnumeration) fallback=$($observation.fallbackEnumeration)" }
+        else { foreach ($listener in $observation.listeners) { Write-Host "$($listener.timestamp) listener=$($listener.localAddress):$($listener.localPort) state=$($listener.state) pid=$($listener.owningPid) process=$($listener.processName) primary=$($observation.primaryEnumeration) fallback=$($observation.fallbackEnumeration)" } }
     }
 }
 
@@ -198,7 +243,7 @@ foreach ($candidate in $candidatePorts | Select-Object -Unique) {
     $launcherArguments = @('-NoProfile','-ExecutionPolicy','Bypass','-File',$scriptPath,'-Port',[string]$candidate)
     if ($Mode -eq 'fixture') {
         $launcherArguments += @('-PythonExecutable',$PythonExecutable)
-        if ($Issue642) { $launcherArguments += '-Issue642Evidence' }
+        if ($Issue642 -or $Issue644) { $launcherArguments += '-Issue642Evidence' }
         if ($Issue642LicensingSourceUnavailable) { $launcherArguments += '-Issue642LicensingSourceUnavailable' }
     }
     # Failed fixture launches leave only temporary diagnostics, never an evidence packet directory.
@@ -229,6 +274,7 @@ if ($Issue502) { $captureArguments.Issue502 = $true }
 if ($Issue420) { $captureArguments.Issue420 = $true }
 if ($Issue642) { $captureArguments.Issue642 = $true }
 if ($Issue643) { $captureArguments.Issue643 = $true }
+if ($Issue644) { $captureArguments.Issue644 = $true }
 if ($Issue655) { $captureArguments.Issue655 = $true }
 if ($Issue655Rehearsal) {
     if (-not $Issue655) { throw 'Issue655Rehearsal requires Issue655.' }

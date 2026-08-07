@@ -3488,9 +3488,9 @@ SHARED_CSS = r"""
     }
     .facility-intelligence-row > article {
       display: grid;
-      gap: 1.1rem;
+      gap: 0.55rem;
       grid-template-columns: minmax(0, 1fr);
-      padding: 1rem;
+      padding: 0.75rem;
     }
     .facility-intelligence-card > * { min-width: 0; }
     .facility-intelligence-row :focus {
@@ -3524,7 +3524,7 @@ SHARED_CSS = r"""
       line-height: 1.35;
     }
     .facility-card-header p {
-      margin-bottom: 0.55rem;
+      margin: 0.25rem 0 0;
     }
     .facility-card-title {
       align-items: start;
@@ -3539,9 +3539,11 @@ SHARED_CSS = r"""
       flex: 0 0 auto;
     }
     .facility-card-summary,
+    .facility-card-topics,
     .facility-card-recommended {
-      border-top: 1px solid #d7d0c5;
-      padding-top: 0.85rem;
+      border-top: 0;
+      margin: 0;
+      padding-top: 0;
     }
     .facility-card-summary dl,
     .facility-card-recommended dl {
@@ -3565,6 +3567,37 @@ SHARED_CSS = r"""
     .facility-card-recommended dd {
       margin: 0;
       overflow-wrap: anywhere;
+    }
+    .facility-card-summary h4,
+    .facility-card-recommended h4,
+    .facility-card-topics h4 {
+      display: inline;
+      margin-right: 0.35rem;
+    }
+    .facility-card-summary h4::after,
+    .facility-card-recommended h4::after,
+    .facility-card-topics h4::after {
+      content: ":";
+    }
+    .facility-card-summary dl,
+    .facility-card-recommended dl {
+      display: inline;
+    }
+    .facility-card-summary dl > div,
+    .facility-card-recommended dl > div,
+    .facility-card-summary dt,
+    .facility-card-summary dd,
+    .facility-card-recommended dt,
+    .facility-card-recommended dd {
+      display: inline;
+    }
+    .facility-card-summary dt::after,
+    .facility-card-recommended dt::after {
+      content: ": ";
+    }
+    .facility-card-summary dl > div + div::before,
+    .facility-card-recommended dl > div + div::before {
+      content: " · ";
     }
     .facility-card-topics ul {
       display: flex;
@@ -3943,6 +3976,34 @@ SHARED_CSS = r"""
         top: 0.5rem;
         z-index: 3;
       }
+      .facility-intelligence-row > article {
+        align-items: start;
+        column-gap: 1rem;
+        grid-template-columns: minmax(16rem, 1.25fr) minmax(13rem, 0.8fr) minmax(15rem, 1fr);
+        padding: 0.7rem 0.9rem;
+        row-gap: 0.45rem;
+      }
+      .facility-card-header {
+        grid-column: 1;
+        grid-row: 1 / span 2;
+      }
+      .facility-card-summary {
+        grid-column: 2;
+        grid-row: 1;
+      }
+      .facility-card-recommended {
+        grid-column: 2;
+        grid-row: 2;
+      }
+      .facility-card-actions {
+        grid-column: 3;
+        grid-row: 1;
+        justify-content: flex-start;
+      }
+      .facility-card-topics {
+        grid-column: 3;
+        grid-row: 2;
+      }
     }
     @media (max-width: 900px) {
       .civic-ledger-page .facility-intelligence-filter-grid {
@@ -4155,6 +4216,108 @@ SHARED_CSS = r"""
       }
       .civic-ledger-page .facility-inventory-context {
         position: static !important;
+      }
+      .civic-ledger-page .facility-intelligence-results {
+        border: 0;
+      }
+      .civic-ledger-page .facility-intelligence-results__header {
+        padding: 0.35rem 0;
+      }
+      .civic-ledger-page .facility-inventory-context {
+        padding: 0.35rem 0;
+      }
+      .civic-ledger-page .facility-inventory-context--bottom {
+        display: none;
+      }
+      .civic-ledger-page .facility-intelligence-inventory {
+        display: block;
+      }
+      .civic-ledger-page .facility-intelligence-row {
+        border-bottom: 1px solid #000;
+        break-inside: avoid;
+        display: block;
+        margin: 0;
+        page-break-inside: avoid;
+      }
+      .civic-ledger-page .facility-intelligence-row > article {
+        display: block;
+        padding: 0.28rem 0.4rem;
+      }
+      .civic-ledger-page .facility-card-header h3,
+      .civic-ledger-page .facility-card-summary h4,
+      .civic-ledger-page .facility-card-topics h4,
+      .civic-ledger-page .facility-card-recommended h4 {
+        display: inline;
+        font-size: 0.78rem;
+        line-height: 1.2;
+        margin: 0;
+      }
+      .civic-ledger-page .facility-card-header p,
+      .civic-ledger-page .facility-card-topics,
+      .civic-ledger-page .facility-card-summary,
+      .civic-ledger-page .facility-card-recommended {
+        display: inline;
+        font-size: 0.72rem;
+        line-height: 1.25;
+        margin: 0;
+      }
+      .civic-ledger-page .facility-card-summary,
+      .civic-ledger-page .facility-card-recommended {
+        border-top: 0;
+        padding-top: 0;
+      }
+      .civic-ledger-page .facility-card-header h3::after,
+      .civic-ledger-page .facility-card-summary h4::after,
+      .civic-ledger-page .facility-card-topics h4::after,
+      .civic-ledger-page .facility-card-recommended h4::after {
+        content: ": ";
+      }
+      .civic-ledger-page .facility-card-header p::before,
+      .civic-ledger-page .facility-card-summary::before,
+      .civic-ledger-page .facility-card-topics::before,
+      .civic-ledger-page .facility-card-recommended::before {
+        content: " · ";
+      }
+      .civic-ledger-page .facility-card-title {
+        display: inline;
+      }
+      .civic-ledger-page .facility-card-summary dl,
+      .civic-ledger-page .facility-card-recommended dl {
+        display: inline;
+        margin: 0;
+      }
+      .civic-ledger-page .facility-card-summary dl > div,
+      .civic-ledger-page .facility-card-recommended dl > div {
+        display: inline;
+      }
+      .civic-ledger-page .facility-card-summary dt,
+      .civic-ledger-page .facility-card-summary dd,
+      .civic-ledger-page .facility-card-recommended dt,
+      .civic-ledger-page .facility-card-recommended dd {
+        display: inline;
+        font-size: inherit;
+        line-height: inherit;
+        margin: 0;
+      }
+      .civic-ledger-page .facility-card-summary dt::after,
+      .civic-ledger-page .facility-card-recommended dt::after {
+        content: ": ";
+      }
+      .civic-ledger-page .facility-card-summary dl > div + div::before,
+      .civic-ledger-page .facility-card-recommended dl > div + div::before {
+        content: " · ";
+      }
+      .civic-ledger-page .facility-card-topics ul {
+        display: inline;
+        gap: 0;
+      }
+      .civic-ledger-page .facility-card-topics li {
+        display: inline;
+      }
+      .civic-ledger-page .facility-card-topics .review-chip {
+        display: inline;
+        font-size: inherit;
+        padding: 0;
       }
       .facility-inventory-item,
       .facility-overview-summary,
