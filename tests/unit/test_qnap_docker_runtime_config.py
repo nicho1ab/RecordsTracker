@@ -318,6 +318,38 @@ def test_release_runbook_preserves_reviewed_compose_and_application_only_rollbac
     assert "docker compose -f docker-compose.qnap.yml exec app python" not in runbook
 
 
+def test_release_runbook_limits_exceptional_pre_backup_recovery() -> None:
+    runbook = read_repo_text("docs/developer/qnap-release-deployment-runbook.md")
+    normalized_runbook = " ".join(runbook.split())
+
+    for required_text in (
+        "The required deployment model above remains the normal and preferred sequence",
+        "only when the operator has established all of the following",
+        "mandatory pre-activation PostgreSQL dump cannot obtain a connection",
+        "PostgreSQL itself is running and healthy",
+        "currently running `app` service",
+        "known pre-fix application connection-lifecycle failure",
+        "Stop only the `app` Compose service",
+        "Leave `postgres` running",
+        "Never stop, restart, recreate, or replace the PostgreSQL service",
+        "Do not raise",
+        "`max_connections`",
+        "use routine `pg_terminate_backend`",
+        "Immediately after the app stops, reverify that PostgreSQL remains running",
+        "dump artifact is non-empty",
+        "verified non-empty PostgreSQL dump is a hard gate",
+        "resume at step 8",
+    ):
+        assert required_text in normalized_runbook
+
+    assert runbook.index("## Required deployment model") < runbook.index(
+        "## Exceptional pre-backup recovery"
+    )
+    assert runbook.index("## Exceptional pre-backup recovery") < runbook.index(
+        "## Prohibited deployment approaches"
+    )
+
+
 def test_qnap_pilot_workflow_script_checks_env_compose_and_routes() -> None:
     script = read_repo_text("scripts/verify-qnap-pilot-workflow.ps1")
 
