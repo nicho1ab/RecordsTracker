@@ -5404,7 +5404,7 @@ def test_default_postgres_reviewer_context_uses_loaded_ccld_corpus_scope(
 ) -> None:
     engine = create_engine("sqlite+pysqlite:///:memory:")
     hosted_seeded_import_metadata.create_all(engine)
-    monkeypatch.setattr(hosted_app, "_DEFAULT_POSTGRES_REVIEWER_UI_CONTEXT", None)
+    monkeypatch.setattr(hosted_app, "_DEFAULT_POSTGRES_ENGINE", None)
     monkeypatch.setattr(
         hosted_app,
         "load_hosted_database_config",
@@ -5413,18 +5413,17 @@ def test_default_postgres_reviewer_context_uses_loaded_ccld_corpus_scope(
     monkeypatch.setattr(hosted_app, "create_engine", lambda _url: engine)
 
     try:
-        context = hosted_app._default_postgres_reviewer_context()
-        assert context is not None
-        source_context = context.workflow_shell_context.source_derived_api_context
+        with hosted_app._default_postgres_reviewer_context() as context:
+            assert context is not None
+            source_context = context.workflow_shell_context.source_derived_api_context
 
-        assert source_context.scope == POSTGRES_REVIEWER_UI_SCOPE
-        assert source_context.scope.scope_id != "seeded-ccld-fixture-2026-06-13"
-        assert source_context.actor is not None
-        assert source_context.actor.scopes == (POSTGRES_REVIEWER_UI_SCOPE,)
-        assert context.manage_read_transactions is True
+            assert source_context.scope == POSTGRES_REVIEWER_UI_SCOPE
+            assert source_context.scope.scope_id != "seeded-ccld-fixture-2026-06-13"
+            assert source_context.actor is not None
+            assert source_context.actor.scopes == (POSTGRES_REVIEWER_UI_SCOPE,)
+            assert context.manage_read_transactions is True
     finally:
-        monkeypatch.setattr(hosted_app, "_DEFAULT_POSTGRES_REVIEWER_UI_CONTEXT", None)
-        engine.dispose()
+        hosted_app._dispose_default_postgres_engine()
 
 def _local_dev_auth_config() -> Any:
     return load_hosted_auth_runtime_config(
