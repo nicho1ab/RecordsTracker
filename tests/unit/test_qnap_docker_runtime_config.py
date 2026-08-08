@@ -318,6 +318,36 @@ def test_release_runbook_preserves_reviewed_compose_and_application_only_rollbac
     assert "docker compose -f docker-compose.qnap.yml exec app python" not in runbook
 
 
+def test_release_runbook_enforces_safe_operator_shell_command_generation() -> None:
+    runbook = read_repo_text("docs/developer/qnap-release-deployment-runbook.md")
+    normalized_runbook = " ".join(runbook.split())
+
+    for required_text in (
+        "must use that exact value verbatim",
+        "Do not silently substitute an SSH alias",
+        "`scp` runs locally without `sudo`",
+        "destination must be writable by the operator account",
+        "required sudo access and Docker Compose availability",
+        "sudo -v && sudo docker compose version",
+        "BusyBox-compatible",
+        "one complete copy/pasteable one-line command",
+        "existing standalone SSH session",
+        "set -e",
+        "set -u",
+        "set -eu",
+        "heredoc execution",
+        "Bash-only syntax",
+        "terminate the interactive SSH session",
+        "if ...; then ...; else ...; fi",
+        "explicitly print `PASS`",
+        "explicitly print `FAIL`",
+        "return nonzero on failure without terminating the SSH session",
+        "protected deployment paths, configuration preservation, backups, "
+        "directory activation, and `.deployed-commit` marker writes",
+    ):
+        assert required_text in normalized_runbook
+
+
 def test_release_runbook_limits_exceptional_pre_backup_recovery() -> None:
     runbook = read_repo_text("docs/developer/qnap-release-deployment-runbook.md")
     normalized_runbook = " ".join(runbook.split())

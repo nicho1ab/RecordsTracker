@@ -52,6 +52,29 @@ repository. The user may use a private PSD1 file, password manager, operator
 notes, or manual substitution. No agent may read, create, display, upload, or
 depend on that private store, and no agent may create a private PSD1 file.
 
+## Operator connection and privilege preflight
+
+When the operator supplies an exact `<qnap-user>@<qnap-host>` value, generated
+local `scp` and connection instructions must use that exact value verbatim. Do
+not silently substitute an SSH alias; use an alias only when the operator
+explicitly requests it. Committed examples continue to use placeholders and
+must not contain a private username, host, IP address, key path, or alias.
+
+`scp` runs locally without `sudo`; its remote destination must be writable by
+the operator account before transfer. On QNAP, use `sudo` for Docker and Compose
+commands and for protected deployment paths, configuration preservation,
+backups, directory activation, and `.deployed-commit` marker writes. Before the
+first QNAP mutation, the operator must separately verify both required sudo
+access and Docker Compose availability. A generated one-line gate may use this
+BusyBox-compatible shape:
+
+```sh
+if sudo -v && sudo docker compose version; then printf '%s\n' PASS; else printf '%s\n' FAIL; false; fi
+```
+
+Do not invent extra host-tool prerequisites: verify only the prerequisites that
+the documented procedure actually requires.
+
 ## Required deployment model
 
 1. Verify clean local `main` and `origin/main` at the exact approved merged commit.
@@ -205,16 +228,16 @@ from `/share/Public/RecordsTracker`. Agents must not run or proxy these commands
 1. Generate the read-only structural audit and atomically publish the validated
    contract package:
 
-   ```sh
-   sudo docker compose -f docker-compose.qnap.yml exec -T app python -m ccld_complaints.source_to_screen_audit --mode runtime --output-dir /app/data/processed/source-to-screen-audit/runtime-audit --coverage-output-dir /app/data/processed/source-to-screen-audit/runtime-current
-   ```
+    ```sh
+    if sudo docker compose -f docker-compose.qnap.yml exec -T app python -m ccld_complaints.source_to_screen_audit --mode runtime --output-dir /app/data/processed/source-to-screen-audit/runtime-audit --coverage-output-dir /app/data/processed/source-to-screen-audit/runtime-current; then printf '%s\n' PASS; else printf '%s\n' FAIL; false; fi
+    ```
 
 2. Revalidate package hashes and reconcile its Facility ID totals with a safe
    deployed-database aggregate query:
 
-   ```sh
-   sudo docker compose -f docker-compose.qnap.yml exec -T app python -m ccld_complaints.operator_coverage_runtime_verify --package-dir /app/data/processed/source-to-screen-audit/runtime-current
-   ```
+    ```sh
+    if sudo docker compose -f docker-compose.qnap.yml exec -T app python -m ccld_complaints.operator_coverage_runtime_verify --package-dir /app/data/processed/source-to-screen-audit/runtime-current; then printf '%s\n' PASS; else printf '%s\n' FAIL; false; fi
+    ```
 
 Both commands are read-only with respect to PostgreSQL. The producer publishes
 files only after complete stable-consumer validation and preserves the prior
@@ -327,10 +350,25 @@ reviewer-state mutation, snapshot deletion, deployment, or Cloudflare operation.
 
 ## Operator command standards
 
-- QNAP commands must be BusyBox-compatible unless a required utility was explicitly verified.
-- Use one complete copy/pasteable one-line command per numbered operator step.
-- Commands must fail nonzero on verification failure.
-- Print PASS only after the operation and its verification succeed.
+- QNAP commands must be BusyBox-compatible unless this runbook requires and the
+  operator has verified a utility.
+- Use one complete copy/pasteable one-line command per numbered operator step;
+  it must be safe when pasted individually into an existing standalone SSH
+  session.
+- Do not generate `set -e`, `set -u`, `set -eu`, `exit`, heredoc execution,
+  Bash-only syntax, or any command intended to terminate the interactive SSH
+  session.
+- When branching is required, use BusyBox-compatible `if ...; then ...; else
+  ...; fi` or an equivalent safe form. Do not rely on shell options or `exit`
+  for control flow.
+- Every numbered mutating command or decision gate must explicitly print `PASS`
+  only after its operation and verification succeed, or explicitly print `FAIL`
+  on failure, and return nonzero on failure without terminating the SSH session.
+  Informational output explicitly intended for operator inspection does not need
+  meaningless PASS/FAIL decoration.
+- A safe generated gate pattern is `if <command>; then printf '%s\n' PASS; else
+  printf '%s\n' FAIL; false; fi`; substitute the documented command and retain
+  any required verification before the PASS result.
 - Keep Windows PowerShell commands separate from standalone QNAP SSH commands.
 
 ## Maintenance

@@ -142,6 +142,9 @@ later phase; RL-MERGE, deployment, and issue closure need explicit authority.
   a clean local archive, calculate its hash, generate local archive-transfer or
   runbook-derived QNAP command text, prepare hosted-acceptance checklists, and
   interpret safe output pasted by the user.
+- Generated QNAP command text must follow the authoritative runbook's
+  connection-identity, sudo-preflight, BusyBox, one-line, PASS/FAIL, and
+  standalone-interactive-SSH safeguards; do not create a competing procedure.
 - Keep QNAP-specific host paths and credentials out of application code. Use docs, placeholders, environment variables, or operator notes instead.
 
 ## Change behavior
