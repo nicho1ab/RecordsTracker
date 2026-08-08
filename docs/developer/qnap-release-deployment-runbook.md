@@ -88,6 +88,56 @@ depend on that private store, and no agent may create a private PSD1 file.
 20. Write the new full commit to `.deployed-commit` only after all verification succeeds.
 21. Retain the prior release directory and backups until hosted acceptance and stakeholder confirmation are complete.
 
+## Exceptional pre-backup recovery for application-owned client saturation
+
+The required deployment model above remains the normal and preferred sequence.
+This human-operator exception applies only after the PostgreSQL dump attempt in
+step 7 fails, and only when the operator has established all of the following:
+
+- the mandatory pre-activation PostgreSQL dump cannot obtain a connection
+  because PostgreSQL client slots are exhausted;
+- PostgreSQL itself is running and healthy;
+- safe runtime evidence establishes that the currently running `app` service,
+  rather than another client or a PostgreSQL fault, owns the excessive client
+  sessions; and
+- the saturation is attributable to the known pre-fix application
+  connection-lifecycle failure corrected by Issue #673 and PR #674, or to an
+  equivalently verified application-owned saturation condition.
+
+If any condition is not established, stop the deployment. Do not use this
+exception as a routine or speculative deployment path.
+
+Under this exceptional condition, the human operator must:
+
+1. Keep the deployment stopped before release extraction or activation. Do not
+   extract the release, rename the active directory, promote a release, rebuild
+   or recreate the app, update `.deployed-commit`, or perform any other
+   activation step.
+2. Stop only the `app` Compose service from the active release. Leave
+   `postgres` running. Never stop, restart, recreate, or replace the PostgreSQL
+   service or its volume as part of this recovery. Do not raise
+   `max_connections`, use routine `pg_terminate_backend`, or restore
+   PostgreSQL as a recovery mechanism.
+3. Immediately after the app stops, reverify that PostgreSQL remains running
+   and healthy. If that verification fails, stop; this exception grants no
+   PostgreSQL recovery or activation authority.
+4. Immediately create the required PostgreSQL dump against the still-running
+   PostgreSQL service, then verify that the dump completed successfully and the
+   dump artifact is non-empty. A failed, missing, or empty dump leaves the
+   deployment stopped.
+5. Only after the non-empty PostgreSQL dump succeeds and is verified, complete
+   any still-incomplete backup work in step 7 and resume at step 8. Retain and
+   reuse already completed, verified backup artifacts instead of repeating
+   them unnecessarily. When the sequence reaches step 13, do not issue a
+   redundant stop if `app` remains stopped; confirm that it is still stopped
+   and continue with the unchanged application-only activation sequence.
+
+The verified non-empty PostgreSQL dump is a hard gate. No release extraction,
+active-directory rename, release promotion, app rebuild or recreation,
+deployed-marker update, or other activation step may proceed before that gate
+succeeds. All later PostgreSQL-volume protections and post-deployment health,
+Alembic, log, route, hosted-corpus, and owner-acceptance gates remain unchanged.
+
 ## Prohibited deployment approaches
 
 - Do not deploy with Git on QNAP.
