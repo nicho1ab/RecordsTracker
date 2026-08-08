@@ -473,6 +473,12 @@ is unavailable, reads source-derived facility rows from the hosted source-derive
 table group when a database-backed context is supplied, keeps request queue and
 reviewer detail on source-derived plus reviewer-created route seams, and keeps
 fixture-demo behavior isolated behind explicit local/demo configuration.
+Hosted PostgreSQL connection-lifecycle tests must also prove that health polls
+and hosted route requests reuse one process-owned engine, release every
+request-owned connection after success and failure, roll back failed or
+unfinished transactions before release, and remain bounded under repeated
+calls. A POST validation or early-return path that performs a read must not
+leave a connection idle in transaction.
 Hosted CCLD import/reload tests must prove local validated artifacts are
 validated before load, source URL/raw SHA-256/raw path/connector traceability is
 preserved, existing source-derived keys are refreshed without duplicates,

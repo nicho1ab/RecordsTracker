@@ -7,14 +7,18 @@ import csv
 import html
 import json
 import os
+from collections.abc import Iterator
+from contextlib import ExitStack, contextmanager
 from dataclasses import dataclass
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from threading import Lock
 from typing import Any
 from urllib.parse import parse_qs, parse_qsl, urlencode, urlparse
 
 from sqlalchemy import create_engine, text
+from sqlalchemy.engine import Engine
 from sqlalchemy.exc import SQLAlchemyError
 
 from ccld_complaints.hosted_app.audit_coverage_plan import (
@@ -170,7 +174,8 @@ PUBLIC_SOURCE_FACILITY_FIXTURE_DIR = (
 )
 FAVICON_FILE = Path(__file__).resolve().parent / "static" / "favicon.ico"
 SOURCE_COVERAGE_FACILITY_FIXTURE = "chhs_facility_master_tiny.csv"
-_DEFAULT_POSTGRES_REVIEWER_UI_CONTEXT: ReviewerUiContext | None = None
+_DEFAULT_POSTGRES_ENGINE: Engine | None = None
+_DEFAULT_POSTGRES_ENGINE_LOCK = Lock()
 
 
 @dataclass(frozen=True)
@@ -483,10 +488,9 @@ def format_host(host: object) -> str:
 def _check_source_data_loaded() -> bool:
     """Return True if at least one row exists in hosted_source_derived_records."""
     try:
-        config = load_hosted_database_config()
-        if config.database_url is None:
+        engine = _default_postgres_engine()
+        if engine is None:
             return False
-        engine = create_engine(config.database_url)
         with engine.connect() as conn:
             result = conn.execute(
                 text("SELECT COUNT(*) FROM hosted_source_derived_records")
@@ -1102,9 +1106,80 @@ def route_response(
     reviewer_ui_context: ReviewerUiContext | None = None,
     ccld_record_request_ui_context: CcldRecordRequestUiContext | None = None,
     operator_coverage_context: OperatorCoverageDashboardContext | None = None,
+    _postgres_context_resolved: bool = False,
 ) -> tuple[int, str, bytes]:
     parsed_url = urlparse(path)
     parsed_path = parsed_url.path
+    active_page_data_mode = _active_page_data_mode(page_data_mode)
+    needs_postgres_context = (
+        not _postgres_context_resolved
+        and active_page_data_mode == POSTGRES_PAGE_DATA_MODE
+        and (
+            parsed_path == "/"
+            or parsed_path.startswith(CCLD_UI_PREFIX)
+            or parsed_path.startswith(REVIEWER_UI_PREFIX)
+        )
+    )
+    if needs_postgres_context:
+        active_auth_config = _active_auth_runtime_config(auth_runtime_config)
+        with ExitStack() as request_resources:
+            active_reviewer_context = reviewer_ui_context
+            if (
+                active_reviewer_context is None
+                and ccld_record_request_ui_context is not None
+            ):
+                active_reviewer_context = (
+                    ccld_record_request_ui_context.reviewer_ui_context
+                )
+            if active_reviewer_context is None:
+                active_reviewer_context = request_resources.enter_context(
+                    _default_postgres_reviewer_context()
+                )
+
+            active_ccld_context = ccld_record_request_ui_context
+            if (
+                active_ccld_context is None
+                and active_reviewer_context is not None
+                and (parsed_path == "/" or parsed_path.startswith(CCLD_UI_PREFIX))
+            ):
+                active_ccld_context = ccld_record_request_context_for_reviewer_context(
+                    active_reviewer_context,
+                    retrieval_context=_default_retrieval_context_for_reviewer_context(
+                        active_reviewer_context,
+                        active_auth_config,
+                    ),
+                )
+
+            return route_response(
+                path,
+                method=method,
+                request_body=request_body,
+                request_headers=request_headers,
+                audit_coverage_plan_context=audit_coverage_plan_context,
+                auth_provider_integration_plan_context=(
+                    auth_provider_integration_plan_context
+                ),
+                source_derived_api_context=source_derived_api_context,
+                audit_events_api_context=audit_events_api_context,
+                reviewer_workflow_shell_context=reviewer_workflow_shell_context,
+                reviewer_created_state_api_context=reviewer_created_state_api_context,
+                reset_reload_dry_run_context=reset_reload_dry_run_context,
+                reset_reload_execution_plan_context=reset_reload_execution_plan_context,
+                reset_reload_planning_metadata_api_context=(
+                    reset_reload_planning_metadata_api_context
+                ),
+                auth_runtime_config=active_auth_config,
+                page_data_mode=active_page_data_mode,
+                feedback_context=feedback_context,
+                github_feedback_config=github_feedback_config,
+                github_feedback_client=github_feedback_client,
+                cloudflare_jwks_fetcher=cloudflare_jwks_fetcher,
+                cloudflare_auth_now=cloudflare_auth_now,
+                reviewer_ui_context=active_reviewer_context,
+                ccld_record_request_ui_context=active_ccld_context,
+                operator_coverage_context=operator_coverage_context,
+                _postgres_context_resolved=True,
+            )
     if method == "GET":
         redirect_location = _legacy_compare_facilities_redirect_location(path)
         if redirect_location is not None:
@@ -1114,7 +1189,6 @@ def route_response(
             return 404, "text/plain; charset=utf-8", b"Not found"
         return 200, "image/x-icon", FAVICON_FILE.read_bytes()
     active_auth_config = _active_auth_runtime_config(auth_runtime_config)
-    active_page_data_mode = _active_page_data_mode(page_data_mode)
     if parsed_path == OPERATOR_COVERAGE_PREFIX or parsed_path.startswith(
         f"{OPERATOR_COVERAGE_PREFIX}/"
     ):
@@ -1542,7 +1616,7 @@ def _default_reviewer_context_for_mode(
     # Postgres mode: outer access control (e.g. Cloudflare Access) handles
     # authentication. If a request reaches here, the caller is considered
     # authorized. Full OIDC/session auth is a future milestone.
-    return _default_postgres_reviewer_context()
+    return None
 
 
 def _default_ccld_context_for_mode(
@@ -1635,25 +1709,49 @@ def _default_feedback_context(
     )
 
 
-def _default_postgres_reviewer_context() -> ReviewerUiContext | None:
-    global _DEFAULT_POSTGRES_REVIEWER_UI_CONTEXT
-    if _DEFAULT_POSTGRES_REVIEWER_UI_CONTEXT is not None:
-        return _DEFAULT_POSTGRES_REVIEWER_UI_CONTEXT
+def _default_postgres_engine() -> Engine | None:
+    global _DEFAULT_POSTGRES_ENGINE
+    if _DEFAULT_POSTGRES_ENGINE is not None:
+        return _DEFAULT_POSTGRES_ENGINE
     try:
         database_config = load_hosted_database_config()
     except HostedDatabaseConfigError:
         return None
     if database_config.database_url is None:
         return None
-    engine = create_engine(database_config.database_url)
-    connection = engine.connect()
-    _DEFAULT_POSTGRES_REVIEWER_UI_CONTEXT = reviewer_ui_context_for_connection(
-        connection,
-        actor=local_test_reviewer_actor(scopes=(POSTGRES_REVIEWER_UI_SCOPE,)),
-        scope=POSTGRES_REVIEWER_UI_SCOPE,
-        manage_read_transactions=True,
-    )
-    return _DEFAULT_POSTGRES_REVIEWER_UI_CONTEXT
+    with _DEFAULT_POSTGRES_ENGINE_LOCK:
+        if _DEFAULT_POSTGRES_ENGINE is None:
+            _DEFAULT_POSTGRES_ENGINE = create_engine(database_config.database_url)
+    return _DEFAULT_POSTGRES_ENGINE
+
+
+@contextmanager
+def _default_postgres_reviewer_context() -> Iterator[ReviewerUiContext | None]:
+    engine = _default_postgres_engine()
+    if engine is None:
+        yield None
+        return
+    try:
+        connection = engine.connect()
+    except SQLAlchemyError:
+        yield None
+        return
+    with connection:
+        yield reviewer_ui_context_for_connection(
+            connection,
+            actor=local_test_reviewer_actor(scopes=(POSTGRES_REVIEWER_UI_SCOPE,)),
+            scope=POSTGRES_REVIEWER_UI_SCOPE,
+            manage_read_transactions=True,
+        )
+
+
+def _dispose_default_postgres_engine() -> None:
+    global _DEFAULT_POSTGRES_ENGINE
+    with _DEFAULT_POSTGRES_ENGINE_LOCK:
+        engine = _DEFAULT_POSTGRES_ENGINE
+        _DEFAULT_POSTGRES_ENGINE = None
+    if engine is not None:
+        engine.dispose()
 
 
 def _facility_reference_from_context(
@@ -1973,12 +2071,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--port", type=int, default=8000)
     args = parser.parse_args(argv)
 
-    with create_server(args.host, args.port) as server:
-        host, port = server.server_address[:2]
-        print(f"{APP_NAME} running locally at http://{format_host(host)}:{port}/")
-        print(SCAFFOLD_NOTICE)
-        try:
+    try:
+        with create_server(args.host, args.port) as server:
+            host, port = server.server_address[:2]
+            print(f"{APP_NAME} running locally at http://{format_host(host)}:{port}/")
+            print(SCAFFOLD_NOTICE)
             server.serve_forever()
-        except KeyboardInterrupt:
-            print("Stopping local hosted tester MVP scaffold.")
+    except KeyboardInterrupt:
+        print("Stopping local hosted tester MVP scaffold.")
+    finally:
+        _dispose_default_postgres_engine()
     return 0
