@@ -215,4 +215,4 @@ The repository identity check must treat organization acronyms as standalone ter
 
 ## QNAP release deployment authority
 
-For QNAP deployment, verification, hosted acceptance, or rollback, follow the authoritative [QNAP Release Deployment Runbook](docs/developer/qnap-release-deployment-runbook.md). Do not invent or substitute another deployment procedure.
+For QNAP deployment, verification, hosted acceptance, or rollback, follow the authoritative [QNAP Release Deployment Runbook](docs/developer/qnap-release-deployment-runbook.md). Do not invent or substitute another deployment procedure. Generated QNAP command text must use that runbook's exact connection-identity, sudo-preflight, BusyBox, one-line, PASS/FAIL, and standalone-interactive-SSH safeguards.

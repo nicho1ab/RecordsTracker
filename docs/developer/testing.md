@@ -491,6 +491,13 @@ validation, optional container/PostgreSQL/Alembic checks, route probes, no-secre
 markers, configurable raw storage, mock-success demo guardrails, and absence of
 hard-coded QNAP-only app paths.
 
+QNAP release-runbook documentation tests should protect the authoritative
+operator-command contract: forbidden interactive-shell controls, exact
+operator-supplied connection identity, required sudo and Docker Compose
+preflight, BusyBox-compatible one-line standalone-SSH commands, and explicit
+PASS/FAIL results for numbered mutations and decision gates. They should retain
+the separately governed exceptional PostgreSQL backup-recovery safeguards.
+
 Hosted reviewer-created state read route tests must prove persisted scaffold
 rows are readable only through authenticated, active, role/scope-allowed local/
 test routes with reviewer-state read permission. Tests should cover authorized

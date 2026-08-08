@@ -443,6 +443,11 @@ roll back, restore PostgreSQL, or administer Cloudflare. The user alone performs
 archive-transfer and QNAP commands through the approved local transfer workflow
 and standalone SSH client.
 
+When a task authorizes generating command text for that human-operated path,
+derive it only from the authoritative QNAP release deployment runbook, including
+its exact connection-identity, sudo-preflight, BusyBox, one-line, PASS/FAIL, and
+standalone-interactive-SSH safeguards. This does not authorize QNAP access.
+
 ## Project Sources
 
 Repository `main` is authoritative. ChatGPT Project Sources are static
