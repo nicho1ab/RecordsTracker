@@ -262,7 +262,9 @@ def import_seeded_corpus_artifact(
     *,
     preserve_existing_import_batch: bool = False,
 ) -> SeededCorpusImportResult:
-    flattened_records = flatten_seeded_corpus_records(artifact)
+    flattened_records = _deduplicate_source_record_projections(
+        flatten_seeded_corpus_records(artifact)
+    )
     _upsert_batch(connection, artifact)
 
     inserted = 0
@@ -293,6 +295,30 @@ def import_seeded_corpus_artifact(
         updated_record_count=updated,
         unchanged_record_count=unchanged,
         conflicted_field_count=conflicted,
+    )
+
+
+def _deduplicate_source_record_projections(
+    records: Sequence[SeededSourceDerivedRecord],
+) -> tuple[SeededSourceDerivedRecord, ...]:
+    """Compare and persist only the final projection for each stable identity.
+
+    One preserved facility can contain multiple source-document bundles that
+    project the same facility, complaint, allegation, or event identity. The
+    import contract stores one current row per stable source identity, so
+    replaying every intermediate projection creates representation-only writes
+    before returning to the same final state. Keeping each identity's final
+    occurrence preserves the importer's established final-write result while
+    retaining every uniquely identified source-derived record.
+    """
+
+    last_index_by_source_record_key = {
+        record.source_record_key: index for index, record in enumerate(records)
+    }
+    return tuple(
+        record
+        for index, record in enumerate(records)
+        if last_index_by_source_record_key[record.source_record_key] == index
     )
 
 

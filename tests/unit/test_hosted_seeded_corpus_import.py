@@ -9,6 +9,7 @@ from sqlalchemy import create_engine, func, select
 from sqlalchemy.exc import IntegrityError
 
 from ccld_complaints.hosted_app.seeded_import import (
+    SeededCorpusArtifact,
     flatten_seeded_corpus_records,
     hosted_import_batches,
     hosted_seeded_import_metadata,
@@ -103,6 +104,71 @@ def test_import_seeded_corpus_artifact_is_idempotent_for_same_stable_identity() 
     assert first_result.imported_record_count == second_result.imported_record_count == 7
     assert batch_count == 1
     assert source_count == 7
+
+
+def test_import_deduplicates_repeated_projections_and_detects_final_source_change(
+) -> None:
+    artifact = load_seeded_corpus_artifact(FIXTURE)
+    first_record = copy.deepcopy(dict(artifact.records[0]))
+    second_record = copy.deepcopy(first_record)
+    first_complaint = cast(dict[str, Any], first_record["complaint"])
+    second_complaint = cast(dict[str, Any], second_record["complaint"])
+    first_complaint["finding"] = "Unsubstantiated"
+    second_complaint["finding"] = "Substantiated"
+    repeated = SeededCorpusArtifact(
+        import_batch_id=artifact.import_batch_id,
+        imported_at=artifact.imported_at,
+        source_artifact_identity=artifact.source_artifact_identity,
+        source_pipeline_version=artifact.source_pipeline_version,
+        validation_status=artifact.validation_status,
+        raw_hash_validation_status=artifact.raw_hash_validation_status,
+        record_counts=artifact.record_counts,
+        warnings=artifact.warnings,
+        errors=artifact.errors,
+        records=(first_record, second_record),
+    )
+    changed_record = copy.deepcopy(second_record)
+    changed_complaint = cast(dict[str, Any], changed_record["complaint"])
+    changed_complaint["finding"] = "Inconclusive"
+    changed = SeededCorpusArtifact(
+        import_batch_id=artifact.import_batch_id,
+        imported_at=artifact.imported_at,
+        source_artifact_identity=artifact.source_artifact_identity,
+        source_pipeline_version=artifact.source_pipeline_version,
+        validation_status=artifact.validation_status,
+        raw_hash_validation_status=artifact.raw_hash_validation_status,
+        record_counts=artifact.record_counts,
+        warnings=artifact.warnings,
+        errors=artifact.errors,
+        records=(first_record, changed_record),
+    )
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    hosted_seeded_import_metadata.create_all(engine)
+
+    with engine.begin() as connection:
+        first = import_seeded_corpus_artifact(connection, repeated)
+        equivalent = import_seeded_corpus_artifact(connection, repeated)
+        changed_result = import_seeded_corpus_artifact(connection, changed)
+        complaint = connection.execute(
+            select(hosted_source_derived_records).where(
+                hosted_source_derived_records.c.entity_type == "complaint"
+            )
+        ).mappings().one()
+
+    assert first.inserted_record_count == 7
+    assert first.updated_record_count == 0
+    assert equivalent.updated_record_count == 0
+    assert equivalent.unchanged_record_count == 7
+    assert changed_result.updated_record_count == 1
+    assert changed_result.conflicted_field_count == 1
+    assert complaint["stable_source_id"] == first_complaint["complaint_id"]
+    assert complaint["original_values"]["finding"] == "Inconclusive"
+    assert complaint["source_traceability"]["refresh_conflicts"][-1] == {
+        "field_name": "finding",
+        "previous_value": "Substantiated",
+        "incoming_value": "Inconclusive",
+        "resolution": "incoming_governed_source_precedence",
+    }
 
 
 @pytest.mark.parametrize("entity_type", ("complaint", "facility"))
