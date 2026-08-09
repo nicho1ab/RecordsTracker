@@ -43,7 +43,6 @@ from ccld_complaints.hosted_app.reviewer_ui import (
 )
 from ccld_complaints.hosted_app.seeded_import import (
     SeededCorpusArtifact,
-    hosted_import_batches,
     hosted_seeded_import_metadata,
     hosted_source_derived_records,
     import_seeded_corpus_artifact,
@@ -499,11 +498,7 @@ def test_bounded_checkpoint_resume_finishes_frozen_selection_idempotently(
     ]
 
 
-def test_preserved_artifact_dry_run_is_unchanged_with_multiple_documents(
-) -> None:
-    engine = create_engine("sqlite+pysqlite:///:memory:")
-    hosted_seeded_import_metadata.create_all(engine)
-    hosted_facility_reference_metadata.create_all(engine)
+def test_deduplicate_facility_projections_retains_document_bundles() -> None:
     first_record = _initial_missing_record()
     second_record = _record_for_second_document(_initial_missing_record())
     first_facility = cast(dict[str, Any], first_record["facility"])
@@ -524,47 +519,138 @@ def test_preserved_artifact_dry_run_is_unchanged_with_multiple_documents(
         assert deduplicated[0][retained_key] == first_record[retained_key]
         assert deduplicated[1][retained_key] == second_record[retained_key]
 
+
+def test_preserved_artifact_repeat_is_unchanged_with_duplicate_complaint_projections(
+    tmp_path: Path,
+) -> None:
+    first_record = _initial_missing_record()
+    second_raw_path = tmp_path / "425802141_inx33_changed_finding.html"
+    second_raw_path.write_text(
+        RAW_FIXTURE.read_text(encoding="utf-8").replace(
+            "Finding: Unsubstantiated",
+            "Finding: Substantiated",
+        ),
+        encoding="utf-8",
+    )
+    second_record = _initial_missing_record(
+        raw_fixture=second_raw_path,
+        source_url=SOURCE_URL.replace("inx=1", "inx=33"),
+    )
+    first_document = cast(dict[str, Any], first_record["source_document"])
+    second_document = cast(dict[str, Any], second_record["source_document"])
+    first_complaint = cast(dict[str, Any], first_record["complaint"])
+    second_complaint = cast(dict[str, Any], second_record["complaint"])
+    assert first_document["document_id"] != second_document["document_id"]
+    assert first_complaint["complaint_id"] == second_complaint["complaint_id"]
+    assert first_complaint["finding"] == "Unsubstantiated"
+    assert second_complaint["finding"] == "Substantiated"
+
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    hosted_seeded_import_metadata.create_all(engine)
+    hosted_facility_reference_metadata.create_all(engine)
     artifact = replace(
-        _artifact("multiple-documents", first_record),
+        _artifact("duplicate-complaint-projections", first_record),
         records=(first_record, second_record),
+    )
+    checkpoint = tmp_path / "duplicate-complaint-projections.json"
+    apply_request = CcldHostedBackfillRequest(
+        facility_numbers=("425802141",),
+        operation="canonical-complaint-observations",
+        batch_size=1,
+        apply_changes=True,
+        checkpoint_file=checkpoint,
+        max_facilities=1,
+    )
+    dry_run_request = replace(
+        apply_request,
+        apply_changes=False,
+        checkpoint_file=None,
+        max_facilities=None,
     )
 
     with engine.connect() as connection:
         import_seeded_corpus_artifact(connection, artifact)
+        complaint_key = f"complaint:{first_complaint['complaint_id']}"
+        _insert_reviewer_state_and_audit(connection, complaint_key)
         connection.commit()
+        initial_counts = _source_counts(connection)
+        initial_identities = _stable_identities(connection)
+        initial_source_hashes = _source_hash_snapshot(connection)
+        initial_import_scope = _import_scope_snapshot(connection)
+        initial_reviewer_state = _reviewer_snapshot(connection)
+        initial_source_rows = _source_rows_snapshot(connection)
+        assert initial_counts["facility"] == 1
+        assert initial_counts["source_document"] == 2
+        assert initial_counts["complaint"] == 1
+        assert initial_counts["allegation"] == 1
+        assert initial_counts["event"] == 1
+        assert initial_counts["extraction_audit"] > 1
 
         first_dry_run = run_ccld_hosted_backfill(
             connection,
-            CcldHostedBackfillRequest(
-                facility_numbers=("425802141",),
-                operation="preserved-artifacts",
-                batch_size=1,
-            ),
+            dry_run_request,
             now=datetime(2026, 7, 13, tzinfo=UTC),
         )
-        first_complaint = _entity_values(
+        assert _source_rows_snapshot(connection) == initial_source_rows
+
+        first_apply = run_ccld_hosted_backfill(
+            connection,
+            apply_request,
+            now=datetime(2026, 7, 13, tzinfo=UTC),
+        )
+        connection.commit()
+        after_apply_source_rows = _source_rows_snapshot(connection)
+        applied_complaint = _entity_values(
             connection,
             "complaint",
-            "ccld-complaint-31-CR-20240425094018",
+            str(first_complaint["complaint_id"]),
         )
-        after_dry_run = _backfill_persistence_snapshot(connection)
+        applied_traceability = _entity_traceability(
+            connection,
+            "complaint",
+            str(first_complaint["complaint_id"]),
+        )
+        applied_conflicts = tuple(applied_traceability["refresh_conflicts"])
 
         repeat_dry_run = run_ccld_hosted_backfill(
             connection,
-            CcldHostedBackfillRequest(
-                facility_numbers=("425802141",),
-                operation="preserved-artifacts",
-                batch_size=1,
-            ),
+            dry_run_request,
             now=datetime(2026, 7, 14, tzinfo=UTC),
+        )
+        assert _source_rows_snapshot(connection) == after_apply_source_rows
+
+        second_apply = run_ccld_hosted_backfill(
+            connection,
+            replace(apply_request, restart=True),
+            now=datetime(2026, 7, 14, tzinfo=UTC),
+        )
+        connection.commit()
+        final_traceability = _entity_traceability(
+            connection,
+            "complaint",
+            str(first_complaint["complaint_id"]),
         )
 
         assert first_dry_run.updated == 1
         assert first_dry_run.unchanged == 0
-        assert first_complaint["first_investigation_activity_date"] is None
-        assert repeat_dry_run.updated == 1
-        assert repeat_dry_run.unchanged == 0
-        assert _backfill_persistence_snapshot(connection) == after_dry_run
+        assert first_apply.updated == 1
+        assert first_apply.unchanged == 0
+        assert applied_complaint["first_investigation_activity_date"] == "2025-11-07"
+        assert applied_complaint["finding"] == "Substantiated"
+        assert applied_conflicts
+        assert repeat_dry_run.updated == 0
+        assert repeat_dry_run.unchanged == 1
+        assert repeat_dry_run.conflicted == 0
+        assert second_apply.updated == 0
+        assert second_apply.unchanged == 1
+        assert second_apply.conflicted == 0
+        assert _source_rows_snapshot(connection) == after_apply_source_rows
+        assert tuple(final_traceability["refresh_conflicts"]) == applied_conflicts
+        assert _source_counts(connection) == initial_counts
+        assert _stable_identities(connection) == initial_identities
+        assert _source_hash_snapshot(connection) == initial_source_hashes
+        assert _import_scope_snapshot(connection) == initial_import_scope
+        assert _reviewer_snapshot(connection) == initial_reviewer_state
 
 
 def test_repeated_supported_retrieval_refreshes_existing_rows_without_state_loss(
@@ -644,8 +730,15 @@ def test_repeated_supported_retrieval_refreshes_existing_rows_without_state_loss
     assert len(client.report_calls) == 2
 
 
-def _initial_missing_record() -> dict[str, object]:
-    normalized = _normalized_record()
+def _initial_missing_record(
+    *,
+    raw_fixture: Path = RAW_FIXTURE,
+    source_url: str = SOURCE_URL,
+) -> dict[str, object]:
+    normalized = _normalized_record(
+        raw_fixture=raw_fixture,
+        source_url=source_url,
+    )
     facility = cast(dict[str, Any], normalized["facility"])
     complaint = cast(dict[str, Any], normalized["complaint"])
     facility.update(facility_type=None, county=None, status=None)
@@ -657,14 +750,18 @@ def _initial_missing_record() -> dict[str, object]:
     return normalized
 
 
-def _normalized_record() -> dict[str, object]:
-    content = RAW_FIXTURE.read_bytes()
+def _normalized_record(
+    *,
+    raw_fixture: Path = RAW_FIXTURE,
+    source_url: str = SOURCE_URL,
+) -> dict[str, object]:
+    content = raw_fixture.read_bytes()
     connector = CcldFacilityReportsConnector(facility_number="425802141")
     return connector.normalize(
         connector.extract(
             SourceDocument(
-                source_url=SOURCE_URL,
-                raw_path=RAW_FIXTURE,
+                source_url=source_url,
+                raw_path=raw_fixture,
                 raw_sha256=sha256_bytes(content),
                 retrieved_at="2026-07-13T00:00:00+00:00",
                 content_type="text/html",
@@ -861,24 +958,53 @@ def _traceability_snapshot(connection: Any) -> tuple[Any, ...]:
     )
 
 
-def _backfill_persistence_snapshot(
+def _source_rows_snapshot(connection: Any) -> tuple[tuple[Any, ...], ...]:
+    return tuple(
+        connection.execute(
+            select(hosted_source_derived_records).order_by(
+                hosted_source_derived_records.c.source_record_key
+            )
+        ).tuples()
+    )
+
+
+def _source_hash_snapshot(connection: Any) -> tuple[tuple[str, str], ...]:
+    return tuple(
+        connection.execute(
+            select(
+                hosted_source_derived_records.c.stable_source_id,
+                hosted_source_derived_records.c.raw_sha256,
+            )
+            .where(hosted_source_derived_records.c.entity_type == "source_document")
+            .order_by(hosted_source_derived_records.c.stable_source_id)
+        ).tuples()
+    )
+
+
+def _import_scope_snapshot(connection: Any) -> tuple[tuple[str, str], ...]:
+    return tuple(
+        connection.execute(
+            select(
+                hosted_source_derived_records.c.source_record_key,
+                hosted_source_derived_records.c.import_batch_id,
+            ).order_by(hosted_source_derived_records.c.source_record_key)
+        ).tuples()
+    )
+
+
+def _entity_traceability(
     connection: Any,
-) -> tuple[tuple[tuple[Any, ...], ...], tuple[tuple[Any, ...], ...]]:
-    return (
-        tuple(
-            connection.execute(
-                select(hosted_import_batches).order_by(
-                    hosted_import_batches.c.import_batch_id
-                )
-            ).tuples()
-        ),
-        tuple(
-            connection.execute(
-                select(hosted_source_derived_records).order_by(
-                    hosted_source_derived_records.c.source_record_key
-                )
-            ).tuples()
-        ),
+    entity_type: str,
+    stable_source_id: str,
+) -> Mapping[str, Any]:
+    return cast(
+        Mapping[str, Any],
+        connection.execute(
+            select(hosted_source_derived_records.c.source_traceability).where(
+                hosted_source_derived_records.c.entity_type == entity_type,
+                hosted_source_derived_records.c.stable_source_id == stable_source_id,
+            )
+        ).scalar_one(),
     )
 
 
