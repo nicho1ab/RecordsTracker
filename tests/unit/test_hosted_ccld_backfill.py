@@ -46,6 +46,7 @@ from ccld_complaints.hosted_app.seeded_import import (
     hosted_seeded_import_metadata,
     hosted_source_derived_records,
     import_seeded_corpus_artifact,
+    load_seeded_corpus_artifact,
 )
 from ccld_complaints.utils.hash import sha256_bytes
 
@@ -56,6 +57,9 @@ STRUCTURED_RAW_FIXTURE = Path(
 SOURCE_URL = (
     "https://www.ccld.dss.ca.gov/transparencyapi/api/FacilityReports"
     "?facNum=425802141&inx=1"
+)
+HISTORICAL_SEEDED_CORPUS_FIXTURE = Path(
+    "tests/fixtures/hosted_seeded_corpus/validated_seeded_corpus.json"
 )
 
 
@@ -678,6 +682,115 @@ def test_preserved_artifact_repeat_is_unchanged_with_duplicate_complaint_project
         assert _reviewer_snapshot(connection) == initial_reviewer_state
 
 
+def test_preserved_artifact_repeat_is_unchanged_when_extraction_adds_child(
+    tmp_path: Path,
+) -> None:
+    historical = load_seeded_corpus_artifact(HISTORICAL_SEEDED_CORPUS_FIXTURE)
+    record = copy.deepcopy(dict(historical.records[0]))
+    allegations = cast(list[dict[str, Any]], record["allegations"])
+    assert len(allegations) == 2
+    record["allegations"] = allegations[:1]
+    pre_correction = replace(historical, records=(record,))
+    complaint = cast(dict[str, Any], record["complaint"])
+    complaint_id = str(complaint["complaint_id"])
+    complaint_key = f"complaint:{complaint_id}"
+    source_document = cast(dict[str, Any], record["source_document"])
+    source_document_id = str(source_document["document_id"])
+
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    hosted_seeded_import_metadata.create_all(engine)
+    hosted_facility_reference_metadata.create_all(engine)
+    checkpoint = tmp_path / "new-child-checkpoint.json"
+    apply_request = CcldHostedBackfillRequest(
+        facility_numbers=("157806098",),
+        operation="preserved-artifacts",
+        batch_size=1,
+        apply_changes=True,
+        checkpoint_file=checkpoint,
+        max_facilities=1,
+    )
+    dry_run_request = replace(
+        apply_request,
+        apply_changes=False,
+        checkpoint_file=None,
+        max_facilities=None,
+    )
+
+    with engine.connect() as connection:
+        import_seeded_corpus_artifact(connection, pre_correction)
+        _insert_reviewer_state_and_audit(
+            connection,
+            complaint_key,
+            complaint_stable_id=complaint_id,
+            source_document_id=source_document_id,
+        )
+        connection.commit()
+        initial_identities = _stable_identities(connection)
+        initial_import_scope = dict(_import_scope_snapshot(connection))
+        initial_reviewer_state = _reviewer_snapshot(connection)
+
+        first_dry_run = run_ccld_hosted_backfill(connection, dry_run_request)
+        first_apply = run_ccld_hosted_backfill(connection, apply_request)
+        connection.commit()
+        after_first_apply = _source_rows_snapshot(connection)
+        after_first_identities = _stable_identities(connection)
+        after_first_hashes = _source_hash_snapshot(connection)
+        after_first_import_scope = _import_scope_snapshot(connection)
+        after_first_reviewer_state = _reviewer_snapshot(connection)
+        after_first_conflicts = _entity_traceability(
+            connection,
+            "complaint",
+            complaint_id,
+        ).get("refresh_conflicts", [])
+
+        repeat_dry_run = run_ccld_hosted_backfill(connection, dry_run_request)
+        assert _source_rows_snapshot(connection) == after_first_apply
+
+        equivalent_operation_dry_run = run_ccld_hosted_backfill(
+            connection,
+            replace(
+                dry_run_request,
+                operation="canonical-complaint-observations",
+            ),
+        )
+        assert _source_rows_snapshot(connection) == after_first_apply
+
+        second_apply = run_ccld_hosted_backfill(
+            connection,
+            replace(apply_request, restart=True),
+        )
+        connection.commit()
+
+        final_conflicts = _entity_traceability(
+            connection,
+            "complaint",
+            complaint_id,
+        ).get("refresh_conflicts", [])
+
+        assert first_dry_run.updated == 1
+        assert first_dry_run.unchanged == 0
+        assert first_apply.updated == 1
+        assert first_apply.unchanged == 0
+        assert repeat_dry_run.updated == 0
+        assert repeat_dry_run.unchanged == 1
+        assert equivalent_operation_dry_run.updated == 0
+        assert equivalent_operation_dry_run.unchanged == 1
+        assert second_apply.updated == 0
+        assert second_apply.unchanged == 1
+        assert _source_rows_snapshot(connection) == after_first_apply
+        assert initial_identities < after_first_identities
+        assert _stable_identities(connection) == after_first_identities
+        assert _source_hash_snapshot(connection) == after_first_hashes
+        assert _import_scope_snapshot(connection) == after_first_import_scope
+        assert all(
+            dict(after_first_import_scope)[key] == import_batch_id
+            for key, import_batch_id in initial_import_scope.items()
+        )
+        assert after_first_reviewer_state == initial_reviewer_state
+        assert _reviewer_snapshot(connection) == initial_reviewer_state
+        assert final_conflicts == after_first_conflicts
+
+
 def test_repeated_supported_retrieval_refreshes_existing_rows_without_state_loss(
     tmp_path: Path,
 ) -> None:
@@ -889,7 +1002,13 @@ def _insert_reference(
     )
 
 
-def _insert_reviewer_state_and_audit(connection: Any, complaint_key: str) -> None:
+def _insert_reviewer_state_and_audit(
+    connection: Any,
+    complaint_key: str,
+    *,
+    complaint_stable_id: str = "ccld-complaint-31-CR-20240425094018",
+    source_document_id: str = "ccld-425802141-inx-1",
+) -> None:
     connection.execute(
         hosted_reviewer_created_state.insert().values(
             reviewer_state_id="reviewer-state:governed-refresh",
@@ -925,8 +1044,8 @@ def _insert_reviewer_state_and_audit(connection: Any, complaint_key: str) -> Non
             target_reviewer_state_id="reviewer-state:governed-refresh",
             source_record_key=complaint_key,
             source_entity_type="complaint",
-            source_stable_source_id="ccld-complaint-31-CR-20240425094018",
-            source_document_id="ccld-425802141-inx-1",
+            source_stable_source_id=complaint_stable_id,
+            source_document_id=source_document_id,
             context_metadata={"payload_kind": "reviewer_status_scaffold"},
         )
     )

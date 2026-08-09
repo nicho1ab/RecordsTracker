@@ -93,6 +93,10 @@ returns exit code 1.
 - Repeating apply with unchanged inputs is idempotent. Checkpoint/resume skips
   completed Facility IDs, retries failed IDs without silently dropping them,
   and excludes newly appearing all-existing rows until a deliberate restart.
+- Preserved allegation, event, and repeated extraction-audit identities are
+  reconciled by exact generated identity and deterministic source occurrence
+  before any fallback. A newly extracted sibling therefore cannot reorder mixed
+  historical and current ID formats on the next replay.
 - Only canonical `facility_type`, `county`, and `status` allocations can be
   enriched. The command does not alter reviewer-created notes, status,
   decisions, or continuity state and does not activate ArcGIS, retrieve a live
@@ -109,6 +113,7 @@ precedence and conflicts, missing-value preservation, preserved-artifact and
 canonical-observation dry-run/apply/repeat behavior, explicit apply bounds,
 durable checkpoint/resume behavior, interrupted-run recovery, isolated failures,
 unchanged raw traceability, stable identities/import scope, preserved reviewer-
-created state and audit history, equivalent preserved-operation provenance,
-reviewer-detail visibility, and ordinary retrieval parity. Tests use local
-source-shaped fixtures and doubles only.
+created state and audit history, stable child identity when extraction adds a
+sibling, equivalent preserved-operation provenance, reviewer-detail visibility,
+and ordinary retrieval parity. Tests use local source-shaped fixtures and
+doubles only.
