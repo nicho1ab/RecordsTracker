@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import tempfile
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
@@ -32,6 +33,7 @@ BackfillOperation = Literal[
     "canonical-complaint-observations",
 ]
 _REPO_ROOT = Path(__file__).resolve().parents[3]
+_IDENTITY_ORDINAL_PATTERN = re.compile(r"(?:^|[-:])(\d+)(?=$|[-:])")
 
 
 @dataclass(frozen=True)
@@ -354,13 +356,11 @@ def _preserve_stable_identities(
         ("event", "events", "event_id"),
     ):
         items = cast(list[dict[str, Any]], normalized.get(list_name, []))
-        prior = sorted(
+        prior = tuple(
             (row for row in existing if row["entity_type"] == entity_type),
-            key=lambda row: str(row["stable_source_id"]),
         )
-        for index, item in enumerate(items):
-            if index < len(prior):
-                item[id_field] = prior[index]["stable_source_id"]
+        _preserve_sequence_stable_identities(items, prior, id_field)
+        for item in items:
             item["complaint_id"] = complaint_id
     prior_audits: dict[str, list[Mapping[str, Any]]] = {}
     for row in sorted(
@@ -371,22 +371,75 @@ def _preserve_stable_identities(
             cast(Mapping[str, Any], row["original_values"]).get("field_name")
         )
         prior_audits.setdefault(field_name, []).append(row)
-    audit_indexes: dict[str, int] = {}
-    for audit in cast(list[dict[str, Any]], normalized.get("extraction_audit", [])):
+    audits = cast(list[dict[str, Any]], normalized.get("extraction_audit", []))
+    audits_by_field: dict[str, list[dict[str, Any]]] = {}
+    for audit in audits:
         audit["document_id"] = document_id
         field_name = str(audit.get("field_name") or "")
-        field_index = audit_indexes.get(field_name, 0)
-        prior_for_field = prior_audits.get(field_name, [])
-        prior_audit = (
-            prior_for_field[field_index]
-            if field_index < len(prior_for_field)
-            else None
+        audits_by_field.setdefault(field_name, []).append(audit)
+    for field_name, field_audits in audits_by_field.items():
+        assigned_indexes = _preserve_sequence_stable_identities(
+            field_audits,
+            prior_audits.get(field_name, ()),
+            "audit_id",
         )
-        audit_indexes[field_name] = field_index + 1
-        if prior_audit is not None:
-            audit["audit_id"] = prior_audit["stable_source_id"]
-        elif str(audit.get("audit_id", "")).startswith(old_document_id):
-            audit["audit_id"] = document_id + str(audit["audit_id"])[len(old_document_id) :]
+        for index, audit in enumerate(field_audits):
+            if index in assigned_indexes:
+                continue
+            if str(audit.get("audit_id", "")).startswith(old_document_id):
+                audit["audit_id"] = (
+                    document_id
+                    + str(audit["audit_id"])[len(old_document_id) :]
+                )
+
+
+def _preserve_sequence_stable_identities(
+    items: Sequence[dict[str, Any]],
+    prior_rows: Sequence[Mapping[str, Any]],
+    id_field: str,
+) -> set[int]:
+    """Reuse stable child IDs without letting mixed ID formats reorder siblings."""
+
+    available = {
+        str(row["stable_source_id"]): row
+        for row in prior_rows
+    }
+    assignments: dict[int, str] = {}
+
+    for index, item in enumerate(items):
+        generated_id = str(item.get(id_field) or "")
+        if generated_id in available:
+            assignments[index] = generated_id
+            available.pop(generated_id)
+
+    for index, _item in enumerate(items, start=1):
+        item_index = index - 1
+        if item_index in assignments:
+            continue
+        ordinal_matches = [
+            stable_id
+            for stable_id in sorted(available)
+            if _stable_identity_ordinal(stable_id) == index
+        ]
+        if len(ordinal_matches) == 1:
+            assignments[item_index] = ordinal_matches[0]
+            available.pop(ordinal_matches[0])
+
+    for item_index, stable_id in zip(
+        (index for index in range(len(items)) if index not in assignments),
+        sorted(available),
+        strict=False,
+    ):
+        assignments[item_index] = stable_id
+
+    for index, stable_id in assignments.items():
+        items[index][id_field] = stable_id
+    return set(assignments)
+
+
+def _stable_identity_ordinal(stable_id: str) -> int | None:
+    matches = _IDENTITY_ORDINAL_PATTERN.findall(stable_id)
+    return int(matches[-1]) if matches else None
 
 
 def _related_records(
