@@ -42,8 +42,8 @@ if ($Apply -and $MaxFacilities -eq 0) {
 if ($Apply -and [string]::IsNullOrWhiteSpace($CheckpointFile)) {
     throw "-Apply requires -CheckpointFile for durable recovery."
 }
-if ($Apply -and $Operation -notin @("facility-reference", "canonical-complaint-observations")) {
-    throw "-Apply supports only -Operation facility-reference or canonical-complaint-observations."
+if ($Apply -and $Operation -notin @("facility-reference", "preserved-artifacts", "canonical-complaint-observations")) {
+    throw "-Apply supports only -Operation facility-reference, preserved-artifacts, or canonical-complaint-observations."
 }
 
 $arguments = @("scripts/backfill_hosted_ccld_data.py", "--operation", $Operation, "--batch-size", "$BatchSize")

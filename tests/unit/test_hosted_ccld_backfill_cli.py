@@ -115,7 +115,7 @@ def test_cli_apply_commits_and_failure_exit_is_nonzero(
     assert "failed=1" in capsys.readouterr().out
 
 
-def test_cli_exposes_bounded_historical_complaint_observation_operation(
+def test_cli_exposes_bounded_preserved_artifact_apply_operations(
     monkeypatch: Any,
     capsys: Any,
 ) -> None:
@@ -146,25 +146,35 @@ def test_cli_exposes_bounded_historical_complaint_observation_operation(
 
     monkeypatch.setattr(cli, "run_ccld_hosted_backfill", fake_run)
 
-    assert cli.main(
-        [
-            "--facility-number",
-            "900000001",
-            "--operation",
-            "canonical-complaint-observations",
-            "--apply",
-            "--checkpoint-file",
-            "checkpoint.json",
-            "--max-facilities",
-            "1",
-        ]
-    ) == 0
-    request = captured_request[0]
-    assert request.operation == "canonical-complaint-observations"
-    assert request.apply_changes is True
-    assert request.max_facilities == 1
-    assert request.checkpoint_file == Path("checkpoint.json")
-    assert connection.commits == 1
+    for operation in (
+        "preserved-artifacts",
+        "canonical-complaint-observations",
+    ):
+        assert cli.main(
+            [
+                "--facility-number",
+                "900000001",
+                "--operation",
+                operation,
+                "--apply",
+                "--checkpoint-file",
+                f"{operation}.json",
+                "--max-facilities",
+                "1",
+            ]
+        ) == 0
+
+    assert [request.operation for request in captured_request] == [
+        "preserved-artifacts",
+        "canonical-complaint-observations",
+    ]
+    assert all(request.apply_changes is True for request in captured_request)
+    assert all(request.max_facilities == 1 for request in captured_request)
+    assert [request.checkpoint_file for request in captured_request] == [
+        Path("preserved-artifacts.json"),
+        Path("canonical-complaint-observations.json"),
+    ]
+    assert connection.commits == 2
     assert connection.rollbacks == 0
     assert "intended_updates=1" in capsys.readouterr().out
 
@@ -193,6 +203,11 @@ def test_powershell_wrapper_exposes_bounded_restartable_interface() -> None:
         assert token in wrapper
     assert "Omit both for dry-run" in wrapper
     assert "canonical-complaint-observations" in wrapper
+    assert (
+        '@("facility-reference", "preserved-artifacts", '
+        '"canonical-complaint-observations")'
+        in wrapper
+    )
 
 
 def _load_cli_module() -> ModuleType:
