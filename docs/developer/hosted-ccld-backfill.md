@@ -47,13 +47,19 @@ The PowerShell wrapper defaults to dry-run:
 
 Selectors are mutually exclusive: `-FacilityNumber`,
 `-FacilityNumberFile <path>`, or `-AllExisting`. Operations are `all`,
-`facility-reference`, and `preserved-artifacts`. Use `-BatchSize 1..1000` for
-transaction grouping. Apply additionally requires both an explicit
-`-MaxFacilities 1..1000` per-run bound and `-CheckpointFile <path>`;
-`-Restart` explicitly starts a new checkpoint selection. Writes require
-explicit `-Apply`, and apply accepts only `-Operation facility-reference`.
-The `all` and `preserved-artifacts` operations remain dry-run diagnostics and
-cannot write complaint-derived records.
+`facility-reference`, `preserved-artifacts`, and
+`canonical-complaint-observations`. Use `-BatchSize 1..1000` for transaction
+grouping. Apply additionally requires both an explicit `-MaxFacilities 1..1000`
+per-run bound and `-CheckpointFile <path>`; `-Restart` explicitly starts a new
+checkpoint selection. Writes require explicit `-Apply`, and apply accepts only
+`-Operation facility-reference`, `-Operation preserved-artifacts`, or
+`-Operation canonical-complaint-observations`. The `all` operation remains a
+dry-run diagnostic and cannot write.
+
+`preserved-artifacts` and `canonical-complaint-observations` replay the same
+preserved-document preparation path and therefore use the same preserved-
+artifact provenance identity. Switching between those equivalent operations
+does not create a provenance-only source-derived update.
 
 The Python entry point exposes the equivalent `--facility-number`,
 `--facility-number-file`, `--all-existing`, `--operation`, `--batch-size`,
@@ -73,10 +79,11 @@ returns exit code 1.
   that requests facility-reference enrichment.
 - Preserved-artifact processing requires the stored raw path to be available to
   the runtime and its bytes to match the stored SHA-256.
-- Dry-run uses rollback and is the default. Apply validates reference identity
-  before writes, processes at most the explicit per-run bound, preserves
-  stable source-derived identities and the original import batch, and continues
-  after an isolated facility failure.
+- Dry-run uses rollback and is the default. When facility-reference enrichment
+  is requested, apply validates reference identity before writes. Every apply
+  processes at most the explicit per-run bound, preserves stable source-derived
+  identities and the original import batch, and continues after an isolated
+  facility failure.
 - Version 2 checkpoints freeze the selected public Facility IDs and the exact
   operation/selector, write through an atomic durable replacement, retain safe
   per-Facility-ID failure-attempt counts, and reject mismatched resume requests.
@@ -98,9 +105,10 @@ container configuration, environment file, or mounts.
 ## Validation coverage
 
 Fixture and unit coverage proves exact field/date extraction, approved-source
-precedence and conflicts, missing-value preservation, dry-run/apply/repeat,
-explicit apply bounds, durable checkpoint/resume behavior, interrupted-run
-recovery, isolated failures, unchanged raw
-traceability, stable identities/import scope, preserved reviewer-created state
-and audit history, reviewer-detail visibility, and ordinary retrieval parity.
-Tests use local source-shaped fixtures and doubles only.
+precedence and conflicts, missing-value preservation, preserved-artifact and
+canonical-observation dry-run/apply/repeat behavior, explicit apply bounds,
+durable checkpoint/resume behavior, interrupted-run recovery, isolated failures,
+unchanged raw traceability, stable identities/import scope, preserved reviewer-
+created state and audit history, equivalent preserved-operation provenance,
+reviewer-detail visibility, and ordinary retrieval parity. Tests use local
+source-shaped fixtures and doubles only.

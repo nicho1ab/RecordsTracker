@@ -504,11 +504,13 @@ def _backfill_artifact(
 ) -> SeededCorpusArtifact:
     fingerprint_source = json.dumps(records, sort_keys=True, separators=(",", ":"), default=str)
     fingerprint = sha256_bytes(fingerprint_source.encode("utf-8"))
+    identity_operation = _source_artifact_identity_operation(operation)
     return SeededCorpusArtifact(
         import_batch_id=f"ccld-backfill-{fingerprint[:32]}",
         imported_at=now.replace(microsecond=0).isoformat(),
         source_artifact_identity=(
-            f"preserved-ccld-backfill:{operation}:{facility_number}:{fingerprint[:16]}"
+            f"preserved-ccld-backfill:{identity_operation}:{facility_number}:"
+            f"{fingerprint[:16]}"
         ),
         source_pipeline_version="governed-ccld-hosted-refresh-1.0.0",
         validation_status="validated",
@@ -575,11 +577,13 @@ def _validate_request(connection: Connection, request: CcldHostedBackfillRequest
         raise ValueError("apply requires an explicit max_facilities bound.")
     if request.apply_changes and request.operation not in {
         "facility-reference",
+        "preserved-artifacts",
         "canonical-complaint-observations",
     }:
         raise ValueError(
-            "apply supports only the approved facility-reference or historical "
-            "complaint-observation canonical allocation."
+            "apply supports only the approved facility-reference canonical allocation, "
+            "preserved-artifact normalization, or historical complaint-observation "
+            "canonical allocation."
         )
 
 
@@ -688,6 +692,16 @@ def _uses_preserved_artifacts(operation: BackfillOperation) -> bool:
         "preserved-artifacts",
         "canonical-complaint-observations",
     }
+
+
+def _source_artifact_identity_operation(
+    operation: BackfillOperation,
+) -> BackfillOperation:
+    """Use one provenance identity for equivalent preserved-document replays."""
+
+    if operation == "canonical-complaint-observations":
+        return "preserved-artifacts"
+    return operation
 
 
 def _required_text(value: object, field_name: str) -> str:

@@ -68,6 +68,7 @@ def test_apply_requires_explicit_bound_and_durable_checkpoint(tmp_path: Path) ->
                 connection,
                 CcldHostedBackfillRequest(
                     facility_numbers=("425802141",),
+                    operation="preserved-artifacts",
                     apply_changes=True,
                     max_facilities=1,
                 ),
@@ -77,6 +78,7 @@ def test_apply_requires_explicit_bound_and_durable_checkpoint(tmp_path: Path) ->
                 connection,
                 CcldHostedBackfillRequest(
                     facility_numbers=("425802141",),
+                    operation="preserved-artifacts",
                     apply_changes=True,
                     checkpoint_file=tmp_path / "checkpoint.json",
                 ),
@@ -86,7 +88,6 @@ def test_apply_requires_explicit_bound_and_durable_checkpoint(tmp_path: Path) ->
                 connection,
                 CcldHostedBackfillRequest(
                     facility_numbers=("425802141",),
-                    operation="preserved-artifacts",
                     apply_changes=True,
                     checkpoint_file=tmp_path / "checkpoint.json",
                     max_facilities=1,
@@ -555,7 +556,7 @@ def test_preserved_artifact_repeat_is_unchanged_with_duplicate_complaint_project
     checkpoint = tmp_path / "duplicate-complaint-projections.json"
     apply_request = CcldHostedBackfillRequest(
         facility_numbers=("425802141",),
-        operation="canonical-complaint-observations",
+        operation="preserved-artifacts",
         batch_size=1,
         apply_changes=True,
         checkpoint_file=checkpoint,
@@ -610,11 +611,24 @@ def test_preserved_artifact_repeat_is_unchanged_with_duplicate_complaint_project
             "complaint",
             str(first_complaint["complaint_id"]),
         )
+        applied_artifact_identity = applied_traceability[
+            "source_artifact_identity"
+        ]
         applied_conflicts = tuple(applied_traceability["refresh_conflicts"])
 
         repeat_dry_run = run_ccld_hosted_backfill(
             connection,
             dry_run_request,
+            now=datetime(2026, 7, 14, tzinfo=UTC),
+        )
+        assert _source_rows_snapshot(connection) == after_apply_source_rows
+
+        equivalent_operation_dry_run = run_ccld_hosted_backfill(
+            connection,
+            replace(
+                dry_run_request,
+                operation="canonical-complaint-observations",
+            ),
             now=datetime(2026, 7, 14, tzinfo=UTC),
         )
         assert _source_rows_snapshot(connection) == after_apply_source_rows
@@ -637,14 +651,25 @@ def test_preserved_artifact_repeat_is_unchanged_with_duplicate_complaint_project
         assert first_apply.unchanged == 0
         assert applied_complaint["first_investigation_activity_date"] == "2025-11-07"
         assert applied_complaint["finding"] == "Substantiated"
+        assert isinstance(applied_artifact_identity, str)
+        assert applied_artifact_identity.startswith(
+            "preserved-ccld-backfill:preserved-artifacts:425802141:"
+        )
         assert applied_conflicts
         assert repeat_dry_run.updated == 0
         assert repeat_dry_run.unchanged == 1
         assert repeat_dry_run.conflicted == 0
+        assert equivalent_operation_dry_run.updated == 0
+        assert equivalent_operation_dry_run.unchanged == 1
+        assert equivalent_operation_dry_run.conflicted == 0
         assert second_apply.updated == 0
         assert second_apply.unchanged == 1
         assert second_apply.conflicted == 0
         assert _source_rows_snapshot(connection) == after_apply_source_rows
+        assert (
+            final_traceability["source_artifact_identity"]
+            == applied_artifact_identity
+        )
         assert tuple(final_traceability["refresh_conflicts"]) == applied_conflicts
         assert _source_counts(connection) == initial_counts
         assert _stable_identities(connection) == initial_identities
@@ -972,11 +997,10 @@ def _source_hash_snapshot(connection: Any) -> tuple[tuple[str, str], ...]:
     return tuple(
         connection.execute(
             select(
-                hosted_source_derived_records.c.stable_source_id,
+                hosted_source_derived_records.c.source_record_key,
                 hosted_source_derived_records.c.raw_sha256,
             )
-            .where(hosted_source_derived_records.c.entity_type == "source_document")
-            .order_by(hosted_source_derived_records.c.stable_source_id)
+            .order_by(hosted_source_derived_records.c.source_record_key)
         ).tuples()
     )
 
