@@ -20,6 +20,7 @@ param(
     [switch]$Restart,
     [switch]$Apply,
     [switch]$DryRun,
+    [switch]$DiagnoseDifferences,
     [switch]$QnapContainer,
     [string]$ComposeFile = "docker-compose.qnap.yml",
     [string]$EnvFile = ".env"
@@ -32,6 +33,15 @@ if ($selectionCount -ne 1) {
 }
 if ($Apply -and $DryRun) {
     throw "Use either -Apply or -DryRun, not both. Omit both for dry-run."
+}
+if ($DiagnoseDifferences -and ($Apply -or $AllExisting)) {
+    throw "-DiagnoseDifferences requires explicit Facility IDs and cannot apply."
+}
+if ($DiagnoseDifferences -and $Operation -ne "preserved-artifacts") {
+    throw "-DiagnoseDifferences supports only -Operation preserved-artifacts."
+}
+if ($DiagnoseDifferences -and ($MaxFacilities -gt 0 -or $CheckpointFile -or $Restart)) {
+    throw "-DiagnoseDifferences does not accept apply or checkpoint options."
 }
 if ($MaxFacilities -lt 0 -or $MaxFacilities -gt 1000) {
     throw "-MaxFacilities must be between 1 and 1000 when provided."
@@ -65,7 +75,10 @@ if (-not [string]::IsNullOrWhiteSpace($CheckpointFile)) {
 if ($Restart) {
     $arguments += "--restart"
 }
-if ($Apply) {
+if ($DiagnoseDifferences) {
+    $arguments += "--diagnose-differences"
+}
+elseif ($Apply) {
     $arguments += "--apply"
 }
 else {

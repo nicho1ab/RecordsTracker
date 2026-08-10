@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
+from dataclasses import asdict
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -11,6 +13,7 @@ if str(SRC_PATH) not in sys.path:
 
 from ccld_complaints.hosted_app.ccld_backfill import (  # noqa: E402
     CcldHostedBackfillRequest,
+    diagnose_ccld_preserved_artifact_differences,
     run_ccld_hosted_backfill,
 )
 from ccld_complaints.hosted_app.ccld_source_refresh import (  # noqa: E402
@@ -54,6 +57,7 @@ def build_parser() -> argparse.ArgumentParser:
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--dry-run", action="store_true")
     mode.add_argument("--apply", action="store_true")
+    mode.add_argument("--diagnose-differences", action="store_true")
     return parser
 
 
@@ -61,6 +65,27 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
         facility_numbers = _facility_numbers(args)
+        if args.diagnose_differences:
+            _validate_diagnostic_arguments(args, facility_numbers)
+            with open_configured_facility_reference_connection() as connection:
+                differences = diagnose_ccld_preserved_artifact_differences(
+                    connection,
+                    facility_numbers,
+                )
+                connection.rollback()
+            print(
+                json.dumps(
+                    {
+                        "schema_version": "recordstracker.ccld-backfill-differences.v1",
+                        "facility_count": len(facility_numbers),
+                        "difference_count": len(differences),
+                        "differences": [asdict(row) for row in differences],
+                    },
+                    sort_keys=True,
+                    separators=(",", ":"),
+                )
+            )
+            return 0
         request = CcldHostedBackfillRequest(
             facility_numbers=facility_numbers,
             all_existing=bool(args.all_existing),
@@ -126,6 +151,18 @@ def _facility_numbers(args: argparse.Namespace) -> tuple[str, ...]:
     return normalized
 
 
+def _validate_diagnostic_arguments(
+    args: argparse.Namespace,
+    facility_numbers: tuple[str, ...],
+) -> None:
+    if args.all_existing or not facility_numbers:
+        raise ValueError("Difference diagnosis requires explicit Facility IDs or a file.")
+    if args.operation != "preserved-artifacts":
+        raise ValueError("Difference diagnosis supports only preserved-artifacts.")
+    if args.max_facilities is not None or args.checkpoint_file or args.restart:
+        raise ValueError("Difference diagnosis does not accept apply or checkpoint options.")
+
+
 def _safe_error(error: Exception) -> str:
     message = str(error)
     if DATABASE_URL_ENV in message:
@@ -143,6 +180,8 @@ def _safe_error(error: Exception) -> str:
         "checkpoint",
         "Select either",
         "Unsupported CCLD hosted backfill operation",
+        "Difference diagnosis",
+        "Diagnostic",
     )
     if any(fragment in message for fragment in allowed_fragments):
         return message

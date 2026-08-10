@@ -21,6 +21,10 @@ from ccld_complaints.hosted_app.ccld_source_refresh import (
 )
 from ccld_complaints.hosted_app.seeded_import import (
     SeededCorpusArtifact,
+    SeededSourceDerivedRecord,
+    _deduplicate_source_record_projections,
+    _prepared_source_record_values,
+    flatten_seeded_corpus_records,
     hosted_source_derived_records,
     import_seeded_corpus_artifact,
 )
@@ -62,6 +66,16 @@ class CcldHostedBackfillResult:
     candidates: int = 0
     excluded: int = 0
     intended_updates: int = 0
+
+
+@dataclass(frozen=True)
+class CcldHostedBackfillDifference:
+    facility_number: str
+    entity_type: str
+    source_record_key: str
+    differing_fields: tuple[str, ...]
+    persisted: Mapping[str, object]
+    prepared: Mapping[str, object]
 
 
 @dataclass
@@ -196,6 +210,183 @@ def run_ccld_hosted_backfill(
         warnings=counts["warnings"],
         failed=counts["failed"],
     )
+
+
+def diagnose_ccld_preserved_artifact_differences(
+    connection: Connection,
+    facility_numbers: Sequence[str],
+) -> tuple[CcldHostedBackfillDifference, ...]:
+    """Compare replay values with persisted rows using SELECT-only preparation."""
+
+    requested = tuple(dict.fromkeys(str(value).strip() for value in facility_numbers))
+    if not requested or any(not value.isdigit() for value in requested):
+        raise ValueError("Diagnostic Facility IDs must be an explicit digit-only selection.")
+    request = CcldHostedBackfillRequest(
+        facility_numbers=requested,
+        operation="preserved-artifacts",
+        apply_changes=False,
+    )
+    _validate_request(connection, request)
+    selected, _candidate_count, selection_conflicts, missing_count = _selected_facilities(
+        connection,
+        request,
+    )
+    if selection_conflicts or missing_count or len(selected) != len(requested):
+        raise ValueError(
+            "Diagnostic selection must resolve every explicit Facility ID exactly once."
+        )
+
+    differences: list[CcldHostedBackfillDifference] = []
+    for facility_number, facility_row in selected:
+        source_documents = _source_documents_for_facility(
+            connection,
+            str(facility_row["facility_id"]),
+        )
+        records: list[Mapping[str, Any]] = []
+        for source_document_row in source_documents:
+            normalized = _reprocess_preserved_document(
+                connection,
+                facility_number,
+                facility_row,
+                source_document_row,
+            )
+            if normalized is None:
+                raise ValueError(
+                    "Diagnostic selection contains an unsupported preserved source document."
+                )
+            records.append(normalized)
+        if not records:
+            raise ValueError("Diagnostic selection has no preserved CCLD source documents.")
+        prepared = prepare_ccld_hosted_source_records(
+            connection,
+            records,
+            include_facility_reference=False,
+        )
+        artifact = _backfill_artifact(
+            facility_number,
+            _deduplicate_facility_projections(prepared.records),
+            operation="preserved-artifacts",
+            now=datetime(2000, 1, 1, tzinfo=UTC),
+        )
+        flattened = _deduplicate_source_record_projections(
+            flatten_seeded_corpus_records(artifact)
+        )
+        for record in flattened:
+            difference = _source_record_difference(
+                connection,
+                facility_number,
+                record,
+            )
+            if difference is not None:
+                differences.append(difference)
+    return tuple(
+        sorted(
+            differences,
+            key=lambda row: (
+                row.facility_number,
+                row.entity_type,
+                row.source_record_key,
+            ),
+        )
+    )
+
+
+def _source_record_difference(
+    connection: Connection,
+    facility_number: str,
+    record: SeededSourceDerivedRecord,
+) -> CcldHostedBackfillDifference | None:
+    existing = cast(
+        Mapping[str, Any] | None,
+        connection.execute(
+            select(hosted_source_derived_records).where(
+                hosted_source_derived_records.c.source_record_key
+                == record.source_record_key
+            )
+        ).mappings().first(),
+    )
+    values, _conflicts = _prepared_source_record_values(
+        connection,
+        record,
+        existing,
+        preserve_existing_import_batch=True,
+    )
+    if existing is None:
+        return CcldHostedBackfillDifference(
+            facility_number=facility_number,
+            entity_type=record.entity_type,
+            source_record_key=record.source_record_key,
+            differing_fields=("persisted_record",),
+            persisted={"persisted_record": {"type": "missing"}},
+            prepared={"persisted_record": _diagnostic_value_summary(values)},
+        )
+    fields, persisted, prepared = _differing_source_record_fields(existing, values)
+    if not fields:
+        return None
+    return CcldHostedBackfillDifference(
+        facility_number=facility_number,
+        entity_type=record.entity_type,
+        source_record_key=record.source_record_key,
+        differing_fields=fields,
+        persisted=persisted,
+        prepared=prepared,
+    )
+
+
+def _differing_source_record_fields(
+    existing: Mapping[str, Any],
+    values: Mapping[str, Any],
+) -> tuple[tuple[str, ...], dict[str, object], dict[str, object]]:
+    fields: list[str] = []
+    persisted: dict[str, object] = {}
+    prepared: dict[str, object] = {}
+    for key in sorted(values):
+        before = existing.get(key)
+        after = values[key]
+        if before == after:
+            continue
+        if key in {"original_values", "source_traceability"} and isinstance(
+            before, Mapping
+        ) and isinstance(after, Mapping):
+            nested_keys = sorted(set(before) | set(after))
+            for nested_key in nested_keys:
+                nested_before = before.get(nested_key)
+                nested_after = after.get(nested_key)
+                if nested_before == nested_after:
+                    continue
+                path = f"{key}.{nested_key}"
+                fields.append(path)
+                persisted[path] = _diagnostic_value_summary(nested_before)
+                prepared[path] = _diagnostic_value_summary(nested_after)
+            continue
+        fields.append(key)
+        persisted[key] = _diagnostic_value_summary(before)
+        prepared[key] = _diagnostic_value_summary(after)
+    return tuple(fields), persisted, prepared
+
+
+def _diagnostic_value_summary(value: object) -> Mapping[str, object]:
+    if value is None:
+        return {"type": "null"}
+    if isinstance(value, bool):
+        return {"type": "boolean", "value": value}
+    if isinstance(value, int | float):
+        return {"type": "number", "value": value}
+    if isinstance(value, str):
+        encoded = value.encode("utf-8")
+        return {
+            "type": "string",
+            "length": len(value),
+            "sha256": sha256_bytes(encoded),
+        }
+    canonical = json.dumps(value, sort_keys=True, separators=(",", ":"), default=str)
+    summary: dict[str, object] = {
+        "type": "mapping" if isinstance(value, Mapping) else "sequence",
+        "sha256": sha256_bytes(canonical.encode("utf-8")),
+    }
+    if isinstance(value, Mapping | Sequence) and not isinstance(value, str | bytes):
+        summary["count"] = len(value)
+    return summary
 
 
 def _process_facility(

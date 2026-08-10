@@ -3,7 +3,7 @@ from __future__ import annotations
 import copy
 import json
 from collections.abc import Mapping
-from dataclasses import replace
+from dataclasses import asdict, replace
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, cast
@@ -11,6 +11,7 @@ from urllib.parse import quote
 
 import pytest
 from sqlalchemy import create_engine, func, select
+from sqlalchemy import event as sqlalchemy_event
 
 from ccld_complaints.connectors.base import SourceDocument
 from ccld_complaints.connectors.ccld.facility_reports import CcldFacilityReportsConnector
@@ -20,6 +21,7 @@ from ccld_complaints.hosted_app.auth import HostedAccessScope
 from ccld_complaints.hosted_app.ccld_backfill import (
     CcldHostedBackfillRequest,
     _deduplicate_facility_projections,
+    diagnose_ccld_preserved_artifact_differences,
     run_ccld_hosted_backfill,
 )
 from ccld_complaints.hosted_app.ccld_retrieval_jobs import (
@@ -789,6 +791,73 @@ def test_preserved_artifact_repeat_is_unchanged_when_extraction_adds_child(
         assert after_first_reviewer_state == initial_reviewer_state
         assert _reviewer_snapshot(connection) == initial_reviewer_state
         assert final_conflicts == after_first_conflicts
+
+
+def test_preserved_artifact_difference_diagnostic_is_select_only_and_redacted() -> None:
+    historical = load_seeded_corpus_artifact(HISTORICAL_SEEDED_CORPUS_FIXTURE)
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    hosted_seeded_import_metadata.create_all(engine)
+    hosted_facility_reference_metadata.create_all(engine)
+
+    with engine.connect() as connection:
+        import_seeded_corpus_artifact(connection, historical)
+        connection.commit()
+
+    statements: list[str] = []
+
+    def capture_statement(
+        _connection: Any,
+        _cursor: Any,
+        statement: str,
+        _parameters: Any,
+        _context: Any,
+        _executemany: Any,
+    ) -> None:
+        statements.append(statement)
+
+    sqlalchemy_event.listen(engine, "before_cursor_execute", capture_statement)
+    try:
+        with engine.connect() as connection:
+            differences = diagnose_ccld_preserved_artifact_differences(
+                connection,
+                ("157806098",),
+            )
+    finally:
+        sqlalchemy_event.remove(engine, "before_cursor_execute", capture_statement)
+
+    assert differences
+    assert all(row.facility_number == "157806098" for row in differences)
+    assert any(
+        "source_traceability.source_artifact_identity" in row.differing_fields
+        for row in differences
+    )
+    serialized = json.dumps([asdict(row) for row in differences], sort_keys=True)
+    assert "Facility clients are being mistreated while in care." not in serialized
+    assert '"sha256"' in serialized
+    assert statements
+    assert not any(
+        statement.lstrip().upper().startswith(("INSERT", "UPDATE", "DELETE"))
+        for statement in statements
+    )
+    assert not any(
+        table_name in statement
+        for statement in statements
+        for table_name in ("hosted_reviewer_created_state", "hosted_audit_events")
+    )
+
+
+def test_preserved_artifact_difference_diagnostic_fails_closed_on_selection() -> None:
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    hosted_seeded_import_metadata.create_all(engine)
+    hosted_facility_reference_metadata.create_all(engine)
+    with engine.connect() as connection:
+        with pytest.raises(ValueError, match="explicit digit-only"):
+            diagnose_ccld_preserved_artifact_differences(connection, ())
+        with pytest.raises(ValueError, match="exactly once"):
+            diagnose_ccld_preserved_artifact_differences(
+                connection,
+                ("157806098",),
+            )
 
 
 def test_repeated_supported_retrieval_refreshes_existing_rows_without_state_loss(
