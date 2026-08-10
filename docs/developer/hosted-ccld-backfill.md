@@ -125,6 +125,14 @@ code 2; an isolated facility failure or safe runtime failure returns exit code
   unmatched allegations, events, and repeated extraction-audit rows. A newly
   extracted allegation receives a collision-free identity and therefore cannot
   shift the stable identities or values of unchanged siblings.
+- Preserved extraction-audit reconciliation prefers identities already scoped
+  to the current source document. When a field has no current-document history,
+  it may reuse a legacy non-document-scoped audit identity from the same
+  facility; this preserves historical multi-document projections that the
+  importer stores under one final stable key. Audit semantic values match before
+  exact identity, ordinal, and deterministic fallback. A genuinely new audit
+  retains a collision-free document-scoped identity, and changed or removed
+  governed audit evidence still prevents equivalence.
 - Before a write decision, preserved-artifact provenance is stabilized only when
   the complete final source-record key set and every importer-visible governed
   value other than artifact identity exactly match persisted state. Superseded
@@ -149,7 +157,8 @@ durable checkpoint/resume behavior, interrupted-run recovery, isolated failures,
 unchanged raw traceability, stable identities/import scope, preserved reviewer-
 created state and audit history, stable child identity when extraction adds a
 sibling, semantic allegation identity when a sibling is inserted, final-
-projection artifact identity with duplicated document projections, equivalent
+projection artifact identity with duplicated document projections, historical
+shared extraction-audit identity replay across multiple documents, equivalent
 preserved-operation provenance, reviewer-detail visibility, SELECT-only redacted
 difference diagnosis, and ordinary retrieval parity. Tests use local source-
 shaped fixtures and doubles only.

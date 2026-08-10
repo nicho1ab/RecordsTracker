@@ -570,9 +570,10 @@ def _preserve_stable_identities(
         for item in items:
             item["complaint_id"] = complaint_id
     prior_audits: dict[str, list[Mapping[str, Any]]] = {}
-    for row in sorted(
-        (row for row in existing if row["entity_type"] == "extraction_audit"),
-        key=lambda row: str(row["stable_source_id"]),
+    for row in _prior_extraction_audits(
+        connection,
+        facility_id,
+        document_id,
     ):
         field_name = str(
             cast(Mapping[str, Any], row["original_values"]).get("field_name")
@@ -589,6 +590,16 @@ def _preserve_stable_identities(
             field_audits,
             prior_audits.get(field_name, ()),
             "audit_id",
+            semantic_fields=(
+                "field_name",
+                "extraction_method",
+                "extractor_version",
+                "extracted_value",
+                "confidence",
+                "source_text",
+                "source_section",
+                "warning",
+            ),
         )
         for index, audit in enumerate(field_audits):
             if index in assigned_indexes:
@@ -733,6 +744,51 @@ def _related_records(
             )
         ).mappings()
     )
+
+
+def _prior_extraction_audits(
+    connection: Connection,
+    facility_id: str,
+    source_document_id: str,
+) -> tuple[Mapping[str, Any], ...]:
+    rows = tuple(
+        dict(row)
+        for row in connection.execute(
+            select(hosted_source_derived_records).where(
+                hosted_source_derived_records.c.entity_type == "extraction_audit",
+                hosted_source_derived_records.c.facility_id == facility_id,
+            )
+        ).mappings()
+    )
+    current_document_fields = {
+        str(cast(Mapping[str, Any], row["original_values"]).get("field_name") or "")
+        for row in rows
+        if row["source_document_id"] == source_document_id
+    }
+    return tuple(
+        sorted(
+            (
+                row
+                for row in rows
+                if row["source_document_id"] == source_document_id
+                or (
+                    not _audit_identity_is_document_scoped(row)
+                    and str(cast(Mapping[str, Any], row["original_values"]).get("field_name") or "")
+                    not in current_document_fields
+                )
+            ),
+            key=lambda row: str(row["stable_source_id"]),
+        )
+    )
+
+
+def _audit_identity_is_document_scoped(row: Mapping[str, Any]) -> bool:
+    values = cast(Mapping[str, Any], row["original_values"])
+    document_id = _optional_text(values.get("document_id"))
+    if document_id is None:
+        return False
+    stable_id = str(row["stable_source_id"])
+    return stable_id.startswith(f"{document_id}-") or stable_id.startswith(f"{document_id}:")
 
 
 def _source_documents_for_facility(
