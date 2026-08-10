@@ -684,6 +684,244 @@ def test_preserved_artifact_repeat_is_unchanged_with_duplicate_complaint_project
         assert _reviewer_snapshot(connection) == initial_reviewer_state
 
 
+def test_preserved_artifact_identity_uses_final_persisted_projections() -> None:
+    first_record = _initial_missing_record()
+    second_record = _initial_missing_record(
+        source_url=SOURCE_URL.replace("inx=1", "inx=33"),
+    )
+    first_document = cast(dict[str, Any], first_record["source_document"])
+    second_document = cast(dict[str, Any], second_record["source_document"])
+    first_complaint = cast(dict[str, Any], first_record["complaint"])
+    second_complaint = cast(dict[str, Any], second_record["complaint"])
+    assert first_document["document_id"] != second_document["document_id"]
+    assert first_complaint["complaint_id"] == second_complaint["complaint_id"]
+
+    baseline_records = _deduplicate_facility_projections((first_record, second_record))
+    intermediate_only_change = copy.deepcopy(first_record)
+    intermediate_allegation = cast(
+        list[dict[str, Any]],
+        intermediate_only_change["allegations"],
+    )[0]
+    intermediate_allegation["allegation_text"] = "Superseded duplicate allegation projection."
+    equivalent_records = _deduplicate_facility_projections(
+        (intermediate_only_change, second_record)
+    )
+    genuine_change = copy.deepcopy(second_record)
+    final_allegation = cast(list[dict[str, Any]], genuine_change["allegations"])[0]
+    final_allegation["allegation_text"] = "Genuinely changed final allegation."
+    changed_records = _deduplicate_facility_projections((first_record, genuine_change))
+
+    baseline = ccld_backfill._backfill_artifact(
+        "425802141",
+        baseline_records,
+        operation="preserved-artifacts",
+        now=datetime(2026, 8, 9, tzinfo=UTC),
+    )
+    equivalent = ccld_backfill._backfill_artifact(
+        "425802141",
+        equivalent_records,
+        operation="preserved-artifacts",
+        now=datetime(2026, 8, 10, tzinfo=UTC),
+    )
+    changed = ccld_backfill._backfill_artifact(
+        "425802141",
+        changed_records,
+        operation="preserved-artifacts",
+        now=datetime(2026, 8, 10, tzinfo=UTC),
+    )
+
+    assert equivalent.source_artifact_identity != baseline.source_artifact_identity
+    assert equivalent.import_batch_id != baseline.import_batch_id
+    assert changed.source_artifact_identity != baseline.source_artifact_identity
+    assert changed.import_batch_id != baseline.import_batch_id
+
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    hosted_seeded_import_metadata.create_all(engine)
+    with engine.connect() as connection:
+        import_seeded_corpus_artifact(connection, baseline)
+        connection.commit()
+        baseline_rows = _source_rows_snapshot(connection)
+
+        equivalent = ccld_backfill._stabilize_equivalent_artifact_provenance(
+            connection,
+            equivalent,
+        )
+        assert equivalent.source_artifact_identity == baseline.source_artifact_identity
+        assert equivalent.import_batch_id == baseline.import_batch_id
+        equivalent_result = import_seeded_corpus_artifact(
+            connection,
+            equivalent,
+            preserve_existing_import_batch=True,
+        )
+        assert equivalent_result.updated_record_count == 0
+        assert equivalent_result.inserted_record_count == 0
+        assert _source_rows_snapshot(connection) == baseline_rows
+
+        changed = ccld_backfill._stabilize_equivalent_artifact_provenance(
+            connection,
+            changed,
+        )
+        assert changed.source_artifact_identity != baseline.source_artifact_identity
+        changed_result = import_seeded_corpus_artifact(
+            connection,
+            changed,
+            preserve_existing_import_batch=True,
+        )
+        assert changed_result.updated_record_count > 0
+
+
+def test_preserved_artifact_insertion_keeps_allegation_semantic_siblings(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    historical = load_seeded_corpus_artifact(HISTORICAL_SEEDED_CORPUS_FIXTURE)
+    historical_record = copy.deepcopy(dict(historical.records[0]))
+    historical_allegations = cast(
+        list[dict[str, Any]],
+        historical_record["allegations"],
+    )
+    complaint = cast(dict[str, Any], historical_record["complaint"])
+    complaint_id = str(complaint["complaint_id"])
+    complaint_key = f"complaint:{complaint_id}"
+    source_document = cast(dict[str, Any], historical_record["source_document"])
+    source_document_id = str(source_document["document_id"])
+    allegation_prefix = str(historical_allegations[0]["allegation_id"]).rsplit(":", 1)[0]
+    for ordinal, label in (
+        (3, "Third historical allegation."),
+        (4, "Fourth historical allegation."),
+    ):
+        sibling = copy.deepcopy(historical_allegations[-1])
+        sibling["allegation_id"] = f"{allegation_prefix}:{ordinal}"
+        sibling["allegation_text"] = label
+        historical_allegations.append(sibling)
+    historical_artifact = replace(historical, records=(historical_record,))
+    original_texts = [str(allegation["allegation_text"]) for allegation in historical_allegations]
+    changed_text = False
+
+    def fresh_normalized_record() -> dict[str, object]:
+        record = copy.deepcopy(historical_record)
+        prior = cast(list[dict[str, Any]], record["allegations"])
+        inserted = copy.deepcopy(prior[0])
+        inserted["allegation_text"] = "Newly inserted second allegation."
+        allegations = [prior[0], inserted, *prior[1:]]
+        for ordinal, allegation in enumerate(allegations, start=1):
+            allegation["allegation_id"] = f"{allegation_prefix}:{ordinal}"
+        if changed_text:
+            allegations[2]["allegation_text"] = "Corrected second historical allegation."
+        record["allegations"] = allegations
+        return record
+
+    def reprocess_preserved_document(
+        connection: Any,
+        _facility_number: str,
+        facility_row: Mapping[str, Any],
+        source_document_row: Mapping[str, Any],
+    ) -> Mapping[str, Any]:
+        normalized = fresh_normalized_record()
+        ccld_backfill._preserve_stable_identities(
+            connection,
+            normalized,
+            facility_row,
+            source_document_row,
+        )
+        return normalized
+
+    monkeypatch.setattr(
+        ccld_backfill,
+        "_reprocess_preserved_document",
+        reprocess_preserved_document,
+    )
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    hosted_seeded_import_metadata.create_all(engine)
+    hosted_facility_reference_metadata.create_all(engine)
+    apply_request = CcldHostedBackfillRequest(
+        facility_numbers=("157806098",),
+        operation="preserved-artifacts",
+        batch_size=1,
+        apply_changes=True,
+        checkpoint_file=tmp_path / "semantic-sibling-insertion.json",
+        max_facilities=1,
+    )
+    dry_run_request = replace(
+        apply_request,
+        apply_changes=False,
+        checkpoint_file=None,
+        max_facilities=None,
+    )
+
+    with engine.connect() as connection:
+        import_seeded_corpus_artifact(connection, historical_artifact)
+        _insert_reviewer_state_and_audit(
+            connection,
+            complaint_key,
+            complaint_stable_id=complaint_id,
+            source_document_id=source_document_id,
+        )
+        connection.commit()
+        initial_hashes = _source_hash_snapshot(connection)
+        initial_import_scope = _import_scope_snapshot(connection)
+        initial_reviewer_state = _reviewer_snapshot(connection)
+
+        first_dry_run = run_ccld_hosted_backfill(connection, dry_run_request)
+        first_apply = run_ccld_hosted_backfill(connection, apply_request)
+        connection.commit()
+        after_apply_rows = _source_rows_snapshot(connection)
+        after_apply_hashes = _source_hash_snapshot(connection)
+        after_apply_import_scope = _import_scope_snapshot(connection)
+        allegation_rows = tuple(
+            dict(row)
+            for row in connection.execute(
+                select(hosted_source_derived_records).where(
+                    hosted_source_derived_records.c.entity_type == "allegation"
+                )
+            ).mappings()
+        )
+        stable_id_by_text = {
+            str(cast(Mapping[str, Any], row["original_values"])["allegation_text"]): str(
+                row["stable_source_id"]
+            )
+            for row in allegation_rows
+        }
+
+        repeat_dry_run = run_ccld_hosted_backfill(connection, dry_run_request)
+        equivalent_operation = run_ccld_hosted_backfill(
+            connection,
+            replace(dry_run_request, operation="canonical-complaint-observations"),
+        )
+        second_apply = run_ccld_hosted_backfill(
+            connection,
+            replace(apply_request, restart=True),
+        )
+        connection.commit()
+
+        changed_text = True
+        genuine_change = run_ccld_hosted_backfill(connection, dry_run_request)
+
+        assert first_dry_run.updated == 1
+        assert first_apply.updated == 1
+        assert repeat_dry_run.updated == 0
+        assert repeat_dry_run.unchanged == 1
+        assert equivalent_operation.updated == 0
+        assert equivalent_operation.unchanged == 1
+        assert second_apply.updated == 0
+        assert second_apply.unchanged == 1
+        assert genuine_change.updated == 1
+        assert genuine_change.unchanged == 0
+        assert len(allegation_rows) == 5
+        for ordinal, text in enumerate(original_texts, start=1):
+            assert stable_id_by_text[text] == f"{allegation_prefix}:{ordinal}"
+        assert stable_id_by_text["Newly inserted second allegation."] == f"{allegation_prefix}:5"
+        assert _source_rows_snapshot(connection) == after_apply_rows
+        assert _source_hash_snapshot(connection) == after_apply_hashes
+        assert all(dict(after_apply_hashes)[key] == raw_hash for key, raw_hash in initial_hashes)
+        assert _import_scope_snapshot(connection) == after_apply_import_scope
+        assert all(
+            dict(after_apply_import_scope)[key] == import_batch_id
+            for key, import_batch_id in initial_import_scope
+        )
+        assert _reviewer_snapshot(connection) == initial_reviewer_state
+
+
 def test_preserved_artifact_repeat_is_unchanged_when_extraction_adds_child(
     tmp_path: Path,
 ) -> None:

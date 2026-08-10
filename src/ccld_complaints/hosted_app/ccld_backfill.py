@@ -5,7 +5,7 @@ import os
 import re
 import tempfile
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Literal, cast
@@ -25,6 +25,7 @@ from ccld_complaints.hosted_app.seeded_import import (
     _deduplicate_source_record_projections,
     _prepared_source_record_values,
     flatten_seeded_corpus_records,
+    hosted_import_batches,
     hosted_source_derived_records,
     import_seeded_corpus_artifact,
 )
@@ -268,6 +269,7 @@ def diagnose_ccld_preserved_artifact_differences(
             operation="preserved-artifacts",
             now=datetime(2000, 1, 1, tzinfo=UTC),
         )
+        artifact = _stabilize_equivalent_artifact_provenance(connection, artifact)
         flattened = _deduplicate_source_record_projections(
             flatten_seeded_corpus_records(artifact)
         )
@@ -458,6 +460,7 @@ def _process_facility(
         operation=request.operation,
         now=now,
     )
+    artifact = _stabilize_equivalent_artifact_provenance(connection, artifact)
     import_result = import_seeded_corpus_artifact(
         connection,
         artifact,
@@ -550,7 +553,20 @@ def _preserve_stable_identities(
         prior = tuple(
             (row for row in existing if row["entity_type"] == entity_type),
         )
-        _preserve_sequence_stable_identities(items, prior, id_field)
+        semantic_fields: tuple[str, ...] = ()
+        if entity_type == "allegation":
+            semantic_fields = (
+                "allegation_text",
+                "allegation_category",
+                "finding",
+                "extraction_confidence",
+            )
+        _preserve_sequence_stable_identities(
+            items,
+            prior,
+            id_field,
+            semantic_fields=semantic_fields,
+        )
         for item in items:
             item["complaint_id"] = complaint_id
     prior_audits: dict[str, list[Mapping[str, Any]]] = {}
@@ -588,6 +604,8 @@ def _preserve_sequence_stable_identities(
     items: Sequence[dict[str, Any]],
     prior_rows: Sequence[Mapping[str, Any]],
     id_field: str,
+    *,
+    semantic_fields: Sequence[str] = (),
 ) -> set[int]:
     """Reuse stable child IDs without letting mixed ID formats reorder siblings."""
 
@@ -597,7 +615,26 @@ def _preserve_sequence_stable_identities(
     }
     assignments: dict[int, str] = {}
 
+    if semantic_fields:
+        stable_ids_by_semantics: dict[str, list[str]] = {}
+        for stable_id, row in sorted(available.items()):
+            values = cast(Mapping[str, Any], row["original_values"])
+            signature = _semantic_identity_signature(values, semantic_fields)
+            stable_ids_by_semantics.setdefault(signature, []).append(stable_id)
+        for index, item in enumerate(items):
+            signature = _semantic_identity_signature(item, semantic_fields)
+            matching_ids = stable_ids_by_semantics.get(signature, [])
+            while matching_ids and matching_ids[0] not in available:
+                matching_ids.pop(0)
+            if not matching_ids:
+                continue
+            stable_id = matching_ids.pop(0)
+            assignments[index] = stable_id
+            available.pop(stable_id)
+
     for index, item in enumerate(items):
+        if index in assignments:
+            continue
         generated_id = str(item.get(id_field) or "")
         if generated_id in available:
             assignments[index] = generated_id
@@ -625,7 +662,58 @@ def _preserve_sequence_stable_identities(
 
     for index, stable_id in assignments.items():
         items[index][id_field] = stable_id
+    if semantic_fields:
+        used_ids = set(assignments.values())
+        for index, item in enumerate(items):
+            if index in assignments:
+                continue
+            generated_id = str(item.get(id_field) or "")
+            if generated_id in used_ids:
+                generated_id = _next_sequence_stable_identity(
+                    generated_id,
+                    used_ids,
+                )
+                item[id_field] = generated_id
+            used_ids.add(generated_id)
     return set(assignments)
+
+
+def _semantic_identity_signature(
+    values: Mapping[str, Any],
+    fields: Sequence[str],
+) -> str:
+    return json.dumps(
+        {field: values.get(field) for field in fields},
+        sort_keys=True,
+        separators=(",", ":"),
+        default=str,
+    )
+
+
+def _next_sequence_stable_identity(
+    generated_id: str,
+    used_ids: set[str],
+) -> str:
+    match = re.fullmatch(r"(.*?)(\d+)", generated_id)
+    if match is None:
+        raise ValueError("Generated child stable identity must end in an ordinal.")
+    prefix = match.group(1)
+    used_ordinals = {
+        int(candidate_match.group(1))
+        for candidate in used_ids
+        if (
+            candidate_match := re.fullmatch(
+                re.escape(prefix) + r"(\d+)",
+                candidate,
+            )
+        )
+    }
+    next_ordinal = max(used_ordinals, default=0) + 1
+    candidate = f"{prefix}{next_ordinal}"
+    while candidate in used_ids:
+        next_ordinal += 1
+        candidate = f"{prefix}{next_ordinal}"
+    return candidate
 
 
 def _stable_identity_ordinal(stable_id: str) -> int | None:
@@ -764,6 +852,80 @@ def _backfill_artifact(
         errors=(),
         records=tuple(records),
     )
+
+
+def _stabilize_equivalent_artifact_provenance(
+    connection: Connection,
+    artifact: SeededCorpusArtifact,
+) -> SeededCorpusArtifact:
+    """Reuse provenance only when the complete persisted source state is equivalent."""
+
+    records = _deduplicate_source_record_projections(flatten_seeded_corpus_records(artifact))
+    facility_ids = {record.facility_id for record in records if record.facility_id}
+    if len(facility_ids) != 1:
+        return artifact
+    existing_rows = tuple(
+        dict(row)
+        for row in connection.execute(
+            select(hosted_source_derived_records).where(
+                hosted_source_derived_records.c.facility_id == next(iter(facility_ids))
+            )
+        ).mappings()
+    )
+    existing_by_key = {str(row["source_record_key"]): row for row in existing_rows}
+    if set(existing_by_key) != {record.source_record_key for record in records}:
+        return artifact
+
+    persisted_identities: set[str] = set()
+    for record in records:
+        existing = existing_by_key[record.source_record_key]
+        values, _conflicts = _prepared_source_record_values(
+            connection,
+            record,
+            existing,
+            preserve_existing_import_batch=True,
+        )
+        existing_comparable = _without_artifact_identity(existing, values)
+        prepared_comparable = _without_artifact_identity(values, values)
+        if existing_comparable != prepared_comparable:
+            return artifact
+        traceability = cast(Mapping[str, Any], existing["source_traceability"])
+        persisted_identity = _optional_text(traceability.get("source_artifact_identity"))
+        if persisted_identity is None:
+            return artifact
+        persisted_identities.add(persisted_identity)
+    if len(persisted_identities) != 1:
+        return artifact
+
+    persisted_identity = next(iter(persisted_identities))
+    import_batch_ids = tuple(
+        str(value)
+        for value in connection.execute(
+            select(hosted_import_batches.c.import_batch_id).where(
+                hosted_import_batches.c.source_artifact_identity == persisted_identity
+            )
+        ).scalars()
+    )
+    if len(import_batch_ids) != 1:
+        return artifact
+    return replace(
+        artifact,
+        import_batch_id=import_batch_ids[0],
+        source_artifact_identity=persisted_identity,
+    )
+
+
+def _without_artifact_identity(
+    row: Mapping[str, Any],
+    comparable_fields: Mapping[str, Any],
+) -> Mapping[str, Any]:
+    comparable = {key: row.get(key) for key in comparable_fields}
+    traceability = comparable.get("source_traceability")
+    if isinstance(traceability, Mapping):
+        stable_traceability = dict(traceability)
+        stable_traceability.pop("source_artifact_identity", None)
+        comparable["source_traceability"] = stable_traceability
+    return comparable
 
 
 def _record_counts(records: Sequence[Mapping[str, Any]]) -> Mapping[str, int]:
