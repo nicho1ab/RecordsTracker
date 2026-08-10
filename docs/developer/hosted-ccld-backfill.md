@@ -66,11 +66,37 @@ The Python entry point exposes the equivalent `--facility-number`,
 `--max-facilities`, `--checkpoint-file`, `--restart`, `--dry-run`, and
 `--apply` arguments.
 
-Output is limited to candidate, excluded, examined, eligible, intended-update,
-updated, unchanged, skipped, conflicted, warning, and failed counts. It does not print raw paths, source
-URLs, report narrative, database values, or credentials. A configuration error
-returns exit code 2; an isolated facility failure or safe runtime failure
-returns exit code 1.
+For a bounded residual-idempotence investigation, `-DiagnoseDifferences`
+requires `-Operation preserved-artifacts` and an explicit Facility ID or
+Facility-ID file. It rejects `-AllExisting`, apply, checkpoint, restart, and
+maximum-facility options. This non-default mode performs only preserved-artifact
+reads and preparation, compares the exact candidate values used by the import
+write decision, and emits one deterministic JSON document. Each difference
+contains the public Facility ID, entity type, stable source-record key, and
+differing field paths. String and structured values are represented only by
+type, length or count, and SHA-256; complaint and allegation narratives are not
+printed. Reviewer-created state and audit tables are outside the diagnostic read
+path.
+
+The equivalent direct Python forms are:
+
+```powershell
+python scripts/backfill_hosted_ccld_data.py --facility-number <facility-id> --operation preserved-artifacts --diagnose-differences
+python scripts/backfill_hosted_ccld_data.py --facility-number-file <facility-id-file> --operation preserved-artifacts --diagnose-differences
+```
+
+Diagnostic mode is a third mutually exclusive mode: the wrapper passes
+`--diagnose-differences` without `--dry-run` or `--apply`. Ordinary wrapper
+invocation still passes `--dry-run`, and explicit `-Apply` still passes
+`--apply`.
+
+Backfill mode output is limited to candidate, excluded, examined, eligible,
+intended-update, updated, unchanged, skipped, conflicted, warning, and failed
+counts. Diagnostic mode instead emits one deterministic JSON document containing
+redacted differences. Neither mode prints raw paths, source URLs, report
+narrative, database values, or credentials. A configuration error returns exit
+code 2; an isolated facility failure or safe runtime failure returns exit code
+1.
 
 ## Prerequisites and safeguards
 
@@ -115,5 +141,5 @@ durable checkpoint/resume behavior, interrupted-run recovery, isolated failures,
 unchanged raw traceability, stable identities/import scope, preserved reviewer-
 created state and audit history, stable child identity when extraction adds a
 sibling, equivalent preserved-operation provenance, reviewer-detail visibility,
-and ordinary retrieval parity. Tests use local source-shaped fixtures and
-doubles only.
+SELECT-only redacted difference diagnosis, and ordinary retrieval parity. Tests
+use local source-shaped fixtures and doubles only.

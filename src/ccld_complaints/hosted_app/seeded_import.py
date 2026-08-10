@@ -502,6 +502,43 @@ def _upsert_source_record(
     *,
     preserve_existing_import_batch: bool = False,
 ) -> tuple[str, int]:
+    existing = cast(
+        Mapping[str, Any] | None,
+        connection.execute(
+            select(hosted_source_derived_records).where(
+                hosted_source_derived_records.c.source_record_key == record.source_record_key
+            )
+        ).mappings().first(),
+    )
+    values, conflicts = _prepared_source_record_values(
+        connection,
+        record,
+        existing,
+        preserve_existing_import_batch=preserve_existing_import_batch,
+    )
+    if existing is None:
+        connection.execute(hosted_source_derived_records.insert().values(**values))
+        return "inserted", 0
+    comparable_existing = {key: existing.get(key) for key in values}
+    if comparable_existing == values:
+        return "unchanged", len(conflicts)
+    connection.execute(
+        update(hosted_source_derived_records)
+        .where(hosted_source_derived_records.c.source_record_key == record.source_record_key)
+        .values(**values)
+    )
+    return "updated", len(conflicts)
+
+
+def _prepared_source_record_values(
+    connection: Connection,
+    record: SeededSourceDerivedRecord,
+    existing: Mapping[str, Any] | None,
+    *,
+    preserve_existing_import_batch: bool,
+) -> tuple[dict[str, Any], tuple[dict[str, Any], ...]]:
+    """Build the exact source-row values used by the write decision."""
+
     values: dict[str, Any] = {
         "source_record_key": record.source_record_key,
         "entity_type": record.entity_type,
@@ -518,11 +555,6 @@ def _upsert_source_record(
         "original_values": dict(record.original_values),
         "source_traceability": dict(record.source_traceability),
     }
-    existing = connection.execute(
-        select(hosted_source_derived_records).where(
-            hosted_source_derived_records.c.source_record_key == record.source_record_key
-        )
-    ).mappings().first()
     if existing is None:
         values.update(
             _canonical_complaint_observation_columns(
@@ -536,37 +568,27 @@ def _upsert_source_record(
                 record.source_document_id,
                 fallback=record.import_batch_id,
             )
-        connection.execute(hosted_source_derived_records.insert().values(**values))
-        return "inserted", 0
-    else:
-        if preserve_existing_import_batch:
-            values["import_batch_id"] = existing["import_batch_id"]
-        merged_original_values, conflicts = _merge_source_original_values(
+        return values, ()
+    if preserve_existing_import_batch:
+        values["import_batch_id"] = existing["import_batch_id"]
+    merged_original_values, conflicts = _merge_source_original_values(
+        record.entity_type,
+        existing.get("original_values"),
+        record.original_values,
+    )
+    values["original_values"] = merged_original_values
+    values.update(
+        _canonical_complaint_observation_columns(
             record.entity_type,
-            existing.get("original_values"),
-            record.original_values,
+            merged_original_values,
         )
-        values["original_values"] = merged_original_values
-        values.update(
-            _canonical_complaint_observation_columns(
-                record.entity_type,
-                merged_original_values,
-            )
-        )
-        values["source_traceability"] = _merge_source_traceability(
-            existing.get("source_traceability"),
-            record.source_traceability,
-            conflicts,
-        )
-        comparable_existing = {key: existing.get(key) for key in values}
-        if comparable_existing == values:
-            return "unchanged", len(conflicts)
-        connection.execute(
-            update(hosted_source_derived_records)
-            .where(hosted_source_derived_records.c.source_record_key == record.source_record_key)
-            .values(**values)
-        )
-        return "updated", len(conflicts)
+    )
+    values["source_traceability"] = _merge_source_traceability(
+        existing.get("source_traceability"),
+        record.source_traceability,
+        conflicts,
+    )
+    return values, conflicts
 
 
 def _existing_document_import_batch_id(

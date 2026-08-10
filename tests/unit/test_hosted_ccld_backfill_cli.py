@@ -6,7 +6,12 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any
 
-from ccld_complaints.hosted_app.ccld_backfill import CcldHostedBackfillResult
+import pytest
+
+from ccld_complaints.hosted_app.ccld_backfill import (
+    CcldHostedBackfillDifference,
+    CcldHostedBackfillResult,
+)
 
 
 class _Connection:
@@ -179,6 +184,87 @@ def test_cli_exposes_bounded_preserved_artifact_apply_operations(
     assert "intended_updates=1" in capsys.readouterr().out
 
 
+def test_cli_difference_diagnostic_is_explicit_read_only_json(
+    monkeypatch: Any,
+    capsys: Any,
+) -> None:
+    cli = _load_cli_module()
+    connection = _Connection()
+    monkeypatch.setattr(
+        cli,
+        "open_configured_facility_reference_connection",
+        lambda: nullcontext(connection),
+    )
+    monkeypatch.setattr(
+        cli,
+        "diagnose_ccld_preserved_artifact_differences",
+        lambda _connection, _facility_numbers: (
+            CcldHostedBackfillDifference(
+                facility_number="425802141",
+                entity_type="allegation",
+                source_record_key="allegation:public-stable-id",
+                differing_fields=("original_values.allegation_text",),
+                persisted={
+                    "original_values.allegation_text": {
+                        "type": "string",
+                        "length": 20,
+                        "sha256": "a" * 64,
+                    }
+                },
+                prepared={
+                    "original_values.allegation_text": {
+                        "type": "string",
+                        "length": 21,
+                        "sha256": "b" * 64,
+                    }
+                },
+            ),
+        ),
+    )
+    monkeypatch.setattr(
+        cli,
+        "run_ccld_hosted_backfill",
+        lambda *_args, **_kwargs: pytest.fail("write-capable backfill must not run"),
+    )
+
+    assert (
+        cli.main(
+            [
+                "--facility-number",
+                "425802141",
+                "--operation",
+                "preserved-artifacts",
+                "--diagnose-differences",
+            ]
+        )
+        == 0
+    )
+
+    output = capsys.readouterr().out
+    assert '"schema_version":"recordstracker.ccld-backfill-differences.v1"' in output
+    assert '"difference_count":1' in output
+    assert "original_values.allegation_text" in output
+    assert "a" * 64 in output
+    assert connection.commits == 0
+    assert connection.rollbacks == 1
+
+
+def test_cli_difference_diagnostic_rejects_unbounded_selection(capsys: Any) -> None:
+    cli = _load_cli_module()
+    assert (
+        cli.main(
+            [
+                "--all-existing",
+                "--operation",
+                "preserved-artifacts",
+                "--diagnose-differences",
+            ]
+        )
+        == 2
+    )
+    assert "requires explicit Facility IDs" in capsys.readouterr().err
+
+
 def test_powershell_wrapper_exposes_bounded_restartable_interface() -> None:
     wrapper = (
         Path(__file__).resolve().parents[2]
@@ -197,12 +283,23 @@ def test_powershell_wrapper_exposes_bounded_restartable_interface() -> None:
         "$Restart",
         "$Apply",
         "$DryRun",
+        "$DiagnoseDifferences",
         "$QnapContainer",
         "docker compose",
     ):
         assert token in wrapper
     assert "Omit both for dry-run" in wrapper
     assert "canonical-complaint-observations" in wrapper
+    assert "--diagnose-differences" in wrapper
+    diagnostic_start = wrapper.index('if ($DiagnoseDifferences) {')
+    diagnostic_end = wrapper.index('if ($QnapContainer)', diagnostic_start)
+    diagnostic_mode = wrapper[diagnostic_start:diagnostic_end]
+    diagnostic_branch = diagnostic_mode.split('elseif ($Apply)', 1)[0]
+    assert '$arguments += "--diagnose-differences"' in diagnostic_branch
+    assert '"--dry-run"' not in diagnostic_branch
+    assert '"--apply"' not in diagnostic_branch
+    assert 'elseif ($Apply)' in diagnostic_mode
+    assert 'else {\n    $arguments += "--dry-run"\n}' in diagnostic_mode
     assert (
         '@("facility-reference", "preserved-artifacts", '
         '"canonical-complaint-observations")'
