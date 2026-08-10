@@ -119,10 +119,18 @@ code 2; an isolated facility failure or safe runtime failure returns exit code
 - Repeating apply with unchanged inputs is idempotent. Checkpoint/resume skips
   completed Facility IDs, retries failed IDs without silently dropping them,
   and excludes newly appearing all-existing rows until a deliberate restart.
-- Preserved allegation, event, and repeated extraction-audit identities are
-  reconciled by exact generated identity and deterministic source occurrence
-  before any fallback. A newly extracted sibling therefore cannot reorder mixed
-  historical and current ID formats on the next replay.
+- Preserved allegation identities first reuse an existing sibling whose source-
+  derived allegation text, category, finding, and confidence are unchanged.
+  Exact generated identity and deterministic source occurrence then reconcile
+  unmatched allegations, events, and repeated extraction-audit rows. A newly
+  extracted allegation receives a collision-free identity and therefore cannot
+  shift the stable identities or values of unchanged siblings.
+- Before a write decision, preserved-artifact provenance is stabilized only when
+  the complete final source-record key set and every importer-visible governed
+  value other than artifact identity exactly match persisted state. Superseded
+  duplicate projections therefore cannot rotate provenance alone; a new,
+  removed, or genuinely changed final projection retains newly generated
+  provenance and remains an update.
 - Only canonical `facility_type`, `county`, and `status` allocations can be
   enriched. The command does not alter reviewer-created notes, status,
   decisions, or continuity state and does not activate ArcGIS, retrieve a live
@@ -140,6 +148,8 @@ canonical-observation dry-run/apply/repeat behavior, explicit apply bounds,
 durable checkpoint/resume behavior, interrupted-run recovery, isolated failures,
 unchanged raw traceability, stable identities/import scope, preserved reviewer-
 created state and audit history, stable child identity when extraction adds a
-sibling, equivalent preserved-operation provenance, reviewer-detail visibility,
-SELECT-only redacted difference diagnosis, and ordinary retrieval parity. Tests
-use local source-shaped fixtures and doubles only.
+sibling, semantic allegation identity when a sibling is inserted, final-
+projection artifact identity with duplicated document projections, equivalent
+preserved-operation provenance, reviewer-detail visibility, SELECT-only redacted
+difference diagnosis, and ordinary retrieval parity. Tests use local source-
+shaped fixtures and doubles only.
