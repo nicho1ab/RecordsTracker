@@ -684,6 +684,193 @@ def test_preserved_artifact_repeat_is_unchanged_with_duplicate_complaint_project
         assert _reviewer_snapshot(connection) == initial_reviewer_state
 
 
+def test_preserved_artifact_reuses_shared_historical_audit_identities(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    first_source_url = SOURCE_URL.replace("425802141", "900000001")
+    first_record = _normalized_record(
+        raw_fixture=STRUCTURED_RAW_FIXTURE,
+        source_url=first_source_url,
+    )
+    second_record = _normalized_record(
+        raw_fixture=STRUCTURED_RAW_FIXTURE,
+        source_url=first_source_url.replace("inx=1", "inx=33"),
+    )
+    first_document = cast(dict[str, Any], first_record["source_document"])
+    second_document = cast(dict[str, Any], second_record["source_document"])
+    assert first_document["document_id"] != second_document["document_id"]
+
+    for record in (first_record, second_record):
+        occurrences: dict[str, int] = {}
+        for audit in cast(list[dict[str, Any]], record["extraction_audit"]):
+            field_name = str(audit["field_name"])
+            occurrences[field_name] = occurrences.get(field_name, 0) + 1
+            if record is first_record and field_name == "facility_number":
+                continue
+            audit["audit_id"] = f"historical-audit:{field_name}:{occurrences[field_name]}"
+    assert (
+        sum(
+            audit["field_name"] == "deficiency_text"
+            for audit in cast(list[dict[str, Any]], first_record["extraction_audit"])
+        )
+        == 2
+    )
+
+    historical = replace(
+        _artifact("shared-historical-audits", first_record),
+        records=(first_record, second_record),
+    )
+    engine = create_engine("sqlite+pysqlite:///:memory:")
+    hosted_seeded_import_metadata.create_all(engine)
+    hosted_facility_reference_metadata.create_all(engine)
+    checkpoint = tmp_path / "shared-historical-audits.json"
+    apply_request = CcldHostedBackfillRequest(
+        facility_numbers=("900000001",),
+        operation="preserved-artifacts",
+        batch_size=1,
+        apply_changes=True,
+        checkpoint_file=checkpoint,
+        max_facilities=1,
+    )
+    dry_run_request = replace(
+        apply_request,
+        apply_changes=False,
+        checkpoint_file=None,
+        max_facilities=None,
+    )
+    change_mode: str | None = None
+    original_reprocess = ccld_backfill._reprocess_preserved_document
+
+    def reprocess_preserved_document(
+        connection: Any,
+        facility_number: str,
+        facility_row: Mapping[str, Any],
+        source_document_row: Mapping[str, Any],
+    ) -> Mapping[str, Any] | None:
+        normalized = original_reprocess(
+            connection,
+            facility_number,
+            facility_row,
+            source_document_row,
+        )
+        target_document_id = (
+            first_document["document_id"]
+            if change_mode == "new"
+            else second_document["document_id"]
+        )
+        if normalized is None or source_document_row["stable_source_id"] != target_document_id:
+            return normalized
+        audits = cast(list[dict[str, Any]], normalized["extraction_audit"])
+        if change_mode == "changed":
+            next(audit for audit in audits if audit["field_name"] == "facility_number")[
+                "extracted_value"
+            ] = "governed-change"
+        elif change_mode == "new":
+            audits.append(
+                {
+                    "audit_id": f"{first_document['document_id']}-new-governed-audit",
+                    "document_id": first_document["document_id"],
+                    "field_name": "new_governed_audit",
+                    "extraction_method": "ccld_facility_report_html_labels",
+                    "extractor_version": "0.1.0",
+                    "extracted_value": "new governed evidence",
+                    "confidence": 1.0,
+                    "source_text": "new governed evidence",
+                    "source_section": "fixture section",
+                    "warning": None,
+                }
+            )
+        elif change_mode == "removed":
+            audits[:] = [audit for audit in audits if audit["field_name"] != "agency_name"]
+        return normalized
+
+    monkeypatch.setattr(
+        ccld_backfill,
+        "_reprocess_preserved_document",
+        reprocess_preserved_document,
+    )
+
+    with engine.connect() as connection:
+        import_seeded_corpus_artifact(connection, historical)
+        complaint = cast(dict[str, Any], second_record["complaint"])
+        complaint_id = str(complaint["complaint_id"])
+        _insert_reviewer_state_and_audit(
+            connection,
+            f"complaint:{complaint_id}",
+            complaint_stable_id=complaint_id,
+            source_document_id=str(second_document["document_id"]),
+        )
+        connection.commit()
+        initial_rows = _source_rows_snapshot(connection)
+        initial_audit_ids = {
+            stable_id
+            for entity_type, stable_id in _stable_identities(connection)
+            if entity_type == "extraction_audit"
+        }
+        initial_hashes = _source_hash_snapshot(connection)
+        initial_import_scope = _import_scope_snapshot(connection)
+        initial_reviewer_state = _reviewer_snapshot(connection)
+
+        differences = diagnose_ccld_preserved_artifact_differences(
+            connection,
+            ("900000001",),
+        )
+        first_dry_run = run_ccld_hosted_backfill(connection, dry_run_request)
+        first_apply = run_ccld_hosted_backfill(connection, apply_request)
+        connection.commit()
+        repeat = run_ccld_hosted_backfill(connection, dry_run_request)
+        equivalent_operation = run_ccld_hosted_backfill(
+            connection,
+            replace(dry_run_request, operation="canonical-complaint-observations"),
+        )
+        second_apply = run_ccld_hosted_backfill(
+            connection,
+            replace(apply_request, restart=True),
+        )
+        connection.commit()
+
+        assert differences == ()
+        assert first_dry_run.updated == 0
+        assert first_dry_run.unchanged == 1
+        assert first_apply.updated == 0
+        assert first_apply.unchanged == 1
+        assert repeat.updated == 0
+        assert repeat.unchanged == 1
+        assert equivalent_operation.updated == 0
+        assert equivalent_operation.unchanged == 1
+        assert second_apply.updated == 0
+        assert second_apply.unchanged == 1
+        assert {
+            stable_id
+            for entity_type, stable_id in _stable_identities(connection)
+            if entity_type == "extraction_audit"
+        } == initial_audit_ids
+
+        change_mode = "changed"
+        changed = run_ccld_hosted_backfill(connection, dry_run_request)
+        change_mode = "new"
+        new_differences = diagnose_ccld_preserved_artifact_differences(
+            connection,
+            ("900000001",),
+        )
+        new_audit_key = f"extraction_audit:{first_document['document_id']}-new-governed-audit"
+        change_mode = "removed"
+        removed = run_ccld_hosted_backfill(connection, dry_run_request)
+
+        assert changed.updated == 1
+        assert any(
+            difference.source_record_key == new_audit_key
+            and difference.differing_fields == ("persisted_record",)
+            for difference in new_differences
+        )
+        assert removed.updated == 1
+        assert _source_rows_snapshot(connection) == initial_rows
+        assert _source_hash_snapshot(connection) == initial_hashes
+        assert _import_scope_snapshot(connection) == initial_import_scope
+        assert _reviewer_snapshot(connection) == initial_reviewer_state
+
+
 def test_preserved_artifact_identity_uses_final_persisted_projections() -> None:
     first_record = _initial_missing_record()
     second_record = _initial_missing_record(
