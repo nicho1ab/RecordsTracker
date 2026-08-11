@@ -509,7 +509,6 @@ def _reprocess_preserved_document(
         raw_dir=raw_path.parent,
     )
     normalized = connector.normalize(connector.extract(document))
-    normalized["source_document"] = dict(values)
     _preserve_stable_identities(
         connection,
         normalized,
@@ -528,7 +527,13 @@ def _preserve_stable_identities(
 ) -> None:
     facility = cast(dict[str, Any], normalized["facility"])
     source_document = cast(dict[str, Any], normalized["source_document"])
+    # Retain the connector's audit-ID namespace before restoring historical
+    # source-document metadata and its stable identity.
     old_document_id = str(source_document["document_id"])
+    source_document.clear()
+    source_document.update(
+        cast(Mapping[str, Any], source_document_row["original_values"])
+    )
     facility_id = str(facility_row["stable_source_id"])
     document_id = str(source_document_row["stable_source_id"])
     facility["facility_id"] = facility_id

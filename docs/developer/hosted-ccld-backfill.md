@@ -130,9 +130,14 @@ code 2; an isolated facility failure or safe runtime failure returns exit code
   it may reuse a legacy non-document-scoped audit identity from the same
   facility; this preserves historical multi-document projections that the
   importer stores under one final stable key. Audit semantic values match before
-  exact identity, ordinal, and deterministic fallback. A genuinely new audit
-  retains a collision-free document-scoped identity, and changed or removed
-  governed audit evidence still prevents equivalence.
+  exact identity, ordinal, and deterministic fallback. Replay captures the
+  connector-generated document-ID namespace before restoring the persisted
+  source-document values and stable identity, so every unmatched generated
+  audit ID is translated into the correct persisted document scope. Source
+  documents are paired with their own stored URL, raw path, and validated raw
+  SHA-256 rather than by report order. A genuinely new audit retains a
+  collision-free document-scoped identity, and changed or removed governed
+  document or audit evidence still prevents equivalence.
 - Before a write decision, preserved-artifact provenance is stabilized only when
   the complete final source-record key set and every importer-visible governed
   value other than artifact identity exactly match persisted state. Superseded
@@ -158,7 +163,9 @@ unchanged raw traceability, stable identities/import scope, preserved reviewer-
 created state and audit history, stable child identity when extraction adds a
 sibling, semantic allegation identity when a sibling is inserted, final-
 projection artifact identity with duplicated document projections, historical
-shared extraction-audit identity replay across multiple documents, equivalent
+shared extraction-audit identity replay across multiple documents, historical
+document-scoped audit identity replay when generated document IDs differ,
+equivalent
 preserved-operation provenance, reviewer-detail visibility, SELECT-only redacted
 difference diagnosis, and ordinary retrieval parity. Tests use local source-
 shaped fixtures and doubles only.
